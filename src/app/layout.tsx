@@ -17,8 +17,47 @@ const bebasNeue = Bebas_Neue({
 
 export const metadata: Metadata = {
   title: "Garden of Eden - אימוני כדורגל מקצועיים",
-  description: "מרכז אימוני כדורגל מקצועי לשחקנים צעירים. פיתוח יכולות אתלטיות, מנטליות וטקטיות.",
-  keywords: ["כדורגל", "אימונים", "שחקנים צעירים", "פיתוח אתלטי", "garden of eden"],
+  description: "מרכז אימוני כדורגל מקצועי לשחקנים צעירים בחיפה. פיתוח יכולות אתלטיות, מנטליות וטקטיות עם מאמנים מקצועיים.",
+  keywords: ["כדורגל", "אימונים", "שחקנים צעירים", "פיתוח אתלטי", "garden of eden", "חיפה", "אקדמיית כדורגל"],
+  authors: [{ name: "Garden of Eden" }],
+  creator: "Garden of Eden",
+  metadataBase: new URL("https://garden-of-eden-website-six.vercel.app"),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  openGraph: {
+    type: "website",
+    locale: "he_IL",
+    url: "https://garden-of-eden-website-six.vercel.app",
+    siteName: "Garden of Eden",
+    title: "Garden of Eden - אימוני כדורגל מקצועיים",
+    description: "מרכז אימוני כדורגל מקצועי לשחקנים צעירים בחיפה. פיתוח יכולות אתלטיות, מנטליות וטקטיות.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Garden of Eden - אקדמיית כדורגל",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Garden of Eden - אימוני כדורגל מקצועיים",
+    description: "מרכז אימוני כדורגל מקצועי לשחקנים צעירים בחיפה.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
