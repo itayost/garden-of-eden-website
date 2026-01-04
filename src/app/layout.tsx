@@ -16,9 +16,9 @@ const bebasNeue = Bebas_Neue({
 });
 
 export const metadata: Metadata = {
-  title: "Garden of Eden - אימוני כדורגל מקצועיים",
-  description: "מרכז אימוני כדורגל מקצועי לשחקנים צעירים בחיפה. פיתוח יכולות אתלטיות, מנטליות וטקטיות עם מאמנים מקצועיים.",
-  keywords: ["כדורגל", "אימונים", "שחקנים צעירים", "פיתוח אתלטי", "garden of eden", "חיפה", "אקדמיית כדורגל"],
+  title: "Garden of Eden - אקדמיית הכדורגל עם מעטפת מלאה | חיפה",
+  description: "אקדמיית כדורגל מקצועית בחיפה עם מעטפת מלאה: אימוני כדורגל, אימוני אתלטיות, ליווי מנטלי, ליווי תזונה, אנליסט כדורגל וניהול קריירה.",
+  keywords: ["אקדמיית כדורגל", "כדורגל חיפה", "אימוני אתלטיות", "ליווי מנטלי", "תזונת ספורטאים", "אנליסט כדורגל", "ניהול קריירה", "garden of eden", "שחקנים צעירים"],
   authors: [{ name: "Garden of Eden" }],
   creator: "Garden of Eden",
   metadataBase: new URL("https://garden-of-eden-website-six.vercel.app"),
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
     locale: "he_IL",
     url: "https://garden-of-eden-website-six.vercel.app",
     siteName: "Garden of Eden",
-    title: "Garden of Eden - אימוני כדורגל מקצועיים",
-    description: "מרכז אימוני כדורגל מקצועי לשחקנים צעירים בחיפה. פיתוח יכולות אתלטיות, מנטליות וטקטיות.",
+    title: "Garden of Eden - אקדמיית הכדורגל עם מעטפת מלאה | חיפה",
+    description: "אקדמיית כדורגל מקצועית בחיפה: אימוני כדורגל ואתלטיות, ליווי מנטלי ותזונה, אנליסט כדורגל וניהול קריירה.",
     images: [
       {
         url: "/og-image.png",
@@ -50,8 +50,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Garden of Eden - אימוני כדורגל מקצועיים",
-    description: "מרכז אימוני כדורגל מקצועי לשחקנים צעירים בחיפה.",
+    title: "Garden of Eden - אקדמיית הכדורגל עם מעטפת מלאה",
+    description: "אקדמיית כדורגל מקצועית בחיפה: אימוני כדורגל ואתלטיות, ליווי מנטלי ותזונה, אנליסט וניהול קריירה.",
     images: ["/og-image.png"],
   },
   robots: {
