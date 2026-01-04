@@ -1,0 +1,217 @@
+import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { PlayerCard } from "@/components/player-card";
+import {
+  Video,
+  ClipboardCheck,
+  ArrowLeft,
+  Salad,
+  Activity,
+  CheckCircle2,
+  TrendingUp
+} from "lucide-react";
+import type { Profile, PlayerStats } from "@/types/database";
+import type { PlayerPosition, CardType } from "@/types/player-stats";
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Get user's data
+  const [
+    { data: profile },
+    { data: nutritionForm },
+    { data: playerStats },
+    { count: preWorkoutCount },
+    { count: postWorkoutCount },
+    { count: videosWatched }
+  ] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
+    supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").single() as unknown as { data: { id: string } | null },
+    supabase.from("player_stats").select("*").eq("user_id", user?.id || "").single() as unknown as { data: PlayerStats | null },
+    supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
+    supabase.from("post_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
+    supabase.from("video_progress").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "").eq("watched", true) as unknown as { count: number | null }
+  ]);
+
+  const hasCompletedNutrition = !!nutritionForm;
+
+  const quickActions = [
+    {
+      title: "שאלון לפני אימון",
+      description: "מלאו לפני כל אימון",
+      icon: Activity,
+      href: "/dashboard/forms/pre-workout",
+      color: "bg-blue-500",
+    },
+    {
+      title: "שאלון אחרי אימון",
+      description: "מלאו אחרי כל אימון",
+      icon: ClipboardCheck,
+      href: "/dashboard/forms/post-workout",
+      color: "bg-green-500",
+    },
+    {
+      title: "שאלון תזונה",
+      description: hasCompletedNutrition ? "הושלם" : "חובה באימון ראשון",
+      icon: Salad,
+      href: "/dashboard/forms/nutrition",
+      color: "bg-orange-500",
+      completed: hasCompletedNutrition,
+    },
+    {
+      title: "סרטוני תרגילים",
+      description: "תרגילים לעשות בבית",
+      icon: Video,
+      href: "/dashboard/videos",
+      color: "bg-purple-500",
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <div>
+        <h1 className="text-3xl font-bold mb-2">
+          שלום, {profile?.full_name || "מתאמן"}! 👋
+        </h1>
+        <p className="text-muted-foreground">
+          ברוכים הבאים לאזור האישי שלך ב-Garden of Eden
+        </p>
+      </div>
+
+      {/* Player Card Section */}
+      {playerStats ? (
+        <Card className="overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <PlayerCard
+                playerName={profile?.full_name || "שחקן"}
+                position={playerStats.position as PlayerPosition}
+                cardType={playerStats.card_type as CardType}
+                overallRating={playerStats.overall_rating}
+                stats={{
+                  pace: playerStats.pace,
+                  shooting: playerStats.shooting,
+                  passing: playerStats.passing,
+                  dribbling: playerStats.dribbling,
+                  defending: playerStats.defending,
+                  physical: playerStats.physical,
+                }}
+              />
+              <div className="text-center sm:text-right flex-1">
+                <h2 className="text-xl font-semibold mb-2">הכרטיס שלך</h2>
+                <p className="text-muted-foreground mb-4">
+                  לחצו על הכרטיס לצפייה בסטטיסטיקות המלאות שלכם
+                </p>
+                <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+                  <Badge variant="outline" className="text-sm">
+                    דירוג: {playerStats.overall_rating}
+                  </Badge>
+                  <Badge variant="outline" className="text-sm">
+                    עמדה: {playerStats.position}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-dashed border-2">
+          <CardContent className="flex items-center gap-4 py-6">
+            <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+              <TrendingUp className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold">כרטיס שחקן</h3>
+              <p className="text-sm text-muted-foreground">
+                המאמן שלך יוסיף את הסטטיסטיקות שלך בקרוב
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Nutrition Alert */}
+      {!hasCompletedNutrition && (
+        <Card className="border-orange-500/50 bg-orange-500/5">
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-orange-500 rounded-full p-2">
+                <Salad className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold">טרם מילאתם שאלון תזונה</p>
+                <p className="text-sm text-muted-foreground">
+                  יש למלא את השאלון לפני האימון הראשון
+                </p>
+              </div>
+            </div>
+            <Button asChild>
+              <Link href="/dashboard/forms/nutrition">
+                למילוי השאלון
+                <ArrowLeft className="mr-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">פעולות מהירות</h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action) => (
+            <Link key={action.href} href={action.href}>
+              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`${action.color} rounded-xl p-3 group-hover:scale-110 transition-transform`}>
+                      <action.icon className="h-6 w-6 text-white" />
+                    </div>
+                    {action.completed && (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700">
+                        <CheckCircle2 className="h-3 w-3 ml-1" />
+                        הושלם
+                      </Badge>
+                    )}
+                  </div>
+                  <h3 className="font-semibold mb-1">{action.title}</h3>
+                  <p className="text-sm text-muted-foreground">{action.description}</p>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">הסטטיסטיקות שלי</h2>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>שאלונים לפני אימון</CardDescription>
+              <CardTitle className="text-3xl">{preWorkoutCount || 0}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>שאלונים אחרי אימון</CardDescription>
+              <CardTitle className="text-3xl">{postWorkoutCount || 0}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>סרטונים שנצפו</CardDescription>
+              <CardTitle className="text-3xl">{videosWatched || 0}</CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
