@@ -66,8 +66,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="he" dir="rtl">
-      <body className={`${heebo.variable} ${bebasNeue.variable} font-sans antialiased`}>
+    <html lang="he" dir="rtl" className="overflow-x-hidden">
+      <body className={`${heebo.variable} ${bebasNeue.variable} font-sans antialiased overflow-x-hidden`}>
         {children}
         <Toaster position="top-center" />
       </body>
