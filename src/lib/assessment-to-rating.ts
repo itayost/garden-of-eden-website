@@ -23,12 +23,15 @@ export function calculateRatingLowerBetter(
   worstInGroup: number
 ): number | null {
   if (value === null || value === undefined) return null;
+  // Handle sentinel value (-1) indicating no group data
+  if (bestInGroup < 0 || worstInGroup < 0) return null;
   if (bestInGroup === worstInGroup) return 99; // Only one player or same values
 
   if (value <= bestInGroup) return 99;
   if (value >= worstInGroup) return 30;
 
   const range = worstInGroup - bestInGroup;
+  if (range === 0) return 99; // Extra safety check
   const position = (value - bestInGroup) / range;
   return Math.round(99 - position * 69); // Scale 30-99
 }
@@ -43,12 +46,15 @@ export function calculateRatingHigherBetter(
   worstInGroup: number
 ): number | null {
   if (value === null || value === undefined) return null;
+  // Handle sentinel value (-1) indicating no group data
+  if (bestInGroup < 0 || worstInGroup < 0) return null;
   if (bestInGroup === worstInGroup) return 99;
 
   if (value >= bestInGroup) return 99;
   if (value <= worstInGroup) return 30;
 
   const range = bestInGroup - worstInGroup;
+  if (range === 0) return 99; // Extra safety check
   const position = (bestInGroup - value) / range;
   return Math.round(99 - position * 69); // Scale 30-99
 }
@@ -77,8 +83,12 @@ export interface GroupStats {
  */
 export function calculateGroupStats(assessments: PlayerAssessment[]): GroupStats {
   const getMinMax = (values: (number | null)[], lowerIsBetter: boolean) => {
-    const validValues = values.filter((v): v is number => v !== null && v !== undefined);
-    if (validValues.length === 0) return { best: 0, worst: 0 };
+    const validValues = values.filter((v): v is number => v !== null && v !== undefined && !isNaN(v));
+    if (validValues.length === 0) {
+      // Return sentinel values that will be handled by rating functions
+      // Using -1 for best indicates "no data available"
+      return { best: -1, worst: -1 };
+    }
 
     const min = Math.min(...validValues);
     const max = Math.max(...validValues);

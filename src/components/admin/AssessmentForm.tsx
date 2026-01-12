@@ -102,28 +102,28 @@ export function AssessmentForm({
 
       const assessmentData = {
         user_id: userId,
-        assessment_date: data.assessment_date || new Date().toISOString().split("T")[0],
-        sprint_5m: data.sprint_5m || null,
-        sprint_10m: data.sprint_10m || null,
-        sprint_20m: data.sprint_20m || null,
-        jump_2leg_distance: data.jump_2leg_distance || null,
-        jump_right_leg: data.jump_right_leg || null,
-        jump_left_leg: data.jump_left_leg || null,
-        jump_2leg_height: data.jump_2leg_height || null,
-        blaze_spot_time: data.blaze_spot_time || null,
-        flexibility_ankle: data.flexibility_ankle || null,
-        flexibility_knee: data.flexibility_knee || null,
-        flexibility_hip: data.flexibility_hip || null,
-        coordination: data.coordination || null,
-        leg_power_technique: data.leg_power_technique || null,
-        body_structure: data.body_structure || null,
-        kick_power_kaiser: data.kick_power_kaiser || null,
-        concentration_notes: data.concentration_notes || null,
-        decision_making_notes: data.decision_making_notes || null,
-        work_ethic_notes: data.work_ethic_notes || null,
-        recovery_notes: data.recovery_notes || null,
-        nutrition_notes: data.nutrition_notes || null,
-        notes: data.notes || null,
+        assessment_date: data.assessment_date ?? new Date().toISOString().split("T")[0],
+        sprint_5m: data.sprint_5m ?? null,
+        sprint_10m: data.sprint_10m ?? null,
+        sprint_20m: data.sprint_20m ?? null,
+        jump_2leg_distance: data.jump_2leg_distance ?? null,
+        jump_right_leg: data.jump_right_leg ?? null,
+        jump_left_leg: data.jump_left_leg ?? null,
+        jump_2leg_height: data.jump_2leg_height ?? null,
+        blaze_spot_time: data.blaze_spot_time ?? null,
+        flexibility_ankle: data.flexibility_ankle ?? null,
+        flexibility_knee: data.flexibility_knee ?? null,
+        flexibility_hip: data.flexibility_hip ?? null,
+        coordination: data.coordination ?? null,
+        leg_power_technique: data.leg_power_technique ?? null,
+        body_structure: data.body_structure ?? null,
+        kick_power_kaiser: data.kick_power_kaiser ?? null,
+        concentration_notes: data.concentration_notes ?? null,
+        decision_making_notes: data.decision_making_notes ?? null,
+        work_ethic_notes: data.work_ethic_notes ?? null,
+        recovery_notes: data.recovery_notes ?? null,
+        nutrition_notes: data.nutrition_notes ?? null,
+        notes: data.notes ?? null,
         assessed_by: user.id,
       };
 
@@ -147,7 +147,6 @@ export function AssessmentForm({
       }
 
       router.push(`/admin/assessments/${userId}`);
-      router.refresh();
     } catch (error: unknown) {
       console.error("Submit error:", error);
       const errorMessage =
@@ -183,7 +182,12 @@ export function AssessmentForm({
                 value={field.value ?? ""}
                 onChange={(e) => {
                   const val = e.target.value;
-                  field.onChange(val === "" ? null : parseFloat(val));
+                  if (val === "") {
+                    field.onChange(null);
+                  } else {
+                    const parsed = parseFloat(val);
+                    field.onChange(isNaN(parsed) ? null : parsed);
+                  }
                 }}
               />
               {ASSESSMENT_UNITS[name] && (

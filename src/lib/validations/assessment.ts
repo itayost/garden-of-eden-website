@@ -19,10 +19,10 @@ export const assessmentSchema = z.object({
   // Agility (seconds)
   blaze_spot_time: z.number().positive().optional().nullable(),
 
-  // Flexibility (cm)
-  flexibility_ankle: z.number().optional().nullable(),
-  flexibility_knee: z.number().optional().nullable(),
-  flexibility_hip: z.number().optional().nullable(),
+  // Flexibility (cm) - positive numbers
+  flexibility_ankle: z.number().nonnegative().optional().nullable(),
+  flexibility_knee: z.number().nonnegative().optional().nullable(),
+  flexibility_hip: z.number().nonnegative().optional().nullable(),
 
   // Categorical
   coordination: z.enum(["basic", "advanced", "deficient"]).optional().nullable(),
