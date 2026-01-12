@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getSafeRedirectUrl } from "@/lib/utils/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,7 +106,7 @@ export default function VerifyPage() {
         throw error;
       }
 
-      const redirect = sessionStorage.getItem("redirectAfterAuth") || "/dashboard";
+      const redirect = getSafeRedirectUrl(sessionStorage.getItem("redirectAfterAuth"));
       sessionStorage.removeItem("verifyPhone");
       sessionStorage.removeItem("verifyEmail");
       sessionStorage.removeItem("verifyType");
