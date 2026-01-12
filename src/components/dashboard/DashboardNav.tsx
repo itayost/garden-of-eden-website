@@ -21,7 +21,7 @@ import {
   LogOut,
   Menu,
   Settings,
-  TrendingUp
+  Target
 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -29,7 +29,7 @@ import type { Profile } from "@/types/database";
 
 const navItems = [
   { href: "/dashboard", label: "ראשי", icon: Home },
-  { href: "/dashboard/stats", label: "סטטיסטיקות", icon: TrendingUp },
+  { href: "/dashboard/assessments", label: "מבדקים", icon: Target },
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
 ];
