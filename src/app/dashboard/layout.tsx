@@ -22,6 +22,11 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single() as { data: Profile | null };
 
+  // Defense-in-depth: Redirect to onboarding if profile is not complete
+  if (profile && !profile.profile_completed) {
+    redirect("/onboarding/profile");
+  }
+
   return (
     <div className="min-h-screen bg-muted/30">
       <DashboardNav user={user} profile={profile} />

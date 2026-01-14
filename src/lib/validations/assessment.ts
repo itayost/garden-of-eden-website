@@ -45,6 +45,32 @@ export const assessmentSchema = z.object({
 
 export type AssessmentFormData = z.infer<typeof assessmentSchema>;
 
+// All assessment form field names (for dynamic iteration)
+export const ASSESSMENT_FIELDS: (keyof AssessmentFormData)[] = [
+  "assessment_date",
+  "sprint_5m",
+  "sprint_10m",
+  "sprint_20m",
+  "jump_2leg_distance",
+  "jump_right_leg",
+  "jump_left_leg",
+  "jump_2leg_height",
+  "blaze_spot_time",
+  "flexibility_ankle",
+  "flexibility_knee",
+  "flexibility_hip",
+  "coordination",
+  "leg_power_technique",
+  "body_structure",
+  "kick_power_kaiser",
+  "concentration_notes",
+  "decision_making_notes",
+  "work_ethic_notes",
+  "recovery_notes",
+  "nutrition_notes",
+  "notes",
+];
+
 // Default empty values for a new assessment
 export const DEFAULT_ASSESSMENT: AssessmentFormData = {
   assessment_date: new Date().toISOString().split("T")[0],

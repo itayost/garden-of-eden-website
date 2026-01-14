@@ -18,6 +18,9 @@ export interface Database {
           phone: string | null;
           role: UserRole;
           birthdate: string | null;
+          position: string | null;
+          avatar_url: string | null;
+          profile_completed: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -27,6 +30,9 @@ export interface Database {
           phone?: string | null;
           role?: UserRole;
           birthdate?: string | null;
+          position?: string | null;
+          avatar_url?: string | null;
+          profile_completed?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -36,6 +42,9 @@ export interface Database {
           phone?: string | null;
           role?: UserRole;
           birthdate?: string | null;
+          position?: string | null;
+          avatar_url?: string | null;
+          profile_completed?: boolean;
           created_at?: string;
           updated_at?: string;
         };

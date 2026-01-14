@@ -47,6 +47,26 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Profile completion check for dashboard routes (not onboarding or admin)
+  if (
+    user &&
+    request.nextUrl.pathname.startsWith("/dashboard") &&
+    !request.nextUrl.pathname.startsWith("/onboarding")
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("profile_completed")
+      .eq("id", user.id)
+      .single();
+
+    // Redirect to onboarding if profile is not complete
+    if (profile && !profile.profile_completed) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding/profile";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Admin-only routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
     const { data: profile } = await supabase
