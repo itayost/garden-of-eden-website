@@ -619,8 +619,8 @@ Benefits:
 | Progress charts (trainee) | HIGH | MEDIUM | P1 | ✅ Done |
 | Admin user editing | MEDIUM | LOW | P2 | ✅ Done |
 | Form draft saving | MEDIUM | LOW | P2 | ✅ Done |
-| Streak tracking | MEDIUM | LOW | P2 | ✅ Done |
-| Goals system | MEDIUM | MEDIUM | P2 | ✅ Done |
+| Streak tracking | MEDIUM | LOW | P2 | ✅ Deployed |
+| Goals system | MEDIUM | MEDIUM | P2 | ✅ Deployed |
 | Notifications | MEDIUM | MEDIUM | P3 | Pending |
 | Achievement badges | LOW | MEDIUM | P3 | Pending |
 | Admin analytics | MEDIUM | HIGH | P3 | Pending |
@@ -635,10 +635,10 @@ Benefits:
 3. ✅ Progress charts with age group rankings - COMPLETE
 4. ✅ Admin user editing with activity logs - COMPLETE
 
-**Phase 2: Engagement Features** ✅ COMPLETE
-5. ✅ Form draft saving - DONE
-6. ✅ Streak tracking - DONE
-7. ✅ Goals system (trainer-managed) - DONE
+**Phase 2: Engagement Features** ✅ DEPLOYED
+5. ✅ Form draft saving - DEPLOYED
+6. ✅ Streak tracking - DEPLOYED (migration applied)
+7. ✅ Goals system (trainer-managed) - DEPLOYED (migration applied)
 
 **Phase 3: Motivation & Goals**
 8. Achievement badges
@@ -701,14 +701,14 @@ Benefits:
 - [x] Add database-level protection against self-modification of role/status
 - [x] Add error handling and proper type safety
 
-### Milestone 5: Engagement & Gamification ✅ COMPLETE
+### Milestone 5: Engagement & Gamification ✅ DEPLOYED
 **Goal**: Increase user engagement through streaks and goals
 
 **Tasks**:
-- [x] Create streak tracking logic → `006_streak_tracking.sql` (triggers, functions)
+- [x] Create streak tracking logic → `006_streak_tracking.sql` (triggers, functions) ✅ Deployed
 - [x] Add streak display to dashboard → `StreakCard.tsx`, `StreakCelebrationClient.tsx`
 - [x] Feature module architecture → `/src/features/streak-tracking/`
-- [x] Create goals database table → `007_goals_system.sql` (with triggers for auto-achievement)
+- [x] Create goals database table → `007_goals_system.sql` (with triggers for auto-achievement) ✅ Deployed
 - [x] Build goals management UI (trainer) → `GoalManagementPanel.tsx`, `SetGoalDialog.tsx`
 - [x] Build goals progress UI (trainee) → `GoalsList.tsx`, `GoalCard.tsx`, `GoalCelebrationClient.tsx`
 - [x] Feature module architecture → `/src/features/goals/`
@@ -874,8 +874,8 @@ CREATE TABLE player_goals (
 | **Progress Charts with Age Group Rankings** | ✅ Complete | Feature module at `/src/features/progress-charts/` with components: `RatingTrendChart.tsx`, `PhysicalMetricChart.tsx`, `PercentileCard.tsx`, `DateRangeFilter.tsx`; hooks: `useDateRangeFilter.ts`; transforms and utilities |
 | **Admin User Editing** | ✅ Complete | Migration `005_user_editing_and_activity_logs.sql` (is_active + activity_logs), `UserEditForm.tsx`, `ActivityLogRow.tsx`, `ActivityLogTable.tsx`, `/admin/users/[userId]` edit page, user list with edit links and status badges |
 | **Form Draft Saving** | ✅ Complete | Feature module at `/src/features/form-drafts/` with `useFormDraft` hook, localStorage storage utilities, auto-save every 10s, draft restoration with toast notification, beforeunload warning |
-| **Streak Tracking** | ✅ Complete | Feature module at `/src/features/streak-tracking/` with database triggers (`006_streak_tracking.sql`), `StreakCard.tsx`, `StreakCelebrationClient.tsx`, `useStreakCelebration` hook; weekday-only tracking (Mon-Fri), toast celebrations at milestones (7, 30, 100 days) |
-| **Goals System** | ✅ Complete | Feature module at `/src/features/goals/` with database triggers (`007_goals_system.sql`), components: `GoalCard.tsx`, `GoalsList.tsx`, `GoalManagementPanel.tsx`, `SetGoalDialog.tsx`, `GoalCelebrationClient.tsx`; hooks: `useGoalCelebration.ts`; auto-achievement detection via DB triggers; trainer UI on `/admin/assessments/[userId]`, trainee display on dashboard |
+| **Streak Tracking** | ✅ Deployed | Feature module at `/src/features/streak-tracking/` with database triggers (`006_streak_tracking.sql` - deployed), `StreakCard.tsx`, `StreakCelebrationClient.tsx`, `useStreakCelebration` hook; weekday-only tracking (Mon-Fri), toast celebrations at milestones (7, 30, 100 days) |
+| **Goals System** | ✅ Deployed | Feature module at `/src/features/goals/` with database triggers (`007_goals_system.sql` - deployed), components: `GoalCard.tsx`, `GoalsList.tsx`, `GoalManagementPanel.tsx`, `SetGoalDialog.tsx`, `GoalCelebrationClient.tsx`; hooks: `useGoalCelebration.ts`; auto-achievement detection via DB triggers; trainer UI on `/admin/assessments/[userId]`, trainee display on dashboard |
 
 ### Pending Features 📋
 
@@ -886,6 +886,6 @@ CREATE TABLE player_goals (
 
 ---
 
-*Document Version: 1.8*
+*Document Version: 1.9*
 *Last Updated: January 2025*
-*Status: Phase 2 Complete - Phase 3 (Motivation & Goals) Next*
+*Status: Phase 2 Complete & Deployed - All migrations applied to production*
