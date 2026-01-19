@@ -37,9 +37,9 @@
 - [ ] No clear "Join Academy" CTA on landing page
 
 **Progress & Feedback**
-- [ ] No trend visualizations (charts/graphs over time)
-- [ ] No goal setting or target tracking
-- [ ] No comparison to peers (percentile rankings)
+- [x] ~~No trend visualizations (charts/graphs over time)~~ ✅ DONE - Progress charts with date filtering
+- [x] ~~No goal setting or target tracking~~ ✅ DONE - Goals system with trainer management
+- [x] ~~No comparison to peers (percentile rankings)~~ ✅ DONE - Age group percentile rankings
 - [ ] No achievement/gamification system
 
 **Communication**
@@ -48,7 +48,7 @@
 - [ ] No feedback loop on forms
 
 **Admin Tools**
-- [ ] No user editing (roles, details)
+- [x] ~~No user editing (roles, details)~~ ✅ DONE - Admin user editing with activity logs
 - [ ] No filtering, search, or export
 - [ ] No analytics dashboard
 
@@ -69,7 +69,7 @@
 - Can't see progress over time (no graphs)
 - Don't know what metrics mean
 - No personalized feedback from trainers
-- Forms are tedious, no draft saving
+- ~~Forms are tedious, no draft saving~~ ✅ Draft saving implemented
 
 ### Persona 2: **Trainer (מאמן)**
 **Who**: Academy coaches who run training sessions
@@ -333,13 +333,15 @@ Benefits:
 - [ ] Highlight improvements (green) and regressions (red)
 - [ ] Calculate deltas (e.g., "-0.15s in 5m sprint")
 
-#### FR-ASS-003: Progress Charts
+#### FR-ASS-003: Progress Charts ✅ DONE
 **Description**: Visualize metrics over time
 **Requirements**:
-- [ ] Line charts for numeric metrics (sprints, jumps)
-- [ ] Bar charts for categorical changes
-- [ ] Date range filter
-- [ ] Export chart as image
+- [x] Line charts for numeric metrics (sprints, jumps)
+- [x] Rating trend charts with all 6 stats
+- [x] Date range filter (1m, 3m, 6m, 1y, all)
+- [x] Age group percentile rankings (top 3 displayed)
+- [x] Physical metrics organized by category (sprint, jump, agility, flexibility, power)
+- [ ] Export chart as image (deferred)
 
 ### 4.2 User Management (Priority: HIGH)
 
@@ -351,23 +353,24 @@ Benefits:
 - [x] Optional fields: position, profile photo
 - [x] Prompt to complete if profile incomplete (middleware + layout redirect)
 
-#### FR-USR-002: Admin User Editing
+#### FR-USR-002: Admin User Editing ✅ DONE
 **Description**: Allow admins to manage users
 **Requirements**:
-- [ ] Edit user details (name, phone, birthdate)
-- [ ] Change user roles (trainee ↔ trainer ↔ admin)
-- [ ] Deactivate/reactivate users
-- [ ] View user activity history
+- [x] Edit user details (name, phone, birthdate)
+- [x] Change user roles (trainee ↔ trainer ↔ admin)
+- [x] Deactivate/reactivate users (is_active flag with soft delete)
+- [x] View user activity history (activity_logs table with full audit trail)
+- [x] Database-level protection against self-modification of role/status
 
 ### 4.3 Forms System (Priority: MEDIUM)
 
-#### FR-FRM-001: Draft Saving
+#### FR-FRM-001: Draft Saving ✅ DONE
 **Description**: Auto-save form progress
 **Requirements**:
-- [ ] Save to localStorage every 10 seconds
-- [ ] Restore draft on page load
-- [ ] Clear draft after successful submission
-- [ ] Warning if navigating away with unsaved changes
+- [x] Save to localStorage every 10 seconds
+- [x] Restore draft on page load
+- [x] Clear draft after successful submission
+- [x] Warning if navigating away with unsaved changes
 
 #### FR-FRM-002: Form Edit Capability
 **Description**: Allow editing submitted forms (within time limit)
@@ -378,12 +381,14 @@ Benefits:
 
 ### 4.4 Progress & Gamification (Priority: MEDIUM)
 
-#### FR-PRG-001: Streak Tracking
+#### FR-PRG-001: Streak Tracking ✅ DONE
 **Description**: Track consecutive training days
 **Requirements**:
-- [ ] Count consecutive days with form submissions
-- [ ] Display streak on dashboard
-- [ ] Celebration animation for milestones (7, 30, 100 days)
+- [x] Count consecutive weekdays with form submissions or video watches
+- [x] Display streak on dashboard (StreakCard component)
+- [x] Toast notification for milestones (7, 30, 100 days)
+- [x] Weekend exempt (weekdays only Mon-Fri, weekends don't break streak)
+- [x] Database triggers for automatic tracking
 
 #### FR-PRG-002: Achievement Badges
 **Description**: Reward accomplishments
@@ -393,13 +398,13 @@ Benefits:
 - [ ] Badge for first assessment
 - [ ] Badge for improvement milestones
 
-#### FR-PRG-003: Goals System
+#### FR-PRG-003: Goals System ✅ DONE
 **Description**: Set and track personal goals
 **Requirements**:
-- [ ] Trainer can set goals per player
-- [ ] Player can see their goals
-- [ ] Progress bar toward each goal
-- [ ] Notification when goal achieved
+- [x] Trainer can set goals per player (GoalManagementPanel)
+- [x] Player can see their goals (GoalsList on dashboard)
+- [x] Progress bar toward each goal (GoalCard with progress)
+- [x] Notification when goal achieved (toast celebration)
 
 ### 4.5 Communication (Priority: MEDIUM)
 
@@ -611,11 +616,11 @@ Benefits:
 |---------|--------|--------|----------|--------|
 | Step-by-step assessments | HIGH | MEDIUM | P1 | ✅ Done |
 | Profile completion flow | HIGH | LOW | P1 | ✅ Done |
-| Progress charts (trainee) | HIGH | MEDIUM | P1 | 🚧 Next |
-| Admin user editing | MEDIUM | LOW | P2 | Pending |
-| Form draft saving | MEDIUM | LOW | P2 | Pending |
-| Streak tracking | MEDIUM | LOW | P2 | Pending |
-| Goals system | MEDIUM | MEDIUM | P2 | Pending |
+| Progress charts (trainee) | HIGH | MEDIUM | P1 | ✅ Done |
+| Admin user editing | MEDIUM | LOW | P2 | ✅ Done |
+| Form draft saving | MEDIUM | LOW | P2 | ✅ Done |
+| Streak tracking | MEDIUM | LOW | P2 | ✅ Done |
+| Goals system | MEDIUM | MEDIUM | P2 | ✅ Done |
 | Notifications | MEDIUM | MEDIUM | P3 | Pending |
 | Achievement badges | LOW | MEDIUM | P3 | Pending |
 | Admin analytics | MEDIUM | HIGH | P3 | Pending |
@@ -624,18 +629,18 @@ Benefits:
 
 ### Recommended Implementation Order
 
-**Phase 1: Core Improvements** ✅ IN PROGRESS
+**Phase 1: Core Improvements** ✅ COMPLETE
 1. ✅ Step-by-step assessment entry - COMPLETE
 2. ✅ Profile completion during onboarding - COMPLETE
-3. 🚧 Basic progress charts on dashboard - NEXT
+3. ✅ Progress charts with age group rankings - COMPLETE
+4. ✅ Admin user editing with activity logs - COMPLETE
 
-**Phase 2: Engagement Features**
-4. Form draft saving
-5. Streak tracking
-6. Admin user role editing
+**Phase 2: Engagement Features** ✅ COMPLETE
+5. ✅ Form draft saving - DONE
+6. ✅ Streak tracking - DONE
+7. ✅ Goals system (trainer-managed) - DONE
 
 **Phase 3: Motivation & Goals**
-7. Goals system
 8. Achievement badges
 9. Assessment comparison view
 
@@ -671,25 +676,42 @@ Benefits:
 - [x] Create avatars storage bucket with policies
 - [x] Create ImageUpload component
 
-### Milestone 3: Progress Visualization
+### Milestone 3: Progress Visualization ✅ COMPLETE
 **Goal**: Show trainees their improvement over time
 
 **Tasks**:
-- [ ] Create TrendChart component
-- [ ] Add progress page to dashboard
-- [ ] Calculate deltas between assessments
-- [ ] Add mini chart to dashboard home
-- [ ] Implement stat-specific detail views
+- [x] Create TrendChart component → `RatingTrendChart.tsx`, `PhysicalMetricChart.tsx`
+- [x] Add progress view to dashboard → `/dashboard/assessments` with charts tab
+- [x] Calculate deltas between assessments → `transforms/index.ts`
+- [x] Implement stat-specific detail views → Tabbed physical metrics by category
+- [x] Add date range filtering → `DateRangeFilter.tsx`, `useDateRangeFilter.ts`
+- [x] Add age group percentile rankings → `PercentileCard.tsx`
+- [x] Feature module architecture → `/src/features/progress-charts/`
 
-### Milestone 4: Engagement & Gamification
+### Milestone 4: Admin User Editing ✅ COMPLETE
+**Goal**: Enable admins to manage users, roles, and track activity
+
+**Tasks**:
+- [x] Add `is_active` column to profiles for soft delete
+- [x] Create `activity_logs` table with RLS policies
+- [x] Create user edit form with validation (`UserEditForm.tsx`)
+- [x] Create activity log components (`ActivityLogRow.tsx`, `ActivityLogTable.tsx`)
+- [x] Create user edit page (`/admin/users/[userId]`)
+- [x] Add edit links to users list
+- [x] Add database-level protection against self-modification of role/status
+- [x] Add error handling and proper type safety
+
+### Milestone 5: Engagement & Gamification ✅ COMPLETE
 **Goal**: Increase user engagement through streaks and goals
 
 **Tasks**:
-- [ ] Create streak tracking logic
-- [ ] Add streak display to dashboard
-- [ ] Create goals database table
-- [ ] Build goals management UI (trainer)
-- [ ] Build goals progress UI (trainee)
+- [x] Create streak tracking logic → `006_streak_tracking.sql` (triggers, functions)
+- [x] Add streak display to dashboard → `StreakCard.tsx`, `StreakCelebrationClient.tsx`
+- [x] Feature module architecture → `/src/features/streak-tracking/`
+- [x] Create goals database table → `007_goals_system.sql` (with triggers for auto-achievement)
+- [x] Build goals management UI (trainer) → `GoalManagementPanel.tsx`, `SetGoalDialog.tsx`
+- [x] Build goals progress UI (trainee) → `GoalsList.tsx`, `GoalCard.tsx`, `GoalCelebrationClient.tsx`
+- [x] Feature module architecture → `/src/features/goals/`
 
 ---
 
@@ -725,14 +747,14 @@ The following decisions have been confirmed:
 
 ### Updated Priority Based on Decisions
 
-**Phase 1: Core (Implement Now)**
+**Phase 1: Core** ✅ COMPLETE
 1. ✅ Step-by-step assessment (with minimum completion rule) - DONE
 2. ✅ Profile completion with photo upload - DONE
-3. Progress charts with age group rankings - NEXT
+3. ✅ Progress charts with age group rankings - DONE
 
-**Phase 2: Enhancement (Next)**
-4. Goals system (trainer-managed)
-5. Admin user role editing
+**Phase 2: Enhancement (In Progress)**
+4. Admin user role editing - NEXT
+5. Goals system (trainer-managed)
 6. Form draft saving
 
 **Deferred:**
@@ -760,24 +782,25 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT 
 -- Allowed MIME types: image/jpeg, image/png, image/webp
 ```
 
-#### Streak Tracking (Migration: 005_user_activity.sql)
+#### Streak Tracking (Migration: 006_streak_tracking.sql) ✅ IMPLEMENTED
 ```sql
--- Track daily activity for streak calculation
-CREATE TABLE user_activity (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  activity_date DATE NOT NULL,
-  activity_type TEXT NOT NULL CHECK (activity_type IN ('form_submission', 'video_watched')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-
-  -- One activity type per user per day
-  UNIQUE(user_id, activity_date, activity_type)
+-- User streaks table with automatic trigger updates
+CREATE TABLE user_streaks (
+  user_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  current_streak INTEGER DEFAULT 0 NOT NULL,
+  longest_streak INTEGER DEFAULT 0 NOT NULL,
+  last_activity_date DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
-CREATE INDEX idx_user_activity_user_date ON user_activity(user_id, activity_date DESC);
+-- Helper functions: is_weekday_israel(), count_weekdays_missed()
+-- Core function: update_user_streak() with FOR UPDATE locking
+-- Triggers on: pre_workout_forms, post_workout_forms, nutrition_forms, video_progress
+-- RLS policies for user/admin access
 ```
 
-#### Goals System (Migration: 006_goals.sql)
+#### Goals System (Migration: 007_goals.sql)
 ```sql
 -- Player goals set by trainers
 CREATE TABLE player_goals (
@@ -848,25 +871,21 @@ CREATE TABLE player_goals (
 |---------|--------|---------------|
 | **Player Assessment System** | ✅ Complete | `player_assessments` table, `AssessmentForm.tsx`, `AssessmentStepContent.tsx`, `ProgressStepper.tsx`, rating calculation |
 | **Profile Completion Flow** | ✅ Complete | `ProfileCompletionForm.tsx`, `ImageUpload.tsx`, `/onboarding/profile`, middleware redirect, storage bucket |
-
-### In Progress 🚧
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **Progress Charts** | Not started | Next priority - visualize metrics over time |
+| **Progress Charts with Age Group Rankings** | ✅ Complete | Feature module at `/src/features/progress-charts/` with components: `RatingTrendChart.tsx`, `PhysicalMetricChart.tsx`, `PercentileCard.tsx`, `DateRangeFilter.tsx`; hooks: `useDateRangeFilter.ts`; transforms and utilities |
+| **Admin User Editing** | ✅ Complete | Migration `005_user_editing_and_activity_logs.sql` (is_active + activity_logs), `UserEditForm.tsx`, `ActivityLogRow.tsx`, `ActivityLogTable.tsx`, `/admin/users/[userId]` edit page, user list with edit links and status badges |
+| **Form Draft Saving** | ✅ Complete | Feature module at `/src/features/form-drafts/` with `useFormDraft` hook, localStorage storage utilities, auto-save every 10s, draft restoration with toast notification, beforeunload warning |
+| **Streak Tracking** | ✅ Complete | Feature module at `/src/features/streak-tracking/` with database triggers (`006_streak_tracking.sql`), `StreakCard.tsx`, `StreakCelebrationClient.tsx`, `useStreakCelebration` hook; weekday-only tracking (Mon-Fri), toast celebrations at milestones (7, 30, 100 days) |
+| **Goals System** | ✅ Complete | Feature module at `/src/features/goals/` with database triggers (`007_goals_system.sql`), components: `GoalCard.tsx`, `GoalsList.tsx`, `GoalManagementPanel.tsx`, `SetGoalDialog.tsx`, `GoalCelebrationClient.tsx`; hooks: `useGoalCelebration.ts`; auto-achievement detection via DB triggers; trainer UI on `/admin/assessments/[userId]`, trainee display on dashboard |
 
 ### Pending Features 📋
 
-- Assessment comparison view
-- Goals system (trainer-managed)
-- Admin user role editing
-- Form draft saving
-- Streak tracking
+- Assessment comparison view (side-by-side)
 - Achievement badges
 - Notifications system
+- Admin analytics dashboard
 
 ---
 
-*Document Version: 1.3*
+*Document Version: 1.8*
 *Last Updated: January 2025*
-*Status: Phase 1 Items 1 & 2 Complete - Progress Charts Next*
+*Status: Phase 2 Complete - Phase 3 (Motivation & Goals) Next*

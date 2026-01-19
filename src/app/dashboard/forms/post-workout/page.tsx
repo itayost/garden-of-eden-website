@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
-import { postWorkoutSchema, type PostWorkoutFormData } from "@/lib/validations/forms";
+import { postWorkoutSchema, type PostWorkoutFormData, type PostWorkoutFormInput } from "@/lib/validations/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -31,24 +30,31 @@ import { Loader2, Send, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { Trainer } from "@/types/database";
+import { useFormDraft } from "@/features/form-drafts";
+
+const getDefaultValues = (): PostWorkoutFormInput => ({
+  training_date: new Date().toISOString().split("T")[0],
+  trainer_id: "",
+  difficulty_level: 5,
+  satisfaction_level: 5,
+  comments: "",
+  contact_info: "",
+});
 
 export default function PostWorkoutFormPage() {
   const [loading, setLoading] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const router = useRouter();
 
-  const form = useForm({
+  const defaultValues = getDefaultValues();
+
+  const form = useForm<PostWorkoutFormInput>({
     resolver: zodResolver(postWorkoutSchema),
-    defaultValues: {
-      full_name: "",
-      training_date: new Date().toISOString().split("T")[0],
-      trainer_id: "",
-      difficulty_level: 5,
-      satisfaction_level: 5,
-      comments: "",
-      contact_info: "",
-    },
+    defaultValues,
   });
+
+  // Enable draft saving with auto-restore
+  const draft = useFormDraft(form, { formId: "post-workout" }, defaultValues);
 
   useEffect(() => {
     const fetchTrainers = async () => {
@@ -76,13 +82,24 @@ export default function PostWorkoutFormPage() {
         throw new Error("נא להתחבר מחדש");
       }
 
+      // Get user's profile name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single() as { data: { full_name: string | null } | null };
+
       const { error } = await (supabase.from("post_workout_forms") as unknown as { insert: (data: Record<string, unknown>) => Promise<{ error: Error | null }> }).insert({
         user_id: user.id,
+        full_name: profile?.full_name || "לא צוין",
         ...data,
         trainer_id: data.trainer_id || null,
       });
 
       if (error) throw error;
+
+      // Clear draft after successful submission
+      draft.clearDraft();
 
       toast.success("השאלון נשלח בהצלחה! תודה על המשוב");
       router.push("/dashboard");
@@ -120,20 +137,6 @@ export default function PostWorkoutFormPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>שם מלא *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="הזינו את שמכם המלא" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="training_date"

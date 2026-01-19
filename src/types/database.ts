@@ -21,6 +21,7 @@ export interface Database {
           position: string | null;
           avatar_url: string | null;
           profile_completed: boolean;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -33,6 +34,7 @@ export interface Database {
           position?: string | null;
           avatar_url?: string | null;
           profile_completed?: boolean;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -45,8 +47,41 @@ export interface Database {
           position?: string | null;
           avatar_url?: string | null;
           profile_completed?: boolean;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      activity_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          action: string;
+          actor_id: string | null;
+          actor_name: string | null;
+          metadata: Json | null;
+          changes: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          action: string;
+          actor_id?: string | null;
+          actor_name?: string | null;
+          metadata?: Json | null;
+          changes?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          action?: string;
+          actor_id?: string | null;
+          actor_name?: string | null;
+          metadata?: Json | null;
+          changes?: Json | null;
+          created_at?: string;
         };
       };
       trainers: {
@@ -500,6 +535,32 @@ export interface Database {
           created_at?: string;
         };
       };
+      user_streaks: {
+        Row: {
+          user_id: string;
+          current_streak: number;
+          longest_streak: number;
+          last_activity_date: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          current_streak?: number;
+          longest_streak?: number;
+          last_activity_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          current_streak?: number;
+          longest_streak?: number;
+          last_activity_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       player_assessments: {
         Row: {
           id: string;
@@ -586,6 +647,50 @@ export interface Database {
           created_at?: string;
         };
       };
+      player_goals: {
+        Row: {
+          id: string;
+          user_id: string;
+          metric_key: string;
+          target_value: number;
+          baseline_value: number | null;
+          current_value: number | null;
+          is_lower_better: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          achieved_at: string | null;
+          achieved_value: number | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          metric_key: string;
+          target_value: number;
+          baseline_value?: number | null;
+          current_value?: number | null;
+          is_lower_better: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          achieved_at?: string | null;
+          achieved_value?: number | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          metric_key?: string;
+          target_value?: number;
+          baseline_value?: number | null;
+          current_value?: number | null;
+          is_lower_better?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          achieved_at?: string | null;
+          achieved_value?: number | null;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -614,3 +719,8 @@ export type PlayerStatsHistory = Database["public"]["Tables"]["player_stats_hist
 export type PlayerAssessmentRow = Database["public"]["Tables"]["player_assessments"]["Row"];
 export type PlayerAssessmentInsert = Database["public"]["Tables"]["player_assessments"]["Insert"];
 export type PlayerAssessmentUpdate = Database["public"]["Tables"]["player_assessments"]["Update"];
+export type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"];
+export type UserStreakRow = Database["public"]["Tables"]["user_streaks"]["Row"];
+export type PlayerGoalRow = Database["public"]["Tables"]["player_goals"]["Row"];
+export type PlayerGoalInsert = Database["public"]["Tables"]["player_goals"]["Insert"];
+export type PlayerGoalUpdate = Database["public"]["Tables"]["player_goals"]["Update"];

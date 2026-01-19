@@ -21,7 +21,8 @@ import {
   calculateGroupStats,
 } from "@/lib/assessment-to-rating";
 import type { PlayerAssessment } from "@/types/assessment";
-import type { Profile } from "@/types/database";
+import type { Profile, PlayerGoalRow } from "@/types/database";
+import { GoalManagementPanel, type PhysicalMetricKey } from "@/features/goals";
 
 interface PageProps {
   params: Promise<{ userId: string }>;
@@ -42,12 +43,19 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch all assessments for this player
-  const { data: assessments } = await supabase
-    .from("player_assessments")
-    .select("*")
-    .eq("user_id", userId)
-    .order("assessment_date", { ascending: false });
+  // Fetch all assessments and goals for this player
+  const [{ data: assessments }, { data: goalsData }] = await Promise.all([
+    supabase
+      .from("player_assessments")
+      .select("*")
+      .eq("user_id", userId)
+      .order("assessment_date", { ascending: false }),
+    supabase
+      .from("player_goals")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
+  ]);
 
   // Get age group
   const ageGroup = getAgeGroup(profile.birthdate);
@@ -115,6 +123,24 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
   };
 
   const latestAssessment = assessments?.[0] as PlayerAssessment | undefined;
+
+  // Extract current metrics from latest assessment for goal management
+  const currentMetrics: Partial<Record<PhysicalMetricKey, number | null>> = latestAssessment
+    ? {
+        sprint_5m: latestAssessment.sprint_5m,
+        sprint_10m: latestAssessment.sprint_10m,
+        sprint_20m: latestAssessment.sprint_20m,
+        jump_2leg_distance: latestAssessment.jump_2leg_distance,
+        jump_2leg_height: latestAssessment.jump_2leg_height,
+        jump_right_leg: latestAssessment.jump_right_leg,
+        jump_left_leg: latestAssessment.jump_left_leg,
+        blaze_spot_time: latestAssessment.blaze_spot_time,
+        flexibility_ankle: latestAssessment.flexibility_ankle,
+        flexibility_knee: latestAssessment.flexibility_knee,
+        flexibility_hip: latestAssessment.flexibility_hip,
+        kick_power_kaiser: latestAssessment.kick_power_kaiser,
+      }
+    : {};
 
   return (
     <div className="space-y-6">
@@ -206,6 +232,14 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
               </CardContent>
             </Card>
           )}
+
+          {/* Goal Management Panel */}
+          <GoalManagementPanel
+            userId={userId}
+            playerName={profile.full_name || "שחקן"}
+            currentMetrics={currentMetrics}
+            existingGoals={goalsData || []}
+          />
         </div>
 
         {/* Right Column - Assessment History */}

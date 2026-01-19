@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Target, TrendingUp, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, Target, TrendingUp, Activity, BarChart3 } from "lucide-react";
 import { PlayerCard } from "@/components/player-card/PlayerCard";
 import {
   ASSESSMENT_LABELS_HE,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/assessment-to-rating";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
+import { AssessmentChartsWrapper } from "./AssessmentChartsWrapper";
 
 export default async function DashboardAssessmentsPage() {
   const supabase = await createClient();
@@ -39,21 +41,22 @@ export default async function DashboardAssessmentsPage() {
     .eq("id", user.id)
     .single() as unknown as { data: Profile | null };
 
-  // Fetch assessments
+  // Fetch assessments (chronological for charts)
   const { data: assessments } = await supabase
     .from("player_assessments")
     .select("*")
     .eq("user_id", user.id)
-    .order("assessment_date", { ascending: false }) as unknown as { data: PlayerAssessment[] | null };
+    .order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null };
 
   // Get age group
   const ageGroup = getAgeGroup(profile?.birthdate || null);
 
-  // Calculate ratings
+  // Calculate ratings and get group assessments
   let calculatedRatings = null;
+  let groupAssessments: PlayerAssessment[] = [];
 
   if (assessments && assessments.length > 0) {
-    const latestAssessment = assessments[0];
+    const latestAssessment = assessments[assessments.length - 1];
 
     if (ageGroup) {
       // Fetch all players with same age group for comparison
@@ -70,14 +73,18 @@ export default async function DashboardAssessmentsPage() {
         .map((p) => p.id) || [];
 
       if (sameAgeGroupIds.length > 0) {
-        const { data: groupAssessments } = await supabase
+        const { data: fetchedGroupAssessments } = await supabase
           .from("player_assessments")
           .select("*")
           .in("user_id", sameAgeGroupIds);
 
-        if (groupAssessments && groupAssessments.length > 1) {
-          const groupStats = calculateGroupStats(groupAssessments as PlayerAssessment[]);
-          calculatedRatings = calculateCardRatings(latestAssessment, groupStats);
+        if (fetchedGroupAssessments && fetchedGroupAssessments.length > 0) {
+          groupAssessments = fetchedGroupAssessments as PlayerAssessment[];
+
+          if (fetchedGroupAssessments.length > 1) {
+            const groupStats = calculateGroupStats(groupAssessments);
+            calculatedRatings = calculateCardRatings(latestAssessment, groupStats);
+          }
         }
       }
     }
@@ -109,7 +116,7 @@ export default async function DashboardAssessmentsPage() {
     }
   };
 
-  const latestAssessment = assessments?.[0] as PlayerAssessment | undefined;
+  const latestAssessment = assessments?.[assessments.length - 1] as PlayerAssessment | undefined;
 
   // No assessments yet
   if (!assessments || assessments.length === 0) {
@@ -176,6 +183,9 @@ export default async function DashboardAssessmentsPage() {
     );
   }
 
+  // Reverse for history display (newest first)
+  const assessmentsForHistory = [...assessments].reverse();
+
   return (
     <div className="space-y-6">
       <div>
@@ -190,191 +200,272 @@ export default async function DashboardAssessmentsPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        {/* Left Column - Card Preview */}
-        <div className="space-y-4">
-          {calculatedRatings && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">הכרטיס שלי</CardTitle>
-                <CardDescription>מבוסס על המבדק האחרון</CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <PlayerCard
-                  playerName={profile?.full_name || "שחקן"}
-                  position="CM"
-                  cardType="gold"
-                  overallRating={calculatedRatings.overall_rating}
-                  stats={{
-                    pace: calculatedRatings.pace,
-                    shooting: calculatedRatings.shooting,
-                    passing: calculatedRatings.passing,
-                    dribbling: calculatedRatings.dribbling,
-                    defending: calculatedRatings.defending,
-                    physical: calculatedRatings.physical,
-                  }}
-                  linkToStats={false}
-                  size="lg"
-                />
-              </CardContent>
-            </Card>
-          )}
+      {/* Main Content with Tabs */}
+      <Tabs defaultValue="progress" dir="rtl">
+        <TabsList className="mb-6">
+          <TabsTrigger value="progress" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            גרפי התקדמות
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            היסטוריית מבדקים
+          </TabsTrigger>
+        </TabsList>
 
-          {latestAssessment && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">מבדק אחרון</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">תאריך</span>
-                  <span>
-                    {new Date(latestAssessment.assessment_date).toLocaleDateString("he-IL")}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">שלמות</span>
-                  <Badge variant="outline">
-                    {getAssessmentCompleteness(latestAssessment)}%
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {/* Progress Charts Tab */}
+        <TabsContent value="progress">
+          <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+            {/* Left Column - Card Preview */}
+            <div className="space-y-4">
+              {calculatedRatings && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">הכרטיס שלי</CardTitle>
+                    <CardDescription>מבוסס על המבדק האחרון</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex justify-center">
+                    <PlayerCard
+                      playerName={profile?.full_name || "שחקן"}
+                      position="CM"
+                      cardType="gold"
+                      overallRating={calculatedRatings.overall_rating}
+                      stats={{
+                        pace: calculatedRatings.pace,
+                        shooting: calculatedRatings.shooting,
+                        passing: calculatedRatings.passing,
+                        dribbling: calculatedRatings.dribbling,
+                        defending: calculatedRatings.defending,
+                        physical: calculatedRatings.physical,
+                      }}
+                      linkToStats={false}
+                      size="lg"
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
-        {/* Right Column - Assessment History */}
-        <div className="space-y-4">
-          {assessments.map((assessment) => {
-            const a = assessment as PlayerAssessment;
-            const completeness = getAssessmentCompleteness(a);
-
-            return (
-              <Card key={a.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <CardTitle className="text-base">
-                        {new Date(a.assessment_date).toLocaleDateString("he-IL", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </CardTitle>
+              {latestAssessment && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">מבדק אחרון</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">תאריך</span>
+                      <span>
+                        {new Date(latestAssessment.assessment_date).toLocaleDateString("he-IL")}
+                      </span>
                     </div>
-                    <Badge variant={completeness >= 80 ? "default" : "secondary"}>
-                      {completeness}% מלא
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {/* Sprint Tests */}
-                    <div>
-                      <h4 className="font-medium mb-2 text-sm text-muted-foreground">
-                        מבדקי ספרינט
-                      </h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>{ASSESSMENT_LABELS_HE.sprint_5m}</span>
-                          <span className="font-medium">
-                            {formatValue("sprint_5m", a.sprint_5m)}
-                          </span>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">שלמות</span>
+                      <Badge variant="outline">
+                        {getAssessmentCompleteness(latestAssessment)}%
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Right Column - Progress Charts */}
+            <div>
+              <AssessmentChartsWrapper
+                assessments={assessments}
+                allAssessmentsInGroup={groupAssessments}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history">
+          <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+            {/* Left Column - Card Preview */}
+            <div className="space-y-4">
+              {calculatedRatings && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">הכרטיס שלי</CardTitle>
+                    <CardDescription>מבוסס על המבדק האחרון</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex justify-center">
+                    <PlayerCard
+                      playerName={profile?.full_name || "שחקן"}
+                      position="CM"
+                      cardType="gold"
+                      overallRating={calculatedRatings.overall_rating}
+                      stats={{
+                        pace: calculatedRatings.pace,
+                        shooting: calculatedRatings.shooting,
+                        passing: calculatedRatings.passing,
+                        dribbling: calculatedRatings.dribbling,
+                        defending: calculatedRatings.defending,
+                        physical: calculatedRatings.physical,
+                      }}
+                      linkToStats={false}
+                      size="lg"
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {latestAssessment && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">מבדק אחרון</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">תאריך</span>
+                      <span>
+                        {new Date(latestAssessment.assessment_date).toLocaleDateString("he-IL")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">שלמות</span>
+                      <Badge variant="outline">
+                        {getAssessmentCompleteness(latestAssessment)}%
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Right Column - Assessment History */}
+            <div className="space-y-4">
+              {assessmentsForHistory.map((assessment) => {
+                const a = assessment as PlayerAssessment;
+                const completeness = getAssessmentCompleteness(a);
+
+                return (
+                  <Card key={a.id}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <CardTitle className="text-base">
+                            {new Date(a.assessment_date).toLocaleDateString("he-IL", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </CardTitle>
                         </div>
-                        <div className="flex justify-between">
-                          <span>{ASSESSMENT_LABELS_HE.sprint_10m}</span>
-                          <span className="font-medium">
-                            {formatValue("sprint_10m", a.sprint_10m)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>{ASSESSMENT_LABELS_HE.sprint_20m}</span>
-                          <span className="font-medium">
-                            {formatValue("sprint_20m", a.sprint_20m)}
-                          </span>
-                        </div>
+                        <Badge variant={completeness >= 80 ? "default" : "secondary"}>
+                          {completeness}% מלא
+                        </Badge>
                       </div>
-                    </div>
-
-                    {/* Jump Tests */}
-                    <div>
-                      <h4 className="font-medium mb-2 text-sm text-muted-foreground">
-                        מבדקי ניתור
-                      </h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>{ASSESSMENT_LABELS_HE.jump_2leg_distance}</span>
-                          <span className="font-medium">
-                            {formatValue("jump_2leg_distance", a.jump_2leg_distance)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>{ASSESSMENT_LABELS_HE.jump_2leg_height}</span>
-                          <span className="font-medium">
-                            {formatValue("jump_2leg_height", a.jump_2leg_height)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Categorical */}
-                    <div>
-                      <h4 className="font-medium mb-2 text-sm text-muted-foreground">
-                        הערכות
-                      </h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>{ASSESSMENT_LABELS_HE.coordination}</span>
-                          <span className="font-medium">
-                            {getCategoricalLabel("coordination", a.coordination)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>{ASSESSMENT_LABELS_HE.body_structure}</span>
-                          <span className="font-medium">
-                            {getCategoricalLabel("body_structure", a.body_structure)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mental Notes */}
-                  {(a.concentration_notes || a.decision_making_notes || a.work_ethic_notes) && (
-                    <div className="mt-4 pt-4 border-t">
-                      <h4 className="font-medium mb-2 text-sm text-muted-foreground">
-                        הערכה מנטלית
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        {a.concentration_notes && (
-                          <div>
-                            <span className="font-medium">{ASSESSMENT_LABELS_HE.concentration_notes}: </span>
-                            <span className="text-muted-foreground">{a.concentration_notes}</span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {/* Sprint Tests */}
+                        <div>
+                          <h4 className="font-medium mb-2 text-sm text-muted-foreground">
+                            מבדקי ספרינט
+                          </h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>{ASSESSMENT_LABELS_HE.sprint_5m}</span>
+                              <span className="font-medium">
+                                {formatValue("sprint_5m", a.sprint_5m)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>{ASSESSMENT_LABELS_HE.sprint_10m}</span>
+                              <span className="font-medium">
+                                {formatValue("sprint_10m", a.sprint_10m)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>{ASSESSMENT_LABELS_HE.sprint_20m}</span>
+                              <span className="font-medium">
+                                {formatValue("sprint_20m", a.sprint_20m)}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                        {a.decision_making_notes && (
-                          <div>
-                            <span className="font-medium">{ASSESSMENT_LABELS_HE.decision_making_notes}: </span>
-                            <span className="text-muted-foreground">{a.decision_making_notes}</span>
+                        </div>
+
+                        {/* Jump Tests */}
+                        <div>
+                          <h4 className="font-medium mb-2 text-sm text-muted-foreground">
+                            מבדקי ניתור
+                          </h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>{ASSESSMENT_LABELS_HE.jump_2leg_distance}</span>
+                              <span className="font-medium">
+                                {formatValue("jump_2leg_distance", a.jump_2leg_distance)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>{ASSESSMENT_LABELS_HE.jump_2leg_height}</span>
+                              <span className="font-medium">
+                                {formatValue("jump_2leg_height", a.jump_2leg_height)}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                        {a.work_ethic_notes && (
-                          <div>
-                            <span className="font-medium">{ASSESSMENT_LABELS_HE.work_ethic_notes}: </span>
-                            <span className="text-muted-foreground">{a.work_ethic_notes}</span>
+                        </div>
+
+                        {/* Categorical */}
+                        <div>
+                          <h4 className="font-medium mb-2 text-sm text-muted-foreground">
+                            הערכות
+                          </h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>{ASSESSMENT_LABELS_HE.coordination}</span>
+                              <span className="font-medium">
+                                {getCategoricalLabel("coordination", a.coordination)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>{ASSESSMENT_LABELS_HE.body_structure}</span>
+                              <span className="font-medium">
+                                {getCategoricalLabel("body_structure", a.body_structure)}
+                              </span>
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+
+                      {/* Mental Notes */}
+                      {(a.concentration_notes || a.decision_making_notes || a.work_ethic_notes) && (
+                        <div className="mt-4 pt-4 border-t">
+                          <h4 className="font-medium mb-2 text-sm text-muted-foreground">
+                            הערכה מנטלית
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            {a.concentration_notes && (
+                              <div>
+                                <span className="font-medium">{ASSESSMENT_LABELS_HE.concentration_notes}: </span>
+                                <span className="text-muted-foreground">{a.concentration_notes}</span>
+                              </div>
+                            )}
+                            {a.decision_making_notes && (
+                              <div>
+                                <span className="font-medium">{ASSESSMENT_LABELS_HE.decision_making_notes}: </span>
+                                <span className="text-muted-foreground">{a.decision_making_notes}</span>
+                              </div>
+                            )}
+                            {a.work_ethic_notes && (
+                              <div>
+                                <span className="font-medium">{ASSESSMENT_LABELS_HE.work_ethic_notes}: </span>
+                                <span className="text-muted-foreground">{a.work_ethic_notes}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
-import { nutritionSchema, type NutritionFormData } from "@/lib/validations/forms";
+import { nutritionSchema, type NutritionFormData, type NutritionFormInput } from "@/lib/validations/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,31 +30,48 @@ import {
 import { Loader2, Send, ArrowRight, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useFormDraft } from "@/features/form-drafts";
+
+const defaultValues: NutritionFormInput = {
+  years_competitive: "",
+  previous_counseling: false,
+  counseling_details: "",
+  weight: "",
+  height: "",
+  allergies: false,
+  allergies_details: "",
+  chronic_conditions: false,
+  conditions_details: "",
+  medications: "no",
+  medications_list: "",
+  additional_comments: "",
+};
 
 export default function NutritionFormPage() {
   const [loading, setLoading] = useState(false);
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const router = useRouter();
 
-  const form = useForm({
+  const form = useForm<NutritionFormInput>({
     resolver: zodResolver(nutritionSchema),
-    defaultValues: {
-      full_name: "",
-      age: 0,
-      years_competitive: "",
-      previous_counseling: false,
-      counseling_details: "",
-      weight: "",
-      height: "",
-      allergies: false,
-      allergies_details: "",
-      chronic_conditions: false,
-      conditions_details: "",
-      medications: "no",
-      medications_list: "",
-      additional_comments: "",
-    },
+    defaultValues,
   });
+
+  // Enable draft saving with auto-restore
+  const draft = useFormDraft(form, { formId: "nutrition" }, defaultValues);
+
+  // Calculate age from birthdate
+  const calculateAge = (birthdate: string | null): number | null => {
+    if (!birthdate) return null;
+    const birth = new Date(birthdate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   useEffect(() => {
     const checkExisting = async () => {
@@ -86,12 +103,24 @@ export default function NutritionFormPage() {
         throw new Error("נא להתחבר מחדש");
       }
 
+      // Get user's profile name and birthdate
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, birthdate")
+        .eq("id", user.id)
+        .single() as { data: { full_name: string | null; birthdate: string | null } | null };
+
       const { error } = await (supabase.from("nutrition_forms") as unknown as { insert: (data: Record<string, unknown>) => Promise<{ error: Error | null }> }).insert({
         user_id: user.id,
+        full_name: profile?.full_name || "לא צוין",
+        age: calculateAge(profile?.birthdate ?? null),
         ...data,
       });
 
       if (error) throw error;
+
+      // Clear draft after successful submission
+      draft.clearDraft();
 
       toast.success("שאלון התזונה נשלח בהצלחה!");
       router.push("/dashboard");
@@ -166,57 +195,27 @@ export default function NutritionFormPage() {
 
                 <FormField
                   control={form.control}
-                  name="full_name"
+                  name="years_competitive"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>שם מלא *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="הזינו את שמכם המלא" {...field} />
-                      </FormControl>
+                      <FormLabel>שנות ספורט תחרותי</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="בחר" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="first_year">שנה ראשונה</SelectItem>
+                          <SelectItem value="up_to_3">עד 3 שנים</SelectItem>
+                          <SelectItem value="up_to_6">עד 6 שנים</SelectItem>
+                          <SelectItem value="7_plus">7+ שנים</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="age"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>גיל *</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="גיל" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="years_competitive"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>שנות ספורט תחרותי</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="בחר" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="first_year">שנה ראשונה</SelectItem>
-                            <SelectItem value="up_to_3">עד 3 שנים</SelectItem>
-                            <SelectItem value="up_to_6">עד 6 שנים</SelectItem>
-                            <SelectItem value="7_plus">7+ שנים</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField

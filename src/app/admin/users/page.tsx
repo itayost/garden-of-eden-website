@@ -1,6 +1,9 @@
+import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -9,16 +12,41 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users } from "lucide-react";
+import { Users, Pencil } from "lucide-react";
 import type { Profile } from "@/types/database";
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
 
-  const { data: users } = await supabase
+  // Verify admin role before showing user list
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+
+  if (!currentUser) {
+    redirect("/login");
+  }
+
+  const { data: currentProfile } = (await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", currentUser.id)
+    .single()) as { data: { role: string } | null };
+
+  if (currentProfile?.role !== "admin") {
+    redirect("/dashboard");
+  }
+
+  const { data: users, error } = await supabase
     .from("profiles")
     .select("*")
-    .order("created_at", { ascending: false }) as unknown as { data: Profile[] | null };
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch users:", error);
+  }
+
+  const typedUsers = users as Profile[] | null;
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("he-IL", {
@@ -60,12 +88,12 @@ export default async function AdminUsersPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            רשימת משתמשים ({users?.length || 0})
+            רשימת משתמשים ({typedUsers?.length || 0})
           </CardTitle>
           <CardDescription>כל המשתמשים הרשומים במערכת</CardDescription>
         </CardHeader>
         <CardContent>
-          {users && users.length > 0 ? (
+          {typedUsers && typedUsers.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -73,11 +101,13 @@ export default async function AdminUsersPage() {
                     <TableHead>שם</TableHead>
                     <TableHead>טלפון</TableHead>
                     <TableHead>תפקיד</TableHead>
+                    <TableHead>סטטוס</TableHead>
                     <TableHead>תאריך הרשמה</TableHead>
+                    <TableHead className="w-[80px]">פעולות</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
+                  {typedUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">
                         {user.full_name || "לא צוין"}
@@ -86,7 +116,26 @@ export default async function AdminUsersPage() {
                         {formatPhone(user.phone)}
                       </TableCell>
                       <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>
+                        {user.is_active === true ? (
+                          <Badge variant="outline" className="border-green-500 text-green-600">
+                            פעיל
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-red-500 text-red-600">
+                            לא פעיל
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>{formatDate(user.created_at)}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/admin/users/${user.id}`}>
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">עריכת {user.full_name}</span>
+                          </Link>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

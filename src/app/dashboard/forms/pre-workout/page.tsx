@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
-import { preWorkoutSchema, type PreWorkoutFormData } from "@/lib/validations/forms";
+import { preWorkoutSchema, type PreWorkoutFormData, type PreWorkoutFormInput } from "@/lib/validations/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,26 +28,43 @@ import {
 import { Loader2, Send, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useFormDraft } from "@/features/form-drafts";
+
+const defaultValues: PreWorkoutFormInput = {
+  group_training: "",
+  urine_color: "",
+  nutrition_status: "",
+  last_game: "",
+  improvements_desired: "",
+  sleep_hours: "",
+  recent_injury: "",
+  next_match: "",
+};
 
 export default function PreWorkoutFormPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const form = useForm({
+  const form = useForm<PreWorkoutFormInput>({
     resolver: zodResolver(preWorkoutSchema),
-    defaultValues: {
-      full_name: "",
-      age: "",
-      group_training: "",
-      urine_color: "",
-      nutrition_status: "",
-      last_game: "",
-      improvements_desired: "",
-      sleep_hours: "",
-      recent_injury: "",
-      next_match: "",
-    },
+    defaultValues,
   });
+
+  // Enable draft saving with auto-restore
+  const draft = useFormDraft(form, { formId: "pre-workout" }, defaultValues);
+
+  // Calculate age from birthdate
+  const calculateAge = (birthdate: string | null): number | null => {
+    if (!birthdate) return null;
+    const birth = new Date(birthdate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   const onSubmit = async (data: PreWorkoutFormData) => {
     setLoading(true);
@@ -60,12 +77,24 @@ export default function PreWorkoutFormPage() {
         throw new Error("נא להתחבר מחדש");
       }
 
+      // Get user's profile name and birthdate
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, birthdate")
+        .eq("id", user.id)
+        .single() as { data: { full_name: string | null; birthdate: string | null } | null };
+
       const { error } = await (supabase.from("pre_workout_forms") as unknown as { insert: (data: Record<string, unknown>) => Promise<{ error: Error | null }> }).insert({
         user_id: user.id,
+        full_name: profile?.full_name || "לא צוין",
+        age: calculateAge(profile?.birthdate ?? null),
         ...data,
       });
 
       if (error) throw error;
+
+      // Clear draft after successful submission
+      draft.clearDraft();
 
       toast.success("השאלון נשלח בהצלחה!");
       router.push("/dashboard");
@@ -100,34 +129,6 @@ export default function PreWorkoutFormPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>שם מלא *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="הזינו את שמכם המלא" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="age"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>גיל</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="גיל" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="group_training"

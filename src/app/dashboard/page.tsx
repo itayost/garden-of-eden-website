@@ -13,8 +13,13 @@ import {
   CheckCircle2,
   TrendingUp
 } from "lucide-react";
-import type { Profile, PlayerStats } from "@/types/database";
+import type { Profile, PlayerStats, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerPosition, CardType } from "@/types/player-stats";
+import type { PlayerAssessment } from "@/types/assessment";
+import { getAgeGroup } from "@/types/assessment";
+import { MiniRatingChartWrapper } from "./MiniRatingChartWrapper";
+import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
+import { GoalsList, calculateGoalProgress } from "@/features/goals";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -25,19 +30,57 @@ export default async function DashboardPage() {
     { data: profile },
     { data: nutritionForm },
     { data: playerStats },
+    { data: assessments },
     { count: preWorkoutCount },
     { count: postWorkoutCount },
-    { count: videosWatched }
+    { count: videosWatched },
+    { data: streakData },
+    { data: goalsData }
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
     supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").single() as unknown as { data: { id: string } | null },
     supabase.from("player_stats").select("*").eq("user_id", user?.id || "").single() as unknown as { data: PlayerStats | null },
+    supabase.from("player_assessments").select("*").eq("user_id", user?.id || "").order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
     supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
     supabase.from("post_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
-    supabase.from("video_progress").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "").eq("watched", true) as unknown as { count: number | null }
+    supabase.from("video_progress").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "").eq("watched", true) as unknown as { count: number | null },
+    supabase.from("user_streaks").select("*").eq("user_id", user?.id || "").single() as unknown as { data: UserStreakRow | null },
+    supabase.from("player_goals").select("*").eq("user_id", user?.id || "").order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null }
   ]);
 
+  // Calculate goal progress for display
+  const goalsWithProgress = (goalsData || []).map(calculateGoalProgress);
+
   const hasCompletedNutrition = !!nutritionForm;
+
+  // Get age group and fetch group assessments for percentile calculations
+  const ageGroup = getAgeGroup(profile?.birthdate || null);
+  let groupAssessments: PlayerAssessment[] = [];
+
+  if (ageGroup && assessments && assessments.length > 0) {
+    const { data: ageGroupProfiles } = await supabase
+      .from("profiles")
+      .select("id, birthdate")
+      .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null };
+
+    const sameAgeGroupIds = ageGroupProfiles
+      ?.filter((p) => {
+        const pAgeGroup = getAgeGroup(p.birthdate);
+        return pAgeGroup?.id === ageGroup.id;
+      })
+      .map((p) => p.id) || [];
+
+    if (sameAgeGroupIds.length > 0) {
+      const { data: fetchedGroupAssessments } = await supabase
+        .from("player_assessments")
+        .select("*")
+        .in("user_id", sameAgeGroupIds);
+
+      if (fetchedGroupAssessments) {
+        groupAssessments = fetchedGroupAssessments as PlayerAssessment[];
+      }
+    }
+  }
 
   const quickActions = [
     {
@@ -191,7 +234,20 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div>
         <h2 className="text-xl font-semibold mb-4">הסטטיסטיקות שלי</h2>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Mini Rating Chart */}
+          {assessments && assessments.length > 0 && (
+            <Link href="/dashboard/assessments" className="lg:col-span-1">
+              <div className="h-full hover:shadow-md transition-shadow cursor-pointer">
+                <MiniRatingChartWrapper
+                  assessments={assessments}
+                  allAssessmentsInGroup={groupAssessments}
+                />
+              </div>
+            </Link>
+          )}
+          {/* Streak Card */}
+          <StreakCard streak={streakData} />
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>שאלונים לפני אימון</CardDescription>
@@ -212,6 +268,21 @@ export default async function DashboardPage() {
           </Card>
         </div>
       </div>
+
+      {/* Goals Section */}
+      {goalsWithProgress.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">היעדים שלי</h2>
+          <GoalsList
+            goals={goalsWithProgress}
+            userId={user?.id || ""}
+            variant="dashboard"
+          />
+        </div>
+      )}
+
+      {/* Streak Celebration (client-side toast) */}
+      <StreakCelebrationClient streak={streakData} />
     </div>
   );
 }

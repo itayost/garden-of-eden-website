@@ -1,8 +1,19 @@
 import { z } from "zod";
 
+// Validation helper for optional numeric strings
+const optionalNumericString = z.string().optional().refine(
+  (val) => !val || val === "" || !isNaN(parseFloat(val)),
+  { message: "נא להזין מספר תקין" }
+);
+
+// Validation helper for required numeric strings
+const requiredNumericString = (errorMsg: string) =>
+  z.string().min(1, errorMsg).refine(
+    (val) => !isNaN(parseFloat(val)),
+    { message: "נא להזין מספר תקין" }
+  );
+
 export const preWorkoutSchema = z.object({
-  full_name: z.string().min(2, "נא להזין שם מלא"),
-  age: z.number().min(5).max(99).optional().or(z.literal("")),
   group_training: z.string().optional(),
   urine_color: z.string().optional(),
   nutrition_status: z.string().optional(),
@@ -14,7 +25,6 @@ export const preWorkoutSchema = z.object({
 });
 
 export const postWorkoutSchema = z.object({
-  full_name: z.string().min(2, "נא להזין שם מלא"),
   training_date: z.string().min(1, "נא לבחור תאריך"),
   trainer_id: z.string().optional(),
   difficulty_level: z.number().min(1).max(10),
@@ -24,36 +34,59 @@ export const postWorkoutSchema = z.object({
 });
 
 export const nutritionSchema = z.object({
-  full_name: z.string().min(2, "נא להזין שם מלא"),
-  age: z.number().min(5, "נא להזין גיל").max(99),
   years_competitive: z.string().optional(),
-  previous_counseling: z.boolean().default(false),
+  previous_counseling: z.boolean(),
   counseling_details: z.string().optional(),
-  weight: z.number().positive().optional().or(z.literal("")),
-  height: z.number().positive().optional().or(z.literal("")),
-  allergies: z.boolean().default(false),
+  weight: optionalNumericString,
+  height: optionalNumericString,
+  allergies: z.boolean(),
   allergies_details: z.string().optional(),
-  chronic_conditions: z.boolean().default(false),
+  chronic_conditions: z.boolean(),
   conditions_details: z.string().optional(),
   medications: z.string().optional(),
   medications_list: z.string().optional(),
-  bloating_frequency: z.number().min(1).max(4).optional(),
-  stomach_pain: z.number().min(1).max(4).optional(),
-  bowel_frequency: z.number().min(1).max(4).optional(),
+  bloating_frequency: optionalNumericString,
+  stomach_pain: optionalNumericString,
+  bowel_frequency: optionalNumericString,
   stool_consistency: z.string().optional(),
   overuse_injuries: z.string().optional(),
-  illness_interruptions: z.number().min(1).max(4).optional(),
-  max_days_missed: z.number().min(1).max(4).optional(),
-  fatigue_level: z.number().min(1).max(4).optional(),
-  concentration: z.number().min(1).max(4).optional(),
-  energy_level: z.number().min(1).max(4).optional(),
-  muscle_soreness: z.number().min(1).max(4).optional(),
-  physical_exhaustion: z.number().min(1).max(4).optional(),
-  preparedness: z.number().min(1).max(4).optional(),
-  overall_energy: z.number().min(1).max(4).optional(),
+  illness_interruptions: optionalNumericString,
+  max_days_missed: optionalNumericString,
+  fatigue_level: optionalNumericString,
+  concentration: optionalNumericString,
+  energy_level: optionalNumericString,
+  muscle_soreness: optionalNumericString,
+  physical_exhaustion: optionalNumericString,
+  preparedness: optionalNumericString,
+  overall_energy: optionalNumericString,
   additional_comments: z.string().optional(),
 });
 
 export type PreWorkoutFormData = z.infer<typeof preWorkoutSchema>;
 export type PostWorkoutFormData = z.infer<typeof postWorkoutSchema>;
 export type NutritionFormData = z.infer<typeof nutritionSchema>;
+
+// Aliases for backward compatibility (same types now, no transforms)
+export type PreWorkoutFormInput = PreWorkoutFormData;
+export type PostWorkoutFormInput = PostWorkoutFormData;
+export type NutritionFormInput = NutritionFormData;
+
+// Helper to convert form data to database format (strings to numbers)
+export function convertFormNumbers<T extends Record<string, unknown>>(
+  data: T,
+  numericFields: string[]
+): T {
+  const result = { ...data };
+  for (const field of numericFields) {
+    if (field in result) {
+      const value = result[field] as string;
+      if (value === "" || value === undefined || value === null) {
+        (result as Record<string, unknown>)[field] = null;
+      } else {
+        const num = parseFloat(value);
+        (result as Record<string, unknown>)[field] = isNaN(num) ? null : num;
+      }
+    }
+  }
+  return result;
+}
