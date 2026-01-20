@@ -324,3 +324,20 @@ export function calculateCardRatingsAbsolute(assessment: PlayerAssessment): Calc
 
   return calculateCardRatings(assessment, defaultStats);
 }
+
+/**
+ * Return neutral ratings (50) when there's insufficient comparison data
+ * Used when only 1 player in age group has assessments
+ * 50 represents "unknown/unranked" - middle of the 1-99 scale
+ */
+export function calculateNeutralRatings(): CalculatedRatings {
+  return {
+    pace: 50,
+    shooting: 50,
+    passing: 50,
+    dribbling: 50,
+    defending: 50,
+    physical: 50,
+    overall_rating: 50,
+  };
+}

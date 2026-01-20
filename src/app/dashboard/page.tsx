@@ -18,7 +18,7 @@ import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getAgeGroup } from "@/types/assessment";
-import { calculateCardRatings, calculateCardRatingsAbsolute, calculateGroupStats } from "@/lib/assessment-to-rating";
+import { calculateCardRatings, calculateNeutralRatings, calculateGroupStats } from "@/lib/assessment-to-rating";
 import { MiniRatingChartWrapper } from "./MiniRatingChartWrapper";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
@@ -103,9 +103,9 @@ export default async function DashboardPage() {
       }
     }
 
-    // Fallback to absolute ratings if no group comparison available
+    // Fallback to neutral ratings (50) if no group comparison available
     if (!calculatedRatings) {
-      calculatedRatings = calculateCardRatingsAbsolute(latestAssessment);
+      calculatedRatings = calculateNeutralRatings();
     }
   }
 

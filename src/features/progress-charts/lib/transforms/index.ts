@@ -3,7 +3,7 @@
 import type { PlayerAssessment } from "@/types/assessment";
 import {
   calculateCardRatings,
-  calculateCardRatingsAbsolute,
+  calculateNeutralRatings,
   type GroupStats,
 } from "@/lib/assessment-to-rating";
 import type {
@@ -86,7 +86,7 @@ export function transformToRatingChartData(
   return sorted.map((assessment) => {
     const ratings = groupStats
       ? calculateCardRatings(assessment, groupStats)
-      : calculateCardRatingsAbsolute(assessment);
+      : calculateNeutralRatings();
 
     return {
       date: assessment.assessment_date,

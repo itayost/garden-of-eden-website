@@ -17,7 +17,7 @@ import {
   getAssessmentCompleteness,
 } from "@/types/assessment";
 import {
-  calculateCardRatingsAbsolute,
+  calculateNeutralRatings,
   calculateCardRatings,
   calculateGroupStats,
 } from "@/lib/assessment-to-rating";
@@ -101,9 +101,9 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
       }
     }
 
-    // Fallback to absolute ratings if no group comparison
+    // Fallback to neutral ratings (50) if no group comparison available
     if (!calculatedRatings) {
-      calculatedRatings = calculateCardRatingsAbsolute(latestAssessment);
+      calculatedRatings = calculateNeutralRatings();
     }
   }
 
