@@ -98,9 +98,9 @@ export function Footer() {
                   <Image
                     src="/logo-transparent.png"
                     alt="Garden of Eden"
-                    width={24}
-                    height={24}
-                    className="w-6 h-6 object-contain"
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 object-contain"
                   />
                 </motion.div>
                 <span className="font-bold group-hover:text-[#CDEA68] transition-colors">

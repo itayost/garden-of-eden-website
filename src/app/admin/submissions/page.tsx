@@ -16,6 +16,13 @@ import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/dat
 
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
 
+// Hebrew translations for form values
+const nutritionStatusTranslations: Record<string, string> = {
+  full_energy: "מלא אנרגיה",
+  insufficient: "לא מספיק",
+  no_energy: "אין אנרגיה",
+};
+
 // Shared utilities
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("he-IL", {
@@ -25,6 +32,11 @@ function formatDate(dateStr: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function translateValue(value: string | null | undefined, translations: Record<string, string>): string {
+  if (!value) return "-";
+  return translations[value] || value;
 }
 
 function EmptyState({ icon: Icon, message }: { icon: LucideIcon; message: string }) {
@@ -114,7 +126,7 @@ export default async function AdminSubmissionsPage() {
             </CardHeader>
             <CardContent>
               {preWorkout && preWorkout.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" dir="rtl">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -132,7 +144,7 @@ export default async function AdminSubmissionsPage() {
                           <TableCell className="font-medium">{form.full_name}</TableCell>
                           <TableCell>{form.age || "-"}</TableCell>
                           <TableCell>{form.sleep_hours || "-"}</TableCell>
-                          <TableCell>{form.nutrition_status || "-"}</TableCell>
+                          <TableCell>{translateValue(form.nutrition_status, nutritionStatusTranslations)}</TableCell>
                           <TableCell>
                             <YesNoBadge value={!!(form.recent_injury && form.recent_injury !== "אין")} />
                           </TableCell>
@@ -157,7 +169,7 @@ export default async function AdminSubmissionsPage() {
             </CardHeader>
             <CardContent>
               {postWorkout && postWorkout.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" dir="rtl">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -198,7 +210,7 @@ export default async function AdminSubmissionsPage() {
             </CardHeader>
             <CardContent>
               {nutrition && nutrition.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" dir="rtl">
                   <Table>
                     <TableHeader>
                       <TableRow>

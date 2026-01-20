@@ -40,6 +40,52 @@ interface FormDetailPageProps {
   params: Promise<{ formType: string; formId: string }>;
 }
 
+// Hebrew translations for form values
+const translations = {
+  groupTraining: {
+    before: "כן, לפני האימון",
+    after: "כן, אחרי האימון",
+    no: "לא",
+  } as Record<string, string>,
+  urineColor: {
+    clear: "שקוף",
+    light_yellow: "צהוב בהיר",
+    dark_yellow: "צהוב כהה",
+    unknown: "לא יודע",
+  } as Record<string, string>,
+  nutritionStatus: {
+    full_energy: "מלא אנרגיה",
+    insufficient: "לא מספיק, ישלים אחרי האימון",
+    no_energy: "אין אנרגיה, מעדיף אימון קל",
+  } as Record<string, string>,
+  sleepHours: {
+    "4-6": "4-6 שעות (איכות ירודה)",
+    "6-8": "6-8 שעות (סביר)",
+    "8-11": "8-11 שעות (טוב)",
+  } as Record<string, string>,
+  nextMatch: {
+    this_weekend: "הסוף שבוע הזה",
+    next_weekend: "הסוף שבוע הבא",
+    midweek: "באמצע השבוע",
+  } as Record<string, string>,
+  yearsCompetitive: {
+    first_year: "שנה ראשונה",
+    up_to_3: "עד 3 שנים",
+    up_to_6: "עד 6 שנים",
+    "7_plus": "7+ שנים",
+  } as Record<string, string>,
+  medications: {
+    no: "לא",
+    yes: "כן",
+    occasionally: "מדי פעם",
+  } as Record<string, string>,
+};
+
+function translateValue(value: string | null | undefined, translationMap: Record<string, string>): string | null {
+  if (!value) return null;
+  return translationMap[value] || value;
+}
+
 // Helper component for consistent field display
 function FieldRow({ label, value, children }: { label: string; value?: string | number | null; children?: React.ReactNode }) {
   return (
@@ -98,7 +144,7 @@ function PreWorkoutFields({ form }: { form: PreWorkoutForm }) {
           <Separator />
           <FieldRow label="גיל" value={form.age != null ? `${form.age} שנים` : null} />
           <Separator />
-          <FieldRow label="אימון קבוצתי" value={form.group_training} />
+          <FieldRow label="אימון קבוצתי" value={translateValue(form.group_training, translations.groupTraining)} />
         </CardContent>
       </Card>
 
@@ -111,11 +157,11 @@ function PreWorkoutFields({ form }: { form: PreWorkoutForm }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <FieldRow label="צבע שתן" value={form.urine_color} />
+          <FieldRow label="צבע שתן" value={translateValue(form.urine_color, translations.urineColor)} />
           <Separator />
-          <FieldRow label="מצב תזונתי" value={form.nutrition_status} />
+          <FieldRow label="מצב תזונתי" value={translateValue(form.nutrition_status, translations.nutritionStatus)} />
           <Separator />
-          <FieldRow label="שעות שינה" value={form.sleep_hours} />
+          <FieldRow label="שעות שינה" value={translateValue(form.sleep_hours, translations.sleepHours)} />
           <Separator />
           <FieldRow label="פציעה אחרונה">
             {form.recent_injury && form.recent_injury !== "אין" ? (
@@ -138,7 +184,7 @@ function PreWorkoutFields({ form }: { form: PreWorkoutForm }) {
         <CardContent className="space-y-1">
           <FieldRow label="משחק אחרון" value={form.last_game} />
           <Separator />
-          <FieldRow label="משחק הבא" value={form.next_match} />
+          <FieldRow label="משחק הבא" value={translateValue(form.next_match, translations.nextMatch)} />
           <Separator />
           <FieldRow label="שיפורים רצויים" value={form.improvements_desired} />
         </CardContent>
@@ -220,7 +266,7 @@ function NutritionFields({ form }: { form: NutritionForm }) {
           <Separator />
           <FieldRow label="גיל" value={form.age != null ? `${form.age} שנים` : null} />
           <Separator />
-          <FieldRow label="שנים בספורט תחרותי" value={form.years_competitive} />
+          <FieldRow label="שנים בספורט תחרותי" value={translateValue(form.years_competitive, translations.yearsCompetitive)} />
         </CardContent>
       </Card>
 
@@ -270,7 +316,7 @@ function NutritionFields({ form }: { form: NutritionForm }) {
           <CardTitle className="text-base">תרופות</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <FieldRow label="נוטל תרופות" value={form.medications} />
+          <FieldRow label="נוטל תרופות" value={translateValue(form.medications, translations.medications)} />
           {form.medications_list && (
             <>
               <Separator />
