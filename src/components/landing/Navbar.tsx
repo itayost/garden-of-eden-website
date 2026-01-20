@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 const navLinks = [
   { label: "בית", href: "#" },
@@ -73,7 +74,13 @@ export function Navbar() {
         <div className="container mx-auto flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 z-50">
-            <div className="w-6 h-6 rounded bg-[#CDEA68]" />
+            <Image
+              src="/logo-transparent.png"
+              alt="Garden of Eden"
+              width={24}
+              height={24}
+              className="w-6 h-6 object-contain"
+            />
             <span className="text-white font-medium text-sm">Garden of Eden</span>
           </Link>
 

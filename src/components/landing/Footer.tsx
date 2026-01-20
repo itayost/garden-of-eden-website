@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { MessageCircle, Instagram, ArrowUp, Phone, MapPin } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
@@ -93,8 +94,15 @@ export function Footer() {
                 <motion.div
                   whileHover={{ rotate: 360 }}
                   transition={{ duration: 0.5 }}
-                  className="w-6 h-6 rounded bg-[#CDEA68]"
-                />
+                >
+                  <Image
+                    src="/logo-transparent.png"
+                    alt="Garden of Eden"
+                    width={24}
+                    height={24}
+                    className="w-6 h-6 object-contain"
+                  />
+                </motion.div>
                 <span className="font-bold group-hover:text-[#CDEA68] transition-colors">
                   GARDEN OF EDEN
                 </span>
@@ -203,20 +211,18 @@ export function Footer() {
               Copyright &copy; {currentYear} Garden of Eden. כל הזכויות שמורות.
             </p>
             <div className="flex gap-6">
-              <a
-                href="#"
-                onClick={(e) => e.preventDefault()}
+              <Link
+                href="/terms-of-service"
                 className="text-white/30 hover:text-white/50 text-sm transition-colors"
               >
                 תנאי שימוש
-              </a>
-              <a
-                href="#"
-                onClick={(e) => e.preventDefault()}
+              </Link>
+              <Link
+                href="/privacy-policy"
                 className="text-white/30 hover:text-white/50 text-sm transition-colors"
               >
                 מדיניות פרטיות
-              </a>
+              </Link>
             </div>
           </div>
         </div>
