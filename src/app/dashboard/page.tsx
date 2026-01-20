@@ -14,10 +14,11 @@ import {
   CheckCircle2,
   TrendingUp
 } from "lucide-react";
-import type { Profile, PlayerStats, UserStreakRow, PlayerGoalRow } from "@/types/database";
-import type { PlayerPosition, CardType } from "@/types/player-stats";
+import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
+import type { PlayerPosition } from "@/types/player-stats";
 import { getAgeGroup } from "@/types/assessment";
+import { calculateCardRatings, calculateCardRatingsAbsolute, calculateGroupStats } from "@/lib/assessment-to-rating";
 import { MiniRatingChartWrapper } from "./MiniRatingChartWrapper";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
@@ -37,7 +38,6 @@ export default async function DashboardPage() {
   const [
     { data: profile },
     { data: nutritionForm },
-    { data: playerStats },
     { data: assessments },
     { count: preWorkoutCount },
     { count: postWorkoutCount },
@@ -48,7 +48,6 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
     supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").single() as unknown as { data: { id: string } | null },
-    supabase.from("player_stats").select("*").eq("user_id", user?.id || "").single() as unknown as { data: PlayerStats | null },
     supabase.from("player_assessments").select("*").eq("user_id", user?.id || "").order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
     supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
     supabase.from("post_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
@@ -69,29 +68,44 @@ export default async function DashboardPage() {
   // Get age group and fetch group assessments for percentile calculations
   const ageGroup = getAgeGroup(profile?.birthdate || null);
   let groupAssessments: PlayerAssessment[] = [];
+  let calculatedRatings = null;
 
-  if (ageGroup && assessments && assessments.length > 0) {
-    const { data: ageGroupProfiles } = await supabase
-      .from("profiles")
-      .select("id, birthdate")
-      .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null };
+  if (assessments && assessments.length > 0) {
+    const latestAssessment = assessments[assessments.length - 1];
 
-    const sameAgeGroupIds = ageGroupProfiles
-      ?.filter((p) => {
-        const pAgeGroup = getAgeGroup(p.birthdate);
-        return pAgeGroup?.id === ageGroup.id;
-      })
-      .map((p) => p.id) || [];
+    if (ageGroup) {
+      const { data: ageGroupProfiles } = await supabase
+        .from("profiles")
+        .select("id, birthdate")
+        .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null };
 
-    if (sameAgeGroupIds.length > 0) {
-      const { data: fetchedGroupAssessments } = await supabase
-        .from("player_assessments")
-        .select("*")
-        .in("user_id", sameAgeGroupIds);
+      const sameAgeGroupIds = ageGroupProfiles
+        ?.filter((p) => {
+          const pAgeGroup = getAgeGroup(p.birthdate);
+          return pAgeGroup?.id === ageGroup.id;
+        })
+        .map((p) => p.id) || [];
 
-      if (fetchedGroupAssessments) {
-        groupAssessments = fetchedGroupAssessments as PlayerAssessment[];
+      if (sameAgeGroupIds.length > 0) {
+        const { data: fetchedGroupAssessments } = await supabase
+          .from("player_assessments")
+          .select("*")
+          .in("user_id", sameAgeGroupIds);
+
+        if (fetchedGroupAssessments && fetchedGroupAssessments.length > 0) {
+          groupAssessments = fetchedGroupAssessments as PlayerAssessment[];
+
+          if (fetchedGroupAssessments.length > 1) {
+            const groupStats = calculateGroupStats(groupAssessments);
+            calculatedRatings = calculateCardRatings(latestAssessment, groupStats);
+          }
+        }
       }
+    }
+
+    // Fallback to absolute ratings if no group comparison available
+    if (!calculatedRatings) {
+      calculatedRatings = calculateCardRatingsAbsolute(latestAssessment);
     }
   }
 
@@ -140,36 +154,43 @@ export default async function DashboardPage() {
       </div>
 
       {/* Player Card Section */}
-      {playerStats ? (
+      {calculatedRatings ? (
         <Card className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <PlayerCard
                 playerName={profile?.full_name || "שחקן"}
-                position={playerStats.position as PlayerPosition}
-                cardType={playerStats.card_type as CardType}
-                overallRating={playerStats.overall_rating}
+                position={(profile?.position as PlayerPosition) || "CM"}
+                cardType="gold"
+                overallRating={calculatedRatings.overall_rating}
                 stats={{
-                  pace: playerStats.pace,
-                  shooting: playerStats.shooting,
-                  passing: playerStats.passing,
-                  dribbling: playerStats.dribbling,
-                  defending: playerStats.defending,
-                  physical: playerStats.physical,
+                  pace: calculatedRatings.pace,
+                  shooting: calculatedRatings.shooting,
+                  passing: calculatedRatings.passing,
+                  dribbling: calculatedRatings.dribbling,
+                  defending: calculatedRatings.defending,
+                  physical: calculatedRatings.physical,
                 }}
               />
               <div className="text-center sm:text-right flex-1">
                 <h2 className="text-xl font-semibold mb-2">הכרטיס שלך</h2>
                 <p className="text-muted-foreground mb-4">
-                  לחצו על הכרטיס לצפייה בסטטיסטיקות המלאות שלכם
+                  הדירוג מחושב על סמך המבדקים הפיזיים שלך
                 </p>
                 <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
                   <Badge variant="outline" className="text-sm">
-                    דירוג: {playerStats.overall_rating}
+                    דירוג: {calculatedRatings.overall_rating}
                   </Badge>
-                  <Badge variant="outline" className="text-sm">
-                    עמדה: {playerStats.position}
-                  </Badge>
+                  {profile?.position && (
+                    <Badge variant="outline" className="text-sm">
+                      עמדה: {profile.position}
+                    </Badge>
+                  )}
+                  {ageGroup && (
+                    <Badge variant="outline" className="text-sm">
+                      {ageGroup.label}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -184,7 +205,7 @@ export default async function DashboardPage() {
             <div className="flex-1">
               <h3 className="font-semibold">כרטיס שחקן</h3>
               <p className="text-sm text-muted-foreground">
-                המאמן שלך יוסיף את הסטטיסטיקות שלך בקרוב
+                המאמן שלך יוסיף מבדקים כדי ליצור את הכרטיס שלך
               </p>
             </div>
           </CardContent>
