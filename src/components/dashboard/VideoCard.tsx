@@ -46,9 +46,9 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
     }
   };
 
-  // Extract YouTube video ID from URL
+  // Extract YouTube video ID from URL (supports watch, shorts, and youtu.be formats)
   const getYouTubeId = (url: string) => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
+    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/(?:shorts\/)?)([^&?]+)/);
     return match ? match[1] : null;
   };
 

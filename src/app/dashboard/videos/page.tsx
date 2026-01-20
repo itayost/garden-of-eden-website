@@ -8,11 +8,11 @@ import { Clock, Calendar, Dumbbell } from "lucide-react";
 import type { WorkoutVideo, VideoProgress } from "@/types/database";
 
 const dayTopics = [
-  { day: 1, topic: "גמישות ויציבות", icon: "🧘" },
-  { day: 2, topic: "כוח רגליים", icon: "🦵" },
-  { day: 3, topic: "זריזות וקואורדינציה", icon: "⚡" },
-  { day: 4, topic: "סיבולת לב-ריאה", icon: "❤️" },
-  { day: 5, topic: "שיקום והתאוששות", icon: "🔄" },
+  { day: 1, topic: "גמישות תנועתיות", icon: "🤸" },
+  { day: 2, topic: "יציבות", icon: "🧘" },
+  { day: 3, topic: "תרגילי בטן ליבה", icon: "💪" },
+  { day: 4, topic: "גמישות פלג גוף עליון", icon: "🙆" },
+  { day: 5, topic: "קוארדינציה", icon: "⚡" },
 ];
 
 export default async function VideosPage() {
