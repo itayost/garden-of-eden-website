@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { isValidUUID } from "@/lib/utils/uuid";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { AssessmentForm } from "@/components/admin/AssessmentForm";
@@ -13,6 +14,12 @@ interface PageProps {
 
 export default async function NewAssessmentPage({ params }: PageProps) {
   const { userId } = await params;
+
+  // Validate userId is a proper UUID
+  if (!isValidUUID(userId)) {
+    notFound();
+  }
+
   const supabase = await createClient();
 
   // Fetch player profile

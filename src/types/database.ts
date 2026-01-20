@@ -691,6 +691,32 @@ export interface Database {
           achieved_value?: number | null;
         };
       };
+      user_achievements: {
+        Row: {
+          id: string;
+          user_id: string;
+          badge_type: string;
+          unlocked_at: string;
+          metadata: Record<string, unknown> | null;
+          celebrated: boolean;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          badge_type: string;
+          unlocked_at?: string;
+          metadata?: Record<string, unknown> | null;
+          celebrated?: boolean;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          badge_type?: string;
+          unlocked_at?: string;
+          metadata?: Record<string, unknown> | null;
+          celebrated?: boolean;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -724,3 +750,28 @@ export type UserStreakRow = Database["public"]["Tables"]["user_streaks"]["Row"];
 export type PlayerGoalRow = Database["public"]["Tables"]["player_goals"]["Row"];
 export type PlayerGoalInsert = Database["public"]["Tables"]["player_goals"]["Insert"];
 export type PlayerGoalUpdate = Database["public"]["Tables"]["player_goals"]["Update"];
+export type UserAchievementRow = Database["public"]["Tables"]["user_achievements"]["Row"];
+export type UserAchievementInsert = Database["public"]["Tables"]["user_achievements"]["Insert"];
+export type UserAchievementUpdate = Database["public"]["Tables"]["user_achievements"]["Update"];
+
+/** Achievement badge types */
+export type AchievementBadgeType =
+  | "nutrition_form_completed"
+  | "profile_completed"
+  | "first_pre_workout"
+  | "first_post_workout"
+  | "first_video_watched"
+  | "videos_day_complete"
+  | "all_videos_watched"
+  | "first_assessment"
+  | "five_assessments"
+  | "ten_assessments"
+  | "sprint_improved"
+  | "jump_improved"
+  | "overall_improved_5pts"
+  | "overall_improved_10pts"
+  | "streak_7_days"
+  | "streak_30_days"
+  | "streak_100_days"
+  | "first_goal_achieved"
+  | "five_goals_achieved";

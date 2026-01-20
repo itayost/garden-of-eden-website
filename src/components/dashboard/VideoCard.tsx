@@ -64,6 +64,7 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
               <button
                 className="relative flex-shrink-0 w-32 h-20 bg-muted rounded-lg overflow-hidden group"
                 onClick={() => markAsWatched()}
+                aria-label={`צפה בסרטון: ${video.title}`}
               >
                 {youtubeId ? (
                   <img
@@ -94,7 +95,7 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
                     height="100%"
                     src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
                     title={video.title}
-                    frameBorder="0"
+                    className="border-0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />

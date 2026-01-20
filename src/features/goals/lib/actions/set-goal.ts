@@ -44,6 +44,21 @@ export async function setGoal(params: SetGoalParams): Promise<SetGoalResult> {
     return { success: false, error: "רק מאמנים יכולים להגדיר יעדים" };
   }
 
+  // Verify target user exists and is a trainee
+  const { data: targetProfile } = (await supabase
+    .from("profiles")
+    .select("id, role")
+    .eq("id", params.userId)
+    .single()) as { data: Pick<Profile, "id" | "role"> | null };
+
+  if (!targetProfile) {
+    return { success: false, error: "המשתמש לא נמצא" };
+  }
+
+  if (targetProfile.role !== "trainee") {
+    return { success: false, error: "ניתן להגדיר יעדים רק לחניכים" };
+  }
+
   // Validate metric
   if (!GOAL_METRICS.includes(params.metricKey)) {
     return { success: false, error: "מדד לא תקין" };

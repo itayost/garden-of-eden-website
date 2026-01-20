@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { isValidUUID } from "@/lib/utils/uuid";
 import {
   Card,
   CardContent,
@@ -21,6 +22,12 @@ interface UserEditPageProps {
 
 export default async function UserEditPage({ params }: UserEditPageProps) {
   const { userId } = await params;
+
+  // Validate userId is a proper UUID
+  if (!isValidUUID(userId)) {
+    notFound();
+  }
+
   const supabase = await createClient();
 
   // Get current user and verify admin role

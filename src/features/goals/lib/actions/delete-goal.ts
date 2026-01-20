@@ -34,6 +34,17 @@ export async function deleteGoal(goalId: string): Promise<DeleteGoalResult> {
     return { success: false, error: "רק מאמנים יכולים למחוק יעדים" };
   }
 
+  // Verify the goal exists before attempting to delete
+  const { data: goalToDelete } = (await supabase
+    .from("player_goals")
+    .select("id, user_id")
+    .eq("id", goalId)
+    .single()) as { data: { id: string; user_id: string } | null };
+
+  if (!goalToDelete) {
+    return { success: false, error: "היעד לא נמצא" };
+  }
+
   const { error } = await (
     supabase as unknown as {
       from: (table: string) => {

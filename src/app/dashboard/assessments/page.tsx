@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Target, TrendingUp, Activity, BarChart3 } from "lucide-react";
+import { Calendar, Target, TrendingUp, Activity, BarChart3, GitCompare } from "lucide-react";
 import { PlayerCard } from "@/components/player-card/PlayerCard";
 import {
   ASSESSMENT_LABELS_HE,
@@ -22,6 +22,7 @@ import {
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 import { AssessmentChartsWrapper } from "./AssessmentChartsWrapper";
+import { ComparisonSelector } from "@/features/assessment-comparison";
 
 export default async function DashboardAssessmentsPage() {
   const supabase = await createClient();
@@ -207,6 +208,10 @@ export default async function DashboardAssessmentsPage() {
             <BarChart3 className="h-4 w-4" />
             גרפי התקדמות
           </TabsTrigger>
+          <TabsTrigger value="compare" className="flex items-center gap-2">
+            <GitCompare className="h-4 w-4" />
+            השוואת מבדקים
+          </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             היסטוריית מבדקים
@@ -276,6 +281,11 @@ export default async function DashboardAssessmentsPage() {
               />
             </div>
           </div>
+        </TabsContent>
+
+        {/* Comparison Tab */}
+        <TabsContent value="compare">
+          <ComparisonSelector assessments={assessments} />
         </TabsContent>
 
         {/* History Tab */}

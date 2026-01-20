@@ -40,7 +40,7 @@
 - [x] ~~No trend visualizations (charts/graphs over time)~~ ✅ DONE - Progress charts with date filtering
 - [x] ~~No goal setting or target tracking~~ ✅ DONE - Goals system with trainer management
 - [x] ~~No comparison to peers (percentile rankings)~~ ✅ DONE - Age group percentile rankings
-- [ ] No achievement/gamification system
+- [x] ~~No achievement/gamification system~~ ✅ DONE - Achievement badges with 19 badge types
 
 **Communication**
 - [ ] No messaging between trainers and trainees
@@ -326,12 +326,12 @@ Benefits:
 - [ ] Resume incomplete assessments (partial - form saves on submit)
 - [ ] Show previous values for comparison while filling
 
-#### FR-ASS-002: Assessment Comparison View
+#### FR-ASS-002: Assessment Comparison View ✅ DONE
 **Description**: Show changes between assessments
 **Requirements**:
-- [ ] Side-by-side comparison of 2 assessments
-- [ ] Highlight improvements (green) and regressions (red)
-- [ ] Calculate deltas (e.g., "-0.15s in 5m sprint")
+- [x] Side-by-side comparison of 2 assessments
+- [x] Highlight improvements (green) and regressions (red)
+- [x] Calculate deltas (e.g., "-0.15s in 5m sprint")
 
 #### FR-ASS-003: Progress Charts ✅ DONE
 **Description**: Visualize metrics over time
@@ -390,13 +390,14 @@ Benefits:
 - [x] Weekend exempt (weekdays only Mon-Fri, weekends don't break streak)
 - [x] Database triggers for automatic tracking
 
-#### FR-PRG-002: Achievement Badges
+#### FR-PRG-002: Achievement Badges ✅ DONE
 **Description**: Reward accomplishments
 **Requirements**:
-- [ ] Badge for completing nutrition form
-- [ ] Badge for watching all videos
-- [ ] Badge for first assessment
-- [ ] Badge for improvement milestones
+- [x] Badge for completing nutrition form
+- [x] Badge for watching all videos
+- [x] Badge for first assessment
+- [x] Badge for improvement milestones
+- [x] Additional badges: profile completion, forms, streaks, goals
 
 #### FR-PRG-003: Goals System ✅ DONE
 **Description**: Set and track personal goals
@@ -433,12 +434,12 @@ Benefits:
 - [ ] Assessment coverage by age group
 - [ ] Exportable reports (CSV, PDF)
 
-#### FR-ANL-002: Age Group Comparisons
+#### FR-ANL-002: Age Group Comparisons ✅ DONE
 **Description**: Compare players within age groups
 **Requirements**:
-- [ ] Leaderboard by metric (sprint, jump, etc.)
-- [ ] Percentile rankings
-- [ ] Group averages and distribution
+- [x] Leaderboard by metric (sprint, jump, etc.)
+- [x] Percentile rankings
+- [x] Group averages and distribution
 
 ---
 
@@ -621,10 +622,10 @@ Benefits:
 | Form draft saving | MEDIUM | LOW | P2 | ✅ Done |
 | Streak tracking | MEDIUM | LOW | P2 | ✅ Deployed |
 | Goals system | MEDIUM | MEDIUM | P2 | ✅ Deployed |
+| Achievement badges | LOW | MEDIUM | P3 | ✅ Done |
 | Notifications | MEDIUM | MEDIUM | P3 | Pending |
-| Achievement badges | LOW | MEDIUM | P3 | Pending |
 | Admin analytics | MEDIUM | HIGH | P3 | Pending |
-| Age group rankings | LOW | MEDIUM | P4 | Pending |
+| Age group rankings | LOW | MEDIUM | P4 | ✅ Done |
 | Messaging system | LOW | HIGH | P4 | Pending |
 
 ### Recommended Implementation Order
@@ -640,14 +641,14 @@ Benefits:
 6. ✅ Streak tracking - DEPLOYED (migration applied)
 7. ✅ Goals system (trainer-managed) - DEPLOYED (migration applied)
 
-**Phase 3: Motivation & Goals**
-8. Achievement badges
-9. Assessment comparison view
+**Phase 3: Motivation & Goals** ✅ COMPLETE
+8. ✅ Achievement badges - DONE
+9. ✅ Assessment comparison view - DONE
 
-**Phase 4: Advanced Features**
+**Phase 4: Advanced Features** (Partial)
 10. Notifications system
 11. Admin analytics dashboard
-12. Age group rankings and leaderboards
+12. ✅ Age group rankings and leaderboards - DONE
 
 ---
 
@@ -876,16 +877,17 @@ CREATE TABLE player_goals (
 | **Form Draft Saving** | ✅ Complete | Feature module at `/src/features/form-drafts/` with `useFormDraft` hook, localStorage storage utilities, auto-save every 10s, draft restoration with toast notification, beforeunload warning |
 | **Streak Tracking** | ✅ Deployed | Feature module at `/src/features/streak-tracking/` with database triggers (`006_streak_tracking.sql` - deployed), `StreakCard.tsx`, `StreakCelebrationClient.tsx`, `useStreakCelebration` hook; weekday-only tracking (Mon-Fri), toast celebrations at milestones (7, 30, 100 days) |
 | **Goals System** | ✅ Deployed | Feature module at `/src/features/goals/` with database triggers (`007_goals_system.sql` - deployed), components: `GoalCard.tsx`, `GoalsList.tsx`, `GoalManagementPanel.tsx`, `SetGoalDialog.tsx`, `GoalCelebrationClient.tsx`; hooks: `useGoalCelebration.ts`; auto-achievement detection via DB triggers; trainer UI on `/admin/assessments/[userId]`, trainee display on dashboard |
+| **Achievement Badges** | ✅ Done | Feature module at `/src/features/achievements/` with database triggers (`008_achievement_badges.sql`), components: `AchievementBadge.tsx`, `AchievementsList.tsx`, `AchievementsCard.tsx`, `AchievementCelebrationClient.tsx`; hooks: `useAchievementCelebration.tsx`; 19 badge types across 6 categories (onboarding, videos, assessments, improvements, streaks, goals); automatic unlocking via DB triggers; rarity system with points; dashboard integration |
+| **Assessment Comparison View** | ✅ Done | Feature module at `/src/features/assessment-comparison/` with components: `AssessmentComparison.tsx`, `ComparisonSelector.tsx`; utility functions: `comparison-utils.ts` (calculateDelta, isImprovement, formatDelta, compareAssessments); side-by-side comparison of 2 assessments; improvements highlighted in green, regressions in red; delta calculation with proper units; summary counts for improvements/regressions/unchanged; integrated as third tab in `/dashboard/assessments`; 26 unit tests with Vitest |
+| **Age Group Rankings** | ✅ Done | Feature module at `/src/features/rankings/` with components: `RankingsView.tsx`, `CategoryLeaderCards.tsx`, `LeaderboardTable.tsx`, `GroupStatisticsCard.tsx`, `DistributionChart.tsx`, `AgeGroupFilter.tsx`; utility functions: `ranking-utils.ts` (getLatestAssessmentPerUser, calculateRankings, calculateGroupStatistics, createDistributionBins); server action: `get-rankings.ts`; 5 category leaders (Sprint, Jump, Agility, Flexibility, Power); full leaderboard with percentile rankings; group statistics with distribution histogram; age group filtering; dedicated page at `/dashboard/rankings`; 21 unit tests with Vitest (47 total across features) |
 
 ### Pending Features 📋
 
-- Assessment comparison view (side-by-side)
-- Achievement badges
 - Notifications system
 - Admin analytics dashboard
 
 ---
 
-*Document Version: 1.9*
-*Last Updated: January 2025*
-*Status: Phase 2 Complete & Deployed - All migrations applied to production*
+*Document Version: 2.2*
+*Last Updated: January 2026*
+*Status: Phase 4 Partial - Age Group Rankings complete, Notifications and Admin Analytics pending*

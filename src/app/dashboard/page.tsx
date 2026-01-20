@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,17 @@ import { getAgeGroup } from "@/types/assessment";
 import { MiniRatingChartWrapper } from "./MiniRatingChartWrapper";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
+import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } from "@/features/achievements";
+import type { UserAchievementRow } from "@/types/database";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Explicit auth check - redirect if not authenticated
+  if (!user) {
+    redirect("/auth/login?redirect=/dashboard");
+  }
 
   // Get user's data
   const [
@@ -35,7 +43,8 @@ export default async function DashboardPage() {
     { count: postWorkoutCount },
     { count: videosWatched },
     { data: streakData },
-    { data: goalsData }
+    { data: goalsData },
+    { data: achievementsData }
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
     supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").single() as unknown as { data: { id: string } | null },
@@ -45,11 +54,15 @@ export default async function DashboardPage() {
     supabase.from("post_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
     supabase.from("video_progress").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "").eq("watched", true) as unknown as { count: number | null },
     supabase.from("user_streaks").select("*").eq("user_id", user?.id || "").single() as unknown as { data: UserStreakRow | null },
-    supabase.from("player_goals").select("*").eq("user_id", user?.id || "").order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null }
+    supabase.from("player_goals").select("*").eq("user_id", user?.id || "").order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
+    supabase.from("user_achievements").select("*").eq("user_id", user?.id || "").order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null }
   ]);
 
   // Calculate goal progress for display
   const goalsWithProgress = (goalsData || []).map(calculateGoalProgress);
+
+  // Enrich achievements with display info
+  const achievementsWithDisplay = (achievementsData || []).map(enrichAchievement);
 
   const hasCompletedNutrition = !!nutritionForm;
 
@@ -234,7 +247,7 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div>
         <h2 className="text-xl font-semibold mb-4">הסטטיסטיקות שלי</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-4">
           {/* Mini Rating Chart */}
           {assessments && assessments.length > 0 && (
             <Link href="/dashboard/assessments" className="lg:col-span-1">
@@ -248,6 +261,8 @@ export default async function DashboardPage() {
           )}
           {/* Streak Card */}
           <StreakCard streak={streakData} />
+          {/* Achievements Card */}
+          <AchievementsCard achievements={achievementsData || []} />
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>שאלונים לפני אימון</CardDescription>
@@ -283,6 +298,9 @@ export default async function DashboardPage() {
 
       {/* Streak Celebration (client-side toast) */}
       <StreakCelebrationClient streak={streakData} />
+
+      {/* Achievement Celebration (client-side toast) */}
+      <AchievementCelebrationClient achievements={achievementsWithDisplay} />
     </div>
   );
 }

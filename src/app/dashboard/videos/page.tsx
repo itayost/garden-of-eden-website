@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,11 @@ const dayTopics = [
 export default async function VideosPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Explicit auth check - redirect if not authenticated
+  if (!user) {
+    redirect("/auth/login?redirect=/dashboard/videos");
+  }
 
   // Fetch videos and progress
   const [{ data: videos }, { data: progress }] = await Promise.all([

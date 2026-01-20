@@ -21,7 +21,8 @@ import {
   LogOut,
   Menu,
   Settings,
-  Target
+  Target,
+  Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -30,6 +31,7 @@ import type { Profile } from "@/types/database";
 const navItems = [
   { href: "/dashboard", label: "ראשי", icon: Home },
   { href: "/dashboard/assessments", label: "מבדקים", icon: Target },
+  { href: "/dashboard/rankings", label: "דירוג", icon: Trophy },
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
 ];

@@ -1,9 +1,13 @@
 import { z } from "zod";
 
+// Max lengths
+const MAX_POSITION_LENGTH = 10;
+const MAX_NOTES_LENGTH = 1000;
+
 const statValue = z.number().min(1).max(99);
 
 export const playerStatsSchema = z.object({
-  position: z.string().min(1),
+  position: z.string().min(1).max(MAX_POSITION_LENGTH),
   card_type: z.enum(["standard", "gold", "silver", "bronze", "special"]),
   // Main stats
   pace: statValue,
@@ -48,7 +52,7 @@ export const playerStatsSchema = z.object({
   recovery: statValue,
   nutrition_score: statValue,
   // Notes
-  notes: z.string().optional(),
+  notes: z.string().max(MAX_NOTES_LENGTH).optional(),
 });
 
 export type PlayerStatsFormData = z.infer<typeof playerStatsSchema>;

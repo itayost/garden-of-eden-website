@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,11 @@ import { Activity, ClipboardCheck, Salad, CheckCircle2, ArrowLeft } from "lucide
 export default async function FormsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Explicit auth check - redirect if not authenticated
+  if (!user) {
+    redirect("/auth/login?redirect=/dashboard/forms");
+  }
 
   const { data: nutritionForm } = await supabase
     .from("nutrition_forms")

@@ -1,55 +1,69 @@
 import { z } from "zod";
 
+// Max lengths for string inputs
+const MAX_SELECT_LENGTH = 50;
+const MAX_SHORT_TEXT = 200;
+const MAX_MEDIUM_TEXT = 500;
+const MAX_LONG_TEXT = 2000;
+
+// Validation helper for optional select values
+const optionalSelect = z.string().max(MAX_SELECT_LENGTH).optional();
+
+// Validation helper for optional text fields
+const optionalShortText = z.string().max(MAX_SHORT_TEXT).optional();
+const optionalMediumText = z.string().max(MAX_MEDIUM_TEXT).optional();
+const optionalLongText = z.string().max(MAX_LONG_TEXT).optional();
+
 // Validation helper for optional numeric strings
-const optionalNumericString = z.string().optional().refine(
+const optionalNumericString = z.string().max(MAX_SHORT_TEXT).optional().refine(
   (val) => !val || val === "" || !isNaN(parseFloat(val)),
   { message: "נא להזין מספר תקין" }
 );
 
 // Validation helper for required numeric strings
 const requiredNumericString = (errorMsg: string) =>
-  z.string().min(1, errorMsg).refine(
+  z.string().min(1, errorMsg).max(MAX_SHORT_TEXT).refine(
     (val) => !isNaN(parseFloat(val)),
     { message: "נא להזין מספר תקין" }
   );
 
 export const preWorkoutSchema = z.object({
-  group_training: z.string().optional(),
-  urine_color: z.string().optional(),
-  nutrition_status: z.string().optional(),
-  last_game: z.string().optional(),
-  improvements_desired: z.string().optional(),
-  sleep_hours: z.string().optional(),
-  recent_injury: z.string().optional(),
-  next_match: z.string().optional(),
+  group_training: optionalSelect,
+  urine_color: optionalSelect,
+  nutrition_status: optionalSelect,
+  last_game: optionalMediumText,
+  improvements_desired: optionalMediumText,
+  sleep_hours: optionalSelect,
+  recent_injury: optionalMediumText,
+  next_match: optionalSelect,
 });
 
 export const postWorkoutSchema = z.object({
-  training_date: z.string().min(1, "נא לבחור תאריך"),
-  trainer_id: z.string().optional(),
+  training_date: z.string().min(1, "נא לבחור תאריך").max(MAX_SHORT_TEXT),
+  trainer_id: z.string().max(MAX_SELECT_LENGTH).optional(),
   difficulty_level: z.number().min(1).max(10),
   satisfaction_level: z.number().min(1).max(10),
-  comments: z.string().optional(),
-  contact_info: z.string().optional(),
+  comments: optionalLongText,
+  contact_info: optionalShortText,
 });
 
 export const nutritionSchema = z.object({
-  years_competitive: z.string().optional(),
+  years_competitive: optionalSelect,
   previous_counseling: z.boolean(),
-  counseling_details: z.string().optional(),
+  counseling_details: optionalMediumText,
   weight: optionalNumericString,
   height: optionalNumericString,
   allergies: z.boolean(),
-  allergies_details: z.string().optional(),
+  allergies_details: optionalMediumText,
   chronic_conditions: z.boolean(),
-  conditions_details: z.string().optional(),
-  medications: z.string().optional(),
-  medications_list: z.string().optional(),
+  conditions_details: optionalMediumText,
+  medications: optionalSelect,
+  medications_list: optionalMediumText,
   bloating_frequency: optionalNumericString,
   stomach_pain: optionalNumericString,
   bowel_frequency: optionalNumericString,
-  stool_consistency: z.string().optional(),
-  overuse_injuries: z.string().optional(),
+  stool_consistency: optionalSelect,
+  overuse_injuries: optionalMediumText,
   illness_interruptions: optionalNumericString,
   max_days_missed: optionalNumericString,
   fatigue_level: optionalNumericString,
@@ -59,7 +73,7 @@ export const nutritionSchema = z.object({
   physical_exhaustion: optionalNumericString,
   preparedness: optionalNumericString,
   overall_energy: optionalNumericString,
-  additional_comments: z.string().optional(),
+  additional_comments: optionalLongText,
 });
 
 export type PreWorkoutFormData = z.infer<typeof preWorkoutSchema>;

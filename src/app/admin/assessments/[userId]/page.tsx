@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { isValidUUID } from "@/lib/utils/uuid";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,12 @@ interface PageProps {
 
 export default async function PlayerAssessmentsPage({ params }: PageProps) {
   const { userId } = await params;
+
+  // Validate userId is a proper UUID
+  if (!isValidUUID(userId)) {
+    notFound();
+  }
+
   const supabase = await createClient();
 
   // Fetch player profile

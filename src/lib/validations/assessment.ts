@@ -1,28 +1,32 @@
 import { z } from "zod";
 
+// Max lengths for text inputs
+const MAX_SHORT_TEXT = 200;
+const MAX_NOTES_TEXT = 1000;
+
 // All fields are optional since partial assessments are allowed
 export const assessmentSchema = z.object({
   // Assessment date
-  assessment_date: z.string().optional(),
+  assessment_date: z.string().max(MAX_SHORT_TEXT).optional(),
 
-  // Sprint tests (seconds) - positive numbers
-  sprint_5m: z.number().positive().optional().nullable(),
-  sprint_10m: z.number().positive().optional().nullable(),
-  sprint_20m: z.number().positive().optional().nullable(),
+  // Sprint tests (seconds) - positive numbers with reasonable max
+  sprint_5m: z.number().positive().max(30).optional().nullable(),
+  sprint_10m: z.number().positive().max(30).optional().nullable(),
+  sprint_20m: z.number().positive().max(60).optional().nullable(),
 
-  // Jump tests (cm) - positive numbers
-  jump_2leg_distance: z.number().positive().optional().nullable(),
-  jump_right_leg: z.number().positive().optional().nullable(),
-  jump_left_leg: z.number().positive().optional().nullable(),
-  jump_2leg_height: z.number().positive().optional().nullable(),
+  // Jump tests (cm) - positive numbers with reasonable max
+  jump_2leg_distance: z.number().positive().max(500).optional().nullable(),
+  jump_right_leg: z.number().positive().max(400).optional().nullable(),
+  jump_left_leg: z.number().positive().max(400).optional().nullable(),
+  jump_2leg_height: z.number().positive().max(200).optional().nullable(),
 
-  // Agility (seconds)
-  blaze_spot_time: z.number().positive().optional().nullable(),
+  // Agility (seconds) with reasonable max
+  blaze_spot_time: z.number().positive().max(120).optional().nullable(),
 
-  // Flexibility (cm) - positive numbers
-  flexibility_ankle: z.number().nonnegative().optional().nullable(),
-  flexibility_knee: z.number().nonnegative().optional().nullable(),
-  flexibility_hip: z.number().nonnegative().optional().nullable(),
+  // Flexibility (cm) - positive numbers with reasonable max
+  flexibility_ankle: z.number().nonnegative().max(100).optional().nullable(),
+  flexibility_knee: z.number().nonnegative().max(100).optional().nullable(),
+  flexibility_hip: z.number().nonnegative().max(100).optional().nullable(),
 
   // Categorical
   coordination: z.enum(["basic", "advanced", "deficient"]).optional().nullable(),
@@ -32,15 +36,15 @@ export const assessmentSchema = z.object({
   // Kick power (percentage 0-100)
   kick_power_kaiser: z.number().min(0).max(100).optional().nullable(),
 
-  // Mental notes (free text)
-  concentration_notes: z.string().optional().nullable(),
-  decision_making_notes: z.string().optional().nullable(),
-  work_ethic_notes: z.string().optional().nullable(),
-  recovery_notes: z.string().optional().nullable(),
-  nutrition_notes: z.string().optional().nullable(),
+  // Mental notes (free text) with max length
+  concentration_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
+  decision_making_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
+  work_ethic_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
+  recovery_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
+  nutrition_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
 
-  // General notes
-  notes: z.string().optional().nullable(),
+  // General notes with max length
+  notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
 });
 
 export type AssessmentFormData = z.infer<typeof assessmentSchema>;
