@@ -691,6 +691,101 @@ export interface Database {
           achieved_value?: number | null;
         };
       };
+      payments: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          process_id: string;
+          process_token: string;
+          transaction_id: string | null;
+          transaction_token: string | null;
+          asmachta: string | null;
+          amount: number;
+          description: string;
+          payment_type: "one_time" | "recurring";
+          status: "pending" | "completed" | "failed" | "cancelled";
+          status_code: string | null;
+          card_suffix: string | null;
+          card_type: string | null;
+          card_brand: string | null;
+          card_exp: string | null;
+          payer_name: string;
+          payer_phone: string;
+          payer_email: string | null;
+          payments_num: number | null;
+          all_payments_num: number | null;
+          first_payment_sum: number | null;
+          periodical_payment_sum: number | null;
+          webhook_received_at: string | null;
+          approved_at: string | null;
+          custom_fields: Json | null;
+          raw_webhook_data: Json | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          process_id: string;
+          process_token: string;
+          transaction_id?: string | null;
+          transaction_token?: string | null;
+          asmachta?: string | null;
+          amount: number;
+          description: string;
+          payment_type: "one_time" | "recurring";
+          status?: "pending" | "completed" | "failed" | "cancelled";
+          status_code?: string | null;
+          card_suffix?: string | null;
+          card_type?: string | null;
+          card_brand?: string | null;
+          card_exp?: string | null;
+          payer_name: string;
+          payer_phone: string;
+          payer_email?: string | null;
+          payments_num?: number | null;
+          all_payments_num?: number | null;
+          first_payment_sum?: number | null;
+          periodical_payment_sum?: number | null;
+          webhook_received_at?: string | null;
+          approved_at?: string | null;
+          custom_fields?: Json | null;
+          raw_webhook_data?: Json | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          process_id?: string;
+          process_token?: string;
+          transaction_id?: string | null;
+          transaction_token?: string | null;
+          asmachta?: string | null;
+          amount?: number;
+          description?: string;
+          payment_type?: "one_time" | "recurring";
+          status?: "pending" | "completed" | "failed" | "cancelled";
+          status_code?: string | null;
+          card_suffix?: string | null;
+          card_type?: string | null;
+          card_brand?: string | null;
+          card_exp?: string | null;
+          payer_name?: string;
+          payer_phone?: string;
+          payer_email?: string | null;
+          payments_num?: number | null;
+          all_payments_num?: number | null;
+          first_payment_sum?: number | null;
+          periodical_payment_sum?: number | null;
+          webhook_received_at?: string | null;
+          approved_at?: string | null;
+          custom_fields?: Json | null;
+          raw_webhook_data?: Json | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
       user_achievements: {
         Row: {
           id: string;
@@ -753,6 +848,9 @@ export type PlayerGoalUpdate = Database["public"]["Tables"]["player_goals"]["Upd
 export type UserAchievementRow = Database["public"]["Tables"]["user_achievements"]["Row"];
 export type UserAchievementInsert = Database["public"]["Tables"]["user_achievements"]["Insert"];
 export type UserAchievementUpdate = Database["public"]["Tables"]["user_achievements"]["Update"];
+export type PaymentRow = Database["public"]["Tables"]["payments"]["Row"];
+export type PaymentInsert = Database["public"]["Tables"]["payments"]["Insert"];
+export type PaymentUpdate = Database["public"]["Tables"]["payments"]["Update"];
 
 /** Achievement badge types */
 export type AchievementBadgeType =
