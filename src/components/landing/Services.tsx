@@ -1,16 +1,18 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { ChevronDown, MessageCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { PaymentButton } from "@/components/payments/PaymentButton";
 
 const plans = [
   {
     name: "קורס דיגיטלי",
     description: "גישה מלאה לתוכן הדיגיטלי",
     price: "290",
+    priceNumber: 290,
     period: "חד פעמי",
+    paymentType: "one_time" as const,
     features: [
       "קורס דיגיטלי מלא",
       "גישה לכל התכנים המוקלטים",
@@ -23,7 +25,9 @@ const plans = [
     name: "תוכנית בסיסית",
     description: "כרטיסייה לאימונים במתחם",
     price: "2,190",
+    priceNumber: 2190,
     period: "ל-10 אימונים",
+    paymentType: "one_time" as const,
     features: [
       "כרטיסייה ל10 אימונים",
       "קורס דיגיטלי",
@@ -35,7 +39,9 @@ const plans = [
     name: "תוכנית מתקדמים",
     description: "אידאלי למתאמנים רציניים",
     price: "1,490",
+    priceNumber: 1490,
     period: "לחודש",
+    paymentType: "recurring" as const,
     features: [
       "2 אימונים שבועיים במתחם",
       "מדידות גופניות חודשיות",
@@ -50,7 +56,9 @@ const plans = [
     name: "תוכנית PRO",
     description: "התוכנית המקיפה ביותר שלנו",
     price: "1,690",
+    priceNumber: 1690,
     period: "לחודש",
+    paymentType: "recurring" as const,
     features: [
       "7 אימונים במתחם (בחודש)",
       "אימון כדורגל",
@@ -72,11 +80,6 @@ export function Services() {
 
   const toggleExpand = (index: number) => {
     setExpandedPlan(expandedPlan === index ? null : index);
-  };
-
-  const getWhatsAppMessage = (planName: string) => {
-    const message = encodeURIComponent(`היי, אני מעוניין/ת בתוכנית ${planName}. אשמח לקבל פרטים נוספים!`);
-    return `https://wa.me/972525779446?text=${message}`;
   };
 
   return (
@@ -191,23 +194,13 @@ export function Services() {
                 </AnimatePresence>
 
                 {/* CTA */}
-                <Button
-                  className={`w-full py-5 rounded-full font-medium transition-all duration-300 ${
-                    plan.highlighted
-                      ? "bg-[#CDEA68] hover:bg-[#bdd85c] text-black"
-                      : "bg-black hover:bg-black/80 text-white"
-                  }`}
-                  asChild
-                >
-                  <a
-                    href={getWhatsAppMessage(plan.name)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <MessageCircle className="w-4 h-4 ml-2" />
-                    התחילו עכשיו
-                  </a>
-                </Button>
+                <PaymentButton
+                  planName={plan.name}
+                  amount={plan.priceNumber}
+                  description={plan.description}
+                  paymentType={plan.paymentType}
+                  variant={plan.highlighted ? "highlighted" : "default"}
+                />
               </motion.div>
             </motion.div>
           ))}

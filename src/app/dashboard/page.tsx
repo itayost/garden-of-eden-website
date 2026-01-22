@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import { MiniRatingChartWrapper } from "./MiniRatingChartWrapper";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
 import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } from "@/features/achievements";
+import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
 import type { UserAchievementRow } from "@/types/database";
 
 export default async function DashboardPage() {
@@ -322,6 +324,11 @@ export default async function DashboardPage() {
 
       {/* Achievement Celebration (client-side toast) */}
       <AchievementCelebrationClient achievements={achievementsWithDisplay} />
+
+      {/* Payment Status Handler (client-side toast for payment success/cancelled) */}
+      <Suspense fallback={null}>
+        <PaymentStatusHandler />
+      </Suspense>
     </div>
   );
 }
