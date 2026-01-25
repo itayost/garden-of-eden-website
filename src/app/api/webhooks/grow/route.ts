@@ -67,8 +67,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Call approveTransaction to acknowledge receipt
+    // Determine if recurring from cField2 (payment type stored during creation)
+    const isRecurring = data.customFields?.cField2 === "recurring";
     try {
-      const approveResponse = await approveTransaction(data);
+      const approveResponse = await approveTransaction(data, isRecurring);
 
       if (approveResponse.status === 1) {
         // Update approved_at timestamp
