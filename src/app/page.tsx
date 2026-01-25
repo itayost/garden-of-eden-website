@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { Navbar, Hero, About, Services, Programs, Contact, Footer } from "@/components/landing";
+import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
 
 export default function HomePage() {
   return (
@@ -10,6 +12,11 @@ export default function HomePage() {
       <Programs />
       <Contact />
       <Footer />
+
+      {/* Payment Status Handler (shows toast for payment success/cancelled) */}
+      <Suspense fallback={null}>
+        <PaymentStatusHandler />
+      </Suspense>
     </main>
   );
 }
