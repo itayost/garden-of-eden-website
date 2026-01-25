@@ -41,11 +41,18 @@ export function PaymentButton({
       } = await supabase.auth.getUser();
 
       if (!user) {
-        // Redirect to login with return URL
-        const returnUrl = encodeURIComponent(
-          `${window.location.pathname}?plan=${encodeURIComponent(planName)}`
+        // Store payment intent in sessionStorage for after login
+        sessionStorage.setItem(
+          "pendingPayment",
+          JSON.stringify({
+            planName,
+            amount,
+            description: `${planName} - ${description}`,
+            paymentType,
+          })
         );
-        router.push(`/auth/login?next=${returnUrl}`);
+        // Redirect to login - will go to dashboard after login
+        router.push("/auth/login?redirect=/dashboard");
         return;
       }
 

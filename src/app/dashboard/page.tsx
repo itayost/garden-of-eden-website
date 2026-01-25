@@ -25,6 +25,7 @@ import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking"
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
 import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } from "@/features/achievements";
 import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
+import { PendingPaymentHandler } from "@/components/payments/PendingPaymentHandler";
 import type { UserAchievementRow } from "@/types/database";
 
 export default async function DashboardPage() {
@@ -329,6 +330,9 @@ export default async function DashboardPage() {
       <Suspense fallback={null}>
         <PaymentStatusHandler />
       </Suspense>
+
+      {/* Pending Payment Handler (auto-continue payment after login) */}
+      <PendingPaymentHandler />
     </div>
   );
 }
