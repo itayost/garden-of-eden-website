@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
     const baseUrl = getWebhookBaseUrl();
 
     // Create payment process with GROW
+    // Use different page code for recurring vs one-time payments
+    const isRecurring = body.paymentType === "recurring";
     const growResponse = await createPaymentProcess({
       sum: body.amount,
       description: body.description,
@@ -97,6 +99,7 @@ export async function POST(request: NextRequest) {
       cField1: body.payerPhone, // Store phone for matching
       cField2: body.paymentType, // Store payment type
       notifyUrl: `${baseUrl}/api/webhooks/grow`,
+      isRecurring,
     });
 
     if (growResponse.status !== 1 || !growResponse.data) {
