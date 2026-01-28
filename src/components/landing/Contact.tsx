@@ -15,21 +15,15 @@ export function Contact() {
             viewport={{ once: true }}
           >
             <div className="aspect-[4/3] rounded-3xl overflow-hidden relative bg-[#1a1a1a]">
-              {/* Google Maps Embed - Haifa placeholder location */}
+              {/* Google Maps Embed - Garden of Eden location */}
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d53814.41833089365!2d34.95!3d32.79!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151dba0b0f8d2d1f%3A0x3d1c5d0f0f7a2b0!2sHaifa%2C%20Israel!5e0!3m2!1sen!2s!4v1700000000000!5m2!1sen!2s"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3353.273065290644!2d34.95703687613971!3d32.81152907364922!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151dbb7b675e66cb%3A0x7a93f87c703bd9f7!2z15LXkNeo15PXnyDXkNeV16Ig16LXk9efIEdhcmRlbiBPZiBFZGVu!5e0!3m2!1sen!2sus!4v1769599490398!5m2!1sen!2sus"
                 className="absolute inset-0 w-full h-full border-0"
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="מפת המיקום שלנו בחיפה"
+                title="Garden of Eden - שלמה המלך 57, חיפה"
               />
-              {/* Note overlay for placeholder */}
-              <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center">
-                <span className="text-white/70 text-sm">
-                  דרכי הגעה מפורטות יעודכנו בקרוב
-                </span>
-              </div>
             </div>
           </motion.div>
 
@@ -93,7 +87,7 @@ export function Contact() {
                 </div>
                 <div>
                   <span className="text-black/50 text-xs block">מיקום</span>
-                  <span className="text-black font-medium text-sm">חיפה, ישראל</span>
+                  <span className="text-black font-medium text-sm">שלמה המלך 57, חיפה</span>
                 </div>
               </div>
             </div>
