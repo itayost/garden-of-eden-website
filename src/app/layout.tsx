@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   keywords: ["אקדמיית כדורגל", "כדורגל חיפה", "אימוני אתלטיות", "ליווי מנטלי", "תזונת ספורטאים", "אנליסט כדורגל", "ניהול קריירה", "garden of eden", "שחקנים צעירים"],
   authors: [{ name: "Garden of Eden" }],
   creator: "Garden of Eden",
-  metadataBase: new URL("https://garden-of-eden-website-six.vercel.app"),
+  metadataBase: new URL("https://www.edengarden.co.il"),
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "he_IL",
-    url: "https://garden-of-eden-website-six.vercel.app",
+    url: "https://www.edengarden.co.il",
     siteName: "Garden of Eden",
     title: "Garden of Eden - אקדמיית הכדורגל עם מעטפת מלאה | חיפה",
     description: "אקדמיית כדורגל מקצועית בחיפה: אימוני כדורגל ואתלטיות, ליווי מנטלי ותזונה, אנליסט כדורגל וניהול קריירה.",

@@ -1,8 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, X } from "lucide-react";
-import { useState } from "react";
+import { Volume2, VolumeX } from "lucide-react";
+import { useState, useRef } from "react";
 
 // 4 Core Values - Updated content
 const categories = [
@@ -48,8 +48,9 @@ const features = [
 
 export function About() {
   const [activeCategory, setActiveCategory] = useState(0);
-  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const scrollToServices = () => {
     const element = document.getElementById("services");
@@ -76,39 +77,40 @@ export function About() {
                 אודותינו
               </h2>
 
-              {/* Video card - clickable */}
-              <button
-                onClick={() => setIsVideoOpen(true)}
-                className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden group cursor-pointer text-right"
-                aria-label="לחצו לצפייה בסרטון אודות Garden of Eden"
-              >
-                {/* Video thumbnail/preview */}
+              {/* Video card */}
+              <div className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden group">
+                {/* Video */}
                 <video
+                  ref={videoRef}
                   className="absolute inset-0 w-full h-full object-cover"
-                  muted
+                  muted={isMuted}
                   loop
                   playsInline
                   autoPlay
                   poster="/landing/athletic.webp"
-                  aria-hidden="true"
                 >
                   <source src="/landing/promo-video.mp4" type="video/mp4" />
                 </video>
-                {/* Overlay for text readability */}
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors" />
 
-                {/* Play button overlay */}
-                <div className="absolute inset-0 flex items-center justify-center">
+                {/* Mute/Unmute button */}
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className="absolute bottom-4 right-4 z-10"
+                  aria-label={isMuted ? "הפעל צליל" : "השתק"}
+                >
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
-                    className="w-20 h-20 rounded-full bg-[#CDEA68] flex items-center justify-center shadow-lg"
+                    className="w-12 h-12 rounded-full bg-[#CDEA68] flex items-center justify-center shadow-lg"
                   >
-                    <Play className="w-8 h-8 text-black fill-black mr-[-4px]" />
+                    {isMuted ? (
+                      <VolumeX className="w-5 h-5 text-black" />
+                    ) : (
+                      <Volume2 className="w-5 h-5 text-black" />
+                    )}
                   </motion.div>
-                </div>
-
-              </button>
+                </button>
+              </div>
 
               <p className="text-black/60 mt-6 leading-relaxed">
                 צפו איך אנחנו משנים את עולם הכושר עם מאמנים מוסמכים, כלים מתקדמים ותוכניות מותאמות אישית עבורכם.
@@ -221,49 +223,6 @@ export function About() {
           </motion.div>
         </div>
       </section>
-
-      {/* Video Modal */}
-      <AnimatePresence>
-        {isVideoOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-            onClick={() => setIsVideoOpen(false)}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setIsVideoOpen(false)}
-              className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-              aria-label="סגור"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            {/* Video container */}
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-4xl aspect-video bg-[#1a1a1a] rounded-2xl overflow-hidden"
-            >
-              <video
-                className="w-full h-full object-cover"
-                controls
-                autoPlay
-                playsInline
-                poster="/landing/athletic.webp"
-                aria-label="סרטון תדמית של Garden of Eden"
-              >
-                <source src="/landing/promo-video.mp4" type="video/mp4" />
-                הדפדפן שלך אינו תומך בוידאו
-              </video>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }
