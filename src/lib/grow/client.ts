@@ -286,7 +286,7 @@ export async function approveTransaction(
 export function getWebhookBaseUrl(): string {
   // In production, use the actual domain
   if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXT_PUBLIC_SITE_URL || 'https://gardengym.co.il';
+    return process.env.NEXT_PUBLIC_SITE_URL || 'https://www.edengarden.co.il';
   }
   // In development/preview, use Vercel URL or fallback
   return process.env.VERCEL_URL

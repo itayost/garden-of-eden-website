@@ -43,7 +43,7 @@ const plans = [
     description: "תוכנית בסיסית + אימונים במתחם",
     price: "1,450",
     priceNumber: 1450,
-    period: "לחודש (הו״ק)",
+    period: "לחודש",
     paymentType: "recurring" as const,
     features: [
       "כל מה שבתוכנית בסיסית",
@@ -58,7 +58,7 @@ const plans = [
     description: "התוכנית המקיפה ביותר שלנו",
     price: "1,650",
     priceNumber: 1650,
-    period: "לחודש (הו״ק)",
+    period: "לחודש",
     paymentType: "recurring" as const,
     features: [
       "כל מה שבתוכנית מתקדמים",
