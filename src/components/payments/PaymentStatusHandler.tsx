@@ -19,7 +19,7 @@ export function PaymentStatusHandler() {
         duration: 5000,
       });
       // Remove the query param from URL
-      router.replace("/dashboard", { scroll: false });
+      router.replace("/", { scroll: false });
     } else if (paymentStatus === "cancelled") {
       toast.error("התשלום בוטל", {
         description: "התשלום לא הושלם. תוכלו לנסות שוב בכל עת.",
@@ -27,7 +27,7 @@ export function PaymentStatusHandler() {
         duration: 5000,
       });
       // Remove the query param from URL
-      router.replace("/dashboard", { scroll: false });
+      router.replace("/", { scroll: false });
     }
   }, [searchParams, router]);
 
