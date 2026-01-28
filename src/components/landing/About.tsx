@@ -150,7 +150,7 @@ export function About() {
             </motion.div>
           </div>
 
-          {/* Why Choose Us - Full Player Support Package */}
+          {/* Why Choose Us */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -162,28 +162,60 @@ export function About() {
                 למה לבחור בנו?
               </h2>
               <p className="text-black/50 max-w-md mt-4 md:mt-0">
-                מעטפת מלאה לשחקן - הכל מה שאתם צריכים להצלחה בקריירה
+                המתחם שלנו מספק הכל מה שאתם צריכים לחוויית אימון מלאה
               </p>
             </div>
 
-            {/* Support package cards - 5 items */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {supportPackage.map((item, index) => (
-                <motion.div
-                  key={item.title}
+            {/* Feature cards - clickable */}
+            <div className="grid md:grid-cols-3 gap-4">
+              {features.map((feature, index) => (
+                <motion.button
+                  key={feature.title}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
-                  whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                  className="bg-white rounded-3xl p-6 border border-black/10 hover:border-[#CDEA68]/50 hover:shadow-lg transition-all duration-300 text-center"
+                  onClick={scrollToServices}
+                  onMouseEnter={() => setHoveredFeature(index)}
+                  onMouseLeave={() => setHoveredFeature(null)}
+                  className="aspect-[4/3] rounded-3xl p-6 flex flex-col justify-end relative overflow-hidden group text-right"
+                  style={{
+                    backgroundImage: `url(${feature.image})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-[#CDEA68]/10 flex items-center justify-center mx-auto mb-4">
-                    <item.icon className="w-7 h-7 text-[#CDEA68]" />
-                  </div>
-                  <h3 className="text-black font-bold text-lg mb-2">{item.title}</h3>
-                  <p className="text-black/50 text-sm">{item.description}</p>
-                </motion.div>
+                  {/* Dark overlay for text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-[#CDEA68]/0 group-hover:bg-[#CDEA68]/10 transition-colors duration-300" />
+
+                  <AnimatePresence mode="wait">
+                    {hoveredFeature === index ? (
+                      <motion.div
+                        key="detail"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="relative z-10"
+                      >
+                        <span className="text-[#CDEA68] text-sm mb-2 block">לחצו לפרטים</span>
+                        <span className="text-white/70 text-sm">{feature.detail}</span>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="summary"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="relative z-10"
+                      >
+                        <span className="text-white/50 text-sm mb-1 block">{feature.desc}</span>
+                        <h3 className="text-white font-bold text-xl">{feature.title}</h3>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
               ))}
             </div>
           </motion.div>
