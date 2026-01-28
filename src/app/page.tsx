@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Navbar, Hero, About, Services, Programs, Contact, Footer } from "@/components/landing";
+import { Navbar, Hero, About, Services, Programs, Testimonials, FAQ, Contact, Footer } from "@/components/landing";
 import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
 
 export default function HomePage() {
@@ -10,6 +10,8 @@ export default function HomePage() {
       <About />
       <Services />
       <Programs />
+      <Testimonials />
+      <FAQ />
       <Contact />
       <Footer />
 

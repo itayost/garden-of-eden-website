@@ -9,9 +9,9 @@ const plans = [
   {
     name: "קורס דיגיטלי",
     description: "גישה מלאה לתוכן הדיגיטלי",
-    price: "290",
-    priceNumber: 290,
-    period: "חד פעמי",
+    price: "350",
+    priceNumber: 350,
+    period: "תשלום אחד",
     paymentType: "one_time" as const,
     features: [
       "קורס דיגיטלי מלא",
@@ -23,31 +23,32 @@ const plans = [
   },
   {
     name: "תוכנית בסיסית",
-    description: "כרטיסייה לאימונים במתחם",
+    description: "מעטפת מלאה לשחקן",
     price: "2,190",
     priceNumber: 2190,
-    period: "ל-10 אימונים",
+    period: "עד 3 תשלומים",
     paymentType: "one_time" as const,
     features: [
-      "כרטיסייה ל10 אימונים",
-      "קורס דיגיטלי",
+      "קורס דיגיטלי מתנה",
+      "ליווי תזונה",
+      "גישה לספורטרפיסת ופיזיוטרפיסת",
+      "5 אימונים ביתיים למניעת פציעות",
+      "מבדקי אתלטיקה כל רבעון",
     ],
     extraFeatures: [],
     highlighted: false,
   },
   {
     name: "תוכנית מתקדמים",
-    description: "אידאלי למתאמנים רציניים",
-    price: "1,490",
-    priceNumber: 1490,
-    period: "לחודש",
+    description: "תוכנית בסיסית + אימונים במתחם",
+    price: "1,450",
+    priceNumber: 1450,
+    period: "לחודש (הו״ק)",
     paymentType: "recurring" as const,
     features: [
-      "2 אימונים שבועיים במתחם",
+      "כל מה שבתוכנית בסיסית",
+      "2 אימונים בשבוע במתחם",
       "מדידות גופניות חודשיות",
-      "מבדקי אתלטיקה כל רבעון",
-      "5 תוכניות אימון ביתי בהתאמה אישית",
-      "קורס דיגיטלי",
     ],
     extraFeatures: [],
     highlighted: true,
@@ -55,22 +56,16 @@ const plans = [
   {
     name: "תוכנית PRO",
     description: "התוכנית המקיפה ביותר שלנו",
-    price: "1,690",
-    priceNumber: 1690,
-    period: "לחודש",
+    price: "1,650",
+    priceNumber: 1650,
+    period: "לחודש (הו״ק)",
     paymentType: "recurring" as const,
     features: [
-      "7 אימונים במתחם (בחודש)",
-      "אימון כדורגל",
-      "תוכנית תזונה ותפריט מותאם אישית",
-      "מדידות גופניות חודשיות",
-      "קורס דיגיטלי",
+      "כל מה שבתוכנית מתקדמים",
+      "מפגש ניתוח וידאו עם אנליסט",
+      "אימון מנטלי אחת לחודש",
     ],
-    extraFeatures: [
-      "מבדקי אתלטיקה כל רבעון",
-      "אימון וידאו עם אנליסט אישי (קבוע בכל חודש)",
-      "5 תוכניות אימון ביתי בהתאמה אישית",
-    ],
+    extraFeatures: [],
     highlighted: false,
   },
 ];
@@ -207,14 +202,15 @@ export function Services() {
         </div>
 
         {/* Bottom note */}
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center text-black/40 text-sm mt-8"
+          className="text-center text-black/40 text-sm mt-8 space-y-1"
         >
-          * כל התוכניות כוללות אימון התנסות ראשון חינם
-        </motion.p>
+          <p>* כל התוכניות כוללות אימון התנסות ראשון - כל האימונים משולבים עם כדור</p>
+          <p>* מתקדמים ו-PRO בהתחייבות ל-4 חודשים, ניתן לבטל בהתראה של 7 ימי עסקים לפני מועד התשלום</p>
+        </motion.div>
       </div>
     </section>
   );

@@ -8,18 +8,27 @@ export function Contact() {
     <section id="contact" className="py-20 bg-[#F5F5F0]">
       <div className="container mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left - Image */}
+          {/* Left - Google Maps */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <div className="aspect-[4/3] rounded-3xl bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] overflow-hidden relative">
-              {/* Placeholder for contact image */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 rounded-full bg-[#CDEA68]/10 flex items-center justify-center">
-                  <MessageCircle className="w-8 h-8 text-[#CDEA68]/40" />
-                </div>
+            <div className="aspect-[4/3] rounded-3xl overflow-hidden relative bg-[#1a1a1a]">
+              {/* Google Maps Embed - Haifa placeholder location */}
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d53814.41833089365!2d34.95!3d32.79!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151dba0b0f8d2d1f%3A0x3d1c5d0f0f7a2b0!2sHaifa%2C%20Israel!5e0!3m2!1sen!2s!4v1700000000000!5m2!1sen!2s"
+                className="absolute inset-0 w-full h-full border-0"
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="מפת המיקום שלנו בחיפה"
+              />
+              {/* Note overlay for placeholder */}
+              <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-sm rounded-xl px-4 py-2 text-center">
+                <span className="text-white/70 text-sm">
+                  דרכי הגעה מפורטות יעודכנו בקרוב
+                </span>
               </div>
             </div>
           </motion.div>
