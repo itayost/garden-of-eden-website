@@ -119,7 +119,7 @@ export function Services() {
               {/* Card */}
               <motion.div
                 whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                className={`rounded-3xl p-8 h-full transition-all duration-300 ${
+                className={`rounded-3xl p-8 h-full flex flex-col transition-all duration-300 ${
                   plan.highlighted
                     ? "bg-white border-2 border-[#CDEA68] shadow-lg"
                     : "bg-white border border-black/10 hover:border-black/20 hover:shadow-md"
@@ -189,13 +189,15 @@ export function Services() {
                 </AnimatePresence>
 
                 {/* CTA */}
-                <PaymentButton
-                  planName={plan.name}
-                  amount={plan.priceNumber}
-                  description={plan.description}
-                  paymentType={plan.paymentType}
-                  variant={plan.highlighted ? "highlighted" : "default"}
-                />
+                <div className="mt-auto pt-4">
+                  <PaymentButton
+                    planName={plan.name}
+                    amount={plan.priceNumber}
+                    description={plan.description}
+                    paymentType={plan.paymentType}
+                    variant={plan.highlighted ? "highlighted" : "default"}
+                  />
+                </div>
               </motion.div>
             </motion.div>
           ))}
