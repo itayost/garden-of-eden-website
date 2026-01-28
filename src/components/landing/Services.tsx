@@ -202,14 +202,15 @@ export function Services() {
         </div>
 
         {/* Bottom note */}
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center text-black/40 text-sm mt-8"
+          className="text-center text-black/40 text-sm mt-8 space-y-1"
         >
-          * מתקדמים ו-PRO בהתחייבות ל-4 חודשים, ניתן לבטל בהתראה של 7 ימי עסקים לפני מועד התשלום
-        </motion.p>
+          <p>* כל האימונים משולבים עם כדור</p>
+          <p>* מתקדמים ו-PRO בהתחייבות ל-4 חודשים, ניתן לבטל בהתראה של 7 ימי עסקים לפני מועד התשלום</p>
+        </motion.div>
       </div>
     </section>
   );
