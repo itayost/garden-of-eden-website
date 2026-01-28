@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, X, Dumbbell, Target, Brain, Video, Apple } from "lucide-react";
+import { Play, X } from "lucide-react";
 import { useState } from "react";
 
 // 4 Core Values - Updated content
@@ -24,38 +24,41 @@ const categories = [
   },
 ];
 
-// Full player support package - 5 areas
-const supportPackage = [
+// Why Choose Us - 3 feature cards with images
+const features = [
   {
-    icon: Dumbbell,
-    title: "אימונים אתלטיים",
-    description: "פיתוח יכולות גופניות מתקדמות",
+    title: "מעטפת מלאה לשחקן",
+    desc: "אימונים אתלטיים, כדורגל, תזונה, מנטלי וניתוחי וידאו",
+    detail: "השחקן מקבל מעטפת מלאה הכוללת: אימונים אתלטיים, אימוני כדורגל, תהליכי תזונה, אימונים מנטליים, וניתוחי וידאו.",
+    image: "/landing/trainers.webp",
   },
   {
-    icon: Target,
-    title: "אימוני כדורגל",
-    description: "שיפור טכניקה וטקטיקה",
+    title: "ציוד מתקדם",
+    desc: "הציוד הטוב ביותר בשוק",
+    detail: "מגרשים באיכות גבוהה, ציוד אימון מתקדם ומערכות ניתוח וידאו",
+    image: "/landing/gym-equipment.webp",
   },
   {
-    icon: Apple,
-    title: "תהליכי תזונה",
-    description: "תפריט מותאם אישית לספורטאים",
-  },
-  {
-    icon: Brain,
-    title: "אימונים מנטליים",
-    description: "חוסן נפשי והכנה לתחרויות",
-  },
-  {
-    icon: Video,
-    title: "ניתוחי וידאו",
-    description: "ניתוח משחקים עם אנליסט מקצועי",
+    title: "תוכניות גמישות",
+    desc: "מותאם אישית לכל אחד",
+    detail: "כל שחקן מקבל תוכנית אימון מותאמת לגיל, ליכולות ולמטרות שלו",
+    image: "/landing/personal-training.webp",
   },
 ];
 
 export function About() {
   const [activeCategory, setActiveCategory] = useState(0);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
+
+  const scrollToServices = () => {
+    const element = document.getElementById("services");
+    if (element) {
+      const offset = 80;
+      const top = element.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: "smooth" });
+    }
+  };
 
   return (
     <>
