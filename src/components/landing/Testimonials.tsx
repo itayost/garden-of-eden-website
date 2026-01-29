@@ -1,31 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Quote } from "lucide-react";
 
-// Placeholder testimonials - to be replaced with content from Eden
-const testimonials = [
-  {
-    id: 1,
-    name: "שם ההורה",
-    role: "הורה לשחקן",
-    content: "המלצה מהורה - התוכן יסופק על ידי עדן. זהו טקסט זמני להדגמה בלבד.",
-    image: null,
-  },
-  {
-    id: 2,
-    name: "שם ההורה",
-    role: "הורה לשחקן",
-    content: "המלצה מהורה - התוכן יסופק על ידי עדן. זהו טקסט זמני להדגמה בלבד.",
-    image: null,
-  },
-  {
-    id: 3,
-    name: "שם ההורה",
-    role: "הורה לשחקן",
-    content: "המלצה מהורה - התוכן יסופק על ידי עדן. זהו טקסט זמני להדגמה בלבד.",
-    image: null,
-  },
+const videos = [
+  { id: "6GdTCLUmS6Q", title: "המלצת הורים" },
+  { id: "tLs7ST6MQi8", title: "המלצת הורים" },
 ];
 
 export function Testimonials() {
@@ -48,53 +27,30 @@ export function Testimonials() {
           </p>
         </motion.div>
 
-        {/* Testimonials grid */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {testimonials.map((testimonial, index) => (
+        {/* Videos grid */}
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          {videos.map((video, index) => (
             <motion.div
-              key={testimonial.id}
+              key={video.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white rounded-3xl p-8 border border-black/10 hover:border-[#CDEA68]/50 hover:shadow-lg transition-all"
             >
-              {/* Quote icon */}
-              <div className="w-12 h-12 rounded-2xl bg-[#CDEA68]/10 flex items-center justify-center mb-6">
-                <Quote className="w-6 h-6 text-[#CDEA68]" />
-              </div>
-
-              {/* Content */}
-              <p className="text-black/60 mb-6 leading-relaxed">
-                &ldquo;{testimonial.content}&rdquo;
-              </p>
-
-              {/* Author */}
-              <div className="flex items-center gap-3">
-                {/* Avatar placeholder */}
-                <div className="w-12 h-12 rounded-full bg-[#CDEA68]/20 flex items-center justify-center">
-                  <span className="text-[#CDEA68] font-bold text-lg">
-                    {testimonial.name.charAt(0)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-black font-medium block">{testimonial.name}</span>
-                  <span className="text-black/40 text-sm">{testimonial.role}</span>
-                </div>
+              <div className="aspect-[9/16] rounded-3xl overflow-hidden bg-black shadow-lg">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${video.id}`}
+                  title={video.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="border-0"
+                />
               </div>
             </motion.div>
           ))}
         </div>
-
-        {/* Placeholder note */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-center text-black/30 text-sm mt-8"
-        >
-          * התוכן יעודכן עם המלצות אמיתיות מהורים
-        </motion.p>
       </div>
     </section>
   );
