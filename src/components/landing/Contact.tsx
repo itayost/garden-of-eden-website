@@ -1,7 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MessageCircle, Phone, MapPin, Clock } from "lucide-react";
+import { MessageCircle, Phone, MapPin, Clock, Bus } from "lucide-react";
+
+const transportRoutes = [
+  { origin: "ממרכז הכרמל", route: "אוטובוס קו 3" },
+  { origin: "ממרכזית לב המפרץ", route: "אוטובוס קו 115" },
+  { origin: "מיקנעם", route: "קו 180 למרכזית המפרץ, משם קו 115" },
+  { origin: "מנהריה", route: "רכבת לחוף הכרמל → קו 115 → תחנת המלך שלמה" },
+];
 
 export function Contact() {
   return (
@@ -89,6 +96,24 @@ export function Contact() {
                   <span className="text-black/50 text-xs block">מיקום</span>
                   <span className="text-black font-medium text-sm">שלמה המלך 57, חיפה</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Transportation directions */}
+            <div className="mt-8">
+              <h3 className="text-lg font-bold text-black mb-4">דרכי הגעה בתחבורה ציבורית</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {transportRoutes.map((item) => (
+                  <div key={item.origin} className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-black/10">
+                    <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center flex-shrink-0">
+                      <Bus className="w-5 h-5 text-[#CDEA68]" />
+                    </div>
+                    <div>
+                      <span className="text-black font-medium text-sm block">{item.origin}</span>
+                      <span className="text-black/50 text-xs">{item.route}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </motion.div>
