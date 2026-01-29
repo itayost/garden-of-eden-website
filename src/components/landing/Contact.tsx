@@ -118,7 +118,7 @@ export function Contact() {
 
               {/* Moovit Button */}
               <a
-                href="https://moovitapp.com/tripplan/israel-1/poi/Garden%20of%20Eden%2C%20%D7%A9%D7%9C%D7%9E%D7%94%20%D7%94%D7%9E%D7%9C%D7%9A%2057/f/he?customerId=4908&ref=16&metroSeoName=Israel&fll=32.81152907364922_34.95703787613971"
+                href="https://moovitapp.com/tripplan/israel-1/poi/Garden%20of%20Eden%2C%20%D7%A9%D7%9C%D7%9E%D7%94%20%D7%94%D7%9E%D7%9C%D7%9A%2057/t/he?customerId=4908&ref=16&metroSeoName=Israel&tll=32.81152907364922_34.95703787613971"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-4 flex items-center justify-center gap-2 w-full p-4 bg-[#50af4c] hover:bg-[#45a041] text-white font-medium rounded-2xl transition-colors"
