@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Trainees can track their fitness progress and see improvement as FIFA-style player cards
-**Current focus:** Phase 4 - Data Export & Assessment Management
+**Current focus:** Phase 4 - Data Export & Assessment Management (Complete)
 
 ## Current Position
 
 | Metric | Value |
 |--------|-------|
 | Current Phase | 4 of 10 (Data Export & Assessments) |
-| Current Plan | 5 of 5 (04-02 complete, 04-05 pending) |
-| Phase Status | In progress |
+| Current Plan | 5 of 5 (04-05 complete) |
+| Phase Status | Complete |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
-| Overall Progress | 24% |
+| Overall Progress | 28% |
 
-**Progress:** [####..........] 3/10 phases in progress
+**Progress:** [#####.........] 4/10 phases complete
 
 ## Phase Overview
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 1 | Security Fixes | Complete | SEC-01 to SEC-05 |
 | 2 | User Management | In Progress | ADMN-06 to ADMN-13 |
 | 3 | Video Management | Complete | VID-02 to VID-09 |
-| 4 | Data Export & Assessments | In Progress | EXP-01 to EXP-04, ASMT-04 |
+| 4 | Data Export & Assessments | Complete | EXP-01 to EXP-04, ASMT-04 |
 | 5 | Profile & Settings | Pending | PROF-01 to PROF-07 |
 | 6 | Auth Enhancements | Pending | AUTH-05 to AUTH-09 |
 | 7 | Notifications | Pending | NOTF-01 to NOTF-08 |
@@ -79,6 +79,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 04-03 | Unique input IDs | Include formType in input IDs for accessibility |
 | 2026-02-01 | 04-02 | Ghost button icon-only trigger | Compact delete action without text label |
 | 2026-02-01 | 04-02 | Badge + action in flex container | Wrap controls together for proper alignment |
+| 2026-02-01 | 04-05 | GDPR export includes/excludes per CONTEXT.md | Profile, forms, assessments, video progress; excludes activity, payments, goals, achievements |
+| 2026-02-01 | 04-05 | Filter soft-deleted assessments | Use deleted_at IS NULL for GDPR export |
 
 ## Patterns Established
 
@@ -131,6 +133,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Assessment CSV export | Raw measurements with Hebrew columns, BOM prefix | 04-04 |
 | DeleteAssessmentDialog | AlertDialog with assessmentId and assessmentDate props | 04-02 |
 | Soft delete filter | .is("deleted_at", null) on assessment queries | 04-02 |
+| GDPRExportData interface | Typed structure for GDPR user data export | 04-05 |
+| exportUserDataAction | Server action for aggregating all user data for GDPR | 04-05 |
 
 ## Blockers / Concerns
 
@@ -177,16 +181,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 04-03 complete | Form submission CSV export with date filtering |
 | 2026-02-01 | 04-04 complete | Assessment CSV/PDF export with @react-pdf/renderer and Heebo font |
 | 2026-02-01 | 04-02 complete | Assessment deletion UI with DeleteAssessmentDialog |
+| 2026-02-01 | 04-05 complete | GDPR user data export server action and button |
+| 2026-02-01 | Phase 4 complete | Data Export & Assessment Management complete |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T17:50:00Z
-- **Stopped at:** Completed 04-02-PLAN.md
+- **Last session:** 2026-02-01T18:10:00Z
+- **Stopped at:** Completed 04-05-PLAN.md, Phase 4 complete
 - **Resume file:** None
 
 ## Next Action
 
-Execute 04-05-PLAN.md: Human verification of assessment delete flow
+Begin Phase 5: Profile & Settings
 
 ---
-*Last updated: 2026-02-01T17:50:00Z*
+*Last updated: 2026-02-01T18:10:00Z*
