@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Upload, Check, X, AlertCircle, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBackgroundRemoval } from "@/hooks/useBackgroundRemoval";
 
 interface TraineeImageUploadProps {
   traineeUserId: string;
@@ -12,7 +13,7 @@ interface TraineeImageUploadProps {
   onCancel?: () => void;
 }
 
-type UploadStep = "select" | "preview" | "processing" | "result";
+type UploadStep = "select" | "preview" | "processing" | "uploading" | "result";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png"];
@@ -26,10 +27,14 @@ export function TraineeImageUpload({
   const [step, setStep] = useState<UploadStep>("select");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [processedPreviewUrl, setProcessedPreviewUrl] = useState<string | null>(null);
   const [processedUrl, setProcessedUrl] = useState<string | null>(null);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Client-side background removal hook
+  const { removeBackground, progress, status, error: bgRemovalError, reset: resetBgRemoval } = useBackgroundRemoval();
 
   // Cleanup object URLs on unmount and step changes
   useEffect(() => {
@@ -37,8 +42,18 @@ export function TraineeImageUpload({
       if (previewUrl && previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl);
       }
+      if (processedPreviewUrl && processedPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(processedPreviewUrl);
+      }
     };
-  }, [previewUrl]);
+  }, [previewUrl, processedPreviewUrl]);
+
+  // Update error from background removal
+  useEffect(() => {
+    if (bgRemovalError) {
+      setError(bgRemovalError);
+    }
+  }, [bgRemovalError]);
 
   const validateFile = useCallback((file: File): string | null => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -76,18 +91,35 @@ export function TraineeImageUpload({
     setError(null);
 
     try {
+      // Step 1: Remove background client-side
+      const processedBlob = await removeBackground(selectedFile);
+
+      if (!processedBlob) {
+        // Background removal failed, but we can still upload original
+        // This is a fallback - the hook already set the error
+        throw new Error(bgRemovalError || "לא ניתן להסיר את הרקע מהתמונה");
+      }
+
+      // Create preview of processed image
+      const processedPreview = URL.createObjectURL(processedBlob);
+      setProcessedPreviewUrl(processedPreview);
+
+      // Step 2: Upload both images
+      setStep("uploading");
+
       const formData = new FormData();
-      formData.append("image", selectedFile);
+      formData.append("original", selectedFile);
+      formData.append("processed", processedBlob, "processed.png");
       formData.append("traineeUserId", traineeUserId);
 
-      const response = await fetch("/api/images/process-background", {
+      const response = await fetch("/api/images/upload-trainee-images", {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "שגיאה בעיבוד התמונה");
+        throw new Error(errorData.error || "שגיאה בהעלאת התמונה");
       }
 
       const data = await response.json();
@@ -110,10 +142,15 @@ export function TraineeImageUpload({
     if (previewUrl && previewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(previewUrl);
     }
+    if (processedPreviewUrl && processedPreviewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(processedPreviewUrl);
+    }
     setSelectedFile(null);
     setPreviewUrl(null);
+    setProcessedPreviewUrl(null);
     setError(null);
     setStep("select");
+    resetBgRemoval();
 
     // Reset file input
     if (inputRef.current) {
@@ -126,12 +163,17 @@ export function TraineeImageUpload({
     if (previewUrl && previewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(previewUrl);
     }
+    if (processedPreviewUrl && processedPreviewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(processedPreviewUrl);
+    }
     setSelectedFile(null);
     setPreviewUrl(null);
+    setProcessedPreviewUrl(null);
     setProcessedUrl(null);
     setOriginalUrl(null);
     setError(null);
     setStep("select");
+    resetBgRemoval();
 
     // Reset file input
     if (inputRef.current) {
@@ -147,7 +189,23 @@ export function TraineeImageUpload({
 
   const handleRetry = () => {
     setError(null);
+    resetBgRemoval();
     handleConfirmAndProcess();
+  };
+
+  // Get progress message based on status
+  const getProgressMessage = () => {
+    if (step === "uploading") {
+      return "מעלה תמונות...";
+    }
+    switch (status) {
+      case "loading-model":
+        return progress < 20 ? "טוען מודל AI..." : "טוען מודל AI (פעם ראשונה לוקח זמן)...";
+      case "processing":
+        return "מסיר רקע...";
+      default:
+        return "מעבד תמונה...";
+    }
   };
 
   return (
@@ -236,19 +294,30 @@ export function TraineeImageUpload({
         </div>
       )}
 
-      {/* Step 3: Processing */}
-      {step === "processing" && (
-        <div className="flex flex-col items-center gap-4 py-8">
+      {/* Step 3: Processing / Uploading */}
+      {(step === "processing" || step === "uploading") && (
+        <div className="flex flex-col items-center gap-4 py-8 w-full max-w-sm">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">מעבד תמונה...</p>
-          <p className="text-sm text-muted-foreground">
-            הסרת רקע עשויה לקחת מספר שניות
+          <p className="text-lg text-muted-foreground">{getProgressMessage()}</p>
+
+          {/* Progress bar */}
+          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-primary h-full transition-all duration-300 ease-out"
+              style={{ width: `${step === "uploading" ? 95 : progress}%` }}
+            />
+          </div>
+
+          <p className="text-sm text-muted-foreground text-center">
+            {step === "processing" && status === "loading-model" && progress < 50
+              ? "הורדת מודל AI (רק בפעם הראשונה)"
+              : "הסרת רקע עשויה לקחת מספר שניות"}
           </p>
         </div>
       )}
 
       {/* Step 4: Result */}
-      {step === "result" && processedUrl && (
+      {step === "result" && (processedUrl || processedPreviewUrl) && (
         <div className="flex flex-col items-center gap-4 w-full max-w-sm">
           {/* Checkered background to show transparency */}
           <div
@@ -260,7 +329,7 @@ export function TraineeImageUpload({
             )}
           >
             <img
-              src={processedUrl}
+              src={processedUrl || processedPreviewUrl || ""}
               alt="תוצאה מעובדת"
               className="max-w-64 max-h-64 object-contain"
             />
