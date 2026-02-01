@@ -212,53 +212,10 @@
 
 ---
 
-## Phase 5: User Features - Profile & Settings 🟠 HIGH
-**Status:** Not Started | **Target:** Week 4 (parallel with Phase 6)
+## Phase 5: User Features - Auth Enhancements 🟠 HIGH
+**Status:** Not Started | **Target:** Week 4
 
-### 5.1 Settings Page
-- [ ] Create `/dashboard/settings` page with tabs
-- [ ] Tab 1: Profile (name, birthdate, position, avatar)
-- [ ] Tab 2: Preferences (notification settings, language)
-- [ ] Tab 3: Account (phone/email, delete account)
-- [ ] Add loading states for save actions
-- [ ] Add success/error toast notifications
-- **New Files:**
-  - `src/app/(dashboard)/dashboard/settings/page.tsx`
-  - `src/components/dashboard/SettingsTabs.tsx`
-  - `src/components/dashboard/ProfileEditForm.tsx`
-  - `src/components/dashboard/PreferencesForm.tsx`
-  - `src/components/dashboard/AccountSettings.tsx`
-
-### 5.2 Profile Editing
-- [ ] Allow editing: name, birthdate, position
-- [ ] Avatar upload/change (reuse ImageUpload component)
-- [ ] Avatar delete functionality
-- [ ] Save changes with validation
-
-### 5.3 Account Management
-- [ ] Change phone number (with OTP verification)
-- [ ] Delete account option (with confirmation dialog)
-- [ ] Download my data (GDPR export)
-
-### 5.4 Write Tests for Phase 5
-- [ ] Test profile update saves correctly
-- [ ] Test avatar upload/delete
-- [ ] Test phone change requires verification
-
-### Success Criteria
-- [ ] Users can access settings from dashboard navbar
-- [ ] Profile changes persist after save
-- [ ] Avatar can be uploaded, changed, and deleted
-- [ ] Account deletion requires confirmation
-
-**Phase 5 Completion:** ⬜ 0/16 tasks
-
----
-
-## Phase 6: User Features - Auth Enhancements 🟠 HIGH
-**Status:** Not Started | **Target:** Week 4 (parallel with Phase 5)
-
-### 6.1 Forgot Password Flow
+### 5.1 Forgot Password Flow
 - [ ] Add "Forgot Password" link on login page
 - [ ] Create forgot password page with email/phone input
 - [ ] Send OTP or magic link
@@ -268,7 +225,7 @@
   - `src/app/auth/forgot-password/page.tsx`
   - `src/app/auth/reset-password/page.tsx`
 
-### 6.2 Two-Factor Authentication (2FA)
+### 5.2 Two-Factor Authentication (2FA)
 - [ ] Add 2FA setup option in settings
 - [ ] Support TOTP (Google Authenticator, etc.)
 - [ ] Backup codes generation
@@ -277,7 +234,7 @@
   - `src/components/dashboard/TwoFactorSetup.tsx`
   - `src/app/auth/verify-2fa/page.tsx`
 
-### 6.3 Write Tests for Phase 6
+### 5.3 Write Tests for Phase 5
 - [ ] Test password reset flow end-to-end
 - [ ] Test 2FA setup and verification
 - [ ] Test backup codes work correctly
@@ -288,40 +245,40 @@
 - [ ] Login requires 2FA code when enabled
 - [ ] Backup codes can be used when 2FA device unavailable
 
-**Phase 6 Completion:** ⬜ 0/14 tasks
+**Phase 5 Completion:** ⬜ 0/14 tasks
 
 ---
 
-## Phase 7: Notifications System 🟡 MEDIUM
+## Phase 6: Notifications System 🟡 MEDIUM
 **Status:** Not Started | **Target:** Week 6
 
 > **Note:** Triggers should integrate with EXISTING achievement/goal/streak logic,
 > not rebuild it. Add notification creation calls to existing feature code.
 
-### 7.1 Database Schema
+### 6.1 Database Schema
 - [ ] Create `notifications` table (id, user_id, type, title, message, read, created_at)
 - [ ] Create `notification_preferences` table
 - [ ] Add RLS policies for notifications
 
-### 7.2 In-App Notifications
+### 6.2 In-App Notifications
 - [ ] Notification bell icon in navbar with unread count
 - [ ] Notification dropdown/panel
 - [ ] Mark as read (individual and all)
 - [ ] Notification center page (`/dashboard/notifications`)
 - [ ] Loading states and empty states
 
-### 7.3 Notification Triggers (Integrate with Existing Features)
+### 6.3 Notification Triggers (Integrate with Existing Features)
 - [ ] Achievement unlocked → Add to `src/features/achievements/`
 - [ ] Goal achieved → Add to `src/features/goals/`
 - [ ] New assessment available → Add to assessment creation
 - [ ] Streak milestones (7, 30, 100 days) → Add to `src/features/streak-tracking/`
 
-### 7.4 Email Notifications (Optional)
+### 6.4 Email Notifications (Optional)
 - [ ] Welcome email on signup
 - [ ] Weekly progress summary
 - [ ] Integrate with Resend or SendGrid
 
-### 7.5 Write Tests for Phase 7
+### 6.5 Write Tests for Phase 6
 - [ ] Test notification creation on triggers
 - [ ] Test mark as read functionality
 - [ ] Test notification preferences respected
@@ -332,14 +289,14 @@
 - [ ] Users can configure notification preferences
 - [ ] Email notifications send when enabled
 
-**Phase 7 Completion:** ⬜ 0/17 tasks
+**Phase 6 Completion:** ⬜ 0/17 tasks
 
 ---
 
-## Phase 8: Form Drafts - Server Sync 🟡 MEDIUM
+## Phase 7: Form Drafts - Server Sync 🟡 MEDIUM
 **Status:** Not Started | **Target:** Week 7
 
-### 8.1 Server-Side Draft Storage
+### 7.1 Server-Side Draft Storage
 - [ ] Create `form_drafts` table in Supabase
 - [ ] Create server action to save drafts
 - [ ] Create server action to load drafts
@@ -348,7 +305,7 @@
 - [ ] Conflict resolution (server vs local - use newer timestamp)
 - **Files:** `src/features/form-drafts/`
 
-### 8.2 Write Tests for Phase 8
+### 7.2 Write Tests for Phase 7
 - [ ] Test draft saves to server
 - [ ] Test draft loads from server
 - [ ] Test conflict resolution uses newer version
@@ -358,28 +315,28 @@
 - [ ] Drafts sync between localStorage and server
 - [ ] Newer version wins in conflicts
 
-**Phase 8 Completion:** ⬜ 0/9 tasks
+**Phase 7 Completion:** ⬜ 0/9 tasks
 
 ---
 
-## Phase 9: Testing & Quality 🟡 MEDIUM
+## Phase 8: Testing & Quality 🟡 MEDIUM
 **Status:** Not Started | **Target:** Week 8
 
 > **Note:** Most testing happens incrementally in each phase.
 > This phase focuses on integration tests and coverage gaps.
 
-### 9.1 Integration Tests
+### 8.1 Integration Tests
 - [ ] Auth flow (signup → verify → onboarding → dashboard)
 - [ ] Assessment flow (create → view → compare → delete)
 - [ ] Payment flow (create → webhook → status update)
 - [ ] Video flow (watch → track progress → resume)
 
-### 9.2 E2E Tests (Playwright)
+### 8.2 E2E Tests (Playwright)
 - [ ] Set up Playwright
 - [ ] Test critical user journeys
 - [ ] Test admin workflows
 
-### 9.3 Test Infrastructure
+### 8.3 Test Infrastructure
 - [ ] Set up test database/mocks for Supabase
 - [ ] Add CI pipeline for tests (GitHub Actions)
 - [ ] Generate coverage reports
@@ -391,27 +348,27 @@
 - [ ] Coverage report shows 60%+ coverage
 - [ ] Critical paths have E2E tests
 
-**Phase 9 Completion:** ⬜ 0/10 tasks
+**Phase 8 Completion:** ⬜ 0/10 tasks
 
 ---
 
-## Phase 10: Performance Optimization 🟢 LOW
+## Phase 9: Performance Optimization 🟢 LOW
 **Status:** Not Started | **Target:** Week 9
 
-### 10.1 Database Performance
+### 9.1 Database Performance
 - [ ] Add performance indexes (frequently queried fields)
 - [ ] Optimize queries (select specific fields instead of *)
 - [ ] Add connection pooling configuration
 - [ ] Analyze slow queries with Supabase dashboard
 
-### 10.2 Frontend Optimization
+### 9.2 Frontend Optimization
 - [ ] Add pagination to all admin list pages
 - [ ] Memoize expensive chart computations (useMemo)
 - [ ] Add skeleton loading states to all pages
 - [ ] Lazy load heavy components (React.lazy)
 - [ ] Image optimization (next/image)
 
-### 10.3 Write Performance Tests
+### 9.3 Write Performance Tests
 - [ ] Benchmark critical API endpoints
 - [ ] Load test with concurrent users
 
@@ -420,7 +377,7 @@
 - [ ] Page load under 3s on slow 3G
 - [ ] Lighthouse performance score 90+
 
-**Phase 10 Completion:** ⬜ 0/12 tasks
+**Phase 9 Completion:** ⬜ 0/12 tasks
 
 ---
 
@@ -432,13 +389,12 @@
 | 2. User Management | 21 | 0 | ⬜ Not Started |
 | 3. Video Management | 7 | 7 | ✅ Complete |
 | 4. Data Export & Assessments | 14 | 11 | ✅ Complete |
-| 5. Profile & Settings | 16 | 0 | ⬜ Not Started |
-| 6. Auth Enhancements | 14 | 0 | ⬜ Not Started |
-| 7. Notifications | 17 | 0 | ⬜ Not Started |
-| 8. Form Drafts Sync | 9 | 0 | ⬜ Not Started |
-| 9. Testing & Quality | 10 | 0 | ⬜ Not Started |
-| 10. Performance | 12 | 0 | ⬜ Not Started |
-| **TOTAL** | **136** | **34** | **25%** |
+| 5. Auth Enhancements | 14 | 0 | ⬜ Not Started |
+| 6. Notifications | 17 | 0 | ⬜ Not Started |
+| 7. Form Drafts Sync | 9 | 0 | ⬜ Not Started |
+| 8. Testing & Quality | 10 | 0 | ⬜ Not Started |
+| 9. Performance | 12 | 0 | ⬜ Not Started |
+| **TOTAL** | **120** | **34** | **28%** |
 
 ---
 
@@ -449,12 +405,12 @@
 | 1 | Phase 1 | Security (critical, do first) |
 | 2 | Phase 2 | Admin user management |
 | 3 | Phase 3 | Admin video management |
-| 4 | Phase 5 + 6 | User settings + Auth (parallel) |
-| 5 | Phase 4 | Data export + Assessment deletion |
-| 6 | Phase 7 | Notifications |
-| 7 | Phase 8 | Form drafts sync |
-| 8 | Phase 9 | Integration tests + coverage |
-| 9 | Phase 10 | Performance optimization |
+| 4 | Phase 4 | Data export + Assessment deletion |
+| 5 | Phase 5 | Auth enhancements |
+| 6 | Phase 6 | Notifications |
+| 7 | Phase 7 | Form drafts sync |
+| 8 | Phase 8 | Integration tests + coverage |
+| 9 | Phase 9 | Performance optimization |
 
 ---
 
@@ -488,3 +444,4 @@ _Add notes here as you work through the roadmap:_
 | 2026-02-01 | 1 | **Phase 1 Complete**: Rate limiting, webhook security, Zod validation, 38 RLS policies, 105 tests |
 | 2026-02-01 | 3 | **Phase 3 Complete**: YouTube utilities, video validation, CRUD server actions, VideoForm, DeleteVideoDialog, TanStack Table, admin pages |
 | 2026-02-01 | 4 | **Phase 4 Complete**: Assessment soft delete with audit trail, form submissions CSV export with date filtering, assessment CSV/PDF export, GDPR user data export |
+| 2026-02-01 | 5 | **Removed Phase 5 (Profile & Settings)**: Trainees don't need settings page, profile managed by admin/coach. Renumbered phases 6-10 → 5-9 |

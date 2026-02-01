@@ -11,13 +11,13 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 
 | Metric | Value |
 |--------|-------|
-| Current Phase | 4 of 10 (Data Export & Assessments) |
+| Current Phase | 4 of 9 (Data Export & Assessments) |
 | Current Plan | 5 of 5 (04-05 complete) |
 | Phase Status | Complete |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
 | Overall Progress | 28% |
 
-**Progress:** [#####.........] 4/10 phases complete
+**Progress:** [#####........] 4/9 phases complete
 
 ## Phase Overview
 
@@ -27,12 +27,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2 | User Management | In Progress | ADMN-06 to ADMN-13 |
 | 3 | Video Management | Complete | VID-02 to VID-09 |
 | 4 | Data Export & Assessments | Complete | EXP-01 to EXP-04, ASMT-04 |
-| 5 | Profile & Settings | Pending | PROF-01 to PROF-07 |
-| 6 | Auth Enhancements | Pending | AUTH-05 to AUTH-09 |
-| 7 | Notifications | Pending | NOTF-01 to NOTF-08 |
-| 8 | Form Drafts Sync | Pending | FORM-03 to FORM-06 |
-| 9 | Testing & Quality | Pending | TEST-01 to TEST-06 |
-| 10 | Performance | Pending | PERF-01 to PERF-06 |
+| 5 | Auth Enhancements | Pending | AUTH-05 to AUTH-09 |
+| 6 | Notifications | Pending | NOTF-01 to NOTF-08 |
+| 7 | Form Drafts Sync | Pending | FORM-03 to FORM-06 |
+| 8 | Testing & Quality | Pending | TEST-01 to TEST-06 |
+| 9 | Performance | Pending | PERF-01 to PERF-06 |
 
 ## Accumulated Decisions
 
@@ -183,16 +182,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 04-02 complete | Assessment deletion UI with DeleteAssessmentDialog |
 | 2026-02-01 | 04-05 complete | GDPR user data export server action and button |
 | 2026-02-01 | Phase 4 complete | Data Export & Assessment Management complete |
+| 2026-02-01 | Removed Phase 5 | Profile & Settings removed - trainees managed by admin/coach |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T18:10:00Z
-- **Stopped at:** Completed 04-05-PLAN.md, Phase 4 complete
+- **Last session:** 2026-02-01T18:30:00Z
+- **Stopped at:** Removed Phase 5 (Profile & Settings), renumbered phases
 - **Resume file:** None
 
 ## Next Action
 
-Begin Phase 5: Profile & Settings
+Begin Phase 5: Auth Enhancements (was Phase 6)
 
 ---
-*Last updated: 2026-02-01T18:10:00Z*
+*Last updated: 2026-02-01T18:30:00Z*
