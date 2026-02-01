@@ -608,6 +608,7 @@ export interface Database {
           notes: string | null;
           created_at: string;
           deleted_at: string | null;
+          deleted_by: string | null;
         };
         Insert: {
           id?: string;
@@ -637,6 +638,7 @@ export interface Database {
           notes?: string | null;
           created_at?: string;
           deleted_at?: string | null;
+          deleted_by?: string | null;
         };
         Update: {
           id?: string;
@@ -666,6 +668,7 @@ export interface Database {
           notes?: string | null;
           created_at?: string;
           deleted_at?: string | null;
+          deleted_by?: string | null;
         };
         Relationships: [];
       };
