@@ -5,26 +5,26 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Trainees can track their fitness progress and see improvement as FIFA-style player cards
-**Current focus:** Phase 1 Complete - Ready for Phase 2
+**Current focus:** Phase 2 - Admin User Management
 
 ## Current Position
 
 | Metric | Value |
 |--------|-------|
-| Current Phase | 1 of 10 (Security Fixes) |
-| Current Plan | 6/6 complete |
-| Phase Status | Complete |
+| Current Phase | 2 of 10 (User Management) |
+| Current Plan | 1/7 complete |
+| Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
-| Overall Progress | 10% |
+| Overall Progress | 12% |
 
-**Progress:** [######....] 6/6 plans in Phase 1 COMPLETE
+**Progress:** [#.........] 1/7 plans in Phase 2
 
 ## Phase Overview
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
 | 1 | Security Fixes | Complete | SEC-01 to SEC-05 |
-| 2 | User Management | Pending | ADMN-06 to ADMN-13 |
+| 2 | User Management | In Progress | ADMN-06 to ADMN-13 |
 | 3 | Video Management | Pending | VID-02 to VID-09 |
 | 4 | Data Export & Assessments | Pending | EXP-01 to EXP-04, ASMT-04 |
 | 5 | Profile & Settings | Pending | PROF-01 to PROF-07 |
@@ -55,6 +55,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 01-05 | Retain `as unknown as` patterns | TypeScript requires unknown for incompatible type assertions |
 | 2026-02-01 | 01-06 | Skip Redis-dependent tests | Focus on unit-testable helpers, skip checkRateLimit |
 | 2026-02-01 | 01-06 | Use Vitest fake timers | For timestamp validation in replay attack tests |
+| 2026-02-01 | 02-01 | Phone normalization in server action | Format 0XX to +972XX at action level, not schema |
+| 2026-02-01 | 02-01 | Profile update not insert | DB trigger creates profile, use update to avoid race |
+| 2026-02-01 | 02-01 | Phone-only credential reset | Return message for OTP login, no SMS delivery |
 
 ## Patterns Established
 
@@ -75,6 +78,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | PostgrestVersion hint | Add `__InternalSupabase.PostgrestVersion` to Database type | 01-05b |
 | Test file location | src/lib/__tests__/ for lib modules, src/lib/validations/__tests__/ for validations | 01-06 |
 | Test naming convention | 'should [expected behavior]' with describe blocks per function | 01-06 |
+| verifyAdmin helper | Centralized admin role check for server actions | 02-01 |
+| ActionResult type | `{ success: true }` or `{ error: string, fieldErrors? }` | 02-01 |
+| UUID validation | Regex check before database operations | 02-01 |
 
 ## Blockers / Concerns
 
@@ -105,21 +111,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 01-05b complete | Type safety improvements, Zod enum fix, PostgrestVersion |
 | 2026-02-01 | 01-05 complete | Added deleted_at to types; `as unknown as` retained per 01-05b decision |
 | 2026-02-01 | 01-06 complete | 105 tests for security features (rate limit, webhook, validation) |
+| 2026-02-01 | 02-01 complete | Server actions for admin user CRUD, Phase 2 dependencies |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T11:43:10Z
-- **Stopped at:** Completed 01-06-PLAN.md
+- **Last session:** 2026-02-01T12:59:00Z
+- **Stopped at:** Completed 02-01-PLAN.md
 - **Resume file:** None
 
 ## Next Action
 
-**Phase 1 Complete!** All 6 plans executed successfully.
-
-Before starting Phase 2:
-1. Apply migration 01-02 (blocker): https://supabase.com/dashboard/project/sedqdnpdvwpivrocdlmh/sql
-2. Run phase verifier: `/gsd:verify-phase 01`
-3. Begin Phase 2: `/gsd:execute-phase 02`
+Continue Phase 2: Execute 02-02-PLAN.md (User Data Table)
 
 ---
 *Last updated: 2026-02-01*
