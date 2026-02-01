@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPaymentProcess, getWebhookBaseUrl } from "@/lib/grow/client";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rate-limit";
+import {
+  createPaymentSchema,
+  formatZodErrors,
+  type CreatePaymentInput,
+} from "@/lib/validations/payment";
 import type { PaymentInsert } from "@/types/database";
-
-interface CreatePaymentBody {
-  amount: number;
-  description: string;
-  paymentType: "one_time" | "recurring";
-  payerName: string;
-  payerPhone: string;
-  payerEmail?: string;
-  paymentNum?: number;
-  maxPaymentNum?: number;
-}
 
 /**
  * Creates a new payment process and returns the payment URL
@@ -20,65 +16,51 @@ interface CreatePaymentBody {
  *
  * This endpoint does NOT require authentication - anyone can initiate a payment.
  * The payer details (name, phone, email) are provided in the request body.
+ *
+ * Security:
+ * - Rate limited to 10 requests/hour per IP
+ * - Input validated via Zod schema with Hebrew error messages
  */
 export async function POST(request: NextRequest) {
   try {
+    // Get IP for rate limiting (anonymous endpoint)
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const identifier = getRateLimitIdentifier(null, ip);
+
+    // Check rate limit (10/hour for payment endpoint)
+    const rateLimitResult = await checkRateLimit(identifier, "payment");
+
+    // Handle rate limit analytics in background
+    waitUntil(rateLimitResult.pending);
+
+    if (rateLimitResult.rateLimited) {
+      // Vague message per CONTEXT.md - don't reveal rate limiting mechanism
+      return NextResponse.json(
+        { error: "הבקשה נכשלה. נסה שוב מאוחר יותר" },
+        { status: 429 }
+      );
+    }
+
     // Parse request body
-    const body: CreatePaymentBody = await request.json();
+    const rawBody = await request.json();
 
-    // Validate required fields
-    if (!body.amount || body.amount <= 0) {
+    // Validate with Zod schema
+    const parseResult = createPaymentSchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      // Return field-level errors for form validation
       return NextResponse.json(
-        { error: "Invalid amount" },
+        {
+          error: "נתונים לא תקינים",
+          fieldErrors: formatZodErrors(parseResult.error),
+        },
         { status: 400 }
       );
     }
 
-    if (!body.description) {
-      return NextResponse.json(
-        { error: "Description is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!body.paymentType || !["one_time", "recurring"].includes(body.paymentType)) {
-      return NextResponse.json(
-        { error: "Invalid payment type" },
-        { status: 400 }
-      );
-    }
-
-    if (!body.payerName) {
-      return NextResponse.json(
-        { error: "Payer name is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!body.payerPhone) {
-      return NextResponse.json(
-        { error: "Payer phone is required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate phone format (Israeli: starts with 05, 10 digits)
-    const phoneRegex = /^05\d{8}$/;
-    if (!phoneRegex.test(body.payerPhone)) {
-      return NextResponse.json(
-        { error: "Invalid phone format" },
-        { status: 400 }
-      );
-    }
-
-    // Validate name (at least 2 words with 2+ chars each)
-    const nameParts = body.payerName.trim().split(/\s+/);
-    if (nameParts.length < 2 || nameParts.some((part) => part.length < 2)) {
-      return NextResponse.json(
-        { error: "Full name must include first and last name" },
-        { status: 400 }
-      );
-    }
+    // Use validated data from here on
+    const body: CreatePaymentInput = parseResult.data;
 
     // Get base URL for callbacks
     const baseUrl = getWebhookBaseUrl();
@@ -93,7 +75,7 @@ export async function POST(request: NextRequest) {
       cancelUrl: `${baseUrl}/?payment=cancelled`,
       fullName: body.payerName.trim(),
       phone: body.payerPhone,
-      email: body.payerEmail,
+      email: body.payerEmail || undefined,
       paymentNum: body.paymentNum,
       maxPaymentNum: body.maxPaymentNum,
       cField1: body.payerPhone, // Store phone for matching
@@ -132,9 +114,9 @@ export async function POST(request: NextRequest) {
     };
 
     // Store payment record in database
-    const { error: insertError } = await (adminSupabase
-      .from("payments") as ReturnType<typeof adminSupabase.from>)
-      .insert(insertData);
+    const { error: insertError } = await (
+      adminSupabase.from("payments") as ReturnType<typeof adminSupabase.from>
+    ).insert(insertData);
 
     if (insertError) {
       console.error("[Payment] Failed to store payment record:", insertError);
