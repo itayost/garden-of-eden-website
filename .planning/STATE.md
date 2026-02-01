@@ -12,10 +12,10 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 4 of 10 (Data Export & Assessments) |
-| Current Plan | 1 of 5 (04-01 complete) |
+| Current Plan | 3 of 5 (04-03 complete) |
 | Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
-| Overall Progress | 19% |
+| Overall Progress | 22% |
 
 **Progress:** [####..........] 3/10 phases in progress
 
@@ -74,6 +74,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 03-03 | renderActions prop pattern | Parent-controlled action buttons for reuse |
 | 2026-02-01 | 03-04 | Sheet for edit dialogs | Slides from left side for RTL, better UX for forms |
 | 2026-02-01 | 03-04 | VideoCreateForm wrapper | Simple wrapper to handle redirect on success |
+| 2026-02-01 | 04-03 | Type assertion for union filtering | Cast through unknown when filtering union types with filter() |
+| 2026-02-01 | 04-03 | Extended column mapping | Export all relevant fields, not just minimal set |
+| 2026-02-01 | 04-03 | Unique input IDs | Include formType in input IDs for accessibility |
 
 ## Patterns Established
 
@@ -118,6 +121,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Create form wrapper | Wrapper component handles redirect on success | 03-04 |
 | Assessment audit trail | deleted_by stores UUID of admin who soft-deleted | 04-01 |
 | admin-assessments.ts | Central server actions file for assessment admin operations | 04-01 |
+| SubmissionExportButton | Reusable export button with date filtering for form submissions | 04-03 |
+| Form-type column mapping | Different Hebrew column mappings per form type | 04-03 |
+| Type assertion for union filtering | Cast through unknown when filtering union types | 04-03 |
 
 ## Blockers / Concerns
 
@@ -161,16 +167,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 03-05 complete | Human verification passed - all CRUD operations working |
 | 2026-02-01 | Phase 3 complete | Video management phase verified and complete |
 | 2026-02-01 | 04-01 complete | Assessment soft delete infrastructure (migration, types, server action) |
+| 2026-02-01 | 04-03 complete | Form submission CSV export with date filtering |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T15:45:00Z
-- **Stopped at:** Completed 04-01-PLAN.md
+- **Last session:** 2026-02-01T17:45:00Z
+- **Stopped at:** Completed 04-03-PLAN.md
 - **Resume file:** None
 
 ## Next Action
 
-Execute 04-02-PLAN.md: Assessment delete UI
+Execute 04-04-PLAN.md: Assessment CSV export
 
 ---
-*Last updated: 2026-02-01T15:45:00Z*
+*Last updated: 2026-02-01T17:45:00Z*
