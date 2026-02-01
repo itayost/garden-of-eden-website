@@ -12,12 +12,12 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 2 of 10 (User Management) |
-| Current Plan | 4/7 complete |
+| Current Plan | 5/7 complete |
 | Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
-| Overall Progress | 18% |
+| Overall Progress | 20% |
 
-**Progress:** [####......] 4/7 plans in Phase 2
+**Progress:** [#####.....] 5/7 plans in Phase 2
 
 ## Phase Overview
 
@@ -63,6 +63,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 02-03 | RTL pagination icons | chevron-right for previous, chevron-left for next |
 | 2026-02-01 | 02-04 | 'in' operator for ActionResult | Use `"error" in result` for discriminated union type checking |
 | 2026-02-01 | 02-04 | Display server message when available | Show credential reset message for phone vs email users |
+| 2026-02-01 | 02-05 | Hebrew/English column mapping | Support both language column headers in CSV import |
+| 2026-02-01 | 02-05 | BOM for Excel Hebrew | Prefix CSV with UTF-8 BOM for proper Hebrew display |
+| 2026-02-01 | 02-05 | Sequential bulk processing | Process users one-by-one to collect per-row errors |
 
 ## Patterns Established
 
@@ -93,6 +96,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Table column format | Hebrew headers, sortable with ArrowUpDown icon | 02-03 |
 | AlertDialog for destructive actions | Confirmation dialog with loading state for delete operations | 02-04 |
 | Client wrapper components | Encapsulate client-side state for server component pages | 02-04 |
+| normalizeCSVRow | Map bilingual column names before Zod validation | 02-05 |
+| BOM CSV export | Prefix CSV with \uFEFF for Hebrew in Excel | 02-05 |
+| Bulk action result | Return { success, created, errors[] } for bulk operations | 02-05 |
 
 ## Blockers / Concerns
 
@@ -127,16 +133,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 02-02 complete | User creation form and page at /admin/users/create |
 | 2026-02-01 | 02-03 complete | TanStack Table components for admin user list |
 | 2026-02-01 | 02-04 complete | Delete dialog and user actions card integration |
+| 2026-02-01 | 02-05 complete | CSV import dialog, export button, validation schema |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T13:06:27Z
-- **Stopped at:** Completed 02-04-PLAN.md
+- **Last session:** 2026-02-01T13:12:46Z
+- **Stopped at:** Completed 02-05-PLAN.md
 - **Resume file:** None
 
 ## Next Action
 
-Continue Phase 2: Execute 02-05-PLAN.md (User Filters)
+Continue Phase 2: Execute 02-06-PLAN.md (Integration)
 
 ---
-*Last updated: 2026-02-01T13:06:27Z*
+*Last updated: 2026-02-01T13:12:46Z*
