@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { approveTransaction, WebhookPayload } from "@/lib/grow/client";
+import { approveTransaction } from "@/lib/grow/client";
+import { verifyGrowWebhook, verifyGrowProcessToken } from "@/lib/webhook-security";
+import { growWebhookSchema, type GrowWebhookPayload } from "@/lib/validations/webhook";
 import type { PaymentUpdate, Json } from "@/types/database";
 
 /**
@@ -8,21 +10,88 @@ import type { PaymentUpdate, Json } from "@/types/database";
  *
  * This endpoint receives payment notifications from GROW.
  * After receiving a notification, it:
- * 1. Updates the payment record in the database
- * 2. Calls approveTransaction to acknowledge receipt
+ * 1. Verifies webhook signature (HMAC-SHA256) or process token
+ * 2. Validates payload with Zod schema
+ * 3. Updates the payment record in the database
+ * 4. Calls approveTransaction to acknowledge receipt
  */
 export async function POST(request: NextRequest) {
   try {
-    // Parse the webhook payload
-    const payload: WebhookPayload = await request.json();
+    // Read raw body for signature verification (before parsing JSON)
+    const rawBody = await request.text();
+
+    // Try HMAC signature verification first (if GROW_WEBHOOK_SECRET is configured)
+    const hasWebhookSecret = !!process.env.GROW_WEBHOOK_SECRET;
+
+    if (hasWebhookSecret) {
+      const signatureResult = verifyGrowWebhook(rawBody, request.headers);
+
+      if (!signatureResult.valid) {
+        console.error("[GROW Webhook] Signature verification failed:", signatureResult.error);
+        return NextResponse.json(
+          { error: signatureResult.error || "Invalid signature" },
+          { status: 401 }
+        );
+      }
+
+      console.log("[GROW Webhook] Signature verified successfully");
+    }
+
+    // Parse and validate with Zod
+    let payload: GrowWebhookPayload;
+    try {
+      const rawPayload = JSON.parse(rawBody);
+      const parseResult = growWebhookSchema.safeParse(rawPayload);
+
+      if (!parseResult.success) {
+        console.error("[GROW Webhook] Validation failed:", parseResult.error.issues);
+        return NextResponse.json(
+          { error: "Invalid payload format", details: parseResult.error.issues },
+          { status: 400 }
+        );
+      }
+
+      payload = parseResult.data;
+    } catch (parseError) {
+      console.error("[GROW Webhook] JSON parse error:", parseError);
+      return NextResponse.json(
+        { error: "Invalid JSON" },
+        { status: 400 }
+      );
+    }
 
     console.log("[GROW Webhook] Received payload:", JSON.stringify(payload, null, 2));
 
-    // Validate payload
+    // If no HMAC secret, fall back to process token validation
+    if (!hasWebhookSecret) {
+      const expectedProcessToken = process.env.GROW_PROCESS_TOKEN;
+
+      if (expectedProcessToken) {
+        const tokenResult = verifyGrowProcessToken(
+          { processToken: payload.data.processToken },
+          expectedProcessToken
+        );
+
+        if (!tokenResult.valid) {
+          console.error("[GROW Webhook] Process token verification failed:", tokenResult.error);
+          return NextResponse.json(
+            { error: tokenResult.error || "Invalid process token" },
+            { status: 401 }
+          );
+        }
+
+        console.log("[GROW Webhook] Process token verified successfully");
+      } else {
+        // Neither HMAC nor process token configured - log warning but proceed
+        console.warn("[GROW Webhook] No signature verification configured (GROW_WEBHOOK_SECRET or GROW_PROCESS_TOKEN)");
+      }
+    }
+
+    // Validate payload status
     if (payload.status !== "1" || !payload.data) {
       console.error("[GROW Webhook] Invalid payload status:", payload.status);
       return NextResponse.json(
-        { error: "Invalid payload" },
+        { error: "Invalid payload status" },
         { status: 400 }
       );
     }
@@ -35,6 +104,8 @@ export async function POST(request: NextRequest) {
     const paymentStatus = data.statusCode === "2" ? "completed" : "failed";
 
     // Prepare update data
+    // Note: paymentsNum, allPaymentsNum, firstPaymentSum, periodicalPaymentSum
+    // are already transformed by Zod to numbers (with NaN handling)
     const updateData: PaymentUpdate = {
       transaction_id: data.transactionId,
       transaction_token: data.transactionToken,
@@ -45,10 +116,10 @@ export async function POST(request: NextRequest) {
       card_type: data.cardType,
       card_brand: data.cardBrand,
       card_exp: data.cardExp,
-      payments_num: parseInt(data.paymentsNum) || 1,
-      all_payments_num: parseInt(data.allPaymentsNum) || 1,
-      first_payment_sum: parseFloat(data.firstPaymentSum) || null,
-      periodical_payment_sum: parseFloat(data.periodicalPaymentSum) || null,
+      payments_num: data.paymentsNum,
+      all_payments_num: data.allPaymentsNum,
+      first_payment_sum: data.firstPaymentSum,
+      periodical_payment_sum: data.periodicalPaymentSum,
       webhook_received_at: new Date().toISOString(),
       raw_webhook_data: payload as unknown as Json,
     };
@@ -69,8 +140,41 @@ export async function POST(request: NextRequest) {
     // Call approveTransaction to acknowledge receipt
     // Determine if recurring from cField2 (payment type stored during creation)
     const isRecurring = data.customFields?.cField2 === "recurring";
+
+    // Build data object for approveTransaction (expects string values)
+    const approveData = {
+      asmachta: data.asmachta,
+      cardSuffix: data.cardSuffix,
+      cardType: data.cardType,
+      cardTypeCode: data.cardTypeCode,
+      cardBrand: data.cardBrand,
+      cardBrandCode: data.cardBrandCode,
+      cardExp: data.cardExp,
+      // These need to be strings for the GROW API FormData
+      firstPaymentSum: data.firstPaymentSum?.toString() ?? "",
+      periodicalPaymentSum: data.periodicalPaymentSum?.toString() ?? "",
+      status: data.status,
+      statusCode: data.statusCode,
+      transactionTypeId: data.transactionTypeId,
+      paymentType: data.paymentType,
+      sum: data.sum,
+      paymentsNum: data.paymentsNum.toString(),
+      allPaymentsNum: data.allPaymentsNum.toString(),
+      paymentDate: data.paymentDate,
+      description: data.description,
+      fullName: data.fullName,
+      payerPhone: data.payerPhone,
+      payerEmail: data.payerEmail,
+      transactionId: data.transactionId,
+      transactionToken: data.transactionToken,
+      processId: data.processId,
+      processToken: data.processToken,
+      payerBankAccountDetails: data.payerBankAccountDetails ?? "",
+      customFields: data.customFields ?? {},
+    };
+
     try {
-      const approveResponse = await approveTransaction(data, isRecurring);
+      const approveResponse = await approveTransaction(approveData, isRecurring);
 
       if (approveResponse.status === 1) {
         // Update approved_at timestamp
