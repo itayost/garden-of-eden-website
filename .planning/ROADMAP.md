@@ -397,12 +397,17 @@
 ---
 
 ## Phase 10: Trainee Image Management & FIFA Card Photos 🟡 MEDIUM
-**Status:** Not Started | **Target:** Week 10
+**Status:** Planned | **Target:** Week 10 | **Plans:** 6 plans
 
 > **Goal:** Enable admins and coaches to upload trainee photos that display as avatars and on FIFA-style player cards with professional cutout styling (shoulders and above, transparent background).
 
 ### Plans
-- [ ] 10-01-PLAN.md — TBD (run /gsd:plan-phase 10 to break down)
+- [ ] 10-01-PLAN.md — Infrastructure (RLS policies, storage utilities, remove.bg install)
+- [ ] 10-02-PLAN.md — API route for background removal + server action for profile updates
+- [ ] 10-03-PLAN.md — TraineeImageUpload component with 4-step flow
+- [ ] 10-04-PLAN.md — Integration into user edit page
+- [ ] 10-05-PLAN.md — PlayerCard updates for cutout display
+- [ ] 10-06-PLAN.md — Human verification of complete feature
 
 ### 10.1 Image Upload Infrastructure
 - [ ] Create `trainee_images` table (id, user_id, original_url, processed_url, created_at)
