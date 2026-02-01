@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { removeBackgroundFromImageBase64 } from "remove.bg";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { uploadTraineeImage, uploadProcessedImage } from "@/lib/utils/storage";
+
+const AVATARS_BUCKET = "avatars";
+const EXTENSION_MAP: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+};
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -115,14 +119,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Upload original image to storage
-    const originalResult = await uploadTraineeImage(traineeUserId, image);
-    if ("error" in originalResult) {
+    // 7. Upload original image to storage using server client
+    const supabase = await createClient();
+    const extension = EXTENSION_MAP[image.type] || "jpg";
+    const timestamp = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const originalPath = `${traineeUserId}/original/${timestamp}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(AVATARS_BUCKET)
+      .upload(originalPath, image, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("[Process Background] Original upload error:", uploadError);
       return NextResponse.json(
-        { error: originalResult.error },
+        { error: "שגיאה בהעלאת התמונה. נסה שוב." },
         { status: 500 }
       );
     }
+
+    const { data: originalUrlData } = supabase.storage
+      .from(AVATARS_BUCKET)
+      .getPublicUrl(originalPath);
 
     // 8. Convert image to base64 for remove.bg
     const imageArrayBuffer = await image.arrayBuffer();
@@ -173,21 +193,36 @@ export async function POST(request: NextRequest) {
     // 11. Convert processed base64 back to Buffer
     const processedBuffer = Buffer.from(processedBase64, "base64");
 
-    // 12. Upload processed image to storage
-    const processedResult = await uploadProcessedImage(traineeUserId, processedBuffer, "png");
-    if ("error" in processedResult) {
+    // 12. Upload processed image to storage using server client
+    const processedTimestamp = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const processedPath = `${traineeUserId}/processed/${processedTimestamp}.png`;
+
+    const { error: processedUploadError } = await supabase.storage
+      .from(AVATARS_BUCKET)
+      .upload(processedPath, processedBuffer, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: "image/png",
+      });
+
+    if (processedUploadError) {
+      console.error("[Process Background] Processed upload error:", processedUploadError);
       return NextResponse.json(
-        { error: processedResult.error },
+        { error: "שגיאה בהעלאת התמונה המעובדת. נסה שוב." },
         { status: 500 }
       );
     }
 
+    const { data: processedUrlData } = supabase.storage
+      .from(AVATARS_BUCKET)
+      .getPublicUrl(processedPath);
+
     // 13. Return success with both URLs
     return NextResponse.json({
-      originalUrl: originalResult.url,
-      processedUrl: processedResult.url,
-      originalPath: originalResult.path,
-      processedPath: processedResult.path,
+      originalUrl: originalUrlData.publicUrl,
+      processedUrl: processedUrlData.publicUrl,
+      originalPath: originalPath,
+      processedPath: processedPath,
     });
 
   } catch (error) {
