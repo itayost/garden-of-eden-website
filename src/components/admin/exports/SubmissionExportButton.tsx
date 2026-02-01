@@ -12,9 +12,12 @@ import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/dat
 /** Post workout form with trainer relation included */
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
 
+/** Base type that all submissions share */
+type AnySubmission = { submitted_at: string; [key: string]: unknown };
+
 interface SubmissionExportButtonProps {
   formType: "pre_workout" | "post_workout" | "nutrition";
-  submissions: PreWorkoutForm[] | PostWorkoutWithTrainer[] | NutritionForm[];
+  submissions: AnySubmission[];
 }
 
 /**
@@ -34,9 +37,7 @@ export function SubmissionExportButton({
 
   const handleExport = () => {
     // Filter by date range if provided
-    // Use type assertion since all forms have submitted_at
-    type SubmissionBase = { submitted_at: string };
-    let filtered = submissions as unknown as SubmissionBase[];
+    let filtered = submissions;
 
     if (startDate) {
       filtered = filtered.filter((s) => s.submitted_at >= startDate);
@@ -52,11 +53,7 @@ export function SubmissionExportButton({
     }
 
     // Transform to Hebrew columns based on form type
-    // Cast back to original type for transformation
-    const csvData = transformToCSV(
-      formType,
-      filtered as unknown as typeof submissions
-    );
+    const csvData = transformToCSV(formType, filtered);
 
     // Export with BOM for Hebrew support in Excel
     const csv = Papa.unparse(csvData);
@@ -109,7 +106,7 @@ export function SubmissionExportButton({
  */
 function transformToCSV(
   formType: "pre_workout" | "post_workout" | "nutrition",
-  submissions: PreWorkoutForm[] | PostWorkoutWithTrainer[] | NutritionForm[]
+  submissions: AnySubmission[]
 ): Record<string, string | number>[] {
   switch (formType) {
     case "pre_workout":
