@@ -220,7 +220,16 @@ export default function LoginPage() {
             <LoginForm />
           </Suspense>
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              שכחתי סיסמה
+            </Link>
+          </div>
+
+          <div className="mt-4 text-center">
             <Link
               href="/"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
