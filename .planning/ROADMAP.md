@@ -6,7 +6,15 @@
 ---
 
 ## Phase 1: Security Fixes 🔴 CRITICAL
-**Status:** Not Started | **Target:** Week 1
+**Status:** Planned | **Target:** Week 1 | **Plans:** 6 plans in 3 waves
+
+### Plans
+- [ ] 01-01-PLAN.md — Security infrastructure (rate limiting + webhook utilities)
+- [ ] 01-02-PLAN.md — Database security (indexes, soft delete, RLS policies)
+- [ ] 01-03-PLAN.md — Payment endpoint security (rate limiting + Zod)
+- [ ] 01-04-PLAN.md — Webhook security (signature verification + Zod)
+- [ ] 01-05-PLAN.md — Type safety cleanup (remove 35+ `as unknown as` patterns)
+- [ ] 01-06-PLAN.md — Security tests (rate limiting, webhook, validation)
 
 ### 1.1 API Rate Limiting & Validation
 - [ ] Add rate limiting middleware for ALL API routes
@@ -452,3 +460,4 @@ _Add notes here as you work through the roadmap:_
 |------|-------|---------|
 | 2026-02-01 | - | Initial roadmap created |
 | 2026-02-01 | All | Added success criteria, test tasks, missing features (2FA, assessment deletion, video resume), fixed schedule, added quick wins checklist |
+| 2026-02-01 | 1 | Created 6 plans in 3 waves for security fixes phase |
