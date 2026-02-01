@@ -165,7 +165,15 @@
 ---
 
 ## Phase 4: Admin Panel - Data Export & Assessment Management 🟡 MEDIUM
-**Status:** Not Started | **Target:** Week 5
+**Status:** Planned | **Target:** Week 5 | **Plans:** 6 plans
+
+### Plans
+- [ ] 04-01-PLAN.md — Database migration (deleted_by column) + assessment soft delete server action
+- [ ] 04-02-PLAN.md — Delete assessment dialog + page integration
+- [ ] 04-03-PLAN.md — Form submissions export with date filtering
+- [ ] 04-04-PLAN.md — Assessment CSV and PDF export
+- [ ] 04-05-PLAN.md — GDPR user data export
+- [ ] 04-06-PLAN.md — Human verification of all functionality
 
 ### 4.1 Form Submissions Export
 - [ ] Add export button to submissions page
