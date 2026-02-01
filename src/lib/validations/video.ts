@@ -79,3 +79,47 @@ export const videoSchema = z.object({
 });
 
 export type VideoInput = z.infer<typeof videoSchema>;
+
+/**
+ * Form schema for react-hook-form (same validation but without coerce for type safety)
+ * Use this for client-side forms, use videoSchema for server action validation
+ */
+export const videoFormSchema = z.object({
+  title: z
+    .string()
+    .min(2, "כותרת חייבת להכיל לפחות 2 תווים")
+    .max(200, "כותרת ארוכה מדי (מקסימום 200 תווים)"),
+
+  youtube_url: z
+    .string()
+    .url("קישור לא תקין")
+    .refine((url) => getYouTubeId(url) !== null, {
+      message: "קישור YouTube לא תקין (פורמטים נתמכים: youtube.com/watch, youtu.be, youtube.com/shorts)",
+    }),
+
+  day_number: z
+    .number()
+    .min(1, "יום חייב להיות בין 1-5")
+    .max(5, "יום חייב להיות בין 1-5"),
+
+  day_topic: z
+    .string()
+    .min(2, "נושא היום חייב להכיל לפחות 2 תווים"),
+
+  duration_minutes: z
+    .number()
+    .min(1, "משך חייב להיות לפחות דקה אחת")
+    .max(120, "משך לא יכול לעלות על 120 דקות"),
+
+  description: z
+    .string()
+    .max(1000, "תיאור ארוך מדי (מקסימום 1000 תווים)")
+    .optional()
+    .or(z.literal("")),
+
+  order_index: z
+    .number()
+    .optional(),
+});
+
+export type VideoFormInput = z.infer<typeof videoFormSchema>;
