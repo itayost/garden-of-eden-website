@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 1 of 10 (Security Fixes) |
-| Current Plan | 01-05b complete |
+| Current Plan | 01-05 complete |
 | Phase Status | In Progress |
 | Requirements Complete | 0/57 |
 | Overall Progress | 8% |
@@ -52,6 +52,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 01-04 | Graceful NaN handling | Default to 1 for paymentsNum, null for payment sums |
 | 2026-02-01 | 01-04 | Signature fallback | Fall back to process token if HMAC secret not configured |
 | 2026-02-01 | 01-05b | Keep Promise.all type casts | Required due to Supabase client type inference limitations |
+| 2026-02-01 | 01-05 | Retain `as unknown as` patterns | TypeScript requires unknown for incompatible type assertions |
 
 ## Patterns Established
 
@@ -98,20 +99,21 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 01-03 complete | Payment rate limiting and Zod validation |
 | 2026-02-01 | 01-04 complete | Webhook signature verification and Zod validation |
 | 2026-02-01 | 01-05b complete | Type safety improvements, Zod enum fix, PostgrestVersion |
+| 2026-02-01 | 01-05 partial | Added deleted_at to types; `as unknown as` retained per 01-05b decision |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T11:36:00Z
-- **Stopped at:** Completed 01-05b-PLAN.md
+- **Last session:** 2026-02-01T11:45:00Z
+- **Stopped at:** Completed 01-05-PLAN.md (partial)
 - **Resume file:** None
 
 ## Next Action
 
-**Phase 1 Plan 05/06:** Continue with remaining security plans
+**Phase 1 Plan 06:** Continue with final security plan
 
 Apply migration first (blocker): https://supabase.com/dashboard/project/sedqdnpdvwpivrocdlmh/sql
 
-Run: `/gsd:execute-plan 01-05` or `/gsd:execute-plan 01-06`
+Run: `/gsd:execute-plan 01-06`
 
 ---
 *Last updated: 2026-02-01*
