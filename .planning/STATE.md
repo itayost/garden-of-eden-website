@@ -12,10 +12,10 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 4 of 10 (Data Export & Assessments) |
-| Current Plan | 3 of 5 (04-03 complete) |
+| Current Plan | 4 of 5 (04-04 complete) |
 | Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
-| Overall Progress | 22% |
+| Overall Progress | 23% |
 
 **Progress:** [####..........] 3/10 phases in progress
 
@@ -124,6 +124,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | SubmissionExportButton | Reusable export button with date filtering for form submissions | 04-03 |
 | Form-type column mapping | Different Hebrew column mappings per form type | 04-03 |
 | Type assertion for union filtering | Cast through unknown when filtering union types | 04-03 |
+| PDF export dynamic import | Use Promise.all for @react-pdf/renderer + template to avoid SSR | 04-04 |
+| RTL PDF layout | flexDirection: row-reverse for Hebrew RTL in @react-pdf/renderer | 04-04 |
+| Assessment CSV export | Raw measurements with Hebrew columns, BOM prefix | 04-04 |
 
 ## Blockers / Concerns
 
@@ -168,16 +171,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | Phase 3 complete | Video management phase verified and complete |
 | 2026-02-01 | 04-01 complete | Assessment soft delete infrastructure (migration, types, server action) |
 | 2026-02-01 | 04-03 complete | Form submission CSV export with date filtering |
+| 2026-02-01 | 04-04 complete | Assessment CSV/PDF export with @react-pdf/renderer and Heebo font |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T17:45:00Z
-- **Stopped at:** Completed 04-03-PLAN.md
+- **Last session:** 2026-02-01T17:49:00Z
+- **Stopped at:** Completed 04-04-PLAN.md
 - **Resume file:** None
 
 ## Next Action
 
-Execute 04-04-PLAN.md: Assessment CSV export
+Execute 04-05-PLAN.md: Assessment deletion UI
 
 ---
-*Last updated: 2026-02-01T17:45:00Z*
+*Last updated: 2026-02-01T17:49:00Z*
