@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Plus, Calendar, Target } from "lucide-react";
 import { PlayerCard } from "@/components/player-card/PlayerCard";
+import { DeleteAssessmentDialog } from "@/components/admin/assessments/DeleteAssessmentDialog";
 import {
   ASSESSMENT_LABELS_HE,
   ASSESSMENT_UNITS,
@@ -58,6 +59,7 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
       .from("player_assessments")
       .select("*")
       .eq("user_id", userId)
+      .is("deleted_at", null)
       .order("assessment_date", { ascending: false }),
     supabase
       .from("player_goals")
@@ -282,9 +284,15 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
                           })}
                         </CardTitle>
                       </div>
-                      <Badge variant={completeness >= 80 ? "default" : "secondary"}>
-                        {completeness}% מלא
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={completeness >= 80 ? "default" : "secondary"}>
+                          {completeness}% מלא
+                        </Badge>
+                        <DeleteAssessmentDialog
+                          assessmentId={a.id}
+                          assessmentDate={a.assessment_date}
+                        />
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
