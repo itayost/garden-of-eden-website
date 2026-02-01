@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 5 of 9 (Auth Enhancements) |
-| Current Plan | 3 of 6 (05-03 complete) |
+| Current Plan | 4 of 6 (05-04 complete) |
 | Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
 | Overall Progress | 33% |
@@ -87,6 +87,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 05-03 | Single code input vs 6 separate | Chose single input with maxLength for simpler UX |
 | 2026-02-01 | 05-03 | TOTP verification before disable | Security measure for authenticator access confirmation |
 | 2026-02-01 | 05-03 | QR with manual secret fallback | Accessibility for users who can't scan QR codes |
+| 2026-02-01 | 05-04 | Inline disable dialog | Single-use component, simpler than separate TwoFactorDisable |
+| 2026-02-01 | 05-04 | Shield icon for security nav | Visually distinguishes security from other settings |
+| 2026-02-01 | 05-04 | Left-side Sheet for setup | RTL context, established pattern from 03-04 |
 
 ## Patterns Established
 
@@ -148,6 +151,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | TwoFactorSetup flow | Multi-step enrollment: intro -> QR -> verify | 05-03 |
 | TwoFactorVerify pattern | Auto-fetch factor on mount for login verification | 05-03 |
 | TwoFactorDisable security | Require TOTP verification before unenrollment | 05-03 |
+| Settings layout wrapper | Consistent wrapper for settings pages | 05-04 |
+| Security settings page | 2FA management at /dashboard/settings/security | 05-04 |
 
 ## Blockers / Concerns
 
@@ -200,16 +205,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 05-01 complete | Password reset flow (forgot-password, reset-password pages, validation schema) |
 | 2026-02-01 | 05-02 complete | MFA helper functions (enrollMFA, verifyMFA, listFactors, unenrollFactor, getAAL) and useMFA hook |
 | 2026-02-01 | 05-03 complete | 2FA components (TwoFactorSetup, TwoFactorVerify, TwoFactorDisable) |
+| 2026-02-01 | 05-04 complete | Security settings page with 2FA management at /dashboard/settings/security |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T17:03:17Z
-- **Stopped at:** Completed 05-03-PLAN.md (2FA Components)
+- **Last session:** 2026-02-01T17:04:32Z
+- **Stopped at:** Completed 05-04-PLAN.md (Security Settings Page)
 - **Resume file:** None
 
 ## Next Action
 
-Continue Phase 5: Auth Enhancements - 05-04-PLAN.md
+Continue Phase 5: Auth Enhancements - 05-05-PLAN.md
 
 ---
-*Last updated: 2026-02-01T17:03:17Z*
+*Last updated: 2026-02-01T17:04:32Z*
