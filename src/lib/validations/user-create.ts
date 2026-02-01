@@ -16,7 +16,7 @@ export const userCreateSchema = z.object({
     .string()
     .regex(phoneRegex, "מספר טלפון לא תקין (פורמט: 0501234567 או +972501234567)"),
 
-  role: z.enum(userRoles, { error: "יש לבחור תפקיד" }),
+  role: z.enum(userRoles, { message: "יש לבחור תפקיד" }),
 
   email: z
     .string()
