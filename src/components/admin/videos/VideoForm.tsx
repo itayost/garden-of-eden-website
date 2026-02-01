@@ -45,17 +45,17 @@ export function VideoForm({ video, onSuccess, onCancel }: VideoFormProps) {
   const [loading, setLoading] = useState(false);
   const isEditMode = !!video;
 
-  const form = useForm<VideoFormInput>({
+  const form = useForm({
     resolver: zodResolver(videoFormSchema),
     defaultValues: {
       title: video?.title ?? "",
       youtube_url: video?.youtube_url ?? "",
       day_number: video?.day_number ?? 1,
       day_topic: video?.day_topic ?? getDayTopicSuggestion(1),
-      duration_minutes: video?.duration_minutes ?? undefined,
+      duration_minutes: video?.duration_minutes ?? 1,
       description: video?.description ?? "",
       order_index: video?.order_index,
-    },
+    } satisfies VideoFormInput,
   });
 
   const dayNumber = form.watch("day_number");
