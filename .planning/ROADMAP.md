@@ -56,7 +56,16 @@
 ---
 
 ## Phase 2: Admin Panel - User Management 🟠 HIGH
-**Status:** Not Started | **Target:** Week 2
+**Status:** Planned | **Target:** Week 2 | **Plans:** 7 plans
+
+### Plans
+- [ ] 02-01-PLAN.md — Server actions + validation schemas (dependencies, createUser, softDelete, resetCredentials)
+- [ ] 02-02-PLAN.md — User creation form and page
+- [ ] 02-03-PLAN.md — Data table with search, filter, pagination (TanStack Table + nuqs)
+- [ ] 02-04-PLAN.md — Delete user dialog and profile page integration
+- [ ] 02-05-PLAN.md — CSV import/export (PapaParse)
+- [ ] 02-06-PLAN.md — Final integration + human verification
+- [ ] 02-07-PLAN.md — Tests for Phase 2
 
 ### 2.1 Create User
 - [ ] Add "Create User" button to admin users page
@@ -66,7 +75,7 @@
 - [ ] Add loading state during creation
 - [ ] Add success/error toast notifications
 - **New Files:**
-  - `src/components/admin/CreateUserForm.tsx`
+  - `src/components/admin/users/UserCreateForm.tsx`
   - `src/app/admin/users/create/page.tsx`
 
 ### 2.2 Delete User
@@ -89,7 +98,7 @@
 
 ### 2.5 Bulk Operations
 - [ ] CSV import for bulk user creation
-- [ ] CSV/Excel export of user list
+- [ ] CSV export of user list
 - [ ] Bulk status update (activate/deactivate)
 
 ### 2.6 Write Tests for Phase 2
