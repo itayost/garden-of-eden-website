@@ -213,39 +213,54 @@
 ---
 
 ## Phase 5: User Features - Auth Enhancements 🟠 HIGH
-**Status:** Not Started | **Target:** Week 4
+**Status:** Planned | **Target:** Week 4 | **Plans:** 6 plans
+
+### Plans
+- [ ] 05-01-PLAN.md — Password reset flow (forgot-password + reset-password pages)
+- [ ] 05-02-PLAN.md — MFA helper functions and useMFA hook
+- [ ] 05-03-PLAN.md — 2FA components (TwoFactorSetup, TwoFactorVerify, TwoFactorDisable)
+- [ ] 05-04-PLAN.md — Security settings page with 2FA management
+- [ ] 05-05-PLAN.md — Login AAL check + verify-2fa page + forgot password link
+- [ ] 05-06-PLAN.md — Human verification of all functionality
 
 ### 5.1 Forgot Password Flow
 - [ ] Add "Forgot Password" link on login page
-- [ ] Create forgot password page with email/phone input
-- [ ] Send OTP or magic link
+- [ ] Create forgot password page with email input
+- [ ] Send magic link for password reset
 - [ ] Create reset password page with new password form
-- [ ] Validate and update password
+- [ ] Validate and update password with strength indicator
 - **New Files:**
   - `src/app/auth/forgot-password/page.tsx`
   - `src/app/auth/reset-password/page.tsx`
+  - `src/lib/validations/auth.ts`
 
 ### 5.2 Two-Factor Authentication (2FA)
-- [ ] Add 2FA setup option in settings
+- [ ] Add 2FA setup in security settings page
 - [ ] Support TOTP (Google Authenticator, etc.)
-- [ ] Backup codes generation
 - [ ] 2FA verification on login when enabled
+- [ ] 2FA can be disabled with code confirmation
 - **New Files:**
-  - `src/components/dashboard/TwoFactorSetup.tsx`
+  - `src/components/auth/TwoFactorSetup.tsx`
+  - `src/components/auth/TwoFactorVerify.tsx`
+  - `src/components/auth/TwoFactorDisable.tsx`
   - `src/app/auth/verify-2fa/page.tsx`
+  - `src/app/dashboard/settings/security/page.tsx`
+  - `src/lib/auth/mfa.ts`
+  - `src/hooks/use-mfa.ts`
 
-### 5.3 Write Tests for Phase 5
+### 5.3 Write Tests for Phase 5 (DEFERRED)
 - [ ] Test password reset flow end-to-end
 - [ ] Test 2FA setup and verification
-- [ ] Test backup codes work correctly
 
 ### Success Criteria
-- [ ] Users can reset password via email/phone
-- [ ] 2FA can be enabled/disabled in settings
+- [ ] Users can reset password via email magic link
+- [ ] 2FA can be enabled/disabled in security settings
 - [ ] Login requires 2FA code when enabled
-- [ ] Backup codes can be used when 2FA device unavailable
+- [ ] Security settings accessible from dashboard sidebar
 
-**Phase 5 Completion:** ⬜ 0/14 tasks
+**Note:** Backup codes not implemented (Supabase recommends secondary factor enrollment instead). Tests deferred to Phase 8.
+
+**Phase 5 Completion:** ⬜ 0/12 tasks
 
 ---
 
