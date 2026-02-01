@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
+import { updateInTable, insertIntoTable } from "@/lib/supabase/helpers";
 import {
   userEditSchema,
   type UserEditFormData,
@@ -111,27 +112,26 @@ export function UserEditForm({ user, currentUserRole }: UserEditFormProps) {
         updated_at: new Date().toISOString(),
       };
 
-      // Update profile
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await (supabase as any)
-        .from("profiles")
-        .update(updateData)
-        .eq("id", user.id);
+      // Update profile using helper
+      const { error: updateError } = await updateInTable(
+        supabase,
+        "profiles",
+        updateData,
+        "id",
+        user.id
+      );
 
       if (updateError) throw updateError;
 
       // Log activity
       const actionType = getActionType(changes);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: logError } = await (supabase as any)
-        .from("activity_logs")
-        .insert({
-          user_id: user.id,
-          action: actionType,
-          actor_id: currentUser.id,
-          actor_name: adminProfile?.full_name || "מנהל",
-          changes: changes,
-        });
+      const { error: logError } = await insertIntoTable(supabase, "activity_logs", {
+        user_id: user.id,
+        action: actionType,
+        actor_id: currentUser.id,
+        actor_name: adminProfile?.full_name || "מנהל",
+        changes: changes,
+      });
 
       if (logError) {
         console.error("Failed to log activity:", logError);

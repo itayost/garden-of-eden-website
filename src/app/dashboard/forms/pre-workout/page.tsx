@@ -1,13 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createClient } from "@/lib/supabase/client";
 import { preWorkoutSchema, type PreWorkoutFormData, type PreWorkoutFormInput } from "@/lib/validations/forms";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,10 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Send, ArrowRight } from "lucide-react";
-import { toast } from "sonner";
-import Link from "next/link";
 import { useFormDraft } from "@/features/form-drafts";
+import { useFormSubmission, fetchUserProfile, calculateAge } from "@/hooks/useFormSubmission";
+import { FormBackButton, FormSubmitButton } from "@/components/forms";
 
 const defaultValues: PreWorkoutFormInput = {
   group_training: "",
@@ -42,9 +36,6 @@ const defaultValues: PreWorkoutFormInput = {
 };
 
 export default function PreWorkoutFormPage() {
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
   const form = useForm<PreWorkoutFormInput>({
     resolver: zodResolver(preWorkoutSchema),
     defaultValues,
@@ -53,71 +44,26 @@ export default function PreWorkoutFormPage() {
   // Enable draft saving with auto-restore
   const draft = useFormDraft(form, { formId: "pre-workout" }, defaultValues);
 
-  // Calculate age from birthdate
-  const calculateAge = (birthdate: string | null): number | null => {
-    if (!birthdate) return null;
-    const birth = new Date(birthdate);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const onSubmit = async (data: PreWorkoutFormData) => {
-    setLoading(true);
-
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("נא להתחבר מחדש");
-      }
-
-      // Get user's profile name and birthdate
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, birthdate")
-        .eq("id", user.id)
-        .single() as { data: { full_name: string | null; birthdate: string | null } | null };
-
-      const { error } = await (supabase.from("pre_workout_forms") as unknown as { insert: (data: Record<string, unknown>) => Promise<{ error: Error | null }> }).insert({
-        user_id: user.id,
+  // Form submission with shared hook
+  const { loading, onSubmit } = useFormSubmission<PreWorkoutFormData>({
+    tableName: "pre_workout_forms",
+    successMessage: "השאלון נשלח בהצלחה!",
+    redirectPath: "/dashboard",
+    onSuccess: () => draft.clearDraft(),
+    transformData: async (data, userId) => {
+      const profile = await fetchUserProfile(userId);
+      return {
+        user_id: userId,
         full_name: profile?.full_name || "לא צוין",
         age: calculateAge(profile?.birthdate ?? null),
         ...data,
-      });
-
-      if (error) throw error;
-
-      // Clear draft after successful submission
-      draft.clearDraft();
-
-      toast.success("השאלון נשלח בהצלחה!");
-      router.push("/dashboard");
-    } catch (error: unknown) {
-      console.error("Submit error:", error);
-      const errorMessage = error instanceof Error ? error.message : "שגיאה בשליחת השאלון";
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+      };
+    },
+  });
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link
-          href="/dashboard/forms"
-          className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
-        >
-          <ArrowRight className="h-4 w-4" />
-          חזרה לשאלונים
-        </Link>
-      </div>
+      <FormBackButton />
 
       <Card>
         <CardHeader>
@@ -296,19 +242,7 @@ export default function PreWorkoutFormPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                    שולח...
-                  </>
-                ) : (
-                  <>
-                    <Send className="ml-2 h-5 w-5" />
-                    שליחת השאלון
-                  </>
-                )}
-              </Button>
+              <FormSubmitButton loading={loading} />
             </form>
           </Form>
         </CardContent>

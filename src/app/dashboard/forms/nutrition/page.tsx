@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
-import { nutritionSchema, type NutritionFormData, type NutritionFormInput } from "@/lib/validations/forms";
+import { nutritionSchema, type NutritionFormData, type NutritionFormInput, convertFormNumbers } from "@/lib/validations/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +17,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -27,10 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Send, ArrowRight, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
+import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useFormDraft } from "@/features/form-drafts";
+import { useFormSubmission } from "@/hooks/useFormSubmission";
+import { FormBackButton, FormSubmitButton } from "@/components/forms";
 
 const defaultValues: NutritionFormInput = {
   years_competitive: "",
@@ -47,10 +46,16 @@ const defaultValues: NutritionFormInput = {
   additional_comments: "",
 };
 
+// Numeric fields that need conversion from string to number
+const NUMERIC_FIELDS = [
+  "weight", "height", "bloating_frequency", "stomach_pain",
+  "bowel_frequency", "illness_interruptions", "max_days_missed",
+  "fatigue_level", "concentration", "energy_level",
+  "muscle_soreness", "physical_exhaustion", "preparedness", "overall_energy"
+];
+
 export default function NutritionFormPage() {
-  const [loading, setLoading] = useState(false);
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
-  const router = useRouter();
 
   const form = useForm<NutritionFormInput>({
     resolver: zodResolver(nutritionSchema),
@@ -60,18 +65,20 @@ export default function NutritionFormPage() {
   // Enable draft saving with auto-restore
   const draft = useFormDraft(form, { formId: "nutrition" }, defaultValues);
 
-  // Calculate age from birthdate
-  const calculateAge = (birthdate: string | null): number | null => {
-    if (!birthdate) return null;
-    const birth = new Date(birthdate);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
+  // Form submission with shared hook
+  const { loading, onSubmit } = useFormSubmission<NutritionFormData>({
+    tableName: "nutrition_forms",
+    successMessage: "שאלון התזונה נשלח בהצלחה!",
+    redirectPath: "/dashboard",
+    onSuccess: () => draft.clearDraft(),
+    transformData: (data, userId) => {
+      const convertedData = convertFormNumbers(data, NUMERIC_FIELDS);
+      return {
+        user_id: userId,
+        ...convertedData,
+      };
+    },
+  });
 
   useEffect(() => {
     const checkExisting = async () => {
@@ -83,7 +90,7 @@ export default function NutritionFormPage() {
           .from("nutrition_forms")
           .select("id")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (data) setAlreadyCompleted(true);
       }
@@ -91,47 +98,6 @@ export default function NutritionFormPage() {
 
     checkExisting();
   }, []);
-
-  const onSubmit = async (data: NutritionFormData) => {
-    setLoading(true);
-
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("נא להתחבר מחדש");
-      }
-
-      // Get user's profile name and birthdate
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, birthdate")
-        .eq("id", user.id)
-        .single() as { data: { full_name: string | null; birthdate: string | null } | null };
-
-      const { error } = await (supabase.from("nutrition_forms") as unknown as { insert: (data: Record<string, unknown>) => Promise<{ error: Error | null }> }).insert({
-        user_id: user.id,
-        full_name: profile?.full_name || "לא צוין",
-        age: calculateAge(profile?.birthdate ?? null),
-        ...data,
-      });
-
-      if (error) throw error;
-
-      // Clear draft after successful submission
-      draft.clearDraft();
-
-      toast.success("שאלון התזונה נשלח בהצלחה!");
-      router.push("/dashboard");
-    } catch (error: unknown) {
-      console.error("Submit error:", error);
-      const errorMessage = error instanceof Error ? error.message : "שגיאה בשליחת השאלון";
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const previousCounseling = form.watch("previous_counseling");
   const hasAllergies = form.watch("allergies");
@@ -141,15 +107,7 @@ export default function NutritionFormPage() {
   if (alreadyCompleted) {
     return (
       <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
-          <Link
-            href="/dashboard/forms"
-            className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
-          >
-            <ArrowRight className="h-4 w-4" />
-            חזרה לשאלונים
-          </Link>
-        </div>
+        <FormBackButton />
 
         <Card className="text-center py-12">
           <CardContent>
@@ -169,15 +127,7 @@ export default function NutritionFormPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link
-          href="/dashboard/forms"
-          className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
-        >
-          <ArrowRight className="h-4 w-4" />
-          חזרה לשאלונים
-        </Link>
-      </div>
+      <FormBackButton />
 
       <Card>
         <CardHeader>
@@ -237,9 +187,9 @@ export default function NutritionFormPage() {
                     name="height"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>גובה (מטר)</FormLabel>
+                        <FormLabel>גובה (ס״מ)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="1.75" {...field} />
+                          <Input type="number" step="1" placeholder="175" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -437,19 +387,7 @@ export default function NutritionFormPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                    שולח...
-                  </>
-                ) : (
-                  <>
-                    <Send className="ml-2 h-5 w-5" />
-                    שליחת השאלון
-                  </>
-                )}
-              </Button>
+              <FormSubmitButton loading={loading} />
             </form>
           </Form>
         </CardContent>

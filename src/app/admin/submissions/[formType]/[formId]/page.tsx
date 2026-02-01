@@ -278,7 +278,7 @@ function NutritionFields({ form }: { form: NutritionForm }) {
         <CardContent className="space-y-1">
           <FieldRow label="משקל" value={form.weight ? `${form.weight} ק"ג` : null} />
           <Separator />
-          <FieldRow label="גובה" value={form.height ? `${form.height} מ'` : null} />
+          <FieldRow label="גובה" value={form.height ? `${form.height} ס״מ` : null} />
         </CardContent>
       </Card>
 

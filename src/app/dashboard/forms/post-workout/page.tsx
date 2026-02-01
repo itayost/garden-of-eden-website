@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
 import { postWorkoutSchema, type PostWorkoutFormData, type PostWorkoutFormInput } from "@/lib/validations/forms";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,11 +24,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Send, ArrowRight } from "lucide-react";
-import { toast } from "sonner";
-import Link from "next/link";
 import type { Trainer } from "@/types/database";
 import { useFormDraft } from "@/features/form-drafts";
+import { useFormSubmission, fetchUserProfile } from "@/hooks/useFormSubmission";
+import { FormBackButton, FormSubmitButton } from "@/components/forms";
 
 const getDefaultValues = (): PostWorkoutFormInput => ({
   training_date: new Date().toISOString().split("T")[0],
@@ -42,9 +39,7 @@ const getDefaultValues = (): PostWorkoutFormInput => ({
 });
 
 export default function PostWorkoutFormPage() {
-  const [loading, setLoading] = useState(false);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
-  const router = useRouter();
 
   const defaultValues = getDefaultValues();
 
@@ -55,6 +50,23 @@ export default function PostWorkoutFormPage() {
 
   // Enable draft saving with auto-restore
   const draft = useFormDraft(form, { formId: "post-workout" }, defaultValues);
+
+  // Form submission with shared hook
+  const { loading, onSubmit } = useFormSubmission<PostWorkoutFormData>({
+    tableName: "post_workout_forms",
+    successMessage: "השאלון נשלח בהצלחה! תודה על המשוב",
+    redirectPath: "/dashboard",
+    onSuccess: () => draft.clearDraft(),
+    transformData: async (data, userId) => {
+      const profile = await fetchUserProfile(userId);
+      return {
+        user_id: userId,
+        full_name: profile?.full_name || "לא צוין",
+        ...data,
+        trainer_id: data.trainer_id || null,
+      };
+    },
+  });
 
   useEffect(() => {
     const fetchTrainers = async () => {
@@ -71,61 +83,12 @@ export default function PostWorkoutFormPage() {
     fetchTrainers();
   }, []);
 
-  const onSubmit = async (data: PostWorkoutFormData) => {
-    setLoading(true);
-
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("נא להתחבר מחדש");
-      }
-
-      // Get user's profile name
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single() as { data: { full_name: string | null } | null };
-
-      const { error } = await (supabase.from("post_workout_forms") as unknown as { insert: (data: Record<string, unknown>) => Promise<{ error: Error | null }> }).insert({
-        user_id: user.id,
-        full_name: profile?.full_name || "לא צוין",
-        ...data,
-        trainer_id: data.trainer_id || null,
-      });
-
-      if (error) throw error;
-
-      // Clear draft after successful submission
-      draft.clearDraft();
-
-      toast.success("השאלון נשלח בהצלחה! תודה על המשוב");
-      router.push("/dashboard");
-    } catch (error: unknown) {
-      console.error("Submit error:", error);
-      const errorMessage = error instanceof Error ? error.message : "שגיאה בשליחת השאלון";
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const difficultyValue = form.watch("difficulty_level");
   const satisfactionValue = form.watch("satisfaction_level");
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link
-          href="/dashboard/forms"
-          className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
-        >
-          <ArrowRight className="h-4 w-4" />
-          חזרה לשאלונים
-        </Link>
-      </div>
+      <FormBackButton />
 
       <Card>
         <CardHeader>
@@ -273,19 +236,7 @@ export default function PostWorkoutFormPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                    שולח...
-                  </>
-                ) : (
-                  <>
-                    <Send className="ml-2 h-5 w-5" />
-                    שליחת השאלון
-                  </>
-                )}
-              </Button>
+              <FormSubmitButton loading={loading} />
             </form>
           </Form>
         </CardContent>

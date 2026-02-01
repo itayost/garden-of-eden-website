@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,8 +14,10 @@ import {
 } from "@/components/ui/table";
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
 import { SubmissionExportButton } from "@/components/admin/exports/SubmissionExportButton";
+import { HasBadge, DifficultyBadge, SatisfactionBadge } from "@/components/ui/badges";
 import { Activity, FileText, Salad, type LucideIcon } from "lucide-react";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
+import { formatDateTime } from "@/lib/utils/date";
 
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
 
@@ -26,16 +27,6 @@ const nutritionStatusTranslations: Record<string, string> = {
   insufficient: "לא מספיק",
   no_energy: "אין אנרגיה",
 };
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("he-IL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function translateValue(value: string | null | undefined, translations: Record<string, string>): string {
   if (!value) return "-";
@@ -49,25 +40,6 @@ function EmptyState({ icon: Icon, message }: { icon: LucideIcon; message: string
       <p>{message}</p>
     </div>
   );
-}
-
-function YesNoBadge({ value }: { value: boolean }) {
-  return value ? (
-    <Badge variant="destructive">יש</Badge>
-  ) : (
-    <Badge variant="secondary">אין</Badge>
-  );
-}
-
-function DifficultyBadge({ level }: { level: number }) {
-  const variant = level >= 8 ? "destructive" : level >= 5 ? "default" : "secondary";
-  return <Badge variant={variant}>{level}/10</Badge>;
-}
-
-function SatisfactionBadge({ level }: { level: number }) {
-  const variant = level >= 8 ? "default" : level >= 5 ? "secondary" : "destructive";
-  const className = level >= 8 ? "bg-green-500" : "";
-  return <Badge variant={variant} className={className}>{level}/10</Badge>;
 }
 
 /** Date filter component */
@@ -185,9 +157,9 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
                     <TableCell>{form.sleep_hours || "-"}</TableCell>
                     <TableCell>{translateValue(form.nutrition_status, nutritionStatusTranslations)}</TableCell>
                     <TableCell>
-                      <YesNoBadge value={!!(form.recent_injury && form.recent_injury !== "אין")} />
+                      <HasBadge value={!!(form.recent_injury && form.recent_injury !== "אין")} />
                     </TableCell>
-                    <TableCell>{formatDate(form.submitted_at)}</TableCell>
+                    <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
                   </ClickableTableRow>
                 ))}
               </TableBody>
@@ -262,7 +234,7 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
                     <TableCell><DifficultyBadge level={form.difficulty_level} /></TableCell>
                     <TableCell><SatisfactionBadge level={form.satisfaction_level} /></TableCell>
                     <TableCell className="max-w-[200px] truncate">{form.comments || "-"}</TableCell>
-                    <TableCell>{formatDate(form.submitted_at)}</TableCell>
+                    <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
                   </ClickableTableRow>
                 ))}
               </TableBody>
@@ -336,8 +308,8 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
                     <TableCell>{form.age}</TableCell>
                     <TableCell>{form.weight ? `${form.weight} ק"ג` : "-"}</TableCell>
                     <TableCell>{form.height ? `${form.height} מ'` : "-"}</TableCell>
-                    <TableCell><YesNoBadge value={form.allergies} /></TableCell>
-                    <TableCell>{formatDate(form.submitted_at)}</TableCell>
+                    <TableCell><HasBadge value={form.allergies} /></TableCell>
+                    <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
                   </ClickableTableRow>
                 ))}
               </TableBody>

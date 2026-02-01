@@ -2,6 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import { RoleBadge, StatusBadge } from "@/components/ui/badges";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,40 +32,6 @@ function getInitials(name: string | null): string {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-}
-
-/**
- * Get role badge with appropriate color
- * admin = red, trainer = blue, trainee = secondary
- */
-function getRoleBadge(role: string) {
-  switch (role) {
-    case "admin":
-      return <Badge className="bg-red-500">מנהל</Badge>;
-    case "trainer":
-      return <Badge className="bg-blue-500">מאמן</Badge>;
-    default:
-      return <Badge variant="secondary">מתאמן</Badge>;
-  }
-}
-
-/**
- * Get status badge based on is_active flag
- * Active = green outline, Inactive = red outline
- */
-function getStatusBadge(isActive: boolean) {
-  if (isActive) {
-    return (
-      <Badge variant="outline" className="border-green-500 text-green-600">
-        פעיל
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="border-red-500 text-red-600">
-      לא פעיל
-    </Badge>
-  );
 }
 
 export const columns: ColumnDef<Profile>[] = [
@@ -117,7 +84,7 @@ export const columns: ColumnDef<Profile>[] = [
         <ArrowUpDown className="mr-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => getRoleBadge(row.getValue("role")),
+    cell: ({ row }) => <RoleBadge role={row.getValue("role")} />,
   },
   {
     accessorKey: "is_active",
@@ -130,7 +97,7 @@ export const columns: ColumnDef<Profile>[] = [
         <ArrowUpDown className="mr-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => getStatusBadge(row.getValue("is_active")),
+    cell: ({ row }) => <StatusBadge isActive={row.getValue("is_active")} />,
   },
   {
     id: "payment_status",

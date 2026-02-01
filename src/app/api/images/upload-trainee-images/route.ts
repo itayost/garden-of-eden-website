@@ -1,45 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const AVATARS_BUCKET = "avatars";
-const EXTENSION_MAP: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-};
-
-// UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// Allowed file types (JPEG, PNG only)
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png"];
-
-// Max file size: 5MB for original, 10MB for processed (PNG can be larger)
-const MAX_ORIGINAL_SIZE = 5 * 1024 * 1024;
-const MAX_PROCESSED_SIZE = 10 * 1024 * 1024;
-
-/**
- * Verify current user is authenticated and has admin or trainer role
- */
-async function verifyAdminOrTrainer() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { authorized: false as const, userId: null };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || (profile.role !== "admin" && profile.role !== "trainer")) {
-    return { authorized: false as const, userId: null };
-  }
-
-  return { authorized: true as const, userId: user.id };
-}
+import {
+  validateUUID,
+  validateImageFile,
+  validateProcessedImage,
+  generateUniqueFilename,
+  getExtensionFromMimeType,
+  AVATARS_BUCKET,
+  MAX_FILE_SIZE,
+  MAX_PROCESSED_SIZE,
+} from "@/lib/api/image-validation";
+import {
+  verifyAdminOrTrainer,
+  parseFormDataSafe,
+  unauthorizedResponse,
+  badRequestResponse,
+  serverErrorResponse,
+} from "@/lib/api/auth";
+import { uploadAvatarImage, cleanupUploadedFiles } from "@/lib/api/storage";
 
 /**
  * POST /api/images/upload-trainee-images
@@ -61,21 +39,13 @@ export async function POST(request: NextRequest) {
     // 1. Verify admin/trainer role
     const authResult = await verifyAdminOrTrainer();
     if (!authResult.authorized) {
-      return NextResponse.json(
-        { error: "Unauthorized - Admin or trainer role required" },
-        { status: 403 }
-      );
+      return unauthorizedResponse();
     }
 
     // 2. Parse FormData
-    let formData: FormData;
-    try {
-      formData = await request.formData();
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid form data" },
-        { status: 400 }
-      );
+    const formData = await parseFormDataSafe(request);
+    if (!formData) {
+      return badRequestResponse("Invalid form data");
     }
 
     const original = formData.get("original") as File | null;
@@ -83,132 +53,61 @@ export async function POST(request: NextRequest) {
     const traineeUserId = formData.get("traineeUserId") as string | null;
 
     // 3. Validate traineeUserId
-    if (!traineeUserId) {
-      return NextResponse.json(
-        { error: "Missing traineeUserId" },
-        { status: 400 }
-      );
-    }
-
-    if (!UUID_REGEX.test(traineeUserId)) {
-      return NextResponse.json(
-        { error: "Invalid traineeUserId format" },
-        { status: 400 }
-      );
+    if (!validateUUID(traineeUserId)) {
+      return badRequestResponse("Missing or invalid traineeUserId");
     }
 
     // 4. Validate original image
-    if (!original || !(original instanceof File)) {
-      return NextResponse.json(
-        { error: "Missing original image file" },
-        { status: 400 }
-      );
+    const originalValidation = validateImageFile(original, MAX_FILE_SIZE);
+    if (!originalValidation.valid) {
+      return badRequestResponse(originalValidation.error);
     }
 
-    if (!ALLOWED_MIME_TYPES.includes(original.type)) {
-      return NextResponse.json(
-        { error: "Invalid original image format. Only JPEG and PNG are allowed" },
-        { status: 400 }
-      );
-    }
-
-    if (original.size > MAX_ORIGINAL_SIZE) {
-      return NextResponse.json(
-        { error: "Original image too large. Maximum size is 5MB" },
-        { status: 400 }
-      );
-    }
-
-    // 5. Validate processed image (accept Blob or File - check for arrayBuffer method)
-    if (!processed || !("arrayBuffer" in processed)) {
-      return NextResponse.json(
-        { error: "Missing processed image file" },
-        { status: 400 }
-      );
-    }
-
-    // Note: Skip PNG type check - canvas blobs may have empty/wrong type
-    // We set contentType=image/png explicitly in the upload
-
-    if (processed.size > MAX_PROCESSED_SIZE) {
-      return NextResponse.json(
-        { error: "Processed image too large. Maximum size is 10MB" },
-        { status: 400 }
-      );
+    // 5. Validate processed image
+    const processedValidation = validateProcessedImage(processed, MAX_PROCESSED_SIZE);
+    if (!processedValidation.valid) {
+      return badRequestResponse(processedValidation.error);
     }
 
     // 6. Upload both images to storage
     const supabase = await createClient();
-    const timestamp = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const extension = getExtensionFromMimeType(original!.type);
+    const originalPath = generateUniqueFilename(traineeUserId, "original", extension);
+    const processedPath = generateUniqueFilename(traineeUserId, "processed", "png");
 
     // Upload original
-    const originalExtension = EXTENSION_MAP[original.type] || "jpg";
-    const originalPath = `${traineeUserId}/original/${timestamp}.${originalExtension}`;
-
-    const { error: originalUploadError } = await supabase.storage
-      .from(AVATARS_BUCKET)
-      .upload(originalPath, original, {
-        cacheControl: "3600",
-        upsert: false,
-      });
-
-    if (originalUploadError) {
-      console.error("[Upload Trainee Images] Original upload error:", originalUploadError);
-      return NextResponse.json(
-        { error: "שגיאה בהעלאת התמונה המקורית. נסה שוב." },
-        { status: 500 }
-      );
+    const originalResult = await uploadAvatarImage(supabase, originalPath, original!);
+    if (!originalResult.success) {
+      console.error("[Upload Trainee Images] Original upload error:", originalResult.error);
+      return serverErrorResponse("שגיאה בהעלאת התמונה המקורית. נסה שוב.");
     }
 
-    // Upload processed - convert to ArrayBuffer for reliable server-side upload
-    const processedPath = `${traineeUserId}/processed/${timestamp}.png`;
-    const processedBuffer = await processed.arrayBuffer();
+    // Upload processed (convert to ArrayBuffer for reliable upload)
+    const processedBuffer = await processed!.arrayBuffer();
+    const processedResult = await uploadAvatarImage(
+      supabase,
+      processedPath,
+      processedBuffer,
+      "image/png"
+    );
 
-    const { error: processedUploadError } = await supabase.storage
-      .from(AVATARS_BUCKET)
-      .upload(processedPath, processedBuffer, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: "image/png",
-      });
-
-    if (processedUploadError) {
-      console.error("[Upload Trainee Images] Processed upload error:", {
-        error: processedUploadError,
-        path: processedPath,
-        size: processed.size,
-        type: processed.type,
-      });
-      // Try to clean up the original that was already uploaded
-      await supabase.storage.from(AVATARS_BUCKET).remove([originalPath]);
-      return NextResponse.json(
-        { error: "שגיאה בהעלאת התמונה המעובדת. נסה שוב." },
-        { status: 500 }
-      );
+    if (!processedResult.success) {
+      console.error("[Upload Trainee Images] Processed upload error:", processedResult.error);
+      // Clean up the original that was already uploaded
+      await cleanupUploadedFiles(supabase, AVATARS_BUCKET, [originalPath]);
+      return serverErrorResponse("שגיאה בהעלאת התמונה המעובדת. נסה שוב.");
     }
 
-    // 7. Get public URLs
-    const { data: originalUrlData } = supabase.storage
-      .from(AVATARS_BUCKET)
-      .getPublicUrl(originalPath);
-
-    const { data: processedUrlData } = supabase.storage
-      .from(AVATARS_BUCKET)
-      .getPublicUrl(processedPath);
-
-    // 8. Return success with both URLs
+    // 7. Return success with both URLs
     return NextResponse.json({
-      originalUrl: originalUrlData.publicUrl,
-      processedUrl: processedUrlData.publicUrl,
-      originalPath: originalPath,
-      processedPath: processedPath,
+      originalUrl: originalResult.url,
+      processedUrl: processedResult.url,
+      originalPath: originalResult.path,
+      processedPath: processedResult.path,
     });
 
   } catch (error) {
     console.error("[Upload Trainee Images] Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

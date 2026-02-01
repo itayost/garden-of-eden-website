@@ -7,10 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   profileCompletionSchema,
   type ProfileCompletionData,
-  validateImage,
-  IMAGE_CONSTRAINTS,
 } from "@/lib/validations/profile";
-import { uploadProfilePhoto } from "@/lib/utils/storage";
 import { POSITIONS, POSITION_LABELS_HE } from "@/types/player-stats";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImageUpload } from "@/components/ui/image-upload";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, UserCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -41,13 +37,11 @@ interface ProfileCompletionFormProps {
     full_name?: string | null;
     birthdate?: string | null;
     position?: string | null;
-    avatar_url?: string | null;
   };
 }
 
 export function ProfileCompletionForm({ userId, initialData }: ProfileCompletionFormProps) {
   const [loading, setLoading] = useState(false);
-  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
 
   const form = useForm<ProfileCompletionData>({
     resolver: zodResolver(profileCompletionSchema),
@@ -72,27 +66,7 @@ export function ProfileCompletionForm({ userId, initialData }: ProfileCompletion
         return;
       }
 
-      let avatarUrl: string | null = initialData?.avatar_url || null;
-
-      // Upload photo if provided
-      if (profilePhoto) {
-        const validation = validateImage(profilePhoto);
-        if (!validation.valid) {
-          toast.error(validation.error || "שגיאה בתמונה");
-          setLoading(false);
-          return;
-        }
-
-        const uploadResult = await uploadProfilePhoto(userId, profilePhoto);
-        if ("error" in uploadResult) {
-          toast.error(uploadResult.error);
-          setLoading(false);
-          return;
-        }
-        avatarUrl = uploadResult.url;
-      }
-
-      // Update profile
+      // Update profile (avatar is managed by admin/coaches only)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (supabase as any)
         .from("profiles")
@@ -100,7 +74,6 @@ export function ProfileCompletionForm({ userId, initialData }: ProfileCompletion
           full_name: data.full_name,
           birthdate: data.birthdate,
           position: data.position || null,
-          avatar_url: avatarUrl,
           profile_completed: true,
           updated_at: new Date().toISOString(),
         })
@@ -138,20 +111,6 @@ export function ProfileCompletionForm({ userId, initialData }: ProfileCompletion
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Profile Photo */}
-            <div className="flex justify-center">
-              <ImageUpload
-                value={profilePhoto || initialData?.avatar_url || null}
-                onChange={setProfilePhoto}
-                maxSizeMB={IMAGE_CONSTRAINTS.maxSizeMB}
-                acceptedFormats={IMAGE_CONSTRAINTS.acceptedTypes}
-                previewSize="lg"
-                label="תמונת פרופיל"
-                description="JPEG, PNG או WebP עד 2MB"
-                disabled={loading}
-              />
-            </div>
-
             {/* Full Name - Required */}
             <FormField
               control={form.control}

@@ -16,15 +16,30 @@ import { getRankingsData } from "../lib/actions/get-rankings";
 interface RankingsViewProps {
   initialData: RankingsData;
   currentUserId?: string;
+  /** Is the current user a trainee (vs admin/trainer)? */
+  isTrainee?: boolean;
+  /** Trainee's own age group ID (for restricting view) */
+  userAgeGroupId?: string | null;
+  /** Trainee's own age group label in Hebrew */
+  userAgeGroupLabel?: string | null;
 }
 
-export function RankingsView({ initialData, currentUserId }: RankingsViewProps) {
+export function RankingsView({
+  initialData,
+  currentUserId,
+  isTrainee = false,
+  userAgeGroupId,
+  userAgeGroupLabel,
+}: RankingsViewProps) {
   const [data, setData] = useState<RankingsData>(initialData);
   const [isPending, startTransition] = useTransition();
   // Track request ID to ignore stale responses from concurrent requests
   const requestIdRef = useRef(0);
 
   const handleAgeGroupChange = (ageGroupId: string) => {
+    // Trainees can only view their own age group
+    if (isTrainee) return;
+
     const currentRequestId = ++requestIdRef.current;
     startTransition(async () => {
       const newData = await getRankingsData(ageGroupId, data.selectedCategory);
@@ -63,11 +78,20 @@ export function RankingsView({ initialData, currentUserId }: RankingsViewProps) 
           {isPending && (
             <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
           )}
-          <AgeGroupFilter
-            selectedAgeGroup={data.selectedAgeGroup}
-            availableAgeGroups={data.availableAgeGroups}
-            onAgeGroupChange={handleAgeGroupChange}
-          />
+          {isTrainee ? (
+            // Trainees see only their age group (no filter control)
+            <Badge variant="secondary" className="text-sm">
+              <Users className="h-3 w-3 ml-1" />
+              {userAgeGroupLabel || "קבוצת הגיל שלי"}
+            </Badge>
+          ) : (
+            // Admin/trainers can filter by age group
+            <AgeGroupFilter
+              selectedAgeGroup={data.selectedAgeGroup}
+              availableAgeGroups={data.availableAgeGroups}
+              onAgeGroupChange={handleAgeGroupChange}
+            />
+          )}
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
+import { updateInTable, insertAndSelect, insertIntoTable } from "@/lib/supabase/helpers";
 import {
   playerStatsSchema,
   type PlayerStatsFormData,
@@ -14,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Slider } from "@/components/ui/slider";
 import {
   Form,
   FormControl,
@@ -43,41 +43,12 @@ import {
 } from "@/types/player-stats";
 import type { PlayerStats } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { StatSlider } from "@/components/admin/stats";
 
 interface PlayerStatsFormProps {
   userId: string;
   playerName: string;
   existingStats: PlayerStats | null;
-}
-
-// Stat slider with visual feedback
-function StatSlider({
-  value,
-  onChange,
-  label,
-}: {
-  value: number;
-  onChange: (value: number) => void;
-  label: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center">
-        <span className="text-sm">{label}</span>
-        <span className={cn("text-sm font-bold w-8 text-left", getStatColor(value))}>
-          {value}
-        </span>
-      </div>
-      <Slider
-        value={[value]}
-        onValueChange={([v]) => onChange(v)}
-        min={1}
-        max={99}
-        step={1}
-        className="w-full"
-      />
-    </div>
-  );
 }
 
 export function PlayerStatsForm({
@@ -166,58 +137,47 @@ export function PlayerStatsForm({
         updated_at: new Date().toISOString(),
       };
 
+      // History data for tracking changes
+      const historyData = {
+        user_id: userId,
+        overall_rating,
+        pace: data.pace,
+        shooting: data.shooting,
+        passing: data.passing,
+        dribbling: data.dribbling,
+        defending: data.defending,
+        physical: data.physical,
+        updated_by: user.id,
+      };
+
       if (existingStats) {
         // Update existing stats
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any)
-          .from("player_stats")
-          .update(statsData)
-          .eq("id", existingStats.id);
-
+        const { error } = await updateInTable(supabase, "player_stats", statsData, "id", existingStats.id);
         if (error) throw error;
 
         // Add to history
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from("player_stats_history").insert({
+        await insertIntoTable(supabase, "player_stats_history", {
           player_stats_id: existingStats.id,
-          user_id: userId,
-          overall_rating,
-          pace: data.pace,
-          shooting: data.shooting,
-          passing: data.passing,
-          dribbling: data.dribbling,
-          defending: data.defending,
-          physical: data.physical,
-          updated_by: user.id,
+          ...historyData,
           update_reason: "עדכון סטטיסטיקות",
         });
 
         toast.success("הסטטיסטיקות עודכנו בהצלחה!");
       } else {
         // Create new stats
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: newStats, error } = await (supabase as any)
-          .from("player_stats")
-          .insert(statsData)
-          .select()
-          .single();
+        const { data: newStats, error } = await insertAndSelect<{ id: string }>(
+          supabase,
+          "player_stats",
+          statsData
+        );
 
         if (error) throw error;
         if (!newStats) throw new Error("Failed to create stats");
 
         // Add initial history entry
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from("player_stats_history").insert({
+        await insertIntoTable(supabase, "player_stats_history", {
           player_stats_id: newStats.id,
-          user_id: userId,
-          overall_rating,
-          pace: data.pace,
-          shooting: data.shooting,
-          passing: data.passing,
-          dribbling: data.dribbling,
-          defending: data.defending,
-          physical: data.physical,
-          updated_by: user.id,
+          ...historyData,
           update_reason: "יצירת כרטיס ראשוני",
         });
 

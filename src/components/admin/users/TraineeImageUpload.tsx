@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Loader2, Upload, Check, X, AlertCircle, RotateCcw } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useBackgroundRemoval } from "@/hooks/useBackgroundRemoval";
 
 interface TraineeImageUploadProps {
@@ -27,16 +27,21 @@ export function TraineeImageUpload({
   const [step, setStep] = useState<UploadStep>("select");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [, setProcessedBlob] = useState<Blob | null>(null);
   const [processedPreviewUrl, setProcessedPreviewUrl] = useState<string | null>(null);
-  const [processedUrl, setProcessedUrl] = useState<string | null>(null);
-  const [originalUrl, setOriginalUrl] = useState<string | null>(null);
+  const [uploadedUrls, setUploadedUrls] = useState<{ original: string; processed: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Client-side background removal hook
-  const { removeBackground, progress, status, error: bgRemovalError, reset: resetBgRemoval } = useBackgroundRemoval();
+  const {
+    removeBackground,
+    progress: bgProgress,
+    status: bgStatus,
+    error: bgError,
+    reset: resetBgRemoval,
+  } = useBackgroundRemoval();
 
-  // Cleanup object URLs on unmount and step changes
+  // Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
       if (previewUrl && previewUrl.startsWith("blob:")) {
@@ -47,13 +52,6 @@ export function TraineeImageUpload({
       }
     };
   }, [previewUrl, processedPreviewUrl]);
-
-  // Update error from background removal
-  useEffect(() => {
-    if (bgRemovalError) {
-      setError(bgRemovalError);
-    }
-  }, [bgRemovalError]);
 
   const validateFile = useCallback((file: File): string | null => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -91,25 +89,23 @@ export function TraineeImageUpload({
     setError(null);
 
     try {
-      // Step 1: Remove background client-side
-      const processedBlob = await removeBackground(selectedFile);
+      // Process background removal client-side
+      const processed = await removeBackground(selectedFile);
 
-      if (!processedBlob) {
-        // Background removal failed, but we can still upload original
-        // This is a fallback - the hook already set the error
-        throw new Error(bgRemovalError || "לא ניתן להסיר את הרקע מהתמונה");
+      if (!processed) {
+        throw new Error(bgError || "שגיאה בעיבוד התמונה");
       }
 
-      // Create preview of processed image
-      const processedPreview = URL.createObjectURL(processedBlob);
-      setProcessedPreviewUrl(processedPreview);
+      setProcessedBlob(processed);
+      const processedUrl = URL.createObjectURL(processed);
+      setProcessedPreviewUrl(processedUrl);
 
-      // Step 2: Upload both images
+      // Now upload both images
       setStep("uploading");
 
       const formData = new FormData();
       formData.append("original", selectedFile);
-      formData.append("processed", processedBlob, "processed.png");
+      formData.append("processed", processed, "processed.png");
       formData.append("traineeUserId", traineeUserId);
 
       const response = await fetch("/api/images/upload-trainee-images", {
@@ -119,7 +115,7 @@ export function TraineeImageUpload({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "שגיאה בהעלאת התמונה");
+        throw new Error(errorData.error || "שגיאה בהעלאת התמונות");
       }
 
       const data = await response.json();
@@ -128,17 +124,19 @@ export function TraineeImageUpload({
         throw new Error("תגובה לא תקינה מהשרת");
       }
 
-      setOriginalUrl(data.originalUrl);
-      setProcessedUrl(data.processedUrl);
+      setUploadedUrls({
+        original: data.originalUrl,
+        processed: data.processedUrl,
+      });
       setStep("result");
     } catch (err) {
+      console.error("[TraineeImageUpload] Error:", err);
       setError(err instanceof Error ? err.message : "שגיאה בעיבוד התמונה");
       setStep("preview");
     }
   };
 
   const handleCancel = () => {
-    // Cleanup
     if (previewUrl && previewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(previewUrl);
     }
@@ -147,43 +145,24 @@ export function TraineeImageUpload({
     }
     setSelectedFile(null);
     setPreviewUrl(null);
+    setProcessedBlob(null);
     setProcessedPreviewUrl(null);
     setError(null);
     setStep("select");
     resetBgRemoval();
 
-    // Reset file input
     if (inputRef.current) {
       inputRef.current.value = "";
     }
   };
 
   const handleTryAnother = () => {
-    // Cleanup
-    if (previewUrl && previewUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    if (processedPreviewUrl && processedPreviewUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(processedPreviewUrl);
-    }
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setProcessedPreviewUrl(null);
-    setProcessedUrl(null);
-    setOriginalUrl(null);
-    setError(null);
-    setStep("select");
-    resetBgRemoval();
-
-    // Reset file input
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
+    handleCancel();
   };
 
   const handleSave = () => {
-    if (originalUrl && processedUrl) {
-      onSuccess(originalUrl, processedUrl);
+    if (uploadedUrls) {
+      onSuccess(uploadedUrls.original, uploadedUrls.processed);
     }
   };
 
@@ -193,18 +172,14 @@ export function TraineeImageUpload({
     handleConfirmAndProcess();
   };
 
-  // Get progress message based on status
-  const getProgressMessage = () => {
-    if (step === "uploading") {
-      return "מעלה תמונות...";
-    }
-    switch (status) {
+  const getStatusText = () => {
+    switch (bgStatus) {
       case "loading-model":
-        return progress < 20 ? "טוען מודל AI..." : "טוען מודל AI (פעם ראשונה לוקח זמן)...";
+        return "טוען מודל עיבוד תמונה...";
       case "processing":
-        return "מסיר רקע...";
+        return "מסיר רקע מהתמונה...";
       default:
-        return "מעבד תמונה...";
+        return "מעבד...";
     }
   };
 
@@ -274,6 +249,10 @@ export function TraineeImageUpload({
             />
           </div>
 
+          <p className="text-sm text-muted-foreground text-center">
+            הרקע יוסר אוטומטית מהתמונה
+          </p>
+
           {error && (
             <p className="text-sm text-destructive flex items-center gap-1">
               <AlertCircle className="h-4 w-4" />
@@ -284,59 +263,67 @@ export function TraineeImageUpload({
           <div className="flex gap-3">
             <Button type="button" onClick={handleConfirmAndProcess}>
               <Check className="h-4 w-4 ml-2" />
-              אשר והמשך
+              אשר ועבד
             </Button>
             <Button type="button" variant="outline" onClick={handleCancel}>
               <X className="h-4 w-4 ml-2" />
               ביטול
             </Button>
           </div>
+
+          {error && (
+            <Button type="button" variant="secondary" onClick={handleRetry}>
+              <RotateCcw className="h-4 w-4 ml-2" />
+              נסה שוב
+            </Button>
+          )}
         </div>
       )}
 
-      {/* Step 3: Processing / Uploading */}
-      {(step === "processing" || step === "uploading") && (
+      {/* Step 3: Processing */}
+      {step === "processing" && (
         <div className="flex flex-col items-center gap-4 py-8 w-full max-w-sm">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">{getProgressMessage()}</p>
-
-          {/* Progress bar */}
-          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-            <div
-              className="bg-primary h-full transition-all duration-300 ease-out"
-              style={{ width: `${step === "uploading" ? 95 : progress}%` }}
-            />
-          </div>
-
-          <p className="text-sm text-muted-foreground text-center">
-            {step === "processing" && status === "loading-model" && progress < 50
-              ? "הורדת מודל AI (רק בפעם הראשונה)"
-              : "הסרת רקע עשויה לקחת מספר שניות"}
-          </p>
+          <p className="text-lg text-muted-foreground">{getStatusText()}</p>
+          <Progress value={bgProgress} className="w-full" />
+          <p className="text-sm text-muted-foreground">{bgProgress}%</p>
         </div>
       )}
 
-      {/* Step 4: Result */}
-      {step === "result" && (processedUrl || processedPreviewUrl) && (
+      {/* Step 4: Uploading */}
+      {step === "uploading" && (
+        <div className="flex flex-col items-center gap-4 py-8">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-lg text-muted-foreground">מעלה תמונות...</p>
+        </div>
+      )}
+
+      {/* Step 5: Result */}
+      {step === "result" && uploadedUrls && (
         <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-          {/* Checkered background to show transparency */}
-          <div
-            className={cn(
-              "relative rounded-lg overflow-hidden",
-              "bg-[length:20px_20px]",
-              "bg-[linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%),linear-gradient(45deg,#f0f0f0_25%,transparent_25%,transparent_75%,#f0f0f0_75%)]",
-              "bg-[position:0_0,10px_10px]"
-            )}
-          >
-            <img
-              src={processedUrl || processedPreviewUrl || ""}
-              alt="תוצאה מעובדת"
-              className="max-w-64 max-h-64 object-contain"
-            />
+          <div className="flex gap-4">
+            <div className="flex flex-col items-center gap-2">
+              <img
+                src={uploadedUrls.original}
+                alt="תמונה מקורית"
+                className="w-32 h-32 rounded-lg object-cover border"
+              />
+              <span className="text-xs text-muted-foreground">מקורית</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-32 h-32 rounded-lg border bg-[url('/checkerboard.svg')] bg-repeat flex items-center justify-center">
+                <img
+                  src={uploadedUrls.processed}
+                  alt="תמונה מעובדת"
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">ללא רקע</span>
+            </div>
           </div>
 
-          <p className="text-sm text-muted-foreground text-center">
-            תמונה לאחר הסרת רקע
+          <p className="text-sm text-green-600 text-center">
+            התמונות הועלו בהצלחה!
           </p>
 
           <div className="flex gap-3">
@@ -346,19 +333,9 @@ export function TraineeImageUpload({
             </Button>
             <Button type="button" variant="outline" onClick={handleTryAnother}>
               <RotateCcw className="h-4 w-4 ml-2" />
-              נסה תמונה אחרת
+              בחר תמונה אחרת
             </Button>
           </div>
-        </div>
-      )}
-
-      {/* Processing error with retry */}
-      {step === "preview" && error && (
-        <div className="flex gap-3 mt-2">
-          <Button type="button" variant="secondary" onClick={handleRetry}>
-            <RotateCcw className="h-4 w-4 ml-2" />
-            נסה שוב
-          </Button>
         </div>
       )}
     </div>

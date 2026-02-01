@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/badges";
 import { ArrowRight, User, History } from "lucide-react";
 import { UserEditForm } from "@/components/admin/UserEditForm";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
@@ -139,11 +139,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
             <CardContent className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground text-sm">סטטוס</span>
-                {userToEdit.is_active ? (
-                  <Badge className="bg-green-500">פעיל</Badge>
-                ) : (
-                  <Badge variant="destructive">לא פעיל</Badge>
-                )}
+                <StatusBadge isActive={userToEdit.is_active} />
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground text-sm">נרשם בתאריך</span>

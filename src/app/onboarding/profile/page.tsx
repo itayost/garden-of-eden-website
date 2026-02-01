@@ -35,7 +35,6 @@ export default async function OnboardingProfilePage() {
           full_name: profile?.full_name,
           birthdate: profile?.birthdate,
           position: profile?.position,
-          avatar_url: profile?.avatar_url,
         }}
       />
     </div>
