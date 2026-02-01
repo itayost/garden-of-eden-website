@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Loader2, KeyRound } from "lucide-react";
 import { resetUserCredentialsAction } from "@/lib/actions/admin-users";
 import { DeleteUserDialog } from "./DeleteUserDialog";
+import { UserDataExportButton } from "@/components/admin/exports/UserDataExportButton";
 import type { Profile } from "@/types/database";
 
 interface UserActionsCardProps {
@@ -58,6 +59,8 @@ export function UserActionsCard({ user, currentUserId }: UserActionsCardProps) {
           )}
           איפוס סיסמה
         </Button>
+
+        <UserDataExportButton userId={user.id} userName={user.full_name || "משתמש"} />
 
         <DeleteUserDialog
           user={user}
