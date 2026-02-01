@@ -100,7 +100,7 @@ export async function setGoal(params: SetGoalParams): Promise<SetGoalResult> {
   }
 
   // Create the goal
-  const { data, error } = (await (supabase as unknown as { from: (table: string) => { insert: (data: Record<string, unknown>) => { select: () => { single: () => Promise<{ data: PlayerGoalRow | null; error: { code?: string; message: string } | null }> } } } })
+  const { data, error } = (await supabase
     .from("player_goals")
     .insert({
       user_id: params.userId,

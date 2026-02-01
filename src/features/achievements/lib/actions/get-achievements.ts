@@ -115,17 +115,11 @@ export async function markAchievementCelebrated(
   }
 
   // Only update achievements belonging to the current user
-  const { error } = await (
-    (supabase.from("user_achievements") as unknown as {
-      update: (data: { celebrated: boolean }) => {
-        eq: (column: string, value: string) => {
-          eq: (column: string, value: string) => Promise<{ error: Error | null }>
-        }
-      }
-    }).update({ celebrated: true })
-      .eq("id", achievementId)
-      .eq("user_id", user.id)
-  );
+  const { error } = await supabase
+    .from("user_achievements")
+    .update({ celebrated: true })
+    .eq("id", achievementId)
+    .eq("user_id", user.id);
 
   if (error) {
     console.error("Error marking achievement celebrated:", error);
@@ -156,17 +150,11 @@ export async function markAchievementsCelebrated(
   }
 
   // Only update achievements belonging to the current user
-  const { error } = await (
-    (supabase.from("user_achievements") as unknown as {
-      update: (data: { celebrated: boolean }) => {
-        eq: (column: string, value: string) => {
-          in: (column: string, values: string[]) => Promise<{ error: Error | null }>
-        }
-      }
-    }).update({ celebrated: true })
-      .eq("user_id", user.id)
-      .in("id", achievementIds)
-  );
+  const { error } = await supabase
+    .from("user_achievements")
+    .update({ celebrated: true })
+    .eq("user_id", user.id)
+    .in("id", achievementIds);
 
   if (error) {
     console.error("Error marking achievements celebrated:", error);

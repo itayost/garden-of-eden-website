@@ -32,9 +32,7 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
 
     if (!user) return;
 
-    const { error } = await (supabase.from("video_progress") as unknown as {
-      upsert: (data: Record<string, unknown>) => Promise<{ error: Error | null }>
-    }).upsert({
+    const { error } = await supabase.from("video_progress").upsert({
       user_id: user.id,
       video_id: video.id,
       watched: true,

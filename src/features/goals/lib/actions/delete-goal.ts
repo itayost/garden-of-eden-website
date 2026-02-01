@@ -45,15 +45,7 @@ export async function deleteGoal(goalId: string): Promise<DeleteGoalResult> {
     return { success: false, error: "היעד לא נמצא" };
   }
 
-  const { error } = await (
-    supabase as unknown as {
-      from: (table: string) => {
-        delete: () => {
-          eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
-        };
-      };
-    }
-  )
+  const { error } = await supabase
     .from("player_goals")
     .delete()
     .eq("id", goalId);

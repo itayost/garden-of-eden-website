@@ -58,7 +58,7 @@ export async function getRankingsData(
   const { data: profiles, error: profilesError } = (await supabase
     .from("profiles")
     .select("id, full_name, birthdate")
-    .eq("role", "trainee")) as unknown as {
+    .eq("role", "trainee")) as {
     data: { id: string; full_name: string | null; birthdate: string | null }[] | null;
     error: Error | null;
   };
@@ -101,7 +101,7 @@ export async function getRankingsData(
   const { data: assessments, error: assessmentsError } = (await supabase
     .from("player_assessments")
     .select("*")
-    .in("user_id", filteredUserIds)) as unknown as {
+    .in("user_id", filteredUserIds)) as {
     data: PlayerAssessment[] | null;
     error: Error | null;
   };
