@@ -117,43 +117,50 @@
 ---
 
 ## Phase 3: Admin Panel - Video Management 🟠 HIGH
-**Status:** Not Started | **Target:** Week 3
+**Status:** Planned | **Target:** Week 3 | **Plans:** 5 plans
+
+### Plans
+- [ ] 03-01-PLAN.md — Server actions + validation schema (YouTube utilities, video schema, CRUD actions)
+- [ ] 03-02-PLAN.md — Video form and delete dialog components
+- [ ] 03-03-PLAN.md — TanStack Table components (columns, toolbar, pagination, data table)
+- [ ] 03-04-PLAN.md — Admin pages integration (upgrade videos page, create page)
+- [ ] 03-05-PLAN.md — Human verification of complete CRUD functionality
 
 ### 3.1 Video CRUD UI
 - [ ] Create video management page with table view
 - [ ] Add video form (title, YouTube URL, day, topic, duration)
 - [ ] Edit existing videos
 - [ ] Delete video with confirmation dialog
-- [ ] Drag-to-reorder within each day
+- [ ] ~~Drag-to-reorder within each day~~ (DEFERRED)
 - [ ] Add loading states for all actions
 - [ ] Add success/error toast notifications
 - **New Files:**
-  - `src/components/admin/VideoForm.tsx`
-  - `src/components/admin/VideoTable.tsx`
+  - `src/components/admin/videos/VideoForm.tsx`
+  - `src/components/admin/videos/VideoDataTable.tsx`
+  - `src/lib/actions/admin-videos.ts`
 
-### 3.2 Video Analytics
+### 3.2 Video Analytics (DEFERRED)
 - [ ] Show view counts per video
 - [ ] Show completion rates
 - [ ] Most/least watched videos dashboard
 
-### 3.3 Video Progress Tracking (User-side)
+### 3.3 Video Progress Tracking - User-side (DEFERRED)
 - [ ] Track watch duration (not just binary watched/not)
 - [ ] Save playback position for resume
 - [ ] Show "Continue watching" for partially viewed videos
 - **Files:** `src/app/dashboard/videos/page.tsx`, `src/components/dashboard/VideoCard.tsx`
 
-### 3.4 Write Tests for Phase 3
+### 3.4 Write Tests for Phase 3 (DEFERRED)
 - [ ] Test video CRUD operations
 - [ ] Test progress tracking saves correctly
 - [ ] Test resume position loads correctly
 
 ### Success Criteria
 - [ ] Admin can create/edit/delete videos from UI
-- [ ] Videos can be reordered by drag-and-drop
-- [ ] Users can resume videos from where they left off
-- [ ] Analytics show accurate view counts
+- [ ] ~~Videos can be reordered by drag-and-drop~~ (DEFERRED)
+- [ ] All actions show loading states and toast feedback
 
-**Phase 3 Completion:** ⬜ 0/16 tasks
+**Phase 3 Completion:** ⬜ 0/7 tasks (core CRUD only, deferred items excluded)
 
 ---
 
