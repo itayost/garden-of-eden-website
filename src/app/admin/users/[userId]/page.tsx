@@ -54,7 +54,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     .from("profiles")
     .select("*")
     .eq("id", userId)
-    .single()) as unknown as { data: Profile | null };
+    .single()) as { data: Profile | null };
 
   if (!userToEdit) {
     notFound();

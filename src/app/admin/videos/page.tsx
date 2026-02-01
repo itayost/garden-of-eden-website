@@ -27,7 +27,7 @@ export default async function AdminVideosPage() {
     .from("workout_videos")
     .select("*")
     .order("day_number")
-    .order("order_index") as unknown as { data: WorkoutVideo[] | null };
+    .order("order_index") as { data: WorkoutVideo[] | null };
 
   return (
     <div className="space-y-8">
