@@ -77,7 +77,7 @@ export function TraineeImageUpload({
 
     try {
       const formData = new FormData();
-      formData.append("file", selectedFile);
+      formData.append("image", selectedFile);
       formData.append("traineeUserId", traineeUserId);
 
       const response = await fetch("/api/images/process-background", {
