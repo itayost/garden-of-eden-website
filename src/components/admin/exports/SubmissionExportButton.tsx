@@ -1,10 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
@@ -21,10 +18,9 @@ interface SubmissionExportButtonProps {
 }
 
 /**
- * Export button with date filtering for form submissions
+ * Export button for form submissions (pre-filtered by parent)
  *
  * Features:
- * - Date range filter with native HTML date inputs
  * - CSV export with UTF-8 BOM for Hebrew Excel support
  * - Hebrew column headers per form type
  */
@@ -32,28 +28,14 @@ export function SubmissionExportButton({
   formType,
   submissions,
 }: SubmissionExportButtonProps) {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-
   const handleExport = () => {
-    // Filter by date range if provided
-    let filtered = submissions;
-
-    if (startDate) {
-      filtered = filtered.filter((s) => s.submitted_at >= startDate);
-    }
-    if (endDate) {
-      // Include entire end day
-      filtered = filtered.filter((s) => s.submitted_at <= endDate + "T23:59:59");
-    }
-
-    if (filtered.length === 0) {
-      toast.error("אין נתונים לייצוא בטווח התאריכים שנבחר");
+    if (submissions.length === 0) {
+      toast.error("אין נתונים לייצוא");
       return;
     }
 
     // Transform to Hebrew columns based on form type
-    const csvData = transformToCSV(formType, filtered);
+    const csvData = transformToCSV(formType, submissions);
 
     // Export with BOM for Hebrew support in Excel
     const csv = Papa.unparse(csvData);
@@ -68,36 +50,14 @@ export function SubmissionExportButton({
     // Cleanup
     URL.revokeObjectURL(link.href);
 
-    toast.success(`יוצאו ${filtered.length} שאלונים`);
+    toast.success(`יוצאו ${submissions.length} שאלונים`);
   };
 
   return (
-    <div className="flex items-end gap-4 flex-wrap">
-      <div>
-        <Label htmlFor={`start-date-${formType}`}>מתאריך</Label>
-        <Input
-          id={`start-date-${formType}`}
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="w-40"
-        />
-      </div>
-      <div>
-        <Label htmlFor={`end-date-${formType}`}>עד תאריך</Label>
-        <Input
-          id={`end-date-${formType}`}
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="w-40"
-        />
-      </div>
-      <Button onClick={handleExport} variant="outline">
-        <Download className="h-4 w-4 ml-2" />
-        ייצוא ל-CSV
-      </Button>
-    </div>
+    <Button onClick={handleExport} variant="outline" disabled={submissions.length === 0}>
+      <Download className="h-4 w-4 ml-2" />
+      ייצוא ל-CSV ({submissions.length})
+    </Button>
   );
 }
 

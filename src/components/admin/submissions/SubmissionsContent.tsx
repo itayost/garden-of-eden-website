@@ -1,0 +1,354 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
+import { SubmissionExportButton } from "@/components/admin/exports/SubmissionExportButton";
+import { Activity, FileText, Salad, type LucideIcon } from "lucide-react";
+import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
+
+type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
+
+// Hebrew translations for form values
+const nutritionStatusTranslations: Record<string, string> = {
+  full_energy: "מלא אנרגיה",
+  insufficient: "לא מספיק",
+  no_energy: "אין אנרגיה",
+};
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("he-IL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function translateValue(value: string | null | undefined, translations: Record<string, string>): string {
+  if (!value) return "-";
+  return translations[value] || value;
+}
+
+function EmptyState({ icon: Icon, message }: { icon: LucideIcon; message: string }) {
+  return (
+    <div className="text-center py-8 text-muted-foreground">
+      <Icon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+      <p>{message}</p>
+    </div>
+  );
+}
+
+function YesNoBadge({ value }: { value: boolean }) {
+  return value ? (
+    <Badge variant="destructive">יש</Badge>
+  ) : (
+    <Badge variant="secondary">אין</Badge>
+  );
+}
+
+function DifficultyBadge({ level }: { level: number }) {
+  const variant = level >= 8 ? "destructive" : level >= 5 ? "default" : "secondary";
+  return <Badge variant={variant}>{level}/10</Badge>;
+}
+
+function SatisfactionBadge({ level }: { level: number }) {
+  const variant = level >= 8 ? "default" : level >= 5 ? "secondary" : "destructive";
+  const className = level >= 8 ? "bg-green-500" : "";
+  return <Badge variant={variant} className={className}>{level}/10</Badge>;
+}
+
+/** Date filter component */
+function DateFilter({
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
+  formType,
+}: {
+  startDate: string;
+  endDate: string;
+  onStartDateChange: (value: string) => void;
+  onEndDateChange: (value: string) => void;
+  formType: string;
+}) {
+  return (
+    <div className="flex items-end gap-4 flex-wrap">
+      <div>
+        <Label htmlFor={`start-date-${formType}`}>מתאריך</Label>
+        <Input
+          id={`start-date-${formType}`}
+          type="date"
+          value={startDate}
+          onChange={(e) => onStartDateChange(e.target.value)}
+          className="w-40"
+        />
+      </div>
+      <div>
+        <Label htmlFor={`end-date-${formType}`}>עד תאריך</Label>
+        <Input
+          id={`end-date-${formType}`}
+          type="date"
+          value={endDate}
+          onChange={(e) => onEndDateChange(e.target.value)}
+          className="w-40"
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Filter submissions by date range */
+function filterByDate<T extends { submitted_at: string }>(
+  submissions: T[],
+  startDate: string,
+  endDate: string
+): T[] {
+  let filtered = submissions;
+  if (startDate) {
+    filtered = filtered.filter((s) => s.submitted_at >= startDate);
+  }
+  if (endDate) {
+    filtered = filtered.filter((s) => s.submitted_at <= endDate + "T23:59:59");
+  }
+  return filtered;
+}
+
+// Pre-workout content component
+export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm[] }) {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const filtered = useMemo(
+    () => filterByDate(submissions, startDate, endDate),
+    [submissions, startDate, endDate]
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>שאלונים לפני אימון</CardTitle>
+              <CardDescription>
+                {filtered.length === submissions.length
+                  ? `כל השאלונים שהוגשו לפני אימונים`
+                  : `מציג ${filtered.length} מתוך ${submissions.length} שאלונים`}
+              </CardDescription>
+            </div>
+            <SubmissionExportButton
+              formType="pre_workout"
+              submissions={filtered}
+            />
+          </div>
+          <DateFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            formType="pre_workout"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {filtered.length > 0 ? (
+          <div className="overflow-x-auto" dir="rtl">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>שם</TableHead>
+                  <TableHead>גיל</TableHead>
+                  <TableHead>שינה</TableHead>
+                  <TableHead>תזונה</TableHead>
+                  <TableHead>פציעה</TableHead>
+                  <TableHead>תאריך</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((form) => (
+                  <ClickableTableRow key={form.id} href={`/admin/submissions/pre-workout/${form.id}`}>
+                    <TableCell className="font-medium">{form.full_name}</TableCell>
+                    <TableCell>{form.age || "-"}</TableCell>
+                    <TableCell>{form.sleep_hours || "-"}</TableCell>
+                    <TableCell>{translateValue(form.nutrition_status, nutritionStatusTranslations)}</TableCell>
+                    <TableCell>
+                      <YesNoBadge value={!!(form.recent_injury && form.recent_injury !== "אין")} />
+                    </TableCell>
+                    <TableCell>{formatDate(form.submitted_at)}</TableCell>
+                  </ClickableTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : submissions.length > 0 ? (
+          <EmptyState icon={Activity} message="אין שאלונים בטווח התאריכים שנבחר" />
+        ) : (
+          <EmptyState icon={Activity} message="אין שאלונים עדיין" />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Post-workout content component
+export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWithTrainer[] }) {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const filtered = useMemo(
+    () => filterByDate(submissions, startDate, endDate),
+    [submissions, startDate, endDate]
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>שאלונים אחרי אימון</CardTitle>
+              <CardDescription>
+                {filtered.length === submissions.length
+                  ? `כל השאלונים שהוגשו אחרי אימונים`
+                  : `מציג ${filtered.length} מתוך ${submissions.length} שאלונים`}
+              </CardDescription>
+            </div>
+            <SubmissionExportButton
+              formType="post_workout"
+              submissions={filtered}
+            />
+          </div>
+          <DateFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            formType="post_workout"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {filtered.length > 0 ? (
+          <div className="overflow-x-auto" dir="rtl">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>שם</TableHead>
+                  <TableHead>מאמן</TableHead>
+                  <TableHead>קושי</TableHead>
+                  <TableHead>שביעות רצון</TableHead>
+                  <TableHead>הערות</TableHead>
+                  <TableHead>תאריך</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((form) => (
+                  <ClickableTableRow key={form.id} href={`/admin/submissions/post-workout/${form.id}`}>
+                    <TableCell className="font-medium">{form.full_name}</TableCell>
+                    <TableCell>{form.trainers?.name || "-"}</TableCell>
+                    <TableCell><DifficultyBadge level={form.difficulty_level} /></TableCell>
+                    <TableCell><SatisfactionBadge level={form.satisfaction_level} /></TableCell>
+                    <TableCell className="max-w-[200px] truncate">{form.comments || "-"}</TableCell>
+                    <TableCell>{formatDate(form.submitted_at)}</TableCell>
+                  </ClickableTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : submissions.length > 0 ? (
+          <EmptyState icon={FileText} message="אין שאלונים בטווח התאריכים שנבחר" />
+        ) : (
+          <EmptyState icon={FileText} message="אין שאלונים עדיין" />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Nutrition content component
+export function NutritionContent({ submissions }: { submissions: NutritionForm[] }) {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const filtered = useMemo(
+    () => filterByDate(submissions, startDate, endDate),
+    [submissions, startDate, endDate]
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>שאלוני תזונה</CardTitle>
+              <CardDescription>
+                {filtered.length === submissions.length
+                  ? `כל שאלוני התזונה שהוגשו`
+                  : `מציג ${filtered.length} מתוך ${submissions.length} שאלונים`}
+              </CardDescription>
+            </div>
+            <SubmissionExportButton
+              formType="nutrition"
+              submissions={filtered}
+            />
+          </div>
+          <DateFilter
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            formType="nutrition"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {filtered.length > 0 ? (
+          <div className="overflow-x-auto" dir="rtl">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>שם</TableHead>
+                  <TableHead>גיל</TableHead>
+                  <TableHead>משקל</TableHead>
+                  <TableHead>גובה</TableHead>
+                  <TableHead>אלרגיות</TableHead>
+                  <TableHead>תאריך</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((form) => (
+                  <ClickableTableRow key={form.id} href={`/admin/submissions/nutrition/${form.id}`}>
+                    <TableCell className="font-medium">{form.full_name}</TableCell>
+                    <TableCell>{form.age}</TableCell>
+                    <TableCell>{form.weight ? `${form.weight} ק"ג` : "-"}</TableCell>
+                    <TableCell>{form.height ? `${form.height} מ'` : "-"}</TableCell>
+                    <TableCell><YesNoBadge value={form.allergies} /></TableCell>
+                    <TableCell>{formatDate(form.submitted_at)}</TableCell>
+                  </ClickableTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : submissions.length > 0 ? (
+          <EmptyState icon={Salad} message="אין שאלונים בטווח התאריכים שנבחר" />
+        ) : (
+          <EmptyState icon={Salad} message="אין שאלונים עדיין" />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
