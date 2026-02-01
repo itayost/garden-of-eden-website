@@ -12,12 +12,12 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 10 of 10 (Trainee Images & FIFA Cards) |
-| Current Plan | 4 of 6 (10-02, 10-03, 10-04 complete) |
+| Current Plan | 5 of 6 (10-02, 10-03, 10-04, 10-05 complete) |
 | Phase Status | In Progress |
 | Requirements Complete | 10/57 (SEC-01 to SEC-05, AUTH-05 to AUTH-09) |
-| Overall Progress | 51% |
+| Overall Progress | 53% |
 
-**Progress:** [########.......] 5.1/10 phases complete
+**Progress:** [########.......] 5.3/10 phases complete
 
 ## Phase Overview
 
@@ -103,6 +103,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 10-03 | Click-to-browse only | Per CONTEXT.md - no drag-drop, simple file picker |
 | 2026-02-01 | 10-03 | Checkered background for result | CSS gradient pattern to show transparent areas in cutout |
 | 2026-02-01 | 10-03 | Hebrew text throughout | All UI labels, buttons, errors in Hebrew for RTL |
+| 2026-02-01 | 10-05 | object-contain for cutouts | Preserves aspect ratio and shows full cutout image |
+| 2026-02-01 | 10-05 | Removed drop-shadow filter | Card already has glow, per CONTEXT.md |
+| 2026-02-01 | 10-05 | Nullish coalescing for avatar | Use ?? instead of \|\| to handle empty strings correctly |
 
 ## Patterns Established
 
@@ -178,6 +181,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Checkered background pattern | CSS gradient for PNG transparency preview | 10-03 |
 | TraineeImageSection | Card wrapper with Avatar display and Sheet upload modal | 10-04 |
 | getInitials helper | Extract 2-char initials from name for avatar fallback | 10-04 |
+| Cutout avatar display | object-contain class, no filter/shadow on img | 10-05 |
+| Avatar URL prop pattern | processed_avatar_url ?? avatar_url ?? undefined | 10-05 |
 
 ## Blockers / Concerns
 
@@ -241,16 +246,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 10-02 complete | Background removal API endpoint and updateTraineeAvatarUrls server action |
 | 2026-02-01 | 10-03 complete | TraineeImageUpload component with 4-step upload flow |
 | 2026-02-01 | 10-04 complete | TraineeImageSection component and user edit page integration |
+| 2026-02-01 | 10-05 complete | PlayerCard cutout display update, pages pass processed_avatar_url |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T18:11:50Z
-- **Stopped at:** Completed 10-04-PLAN.md (Page Integration)
+- **Last session:** 2026-02-01T18:15:27Z
+- **Stopped at:** Completed 10-05-PLAN.md (FIFA Card Display)
 - **Resume file:** None
 
 ## Next Action
 
-Continue Phase 10: Plan 10-05 (FIFA Card Design) or 10-06 (Human Verification)
+Continue Phase 10: Plan 10-06 (Human Verification)
 
 ---
-*Last updated: 2026-02-01T18:11:50Z*
+*Last updated: 2026-02-01T18:15:27Z*
