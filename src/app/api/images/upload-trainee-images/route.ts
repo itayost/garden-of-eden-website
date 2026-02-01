@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     const original = formData.get("original") as File | null;
-    const processed = formData.get("processed") as File | null;
+    const processed = formData.get("processed") as Blob | null;
     const traineeUserId = formData.get("traineeUserId") as string | null;
 
     // 3. Validate traineeUserId
@@ -119,21 +119,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Validate processed image
-    if (!processed || !(processed instanceof File)) {
+    // 5. Validate processed image (accept Blob or File - check for arrayBuffer method)
+    if (!processed || !("arrayBuffer" in processed)) {
       return NextResponse.json(
         { error: "Missing processed image file" },
         { status: 400 }
       );
     }
 
-    // Processed should be PNG (for transparency)
-    if (processed.type !== "image/png") {
-      return NextResponse.json(
-        { error: "Processed image must be PNG format" },
-        { status: 400 }
-      );
-    }
+    // Note: Skip PNG type check - canvas blobs may have empty/wrong type
+    // We set contentType=image/png explicitly in the upload
 
     if (processed.size > MAX_PROCESSED_SIZE) {
       return NextResponse.json(
@@ -165,19 +160,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload processed
+    // Upload processed - convert to ArrayBuffer for reliable server-side upload
     const processedPath = `${traineeUserId}/processed/${timestamp}.png`;
+    const processedBuffer = await processed.arrayBuffer();
 
     const { error: processedUploadError } = await supabase.storage
       .from(AVATARS_BUCKET)
-      .upload(processedPath, processed, {
+      .upload(processedPath, processedBuffer, {
         cacheControl: "3600",
         upsert: false,
         contentType: "image/png",
       });
 
     if (processedUploadError) {
-      console.error("[Upload Trainee Images] Processed upload error:", processedUploadError);
+      console.error("[Upload Trainee Images] Processed upload error:", {
+        error: processedUploadError,
+        path: processedPath,
+        size: processed.size,
+        type: processed.type,
+      });
       // Try to clean up the original that was already uploaded
       await supabase.storage.from(AVATARS_BUCKET).remove([originalPath]);
       return NextResponse.json(
