@@ -12,12 +12,12 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 1 of 10 (Security Fixes) |
-| Current Plan | 01-04 complete |
+| Current Plan | 01-05b complete |
 | Phase Status | In Progress |
 | Requirements Complete | 0/57 |
-| Overall Progress | 7% |
+| Overall Progress | 8% |
 
-**Progress:** [####......] 4/6 plans in Phase 1
+**Progress:** [#####.....] 5/6 plans in Phase 1
 
 ## Phase Overview
 
@@ -51,6 +51,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 01-03 | Rate limit before parsing | Check rate limit immediately before processing payload |
 | 2026-02-01 | 01-04 | Graceful NaN handling | Default to 1 for paymentsNum, null for payment sums |
 | 2026-02-01 | 01-04 | Signature fallback | Fall back to process token if HMAC secret not configured |
+| 2026-02-01 | 01-05b | Keep Promise.all type casts | Required due to Supabase client type inference limitations |
 
 ## Patterns Established
 
@@ -67,12 +68,15 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Validation error format | `{ error: string, fieldErrors: Record<string, string> }` | 01-03 |
 | Zod transforms for numbers | Use z.transform with safeParseInt/safeParseFloat | 01-04 |
 | Webhook raw body first | Read request.text() before JSON parsing for signature | 01-04 |
+| Const arrays for Zod enums | Use `as const` for arrays passed to z.enum() | 01-05b |
+| PostgrestVersion hint | Add `__InternalSupabase.PostgrestVersion` to Database type | 01-05b |
 
 ## Blockers / Concerns
 
 | Issue | Impact | Resolution |
 |-------|--------|------------|
 | Migration 01-02 not applied | RLS policies not active in database | Apply via Supabase Dashboard SQL Editor |
+| Test file null checks | 11 TypeScript errors in ranking-utils.test.ts | Pre-existing, not blocking |
 
 ## Workflow Configuration
 
@@ -93,20 +97,21 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 01-02 complete | Security indexes, soft delete, 38 RLS policies |
 | 2026-02-01 | 01-03 complete | Payment rate limiting and Zod validation |
 | 2026-02-01 | 01-04 complete | Webhook signature verification and Zod validation |
+| 2026-02-01 | 01-05b complete | Type safety improvements, Zod enum fix, PostgrestVersion |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T11:30:00Z
-- **Stopped at:** Completed 01-04-PLAN.md
+- **Last session:** 2026-02-01T11:36:00Z
+- **Stopped at:** Completed 01-05b-PLAN.md
 - **Resume file:** None
 
 ## Next Action
 
-**Phase 1 Plan 05:** Continue with API route protection
+**Phase 1 Plan 05/06:** Continue with remaining security plans
 
 Apply migration first (blocker): https://supabase.com/dashboard/project/sedqdnpdvwpivrocdlmh/sql
 
-Run: `/gsd:execute-plan 01-05`
+Run: `/gsd:execute-plan 01-05` or `/gsd:execute-plan 01-06`
 
 ---
 *Last updated: 2026-02-01*
