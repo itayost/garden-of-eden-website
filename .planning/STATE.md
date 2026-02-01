@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Trainees can track their fitness progress and see improvement as FIFA-style player cards
-**Current focus:** Phase 5 - Auth Enhancements (Complete)
+**Current focus:** Phase 10 - Trainee Images & FIFA Cards (In Progress)
 
 ## Current Position
 
 | Metric | Value |
 |--------|-------|
-| Current Phase | 5 of 10 (Auth Enhancements) |
-| Current Plan | 6 of 6 (05-06 complete) |
-| Phase Status | Complete |
+| Current Phase | 10 of 10 (Trainee Images & FIFA Cards) |
+| Current Plan | 1 of 6 (10-01 complete) |
+| Phase Status | In Progress |
 | Requirements Complete | 10/57 (SEC-01 to SEC-05, AUTH-05 to AUTH-09) |
-| Overall Progress | 50% |
+| Overall Progress | 51% |
 
-**Progress:** [########.......] 5/10 phases complete
+**Progress:** [########.......] 5.1/10 phases complete
 
 ## Phase Overview
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 7 | Form Drafts Sync | Pending | FORM-03 to FORM-06 |
 | 8 | Testing & Quality | Pending | TEST-01 to TEST-06 |
 | 9 | Performance | Pending | PERF-01 to PERF-06 |
-| 10 | Trainee Images & FIFA Cards | Pending | IMG-01 to IMG-06 |
+| 10 | Trainee Images & FIFA Cards | In Progress | IMG-01 to IMG-06 |
 
 ## Accumulated Decisions
 
@@ -94,6 +94,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 05-05 | Hard redirect after 2FA success | Use window.location.href for session cookie propagation |
 | 2026-02-01 | 05-05 | Fail-open on AAL error | Redirect to dashboard if AAL fetch fails for availability |
 | 2026-02-01 | 05-05 | Cancel 2FA signs out user | Prevent partial auth state by signing out and returning to login |
+| 2026-02-01 | 10-01 | Trainee image paths | {userId}/original/ and {userId}/processed/ subfolder structure |
+| 2026-02-01 | 10-01 | JPG/PNG only for trainee uploads | Per CONTEXT.md - standard photo formats for processing |
+| 2026-02-01 | 10-01 | 5MB limit for trainee images | Larger than profile photos to support high-res source images |
 
 ## Patterns Established
 
@@ -159,6 +162,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Security settings page | 2FA management at /dashboard/settings/security | 05-04 |
 | AAL check in callback | Check nextLevel vs currentLevel for MFA routing | 05-05 |
 | 2FA login flow | OTP verify -> AAL check -> 2FA verify -> dashboard | 05-05 |
+| Trainee image paths | {userId}/original/ and {userId}/processed/ subfolders | 10-01 |
+| Admin/trainer storage RLS | EXISTS check for role IN ('admin', 'trainer') on storage.objects | 10-01 |
+| Dual image storage | Original for avatar, processed for FIFA card | 10-01 |
 
 ## Blockers / Concerns
 
@@ -167,6 +173,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Migration 01-02 not applied | RLS policies not active in database | Apply via Supabase Dashboard SQL Editor |
 | Migration 04-01 not applied | deleted_by column not in database | Apply via Supabase Dashboard SQL Editor |
 | Test file null checks | 11 TypeScript errors in ranking-utils.test.ts | Pre-existing, not blocking |
+| Migration 10-01 not applied | RLS policies and processed_avatar_url column not in database | Apply via Supabase Dashboard SQL Editor |
+| REMOVEBG_API_KEY not set | Background removal API will fail without key | User must set env var before 10-03 |
 
 ## Workflow Configuration
 
@@ -216,16 +224,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | Phase 10 added | Trainee Image Management & FIFA Card Photos |
 | 2026-02-01 | 05-06 complete | Human verification approved (deferred testing) |
 | 2026-02-01 | Phase 5 complete | Auth enhancements verified - password reset, 2FA enrollment, 2FA login, security settings |
+| 2026-02-01 | 10-01 complete | Image infrastructure: migration, storage utilities, remove.bg package |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T17:08:35Z
-- **Stopped at:** Completed 05-05-PLAN.md (2FA Login Flow)
+- **Last session:** 2026-02-01T17:59:45Z
+- **Stopped at:** Completed 10-01-PLAN.md (Image Infrastructure)
 - **Resume file:** None
 
 ## Next Action
 
-Begin Phase 6: Notifications System
+Continue Phase 10: Plan 10-02 (Image Upload UI)
 
 ---
-*Last updated: 2026-02-01T19:20:00Z*
+*Last updated: 2026-02-01T17:59:45Z*
