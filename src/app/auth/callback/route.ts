@@ -11,6 +11,16 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Check if user needs MFA verification
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+      // If user has MFA enabled but hasn't verified this session, redirect to 2FA page
+      if (aalData?.nextLevel === "aal2" && aalData?.currentLevel !== aalData.nextLevel) {
+        // Store the intended redirect for after 2FA verification
+        // Note: This is handled via sessionStorage on client side for the verify-2fa page
+        return NextResponse.redirect(`${origin}/auth/verify-2fa`);
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
