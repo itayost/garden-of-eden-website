@@ -213,10 +213,10 @@
 ---
 
 ## Phase 5: User Features - Auth Enhancements 🟠 HIGH
-**Status:** Planned | **Target:** Week 4 | **Plans:** 6 plans
+**Status:** In Progress | **Target:** Week 4 | **Plans:** 1/6 complete
 
 ### Plans
-- [ ] 05-01-PLAN.md — Password reset flow (forgot-password + reset-password pages)
+- [x] 05-01-PLAN.md — Password reset flow (forgot-password + reset-password pages)
 - [ ] 05-02-PLAN.md — MFA helper functions and useMFA hook
 - [ ] 05-03-PLAN.md — 2FA components (TwoFactorSetup, TwoFactorVerify, TwoFactorDisable)
 - [ ] 05-04-PLAN.md — Security settings page with 2FA management
@@ -225,10 +225,10 @@
 
 ### 5.1 Forgot Password Flow
 - [ ] Add "Forgot Password" link on login page
-- [ ] Create forgot password page with email input
-- [ ] Send magic link for password reset
-- [ ] Create reset password page with new password form
-- [ ] Validate and update password with strength indicator
+- [x] Create forgot password page with email input
+- [x] Send magic link for password reset
+- [x] Create reset password page with new password form
+- [x] Validate and update password with strength indicator
 - **New Files:**
   - `src/app/auth/forgot-password/page.tsx`
   - `src/app/auth/reset-password/page.tsx`
@@ -260,7 +260,7 @@
 
 **Note:** AUTH-08 (backup codes) addressed via secondary factor enrollment per Supabase recommendation. Supabase does not provide built-in backup codes; instead, users are encouraged to add TOTP to a secondary device during enrollment (TwoFactorSetup component). Tests deferred to Phase 8.
 
-**Phase 5 Completion:** ⬜ 0/12 tasks
+**Phase 5 Completion:** 🟡 4/12 tasks
 
 ---
 
@@ -404,12 +404,12 @@
 | 2. User Management | 21 | 0 | ⬜ Not Started |
 | 3. Video Management | 7 | 7 | ✅ Complete |
 | 4. Data Export & Assessments | 14 | 11 | ✅ Complete |
-| 5. Auth Enhancements | 14 | 0 | ⬜ Not Started |
+| 5. Auth Enhancements | 14 | 4 | 🟡 In Progress |
 | 6. Notifications | 17 | 0 | ⬜ Not Started |
 | 7. Form Drafts Sync | 9 | 0 | ⬜ Not Started |
 | 8. Testing & Quality | 10 | 0 | ⬜ Not Started |
 | 9. Performance | 12 | 0 | ⬜ Not Started |
-| **TOTAL** | **120** | **34** | **28%** |
+| **TOTAL** | **120** | **38** | **32%** |
 
 ---
 
@@ -460,3 +460,4 @@ _Add notes here as you work through the roadmap:_
 | 2026-02-01 | 3 | **Phase 3 Complete**: YouTube utilities, video validation, CRUD server actions, VideoForm, DeleteVideoDialog, TanStack Table, admin pages |
 | 2026-02-01 | 4 | **Phase 4 Complete**: Assessment soft delete with audit trail, form submissions CSV export with date filtering, assessment CSV/PDF export, GDPR user data export |
 | 2026-02-01 | 5 | **Removed Phase 5 (Profile & Settings)**: Trainees don't need settings page, profile managed by admin/coach. Renumbered phases 6-10 → 5-9 |
+| 2026-02-01 | 5 | **05-01 Complete**: Password reset flow with forgot-password page, reset-password page with strength indicator, passwordSchema |
