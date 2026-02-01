@@ -49,7 +49,7 @@ export function UserCreateForm() {
     try {
       const result = await createUserAction(data);
 
-      if ("error" in result) {
+      if (!("success" in result)) {
         if (result.fieldErrors) {
           // Set field-level errors
           Object.entries(result.fieldErrors).forEach(([field, errors]) => {

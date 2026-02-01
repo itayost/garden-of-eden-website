@@ -22,7 +22,7 @@ export function UserActionsCard({ user, currentUserId }: UserActionsCardProps) {
     try {
       const result = await resetUserCredentialsAction(user.id);
 
-      if ("error" in result) {
+      if (!("success" in result)) {
         toast.error(result.error);
         return;
       }

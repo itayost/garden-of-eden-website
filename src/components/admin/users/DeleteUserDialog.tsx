@@ -42,7 +42,7 @@ export function DeleteUserDialog({ user, currentUserId, trigger }: DeleteUserDia
     try {
       const result = await softDeleteUserAction(user.id);
 
-      if ("error" in result) {
+      if (!("success" in result)) {
         toast.error(result.error);
         return;
       }
