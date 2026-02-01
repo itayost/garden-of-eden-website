@@ -258,7 +258,7 @@
 - [ ] Login requires 2FA code when enabled
 - [ ] Security settings accessible from dashboard sidebar
 
-**Note:** Backup codes not implemented (Supabase recommends secondary factor enrollment instead). Tests deferred to Phase 8.
+**Note:** AUTH-08 (backup codes) addressed via secondary factor enrollment per Supabase recommendation. Supabase does not provide built-in backup codes; instead, users are encouraged to add TOTP to a secondary device during enrollment (TwoFactorSetup component). Tests deferred to Phase 8.
 
 **Phase 5 Completion:** ⬜ 0/12 tasks
 
