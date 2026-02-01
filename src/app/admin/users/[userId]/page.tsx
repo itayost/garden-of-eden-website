@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, User, History } from "lucide-react";
 import { UserEditForm } from "@/components/admin/UserEditForm";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
+import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import type { Profile } from "@/types/database";
 
 interface UserEditPageProps {
@@ -112,6 +113,12 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               <UserEditForm user={userToEdit} currentUserRole="admin" />
             </CardContent>
           </Card>
+
+          {/* User Actions */}
+          <UserActionsCard
+            user={userToEdit}
+            currentUserId={currentUser.id}
+          />
         </div>
 
         {/* User Info Sidebar */}
