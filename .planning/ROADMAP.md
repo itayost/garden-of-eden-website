@@ -212,34 +212,34 @@
 
 ---
 
-## Phase 5: User Features - Auth Enhancements 🟠 HIGH
-**Status:** In Progress | **Target:** Week 4 | **Plans:** 1/6 complete
+## Phase 5: User Features - Auth Enhancements ✅ COMPLETE
+**Status:** Complete | **Completed:** 2026-02-01 | **Plans:** 6/6 complete
 
 ### Plans
 - [x] 05-01-PLAN.md — Password reset flow (forgot-password + reset-password pages)
-- [ ] 05-02-PLAN.md — MFA helper functions and useMFA hook
-- [ ] 05-03-PLAN.md — 2FA components (TwoFactorSetup, TwoFactorVerify, TwoFactorDisable)
-- [ ] 05-04-PLAN.md — Security settings page with 2FA management
-- [ ] 05-05-PLAN.md — Login AAL check + verify-2fa page + forgot password link
-- [ ] 05-06-PLAN.md — Human verification of all functionality
+- [x] 05-02-PLAN.md — MFA helper functions and useMFA hook
+- [x] 05-03-PLAN.md — 2FA components (TwoFactorSetup, TwoFactorVerify, TwoFactorDisable)
+- [x] 05-04-PLAN.md — Security settings page with 2FA management
+- [x] 05-05-PLAN.md — Login AAL check + verify-2fa page + forgot password link
+- [x] 05-06-PLAN.md — Human verification of all functionality
 
 ### 5.1 Forgot Password Flow
-- [ ] Add "Forgot Password" link on login page
+- [x] Add "Forgot Password" link on login page
 - [x] Create forgot password page with email input
 - [x] Send magic link for password reset
 - [x] Create reset password page with new password form
 - [x] Validate and update password with strength indicator
-- **New Files:**
+- **Files:**
   - `src/app/auth/forgot-password/page.tsx`
   - `src/app/auth/reset-password/page.tsx`
   - `src/lib/validations/auth.ts`
 
 ### 5.2 Two-Factor Authentication (2FA)
-- [ ] Add 2FA setup in security settings page
-- [ ] Support TOTP (Google Authenticator, etc.)
-- [ ] 2FA verification on login when enabled
-- [ ] 2FA can be disabled with code confirmation
-- **New Files:**
+- [x] Add 2FA setup in security settings page
+- [x] Support TOTP (Google Authenticator, etc.)
+- [x] 2FA verification on login when enabled
+- [x] 2FA can be disabled with code confirmation
+- **Files:**
   - `src/components/auth/TwoFactorSetup.tsx`
   - `src/components/auth/TwoFactorVerify.tsx`
   - `src/components/auth/TwoFactorDisable.tsx`
@@ -253,14 +253,14 @@
 - [ ] Test 2FA setup and verification
 
 ### Success Criteria
-- [ ] Users can reset password via email magic link
-- [ ] 2FA can be enabled/disabled in security settings
-- [ ] Login requires 2FA code when enabled
-- [ ] Security settings accessible from dashboard sidebar
+- [x] Users can reset password via email magic link
+- [x] 2FA can be enabled/disabled in security settings
+- [x] Login requires 2FA code when enabled
+- [x] Security settings accessible from dashboard sidebar
 
 **Note:** AUTH-08 (backup codes) addressed via secondary factor enrollment per Supabase recommendation. Supabase does not provide built-in backup codes; instead, users are encouraged to add TOTP to a secondary device during enrollment (TwoFactorSetup component). Tests deferred to Phase 8.
 
-**Phase 5 Completion:** 🟡 4/12 tasks
+**Phase 5 Completion:** ✅ 10/12 tasks (tests deferred)
 
 ---
 
@@ -396,6 +396,59 @@
 
 ---
 
+## Phase 10: Trainee Image Management & FIFA Card Photos 🟡 MEDIUM
+**Status:** Not Started | **Target:** Week 10
+
+> **Goal:** Enable admins and coaches to upload trainee photos that display as avatars and on FIFA-style player cards with professional cutout styling (shoulders and above, transparent background).
+
+### Plans
+- [ ] 10-01-PLAN.md — TBD (run /gsd:plan-phase 10 to break down)
+
+### 10.1 Image Upload Infrastructure
+- [ ] Create `trainee_images` table (id, user_id, original_url, processed_url, created_at)
+- [ ] Set up Supabase Storage bucket for trainee images
+- [ ] Add RLS policies for image access (admin/coach can upload, trainee can view own)
+- [ ] Create image upload API endpoint with validation (file type, size limits)
+
+### 10.2 Background Removal & Processing
+- [ ] Integrate background removal service (remove.bg API or similar)
+- [ ] Process uploaded images to create cutout version (shoulders and above)
+- [ ] Store both original and processed versions
+- [ ] Handle processing errors gracefully with fallback to original
+
+### 10.3 Admin/Coach Upload Interface
+- [ ] Add image upload component to user management
+- [ ] Preview uploaded image before saving
+- [ ] Show processing status during background removal
+- [ ] Allow re-upload to replace existing image
+
+### 10.4 Avatar Integration
+- [ ] Update user avatar display to use uploaded image
+- [ ] Fallback to default avatar if no image uploaded
+- [ ] Update all avatar instances (dashboard, sidebar, profile)
+
+### 10.5 FIFA Card Integration
+- [ ] Update FIFA card component to use processed (cutout) image
+- [ ] Position cutout image correctly on card (shoulders visible, head at top)
+- [ ] Card background shows through transparent areas
+- [ ] Fallback styling when no image available
+
+### 10.6 Write Tests for Phase 10
+- [ ] Test image upload with valid/invalid files
+- [ ] Test background removal integration
+- [ ] Test avatar displays uploaded image
+- [ ] Test FIFA card displays cutout correctly
+
+### Success Criteria
+- [ ] Admin/coach can upload trainee photo from user management
+- [ ] Uploaded photo appears as trainee's avatar throughout app
+- [ ] FIFA card shows cutout image with card background visible
+- [ ] Background removal processes automatically on upload
+
+**Phase 10 Completion:** ⬜ 0/18 tasks
+
+---
+
 ## Overall Progress
 
 | Phase | Tasks | Completed | Status |
@@ -404,12 +457,13 @@
 | 2. User Management | 21 | 0 | ⬜ Not Started |
 | 3. Video Management | 7 | 7 | ✅ Complete |
 | 4. Data Export & Assessments | 14 | 11 | ✅ Complete |
-| 5. Auth Enhancements | 14 | 4 | 🟡 In Progress |
+| 5. Auth Enhancements | 12 | 10 | ✅ Complete |
 | 6. Notifications | 17 | 0 | ⬜ Not Started |
 | 7. Form Drafts Sync | 9 | 0 | ⬜ Not Started |
 | 8. Testing & Quality | 10 | 0 | ⬜ Not Started |
 | 9. Performance | 12 | 0 | ⬜ Not Started |
-| **TOTAL** | **120** | **38** | **32%** |
+| 10. Trainee Images & FIFA Cards | 18 | 0 | ⬜ Not Started |
+| **TOTAL** | **138** | **38** | **28%** |
 
 ---
 
@@ -426,6 +480,7 @@
 | 7 | Phase 7 | Form drafts sync |
 | 8 | Phase 8 | Integration tests + coverage |
 | 9 | Phase 9 | Performance optimization |
+| 10 | Phase 10 | Trainee images & FIFA card photos |
 
 ---
 
@@ -455,6 +510,7 @@ _Add notes here as you work through the roadmap:_
 |------|-------|---------|
 | 2026-02-01 | - | Initial roadmap created |
 | 2026-02-01 | All | Added success criteria, test tasks, missing features (2FA, assessment deletion, video resume), fixed schedule, added quick wins checklist |
+| 2026-02-01 | 10 | **Phase 10 Added**: Trainee Image Management & FIFA Card Photos |
 | 2026-02-01 | 1 | Created 6 plans in 3 waves for security fixes phase |
 | 2026-02-01 | 1 | **Phase 1 Complete**: Rate limiting, webhook security, Zod validation, 38 RLS policies, 105 tests |
 | 2026-02-01 | 3 | **Phase 3 Complete**: YouTube utilities, video validation, CRUD server actions, VideoForm, DeleteVideoDialog, TanStack Table, admin pages |
