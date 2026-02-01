@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 10 of 10 (Trainee Images & FIFA Cards) |
-| Current Plan | 3 of 6 (10-03 complete) |
+| Current Plan | 3 of 6 (10-02, 10-03 complete) |
 | Phase Status | In Progress |
 | Requirements Complete | 10/57 (SEC-01 to SEC-05, AUTH-05 to AUTH-09) |
 | Overall Progress | 51% |
@@ -97,6 +97,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 10-01 | Trainee image paths | {userId}/original/ and {userId}/processed/ subfolder structure |
 | 2026-02-01 | 10-01 | JPG/PNG only for trainee uploads | Per CONTEXT.md - standard photo formats for processing |
 | 2026-02-01 | 10-01 | 5MB limit for trainee images | Larger than profile photos to support high-res source images |
+| 2026-02-01 | 10-02 | FormData upload format | FormData with image file and traineeUserId for image uploads |
+| 2026-02-01 | 10-02 | Dual URL return | Return both originalUrl and processedUrl in API response |
+| 2026-02-01 | 10-02 | clearTraineeAvatarUrls action | Beyond plan, needed for CONTEXT.md revert-to-initials requirement |
 | 2026-02-01 | 10-03 | Click-to-browse only | Per CONTEXT.md - no drag-drop, simple file picker |
 | 2026-02-01 | 10-03 | Checkered background for result | CSS gradient pattern to show transparent areas in cutout |
 | 2026-02-01 | 10-03 | Hebrew text throughout | All UI labels, buttons, errors in Hebrew for RTL |
@@ -168,6 +171,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Trainee image paths | {userId}/original/ and {userId}/processed/ subfolders | 10-01 |
 | Admin/trainer storage RLS | EXISTS check for role IN ('admin', 'trainer') on storage.objects | 10-01 |
 | Dual image storage | Original for avatar, processed for FIFA card | 10-01 |
+| verifyAdminOrTrainer helper | Check for admin OR trainer role in server actions | 10-02 |
+| FormData image upload | POST with FormData containing image file and metadata | 10-02 |
 | Multi-step upload flow | select -> preview -> processing -> result | 10-03 |
 | UploadStep type union | Type-safe step state machine for upload flows | 10-03 |
 | Checkered background pattern | CSS gradient for PNG transparency preview | 10-03 |
@@ -231,17 +236,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 05-06 complete | Human verification approved (deferred testing) |
 | 2026-02-01 | Phase 5 complete | Auth enhancements verified - password reset, 2FA enrollment, 2FA login, security settings |
 | 2026-02-01 | 10-01 complete | Image infrastructure: migration, storage utilities, remove.bg package |
+| 2026-02-01 | 10-02 complete | Background removal API endpoint and updateTraineeAvatarUrls server action |
 | 2026-02-01 | 10-03 complete | TraineeImageUpload component with 4-step upload flow |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T18:05:11Z
-- **Stopped at:** Completed 10-03-PLAN.md (TraineeImageUpload Component)
+- **Last session:** 2026-02-01T18:05:27Z
+- **Stopped at:** Completed 10-02-PLAN.md (Background Removal API)
 - **Resume file:** None
 
 ## Next Action
 
-Continue Phase 10: Plan 10-04 (Page Integration)
+Continue Phase 10: Plan 10-04 (Page Integration) - 10-02 and 10-03 now complete
 
 ---
-*Last updated: 2026-02-01T18:05:11Z*
+*Last updated: 2026-02-01T18:05:27Z*
