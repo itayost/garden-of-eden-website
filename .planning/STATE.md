@@ -12,12 +12,12 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 1 of 10 (Security Fixes) |
-| Current Plan | 01-01 complete |
+| Current Plan | 01-02 complete |
 | Phase Status | In Progress |
 | Requirements Complete | 0/57 |
-| Overall Progress | 2% |
+| Overall Progress | 3% |
 
-**Progress:** [#.........] 1/6 plans in Phase 1
+**Progress:** [##........] 2/6 plans in Phase 1
 
 ## Phase Overview
 
@@ -41,6 +41,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 01-01 | Fail-open rate limiting | Prefer availability over blocking legitimate users when Redis unavailable |
 | 2026-02-01 | 01-01 | Process token fallback for GROW | Uncertain HMAC signature format, added alternative verification |
 | 2026-02-01 | 01-01 | 5-minute replay protection | Balance security vs clock drift tolerance |
+| 2026-02-01 | 01-02 | Soft delete over hard delete | Preserves data for audit trail and allows recovery |
+| 2026-02-01 | 01-02 | Partial unique indexes | Allows recreation of accounts with same phone after soft delete |
+| 2026-02-01 | 01-02 | Forms as immutable audit logs | INSERT-only for pre_workout, post_workout, nutrition forms |
+| 2026-02-01 | 01-02 | Activity logs append-only | No UPDATE/DELETE for audit integrity |
+| 2026-02-01 | 01-02 | Admin visibility includes deleted | Admins can see soft-deleted records for support |
 
 ## Patterns Established
 
@@ -49,6 +54,15 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Rate limit identifier | userId for authenticated, ip:address for anonymous | 01-01 |
 | Webhook HMAC payload | timestamp.body format | 01-01 |
 | Admin exemption | Admin role bypasses rate limits | 01-01 |
+| Soft delete | Use `deleted_at TIMESTAMPTZ` column, NULL = active | 01-02 |
+| Admin check in RLS | `EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')` | 01-02 |
+| Session user in RLS | Use `(SELECT auth.uid())` for current user | 01-02 |
+
+## Blockers / Concerns
+
+| Issue | Impact | Resolution |
+|-------|--------|------------|
+| Migration 01-02 not applied | RLS policies not active in database | Apply via Supabase Dashboard SQL Editor |
 
 ## Workflow Configuration
 
@@ -66,18 +80,21 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | Project initialized | Brownfield project with existing codebase |
 | 2026-02-01 | Roadmap created | 10 phases, 145 tasks, 57 requirements |
 | 2026-02-01 | 01-01 complete | Security infrastructure utilities created |
+| 2026-02-01 | 01-02 complete | Security indexes, soft delete, 38 RLS policies |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T11:19:00Z
-- **Stopped at:** Completed 01-01-PLAN.md
+- **Last session:** 2026-02-01T11:20:40Z
+- **Stopped at:** Completed 01-02-PLAN.md
 - **Resume file:** None
 
 ## Next Action
 
-**Phase 1 Plan 02:** Rate limit payment endpoints
+**Phase 1 Plan 03:** Continue with next security plan
 
-Run: `/gsd:execute-plan 01-02`
+Apply migration first (blocker): https://supabase.com/dashboard/project/sedqdnpdvwpivrocdlmh/sql
+
+Run: `/gsd:execute-plan 01-03`
 
 ---
 *Last updated: 2026-02-01*
