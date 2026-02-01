@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Trainees can track their fitness progress and see improvement as FIFA-style player cards
-**Current focus:** Phase 4 - Data Export & Assessment Management (Complete)
+**Current focus:** Phase 5 - Auth Enhancements (In Progress)
 
 ## Current Position
 
 | Metric | Value |
 |--------|-------|
-| Current Phase | 4 of 9 (Data Export & Assessments) |
-| Current Plan | 5 of 5 (04-05 complete) |
-| Phase Status | Complete |
+| Current Phase | 5 of 9 (Auth Enhancements) |
+| Current Plan | 2 of 6 (05-02 complete) |
+| Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
-| Overall Progress | 28% |
+| Overall Progress | 33% |
 
-**Progress:** [#####........] 4/9 phases complete
+**Progress:** [######.......] 5/9 phases in progress
 
 ## Phase Overview
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2 | User Management | In Progress | ADMN-06 to ADMN-13 |
 | 3 | Video Management | Complete | VID-02 to VID-09 |
 | 4 | Data Export & Assessments | Complete | EXP-01 to EXP-04, ASMT-04 |
-| 5 | Auth Enhancements | Pending | AUTH-05 to AUTH-09 |
+| 5 | Auth Enhancements | In Progress | AUTH-05 to AUTH-09 |
 | 6 | Notifications | Pending | NOTF-01 to NOTF-08 |
 | 7 | Form Drafts Sync | Pending | FORM-03 to FORM-06 |
 | 8 | Testing & Quality | Pending | TEST-01 to TEST-06 |
@@ -80,6 +80,10 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 04-02 | Badge + action in flex container | Wrap controls together for proper alignment |
 | 2026-02-01 | 04-05 | GDPR export includes/excludes per CONTEXT.md | Profile, forms, assessments, video progress; excludes activity, payments, goals, achievements |
 | 2026-02-01 | 04-05 | Filter soft-deleted assessments | Use deleted_at IS NULL for GDPR export |
+| 2026-02-01 | 05-01 | Password requirements | 8+ chars, uppercase, lowercase, number (industry standard) |
+| 2026-02-01 | 05-01 | Disable submit until valid | Button disabled until all password requirements met |
+| 2026-02-01 | 05-02 | Parallel fetch in useMFA hook | Fetch factors and AAL simultaneously for faster load |
+| 2026-02-01 | 05-02 | User-friendly MFA error messages | Translate invalid/expired errors to clear messages |
 
 ## Patterns Established
 
@@ -134,6 +138,10 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Soft delete filter | .is("deleted_at", null) on assessment queries | 04-02 |
 | GDPRExportData interface | Typed structure for GDPR user data export | 04-05 |
 | exportUserDataAction | Server action for aggregating all user data for GDPR | 04-05 |
+| passwordRequirements array | UI password strength indicators with test functions | 05-01 |
+| Show/hide password toggle | Eye/EyeOff icons for password visibility | 05-01 |
+| MFA result types | { success: true } or { error: string } for MFA operations | 05-02 |
+| useMFA hook pattern | React hook for reactive MFA state in components | 05-02 |
 
 ## Blockers / Concerns
 
@@ -183,16 +191,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 04-05 complete | GDPR user data export server action and button |
 | 2026-02-01 | Phase 4 complete | Data Export & Assessment Management complete |
 | 2026-02-01 | Removed Phase 5 | Profile & Settings removed - trainees managed by admin/coach |
+| 2026-02-01 | 05-01 complete | Password reset flow (forgot-password, reset-password pages, validation schema) |
+| 2026-02-01 | 05-02 complete | MFA helper functions (enrollMFA, verifyMFA, listFactors, unenrollFactor, getAAL) and useMFA hook |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T18:30:00Z
-- **Stopped at:** Removed Phase 5 (Profile & Settings), renumbered phases
+- **Last session:** 2026-02-01T16:57:56Z
+- **Stopped at:** Completed 05-02-PLAN.md (MFA Helpers)
 - **Resume file:** None
 
 ## Next Action
 
-Begin Phase 5: Auth Enhancements (was Phase 6)
+Continue Phase 5: Auth Enhancements - 05-03-PLAN.md
 
 ---
-*Last updated: 2026-02-01T18:30:00Z*
+*Last updated: 2026-02-01T16:57:56Z*
