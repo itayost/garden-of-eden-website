@@ -243,6 +243,7 @@ export default async function DashboardAssessmentsPage() {
                         defending: calculatedRatings.defending,
                         physical: calculatedRatings.physical,
                       }}
+                      avatarUrl={profile?.processed_avatar_url ?? profile?.avatar_url ?? undefined}
                       linkToStats={false}
                       size="lg"
                     />
@@ -313,6 +314,7 @@ export default async function DashboardAssessmentsPage() {
                         defending: calculatedRatings.defending,
                         physical: calculatedRatings.physical,
                       }}
+                      avatarUrl={profile?.processed_avatar_url ?? profile?.avatar_url ?? undefined}
                       linkToStats={false}
                       size="lg"
                     />

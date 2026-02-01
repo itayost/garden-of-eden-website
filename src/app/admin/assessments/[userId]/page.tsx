@@ -219,6 +219,7 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
                     defending: calculatedRatings.defending,
                     physical: calculatedRatings.physical,
                   }}
+                  avatarUrl={profile.processed_avatar_url ?? profile.avatar_url ?? undefined}
                   linkToStats={false}
                   size="md"
                 />

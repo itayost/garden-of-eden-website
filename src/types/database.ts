@@ -24,6 +24,7 @@ export interface Database {
           birthdate: string | null;
           position: string | null;
           avatar_url: string | null;
+          processed_avatar_url: string | null;
           profile_completed: boolean;
           is_active: boolean;
           created_at: string;
@@ -38,6 +39,7 @@ export interface Database {
           birthdate?: string | null;
           position?: string | null;
           avatar_url?: string | null;
+          processed_avatar_url?: string | null;
           profile_completed?: boolean;
           is_active?: boolean;
           created_at?: string;
@@ -52,6 +54,7 @@ export interface Database {
           birthdate?: string | null;
           position?: string | null;
           avatar_url?: string | null;
+          processed_avatar_url?: string | null;
           profile_completed?: boolean;
           is_active?: boolean;
           created_at?: string;

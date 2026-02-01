@@ -173,6 +173,7 @@ export default async function DashboardPage() {
                   defending: calculatedRatings.defending,
                   physical: calculatedRatings.physical,
                 }}
+                avatarUrl={profile?.processed_avatar_url ?? profile?.avatar_url ?? undefined}
               />
               <div className="text-center sm:text-right flex-1">
                 <h2 className="text-xl font-semibold mb-2">הכרטיס שלך</h2>
