@@ -5,19 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Trainees can track their fitness progress and see improvement as FIFA-style player cards
-**Current focus:** Phase 2 - Admin User Management
+**Current focus:** Phase 3 - Video Management
 
 ## Current Position
 
 | Metric | Value |
 |--------|-------|
-| Current Phase | 2 of 10 (User Management) |
-| Current Plan | 5/7 complete |
+| Current Phase | 3 of 10 (Video Management) |
+| Current Plan | 1/5 complete |
 | Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
-| Overall Progress | 20% |
+| Overall Progress | 25% |
 
-**Progress:** [#####.....] 5/7 plans in Phase 2
+**Progress:** [######....] 1/5 plans in Phase 3
 
 ## Phase Overview
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 |-------|------|--------|--------------|
 | 1 | Security Fixes | Complete | SEC-01 to SEC-05 |
 | 2 | User Management | In Progress | ADMN-06 to ADMN-13 |
-| 3 | Video Management | Pending | VID-02 to VID-09 |
+| 3 | Video Management | In Progress | VID-02 to VID-09 |
 | 4 | Data Export & Assessments | Pending | EXP-01 to EXP-04, ASMT-04 |
 | 5 | Profile & Settings | Pending | PROF-01 to PROF-07 |
 | 6 | Auth Enhancements | Pending | AUTH-05 to AUTH-09 |
@@ -66,6 +66,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 02-05 | Hebrew/English column mapping | Support both language column headers in CSV import |
 | 2026-02-01 | 02-05 | BOM for Excel Hebrew | Prefix CSV with UTF-8 BOM for proper Hebrew display |
 | 2026-02-01 | 02-05 | Sequential bulk processing | Process users one-by-one to collect per-row errors |
+| 2026-02-01 | 03-01 | Hard delete for videos | Videos don't have deleted_at column, use hard delete |
+| 2026-02-01 | 03-01 | Auto-calculate order_index | Query max order_index for day and increment on create |
 
 ## Patterns Established
 
@@ -99,6 +101,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | normalizeCSVRow | Map bilingual column names before Zod validation | 02-05 |
 | BOM CSV export | Prefix CSV with \uFEFF for Hebrew in Excel | 02-05 |
 | Bulk action result | Return { success, created, errors[] } for bulk operations | 02-05 |
+| YouTube URL parsing | Regex for watch, shorts, embed, youtu.be formats | 03-01 |
+| Video validation refine | Use getYouTubeId in refine for URL validation | 03-01 |
+| getDayTopicSuggestion | Helper returns default topic for day 1-5 | 03-01 |
 
 ## Blockers / Concerns
 
@@ -134,16 +139,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 02-03 complete | TanStack Table components for admin user list |
 | 2026-02-01 | 02-04 complete | Delete dialog and user actions card integration |
 | 2026-02-01 | 02-05 complete | CSV import dialog, export button, validation schema |
+| 2026-02-01 | 03-01 complete | Video validation schema and server actions |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T13:12:46Z
-- **Stopped at:** Completed 02-05-PLAN.md
+- **Last session:** 2026-02-01T14:38:05Z
+- **Stopped at:** Completed 03-01-PLAN.md
 - **Resume file:** None
 
 ## Next Action
 
-Continue Phase 2: Execute 02-06-PLAN.md (Integration)
+Continue Phase 3: Execute 03-02-PLAN.md (Video Create Form)
 
 ---
-*Last updated: 2026-02-01T13:12:46Z*
+*Last updated: 2026-02-01T14:38:05Z*
