@@ -195,11 +195,10 @@ export function PlayerCard({
             <img
               src={avatarUrl}
               alt={playerName}
-              className="object-cover object-top"
+              className="object-contain"
               style={{
                 width: "100%",
                 height: "100%",
-                filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))",
               }}
             />
           ) : (
