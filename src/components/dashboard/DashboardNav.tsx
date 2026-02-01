@@ -23,6 +23,7 @@ import {
   Settings,
   Target,
   Trophy,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/dashboard/rankings", label: "דירוג", icon: Trophy },
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
+  { href: "/dashboard/settings/security", label: "אבטחה", icon: Shield },
 ];
 
 interface DashboardNavProps {
