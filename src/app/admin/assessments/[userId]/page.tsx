@@ -24,6 +24,8 @@ import {
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile, PlayerGoalRow } from "@/types/database";
 import { GoalManagementPanel, type PhysicalMetricKey } from "@/features/goals";
+import { AssessmentExportButton } from "@/components/admin/exports/AssessmentExportButton";
+import { AssessmentPdfButton } from "@/components/admin/exports/AssessmentPdfButton";
 
 interface PageProps {
   params: Promise<{ userId: string }>;
@@ -173,12 +175,22 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
             </span>
           </div>
         </div>
-        <Button asChild>
-          <Link href={`/admin/assessments/${userId}/new`}>
-            <Plus className="h-4 w-4 ml-2" />
-            מבדק חדש
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <AssessmentExportButton
+            playerName={profile.full_name || "שחקן"}
+            assessments={(assessments || []) as PlayerAssessment[]}
+          />
+          <AssessmentPdfButton
+            playerName={profile.full_name || "שחקן"}
+            assessments={(assessments || []) as PlayerAssessment[]}
+          />
+          <Button asChild>
+            <Link href={`/admin/assessments/${userId}/new`}>
+              <Plus className="h-4 w-4 ml-2" />
+              מבדק חדש
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}
