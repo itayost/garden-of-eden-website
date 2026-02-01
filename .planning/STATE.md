@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 5 of 9 (Auth Enhancements) |
-| Current Plan | 4 of 6 (05-04 complete) |
+| Current Plan | 5 of 6 (05-05 complete) |
 | Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
 | Overall Progress | 33% |
@@ -90,6 +90,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 05-04 | Inline disable dialog | Single-use component, simpler than separate TwoFactorDisable |
 | 2026-02-01 | 05-04 | Shield icon for security nav | Visually distinguishes security from other settings |
 | 2026-02-01 | 05-04 | Left-side Sheet for setup | RTL context, established pattern from 03-04 |
+| 2026-02-01 | 05-05 | Hard redirect after 2FA success | Use window.location.href for session cookie propagation |
+| 2026-02-01 | 05-05 | Fail-open on AAL error | Redirect to dashboard if AAL fetch fails for availability |
+| 2026-02-01 | 05-05 | Cancel 2FA signs out user | Prevent partial auth state by signing out and returning to login |
 
 ## Patterns Established
 
@@ -153,6 +156,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | TwoFactorDisable security | Require TOTP verification before unenrollment | 05-03 |
 | Settings layout wrapper | Consistent wrapper for settings pages | 05-04 |
 | Security settings page | 2FA management at /dashboard/settings/security | 05-04 |
+| AAL check in callback | Check nextLevel vs currentLevel for MFA routing | 05-05 |
+| 2FA login flow | OTP verify -> AAL check -> 2FA verify -> dashboard | 05-05 |
 
 ## Blockers / Concerns
 
@@ -206,16 +211,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 05-02 complete | MFA helper functions (enrollMFA, verifyMFA, listFactors, unenrollFactor, getAAL) and useMFA hook |
 | 2026-02-01 | 05-03 complete | 2FA components (TwoFactorSetup, TwoFactorVerify, TwoFactorDisable) |
 | 2026-02-01 | 05-04 complete | Security settings page with 2FA management at /dashboard/settings/security |
+| 2026-02-01 | 05-05 complete | verify-2fa page, forgot password link, AAL check in callback |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T17:04:32Z
-- **Stopped at:** Completed 05-04-PLAN.md (Security Settings Page)
+- **Last session:** 2026-02-01T17:08:35Z
+- **Stopped at:** Completed 05-05-PLAN.md (2FA Login Flow)
 - **Resume file:** None
 
 ## Next Action
 
-Continue Phase 5: Auth Enhancements - 05-05-PLAN.md
+Continue Phase 5: Auth Enhancements - 05-06-PLAN.md
 
 ---
-*Last updated: 2026-02-01T17:04:32Z*
+*Last updated: 2026-02-01T17:08:35Z*
