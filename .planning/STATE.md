@@ -12,10 +12,10 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 4 of 10 (Data Export & Assessments) |
-| Current Plan | 4 of 5 (04-04 complete) |
+| Current Plan | 5 of 5 (04-02 complete, 04-05 pending) |
 | Phase Status | In progress |
 | Requirements Complete | 5/57 (SEC-01 to SEC-05) |
-| Overall Progress | 23% |
+| Overall Progress | 24% |
 
 **Progress:** [####..........] 3/10 phases in progress
 
@@ -77,6 +77,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 04-03 | Type assertion for union filtering | Cast through unknown when filtering union types with filter() |
 | 2026-02-01 | 04-03 | Extended column mapping | Export all relevant fields, not just minimal set |
 | 2026-02-01 | 04-03 | Unique input IDs | Include formType in input IDs for accessibility |
+| 2026-02-01 | 04-02 | Ghost button icon-only trigger | Compact delete action without text label |
+| 2026-02-01 | 04-02 | Badge + action in flex container | Wrap controls together for proper alignment |
 
 ## Patterns Established
 
@@ -127,6 +129,8 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | PDF export dynamic import | Use Promise.all for @react-pdf/renderer + template to avoid SSR | 04-04 |
 | RTL PDF layout | flexDirection: row-reverse for Hebrew RTL in @react-pdf/renderer | 04-04 |
 | Assessment CSV export | Raw measurements with Hebrew columns, BOM prefix | 04-04 |
+| DeleteAssessmentDialog | AlertDialog with assessmentId and assessmentDate props | 04-02 |
+| Soft delete filter | .is("deleted_at", null) on assessment queries | 04-02 |
 
 ## Blockers / Concerns
 
@@ -172,16 +176,17 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 2026-02-01 | 04-01 complete | Assessment soft delete infrastructure (migration, types, server action) |
 | 2026-02-01 | 04-03 complete | Form submission CSV export with date filtering |
 | 2026-02-01 | 04-04 complete | Assessment CSV/PDF export with @react-pdf/renderer and Heebo font |
+| 2026-02-01 | 04-02 complete | Assessment deletion UI with DeleteAssessmentDialog |
 
 ## Session Continuity
 
-- **Last session:** 2026-02-01T17:49:00Z
-- **Stopped at:** Completed 04-04-PLAN.md
+- **Last session:** 2026-02-01T17:50:00Z
+- **Stopped at:** Completed 04-02-PLAN.md
 - **Resume file:** None
 
 ## Next Action
 
-Execute 04-05-PLAN.md: Assessment deletion UI
+Execute 04-05-PLAN.md: Human verification of assessment delete flow
 
 ---
-*Last updated: 2026-02-01T17:49:00Z*
+*Last updated: 2026-02-01T17:50:00Z*
