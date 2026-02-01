@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
+import { SubmissionExportButton } from "@/components/admin/exports/SubmissionExportButton";
 import { Activity, FileText, Salad, type LucideIcon } from "lucide-react";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
 
@@ -83,17 +84,17 @@ export default async function AdminSubmissionsPage() {
       .from("pre_workout_forms")
       .select("*")
       .order("submitted_at", { ascending: false })
-      .limit(50) as unknown as { data: PreWorkoutForm[] | null },
+      .limit(1000) as unknown as { data: PreWorkoutForm[] | null },
     supabase
       .from("post_workout_forms")
       .select("*, trainers(name)")
       .order("submitted_at", { ascending: false })
-      .limit(50) as unknown as { data: PostWorkoutWithTrainer[] | null },
+      .limit(1000) as unknown as { data: PostWorkoutWithTrainer[] | null },
     supabase
       .from("nutrition_forms")
       .select("*")
       .order("submitted_at", { ascending: false })
-      .limit(50) as unknown as { data: NutritionForm[] | null },
+      .limit(1000) as unknown as { data: NutritionForm[] | null },
   ]);
 
   return (
@@ -124,8 +125,16 @@ export default async function AdminSubmissionsPage() {
         <TabsContent value="pre-workout">
           <Card>
             <CardHeader>
-              <CardTitle>שאלונים לפני אימון</CardTitle>
-              <CardDescription>כל השאלונים שהוגשו לפני אימונים</CardDescription>
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>שאלונים לפני אימון</CardTitle>
+                  <CardDescription>כל השאלונים שהוגשו לפני אימונים</CardDescription>
+                </div>
+                <SubmissionExportButton
+                  formType="pre_workout"
+                  submissions={preWorkout || []}
+                />
+              </div>
             </CardHeader>
             <CardContent>
               {preWorkout && preWorkout.length > 0 ? (
@@ -167,8 +176,16 @@ export default async function AdminSubmissionsPage() {
         <TabsContent value="post-workout">
           <Card>
             <CardHeader>
-              <CardTitle>שאלונים אחרי אימון</CardTitle>
-              <CardDescription>כל השאלונים שהוגשו אחרי אימונים</CardDescription>
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>שאלונים אחרי אימון</CardTitle>
+                  <CardDescription>כל השאלונים שהוגשו אחרי אימונים</CardDescription>
+                </div>
+                <SubmissionExportButton
+                  formType="post_workout"
+                  submissions={postWorkout || []}
+                />
+              </div>
             </CardHeader>
             <CardContent>
               {postWorkout && postWorkout.length > 0 ? (
@@ -208,8 +225,16 @@ export default async function AdminSubmissionsPage() {
         <TabsContent value="nutrition">
           <Card>
             <CardHeader>
-              <CardTitle>שאלוני תזונה</CardTitle>
-              <CardDescription>כל שאלוני התזונה שהוגשו</CardDescription>
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>שאלוני תזונה</CardTitle>
+                  <CardDescription>כל שאלוני התזונה שהוגשו</CardDescription>
+                </div>
+                <SubmissionExportButton
+                  formType="nutrition"
+                  submissions={nutrition || []}
+                />
+              </div>
             </CardHeader>
             <CardContent>
               {nutrition && nutrition.length > 0 ? (
