@@ -132,10 +132,10 @@ export const POSITION_LABELS_HE: Record<PlayerPosition, string> = {
   CF: "חלוץ מרכזי",
 };
 
-// All positions as array
-export const POSITIONS: PlayerPosition[] = [
+// All positions as const array (enables Zod enum without type assertion)
+export const POSITIONS = [
   "GK", "CB", "RB", "LB", "CDM", "CM", "CAM", "LW", "RW", "ST", "CF"
-];
+] as const;
 
 // Card types with Hebrew labels
 export const CARD_TYPES: { value: CardType; label: string }[] = [

@@ -71,6 +71,9 @@ function SatisfactionBadge({ level }: { level: number }) {
 export default async function AdminSubmissionsPage() {
   const supabase = await createClient();
 
+  // Note: Type assertions needed due to Supabase client type inference limitations
+  // with Promise.all patterns. The PostgrestVersion hint in Database type helps
+  // but doesn't fully resolve builder-to-result type casting.
   const [
     { data: preWorkout },
     { data: postWorkout },
@@ -80,17 +83,17 @@ export default async function AdminSubmissionsPage() {
       .from("pre_workout_forms")
       .select("*")
       .order("submitted_at", { ascending: false })
-      .limit(50) as { data: PreWorkoutForm[] | null },
+      .limit(50) as unknown as { data: PreWorkoutForm[] | null },
     supabase
       .from("post_workout_forms")
       .select("*, trainers(name)")
       .order("submitted_at", { ascending: false })
-      .limit(50) as { data: PostWorkoutWithTrainer[] | null },
+      .limit(50) as unknown as { data: PostWorkoutWithTrainer[] | null },
     supabase
       .from("nutrition_forms")
       .select("*")
       .order("submitted_at", { ascending: false })
-      .limit(50) as { data: NutritionForm[] | null },
+      .limit(50) as unknown as { data: NutritionForm[] | null },
   ]);
 
   return (

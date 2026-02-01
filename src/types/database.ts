@@ -9,6 +9,10 @@ export type Json =
 export type UserRole = "trainee" | "trainer" | "admin";
 
 export interface Database {
+  // Required for proper Supabase client type inference
+  __InternalSupabase: {
+    PostgrestVersion: "14.1";
+  };
   public: {
     Tables: {
       profiles: {
@@ -54,6 +58,7 @@ export interface Database {
           updated_at?: string;
           deleted_at?: string | null;
         };
+        Relationships: [];
       };
       activity_logs: {
         Row: {
@@ -86,6 +91,7 @@ export interface Database {
           changes?: Json | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       trainers: {
         Row: {
@@ -106,6 +112,7 @@ export interface Database {
           active?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       pre_workout_forms: {
         Row: {
@@ -153,6 +160,7 @@ export interface Database {
           next_match?: string | null;
           submitted_at?: string;
         };
+        Relationships: [];
       };
       post_workout_forms: {
         Row: {
@@ -191,6 +199,7 @@ export interface Database {
           contact_info?: string | null;
           submitted_at?: string;
         };
+        Relationships: [];
       };
       nutrition_forms: {
         Row: {
@@ -292,6 +301,7 @@ export interface Database {
           additional_comments?: string | null;
           submitted_at?: string;
         };
+        Relationships: [];
       };
       workout_videos: {
         Row: {
@@ -327,6 +337,7 @@ export interface Database {
           order_index?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       video_progress: {
         Row: {
@@ -350,6 +361,7 @@ export interface Database {
           watched?: boolean;
           watched_at?: string | null;
         };
+        Relationships: [];
       };
       player_stats: {
         Row: {
@@ -490,6 +502,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       player_stats_history: {
         Row: {
@@ -537,6 +550,7 @@ export interface Database {
           update_reason?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       user_streaks: {
         Row: {
@@ -563,6 +577,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       player_assessments: {
         Row: {
@@ -652,6 +667,7 @@ export interface Database {
           created_at?: string;
           deleted_at?: string | null;
         };
+        Relationships: [];
       };
       player_goals: {
         Row: {
@@ -696,6 +712,7 @@ export interface Database {
           achieved_at?: string | null;
           achieved_value?: number | null;
         };
+        Relationships: [];
       };
       payments: {
         Row: {
@@ -791,6 +808,7 @@ export interface Database {
           created_at?: string | null;
           updated_at?: string | null;
         };
+        Relationships: [];
       };
       user_achievements: {
         Row: {
@@ -817,6 +835,7 @@ export interface Database {
           metadata?: Record<string, unknown> | null;
           celebrated?: boolean;
         };
+        Relationships: [];
       };
     };
     Views: {

@@ -24,7 +24,7 @@ export const profileCompletionSchema = z.object({
       "תאריך לידה לא תקין (גיל 5-100)"
     ),
   position: z
-    .enum(POSITIONS as unknown as [string, ...string[]])
+    .enum(POSITIONS)
     .optional()
     .nullable(),
   // Photo is handled separately (File object can't be validated by zod directly in all contexts)
