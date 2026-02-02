@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PlayerAssessment } from "@/types/assessment";
-import { calculateGroupStats } from "@/lib/assessment-to-rating";
+import { calculateGroupStats, getLatestAssessmentsPerUser } from "@/lib/assessment-to-rating";
 import { DateRangeFilter } from "./DateRangeFilter";
 import { RatingTrendChart } from "./RatingTrendChart";
 import { PhysicalMetricChart } from "./PhysicalMetricChart";
@@ -29,10 +29,11 @@ export function AssessmentProgressCharts({
   const { preset, setPreset, filter } = useDateRangeFilter("6m");
   const [selectedCategory, setSelectedCategory] = useState<MetricCategory>("sprint");
 
-  // Calculate group stats for relative ratings
+  // Calculate group stats for relative ratings (using only latest assessment per user)
   const groupStats = useMemo(() => {
     if (allAssessmentsInGroup.length > 1) {
-      return calculateGroupStats(allAssessmentsInGroup);
+      const latestAssessments = getLatestAssessmentsPerUser(allAssessmentsInGroup);
+      return calculateGroupStats(latestAssessments);
     }
     return null;
   }, [allAssessmentsInGroup]);
