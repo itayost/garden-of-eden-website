@@ -19,7 +19,7 @@ import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getAgeGroup } from "@/types/assessment";
-import { calculateCardRatings, calculateNeutralRatings, calculateGroupStats } from "@/lib/assessment-to-rating";
+import { calculateCardRatings, calculateNeutralRatings, calculateGroupStats, getLatestAssessmentsPerUser } from "@/lib/assessment-to-rating";
 import { MiniRatingChartWrapper } from "./MiniRatingChartWrapper";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
@@ -97,8 +97,11 @@ export default async function DashboardPage() {
         if (fetchedGroupAssessments && fetchedGroupAssessments.length > 0) {
           groupAssessments = fetchedGroupAssessments as PlayerAssessment[];
 
-          if (fetchedGroupAssessments.length > 1) {
-            const groupStats = calculateGroupStats(groupAssessments);
+          // Filter to only latest assessment per user for fair comparison
+          const latestAssessments = getLatestAssessmentsPerUser(groupAssessments);
+
+          if (latestAssessments.length > 1) {
+            const groupStats = calculateGroupStats(latestAssessments);
             calculatedRatings = calculateCardRatings(latestAssessment, groupStats);
           }
         }

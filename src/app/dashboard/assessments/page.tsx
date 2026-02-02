@@ -18,6 +18,7 @@ import {
   calculateNeutralRatings,
   calculateCardRatings,
   calculateGroupStats,
+  getLatestAssessmentsPerUser,
 } from "@/lib/assessment-to-rating";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
@@ -82,8 +83,11 @@ export default async function DashboardAssessmentsPage() {
         if (fetchedGroupAssessments && fetchedGroupAssessments.length > 0) {
           groupAssessments = fetchedGroupAssessments as PlayerAssessment[];
 
-          if (fetchedGroupAssessments.length > 1) {
-            const groupStats = calculateGroupStats(groupAssessments);
+          // Filter to only latest assessment per user for fair comparison
+          const latestAssessments = getLatestAssessmentsPerUser(groupAssessments);
+
+          if (latestAssessments.length > 1) {
+            const groupStats = calculateGroupStats(latestAssessments);
             calculatedRatings = calculateCardRatings(latestAssessment, groupStats);
           }
         }

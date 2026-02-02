@@ -60,6 +60,27 @@ export function calculateRatingHigherBetter(
 }
 
 // ===========================================
+// HELPER FUNCTIONS
+// ===========================================
+
+/**
+ * Filter assessments to only the latest one per user
+ * Used for calculating group stats based on current ability, not historical best
+ */
+export function getLatestAssessmentsPerUser(assessments: PlayerAssessment[]): PlayerAssessment[] {
+  const latestByUser = new Map<string, PlayerAssessment>();
+
+  for (const assessment of assessments) {
+    const existing = latestByUser.get(assessment.user_id);
+    if (!existing || new Date(assessment.assessment_date) > new Date(existing.assessment_date)) {
+      latestByUser.set(assessment.user_id, assessment);
+    }
+  }
+
+  return Array.from(latestByUser.values());
+}
+
+// ===========================================
 // GROUP STATISTICS
 // ===========================================
 
