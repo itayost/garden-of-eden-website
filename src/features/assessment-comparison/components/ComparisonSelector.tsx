@@ -84,7 +84,7 @@ export function ComparisonSelector({ assessments }: ComparisonSelectorProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-end gap-4">
             {/* Older assessment selector */}
             <div className="flex-1 w-full">
               <label className="text-sm font-medium mb-2 block">מבדק קודם</label>
@@ -108,7 +108,7 @@ export function ComparisonSelector({ assessments }: ComparisonSelectorProps) {
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0 mt-6 sm:mt-0"
+              className="shrink-0"
               onClick={handleSwap}
               title="החלף מבדקים"
             >
