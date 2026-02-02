@@ -82,7 +82,7 @@ export function MiniRatingChart({ data, height = 80 }: MiniRatingChartProps) {
       </CardHeader>
       <CardContent className="pt-0 pb-2">
         <div style={{ width: "100%", height }} dir="ltr">
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <Tooltip content={<CustomTooltip />} />
               <Line

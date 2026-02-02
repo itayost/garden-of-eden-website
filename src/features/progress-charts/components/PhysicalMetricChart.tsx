@@ -81,7 +81,7 @@ export function PhysicalMetricChart({ data, height = 200 }: PhysicalMetricChartP
       </CardHeader>
       <CardContent className="pt-0">
         <div style={{ width: "100%", height }} dir="ltr">
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.data}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis

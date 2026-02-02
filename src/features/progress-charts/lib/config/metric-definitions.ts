@@ -140,7 +140,7 @@ export const METRIC_CATEGORIES: Record<
 
 // Chart colors for EA FC ratings
 export const RATING_COLORS: Record<string, string> = {
-  overall_rating: "hsl(var(--primary))",
+  overall_rating: "hsl(221, 83%, 53%)", // Blue - hardcoded because CSS vars don't work in SVG
   pace: "hsl(142, 76%, 36%)", // Green
   shooting: "hsl(0, 84%, 60%)", // Red
   passing: "hsl(217, 91%, 60%)", // Blue

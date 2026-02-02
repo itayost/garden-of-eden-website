@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { PlayerAssessment } from "@/types/assessment";
-import { calculateGroupStats, type GroupStats } from "@/lib/assessment-to-rating";
+import { calculateGroupStats, getLatestAssessmentsPerUser, type GroupStats } from "@/lib/assessment-to-rating";
 import { MiniRatingChart, transformToRatingChartData } from "@/features/progress-charts";
 
 interface MiniRatingChartWrapperProps {
@@ -14,10 +14,11 @@ export function MiniRatingChartWrapper({
   assessments,
   allAssessmentsInGroup = [],
 }: MiniRatingChartWrapperProps) {
-  // Calculate group stats for relative ratings
+  // Calculate group stats for relative ratings (using only latest assessment per user)
   const groupStats = useMemo<GroupStats | null>(() => {
     if (allAssessmentsInGroup.length > 1) {
-      return calculateGroupStats(allAssessmentsInGroup);
+      const latestAssessments = getLatestAssessmentsPerUser(allAssessmentsInGroup);
+      return calculateGroupStats(latestAssessments);
     }
     return null;
   }, [allAssessmentsInGroup]);

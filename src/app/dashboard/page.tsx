@@ -49,7 +49,7 @@ export default async function DashboardPage() {
     { data: achievementsData }
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
-    supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").single() as unknown as { data: { id: string } | null },
+    supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").limit(1).maybeSingle() as unknown as { data: { id: string } | null },
     supabase.from("player_assessments").select("*").eq("user_id", user?.id || "").order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
     supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
     supabase.from("post_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
