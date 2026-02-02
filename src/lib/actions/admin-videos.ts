@@ -1,40 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { videoSchema, type VideoInput } from "@/lib/validations/video";
-
-// UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { verifyAdmin } from "@/lib/actions/shared";
+import { isValidUUID } from "@/lib/validations/common";
 
 type ActionResult =
   | { success: true; videoId?: string }
   | { error: string; fieldErrors?: Record<string, string[]> };
-
-/**
- * Verify current user is authenticated and has admin role
- */
-async function verifyAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Not authenticated" as const, user: null, adminProfile: null };
-  }
-
-  const { data: adminProfile } = await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .single();
-
-  if (adminProfile?.role !== "admin") {
-    return { error: "Admin access required" as const, user: null, adminProfile: null };
-  }
-
-  return { error: null, user, adminProfile };
-}
 
 /**
  * Create a new workout video
@@ -127,7 +101,7 @@ export async function updateVideoAction(
   if (authError) return { error: authError };
 
   // 2. Validate videoId format
-  if (!UUID_REGEX.test(videoId)) {
+  if (!isValidUUID(videoId)) {
     return { error: "מזהה סרטון לא תקין" };
   }
 
@@ -190,7 +164,7 @@ export async function deleteVideoAction(videoId: string): Promise<ActionResult> 
   if (authError) return { error: authError };
 
   // 2. Validate videoId format
-  if (!UUID_REGEX.test(videoId)) {
+  if (!isValidUUID(videoId)) {
     return { error: "מזהה סרטון לא תקין" };
   }
 

@@ -1,41 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-// UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { isValidUUID } from "@/lib/validations/common";
 
 type ActionResult = { success: true } | { error: string };
-
-/**
- * Verify current user is authenticated and has admin or trainer role
- * Similar to verifyAdmin in admin-users.ts but accepts both admin and trainer
- */
-async function verifyAdminOrTrainer(): Promise<
-  | { authorized: true; userId: string }
-  | { authorized: false }
-> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { authorized: false };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || (profile.role !== "admin" && profile.role !== "trainer")) {
-    return { authorized: false };
-  }
-
-  return { authorized: true, userId: user.id };
-}
 
 /**
  * Update a trainee's avatar URLs in their profile
@@ -53,13 +23,14 @@ export async function updateTraineeAvatarUrls(
   processedUrl: string
 ): Promise<ActionResult> {
   // 1. Verify admin/trainer role
-  const authResult = await verifyAdminOrTrainer();
-  if (!authResult.authorized) {
+  const { error: authError, user } = await verifyAdminOrTrainer();
+  if (authError || !user) {
     return { error: "Unauthorized" };
   }
+  const actorId = user.id;
 
   // 2. Validate traineeUserId format
-  if (!UUID_REGEX.test(traineeUserId)) {
+  if (!isValidUUID(traineeUserId)) {
     return { error: "Invalid user ID format" };
   }
 
@@ -100,7 +71,7 @@ export async function updateTraineeAvatarUrls(
     await adminClient.from("activity_logs").insert({
       user_id: traineeUserId,
       action: "avatar_updated",
-      actor_id: authResult.userId,
+      actor_id: actorId,
       metadata: {
         original_url: originalUrl,
         processed_url: processedUrl,
@@ -133,13 +104,14 @@ export async function clearTraineeAvatarUrls(
   traineeUserId: string
 ): Promise<ActionResult> {
   // 1. Verify admin/trainer role
-  const authResult = await verifyAdminOrTrainer();
-  if (!authResult.authorized) {
+  const { error: authError, user } = await verifyAdminOrTrainer();
+  if (authError || !user) {
     return { error: "Unauthorized" };
   }
+  const actorId = user.id;
 
   // 2. Validate traineeUserId format
-  if (!UUID_REGEX.test(traineeUserId)) {
+  if (!isValidUUID(traineeUserId)) {
     return { error: "Invalid user ID format" };
   }
 
@@ -175,7 +147,7 @@ export async function clearTraineeAvatarUrls(
     await adminClient.from("activity_logs").insert({
       user_id: traineeUserId,
       action: "avatar_cleared",
-      actor_id: authResult.userId,
+      actor_id: actorId,
     });
 
     // 6. Revalidate relevant paths

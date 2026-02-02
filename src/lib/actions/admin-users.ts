@@ -1,41 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { userCreateSchema, type CreateUserInput } from "@/lib/validations/user-create";
 import { type CSVUserRow } from "@/lib/validations/user-import";
-
-// UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { verifyAdmin } from "@/lib/actions/shared";
+import { isValidUUID, formatPhoneToInternational } from "@/lib/validations/common";
 
 type ActionResult =
   | { success: true; userId?: string; message?: string }
   | { error: string; fieldErrors?: Record<string, string[]> };
-
-/**
- * Verify current user is authenticated and has admin role
- */
-async function verifyAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Not authenticated" as const, user: null, adminProfile: null };
-  }
-
-  const { data: adminProfile } = await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .single();
-
-  if (adminProfile?.role !== "admin") {
-    return { error: "Admin access required" as const, user: null, adminProfile: null };
-  }
-
-  return { error: null, user, adminProfile };
-}
 
 /**
  * Create a new user with phone-based auth
@@ -62,9 +36,7 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
   const { full_name, phone, role, email } = validated.data;
 
   // 3. Format phone to +972 format for Supabase
-  const formattedPhone = phone.startsWith("+")
-    ? phone
-    : `+972${phone.slice(1)}`;
+  const formattedPhone = formatPhoneToInternational(phone);
 
   // 4. Create user with admin client
   const adminClient = createAdminClient();
@@ -146,7 +118,7 @@ export async function softDeleteUserAction(userId: string): Promise<ActionResult
   if (authError) return { error: authError };
 
   // 2. Validate userId format
-  if (!UUID_REGEX.test(userId)) {
+  if (!isValidUUID(userId)) {
     return { error: "מזהה משתמש לא תקין" };
   }
 
@@ -216,7 +188,7 @@ export async function resetUserCredentialsAction(userId: string): Promise<Action
   if (authError) return { error: authError };
 
   // 2. Validate userId format
-  if (!UUID_REGEX.test(userId)) {
+  if (!isValidUUID(userId)) {
     return { error: "מזהה משתמש לא תקין" };
   }
 
@@ -321,9 +293,7 @@ export async function bulkCreateUsersAction(users: CSVUserRow[]): Promise<BulkIm
     const csvUser = users[i];
     try {
       // Format phone to +972 format
-      const formattedPhone = csvUser.phone.startsWith("+")
-        ? csvUser.phone
-        : `+972${csvUser.phone.slice(1)}`;
+      const formattedPhone = formatPhoneToInternational(csvUser.phone);
 
       // Create auth user
       const { data: authData, error: createError } = await adminClient.auth.admin.createUser({

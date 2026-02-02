@@ -70,6 +70,10 @@ const generalLimiter = redis
 /**
  * Check rate limit for an identifier.
  *
+ * Security behavior:
+ * - Payment operations: FAIL CLOSED (block if Redis unavailable) - security over availability
+ * - General operations: FAIL OPEN (allow if Redis unavailable) - availability over security
+ *
  * @param identifier - User ID or IP-based identifier
  * @param type - Type of rate limit to check ('payment' for sensitive ops, 'general' for standard)
  * @returns Rate limit result with remaining quota and pending analytics promise
@@ -89,14 +93,26 @@ export async function checkRateLimit(
   type: "payment" | "general"
 ): Promise<RateLimitResult> {
   const limiter = type === "payment" ? paymentLimiter : generalLimiter;
+  const isSensitiveOperation = type === "payment";
 
-  // Fail open: if Redis is unavailable, don't block legitimate users
+  // If Redis is unavailable:
+  // - For sensitive operations (payments): FAIL CLOSED - block the request
+  // - For general operations: FAIL OPEN - allow the request
   if (!limiter) {
-    console.warn("[rate-limit] Rate limiter unavailable, allowing request");
+    if (isSensitiveOperation) {
+      console.error("[rate-limit] Rate limiter unavailable for sensitive operation, blocking request");
+      return {
+        rateLimited: true, // FAIL CLOSED for security
+        limit: 0,
+        remaining: 0,
+        pending: Promise.resolve(),
+      };
+    }
+    console.warn("[rate-limit] Rate limiter unavailable, allowing general request");
     return {
       rateLimited: false,
-      limit: type === "payment" ? 10 : 100,
-      remaining: type === "payment" ? 10 : 100,
+      limit: 100,
+      remaining: 100,
       pending: Promise.resolve(),
     };
   }
@@ -111,12 +127,21 @@ export async function checkRateLimit(
       pending: result.pending,
     };
   } catch (error) {
-    // Fail open on Redis errors for availability
+    // On Redis errors, apply same fail strategy
     console.error("[rate-limit] Rate limit check failed:", error);
+    if (isSensitiveOperation) {
+      console.error("[rate-limit] Blocking sensitive operation due to Redis error");
+      return {
+        rateLimited: true, // FAIL CLOSED for security
+        limit: 0,
+        remaining: 0,
+        pending: Promise.resolve(),
+      };
+    }
     return {
       rateLimited: false,
-      limit: type === "payment" ? 10 : 100,
-      remaining: type === "payment" ? 10 : 100,
+      limit: 100,
+      remaining: 100,
       pending: Promise.resolve(),
     };
   }

@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   Profile,
@@ -10,9 +9,8 @@ import type {
   VideoProgress,
 } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
-
-// UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { verifyAdmin } from "@/lib/actions/shared";
+import { isValidUUID } from "@/lib/validations/common";
 
 /**
  * GDPR export data structure
@@ -45,32 +43,6 @@ type ActionResult =
   | { error: string };
 
 /**
- * Verify current user is authenticated and has admin role
- */
-async function verifyAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "לא מחובר" as const, user: null };
-  }
-
-  const { data: adminProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (adminProfile?.role !== "admin") {
-    return { error: "נדרשת הרשאת מנהל" as const, user: null };
-  }
-
-  return { error: null, user };
-}
-
-/**
  * Export all user data for GDPR compliance
  *
  * Includes (per CONTEXT.md):
@@ -93,7 +65,7 @@ export async function exportUserDataAction(
   if (authError) return { error: authError };
 
   // 2. Validate userId
-  if (!UUID_REGEX.test(userId)) {
+  if (!isValidUUID(userId)) {
     return { error: "מזהה משתמש לא תקין" };
   }
 

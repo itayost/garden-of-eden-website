@@ -1,37 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-// UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { verifyAdmin } from "@/lib/actions/shared";
+import { isValidUUID } from "@/lib/validations/common";
 
 type ActionResult = { success: true } | { error: string };
-
-/**
- * Verify current user is authenticated and has admin role
- */
-async function verifyAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "לא מחובר" as const, user: null, adminProfile: null };
-  }
-
-  const { data: adminProfile } = await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .single();
-
-  if (adminProfile?.role !== "admin") {
-    return { error: "נדרשת הרשאת מנהל" as const, user: null, adminProfile: null };
-  }
-
-  return { error: null, user, adminProfile };
-}
 
 /**
  * Soft delete an assessment by setting deleted_at and deleted_by
@@ -46,7 +20,7 @@ export async function softDeleteAssessmentAction(assessmentId: string): Promise<
   if (authError) return { error: authError };
 
   // 2. Validate assessmentId format
-  if (!UUID_REGEX.test(assessmentId)) {
+  if (!isValidUUID(assessmentId)) {
     return { error: "מזהה מבדק לא תקין" };
   }
 

@@ -103,7 +103,15 @@ export function Navbar() {
           </div>
 
           {/* Desktop CTA */}
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-white/20 bg-transparent hover:bg-white/10 text-white rounded-full px-4"
+              asChild
+            >
+              <Link href="/dashboard">לאיזור המתאמנים</Link>
+            </Button>
             <Button
               size="sm"
               className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-0 rounded-full px-4"
@@ -159,8 +167,15 @@ export function Navbar() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: navLinks.length * 0.1 }}
-                className="mt-4"
+                className="mt-4 flex flex-col gap-3"
               >
+                <Button
+                  variant="outline"
+                  className="border-white/30 bg-transparent hover:bg-white/10 text-white rounded-full px-8 py-6 text-lg font-medium"
+                  asChild
+                >
+                  <Link href="/dashboard">לאיזור המתאמנים</Link>
+                </Button>
                 <Button
                   className="bg-[#CDEA68] hover:bg-[#bdd85c] text-black rounded-full px-8 py-6 text-lg font-medium"
                   asChild
