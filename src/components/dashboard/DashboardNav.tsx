@@ -35,7 +35,7 @@ const navItems = [
   { href: "/dashboard/rankings", label: "דירוג", icon: Trophy },
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
-  { href: "/dashboard/settings/security", label: "אבטחה", icon: Shield },
+  // { href: "/dashboard/settings/security", label: "אבטחה", icon: Shield }, // Hidden - not fully ready
 ];
 
 interface DashboardNavProps {
