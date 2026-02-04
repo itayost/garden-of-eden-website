@@ -1,16 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, FileText, Salad } from "lucide-react";
-import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
+import { Activity, FileText, Salad, ClipboardCheck } from "lucide-react";
+import type { PreWorkoutForm, PostWorkoutForm, NutritionForm, TrainerShiftReport } from "@/types/database";
 import {
   PreWorkoutContent,
   PostWorkoutContent,
   NutritionContent,
 } from "@/components/admin/submissions/SubmissionsContent";
+import { ShiftReportContent } from "@/components/admin/submissions/ShiftReportContent";
 
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
 
-export default async function AdminSubmissionsPage() {
+interface AdminSubmissionsPageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function AdminSubmissionsPage({ searchParams }: AdminSubmissionsPageProps) {
+  const { tab } = await searchParams;
   const supabase = await createClient();
 
   // Note: Type assertions needed due to Supabase client type inference limitations
@@ -19,7 +25,8 @@ export default async function AdminSubmissionsPage() {
   const [
     { data: preWorkout },
     { data: postWorkout },
-    { data: nutrition }
+    { data: nutrition },
+    { data: shiftReports },
   ] = await Promise.all([
     supabase
       .from("pre_workout_forms")
@@ -36,7 +43,15 @@ export default async function AdminSubmissionsPage() {
       .select("*")
       .order("submitted_at", { ascending: false })
       .limit(1000) as unknown as { data: NutritionForm[] | null },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("trainer_shift_reports")
+      .select("*")
+      .order("report_date", { ascending: false })
+      .limit(1000) as unknown as { data: TrainerShiftReport[] | null },
   ]);
+
+  const defaultTab = tab || "pre-workout";
 
   return (
     <div className="space-y-8">
@@ -47,7 +62,7 @@ export default async function AdminSubmissionsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="pre-workout">
+      <Tabs defaultValue={defaultTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="pre-workout" className="gap-2">
             <Activity className="h-4 w-4" />
@@ -61,6 +76,10 @@ export default async function AdminSubmissionsPage() {
             <Salad className="h-4 w-4" />
             תזונה ({nutrition?.length || 0})
           </TabsTrigger>
+          <TabsTrigger value="shift-reports" className="gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            דוחות משמרת ({shiftReports?.length || 0})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pre-workout">
@@ -73,6 +92,10 @@ export default async function AdminSubmissionsPage() {
 
         <TabsContent value="nutrition">
           <NutritionContent submissions={nutrition || []} />
+        </TabsContent>
+
+        <TabsContent value="shift-reports">
+          <ShiftReportContent submissions={shiftReports || []} />
         </TabsContent>
       </Tabs>
     </div>
