@@ -17,12 +17,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Users, Utensils, Lightbulb } from "lucide-react";
-import type { Profile } from "@/types/database";
-import type {
-  TraineeMealPlanRow,
-  NutritionRecommendationRow,
-} from "@/features/nutrition";
-
 export default async function AdminNutritionPage() {
   const supabase = await createClient();
 
@@ -30,36 +24,38 @@ export default async function AdminNutritionPage() {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("*")
+        .select("id, full_name, role")
         .eq("role", "trainee")
         .is("deleted_at", null)
-        .order("full_name") as unknown as { data: Profile[] | null },
+        .order("full_name") as unknown as {
+        data: { id: string; full_name: string | null; role: string }[] | null;
+      },
       supabase
         .from("trainee_meal_plans")
-        .select("*")
+        .select("id, user_id")
         .is("deleted_at", null) as unknown as {
-        data: TraineeMealPlanRow[] | null;
+        data: { id: string; user_id: string }[] | null;
       },
       supabase
         .from("nutrition_recommendations")
-        .select("*")
+        .select("id, user_id")
         .is("deleted_at", null) as unknown as {
-        data: NutritionRecommendationRow[] | null;
+        data: { id: string; user_id: string }[] | null;
       },
     ]);
 
-  const mealPlansByUser = new Map(
-    (mealPlans || []).map((mp) => [mp.user_id, mp])
+  const mealPlanUserIds = new Set(
+    (mealPlans || []).map((mp) => mp.user_id)
   );
-  const recommendationsByUser = new Map(
-    (recommendations || []).map((rec) => [rec.user_id, rec])
+  const recommendationUserIds = new Set(
+    (recommendations || []).map((rec) => rec.user_id)
   );
 
   const totalTrainees = trainees?.length || 0;
   const traineesWithMealPlans =
-    trainees?.filter((t) => mealPlansByUser.has(t.id)).length || 0;
+    trainees?.filter((t) => mealPlanUserIds.has(t.id)).length || 0;
   const traineesWithRecommendations =
-    trainees?.filter((t) => recommendationsByUser.has(t.id)).length || 0;
+    trainees?.filter((t) => recommendationUserIds.has(t.id)).length || 0;
 
   return (
     <div className="space-y-6">
@@ -137,8 +133,8 @@ export default async function AdminNutritionPage() {
               </TableHeader>
               <TableBody>
                 {trainees.map((trainee) => {
-                  const hasMealPlan = mealPlansByUser.has(trainee.id);
-                  const hasRecommendation = recommendationsByUser.has(
+                  const hasMealPlan = mealPlanUserIds.has(trainee.id);
+                  const hasRecommendation = recommendationUserIds.has(
                     trainee.id
                   );
 

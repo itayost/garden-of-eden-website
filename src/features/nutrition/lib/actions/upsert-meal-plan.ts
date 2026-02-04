@@ -2,8 +2,34 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { WeeklyMealPlan } from "../../types";
+import type { WeeklyMealPlan, DayOfWeek, MealCategory } from "../../types";
 import type { Json, Profile } from "@/types/database";
+
+const VALID_DAYS: DayOfWeek[] = [
+  "sunday", "monday", "tuesday", "wednesday",
+  "thursday", "friday", "saturday",
+];
+const VALID_MEALS: MealCategory[] = ["breakfast", "lunch", "dinner", "snacks"];
+
+function validateMealPlan(input: unknown): input is WeeklyMealPlan {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return false;
+  }
+  const obj = input as Record<string, unknown>;
+  for (const day of VALID_DAYS) {
+    const dayPlan = obj[day];
+    if (typeof dayPlan !== "object" || dayPlan === null || Array.isArray(dayPlan)) {
+      return false;
+    }
+    const meals = dayPlan as Record<string, unknown>;
+    for (const meal of VALID_MEALS) {
+      const items = meals[meal];
+      if (!Array.isArray(items)) return false;
+      if (!items.every((item) => typeof item === "string")) return false;
+    }
+  }
+  return true;
+}
 
 interface UpsertMealPlanResult {
   success: boolean;
@@ -18,6 +44,10 @@ export async function upsertMealPlan(
   userId: string,
   mealPlan: WeeklyMealPlan
 ): Promise<UpsertMealPlanResult> {
+  if (!validateMealPlan(mealPlan)) {
+    return { success: false, error: "מבנה תוכנית התזונה אינו תקין" };
+  }
+
   const supabase = await createClient();
 
   const {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Card,
@@ -18,7 +18,6 @@ import type {
   DayOfWeek,
   MealCategory,
   WeeklyMealPlan,
-  DayMealPlan,
 } from "@/features/nutrition/types";
 import {
   DAY_LABELS_HE,
@@ -29,77 +28,119 @@ import {
 } from "@/features/nutrition";
 import { upsertMealPlan } from "@/features/nutrition";
 
+interface MealItem {
+  id: number;
+  value: string;
+}
+
+type DayMealItems = Record<MealCategory, MealItem[]>;
+type WeeklyMealItems = Record<DayOfWeek, DayMealItems>;
+
 interface MealPlanFormProps {
   userId: string;
   existingPlan: TraineeMealPlanRow | null;
 }
 
-function deepCloneMealPlan(plan: WeeklyMealPlan): WeeklyMealPlan {
-  const result: Record<string, DayMealPlan> = {};
+function toMealItems(
+  plan: WeeklyMealPlan,
+  nextId: () => number
+): WeeklyMealItems {
+  const result: Record<string, DayMealItems> = {};
   for (const day of ORDERED_DAYS) {
     result[day] = {
-      breakfast: [...(plan[day]?.breakfast || [])],
-      lunch: [...(plan[day]?.lunch || [])],
-      dinner: [...(plan[day]?.dinner || [])],
-      snacks: [...(plan[day]?.snacks || [])],
+      breakfast: (plan[day]?.breakfast || []).map((v) => ({ id: nextId(), value: v })),
+      lunch: (plan[day]?.lunch || []).map((v) => ({ id: nextId(), value: v })),
+      dinner: (plan[day]?.dinner || []).map((v) => ({ id: nextId(), value: v })),
+      snacks: (plan[day]?.snacks || []).map((v) => ({ id: nextId(), value: v })),
     };
   }
-  return result as WeeklyMealPlan;
+  return result as unknown as WeeklyMealItems;
+}
+
+function toWeeklyMealPlan(items: WeeklyMealItems): WeeklyMealPlan {
+  const result: Record<string, Record<string, string[]>> = {};
+  for (const day of ORDERED_DAYS) {
+    result[day] = {
+      breakfast: items[day].breakfast.map((i) => i.value),
+      lunch: items[day].lunch.map((i) => i.value),
+      dinner: items[day].dinner.map((i) => i.value),
+      snacks: items[day].snacks.map((i) => i.value),
+    };
+  }
+  return result as unknown as WeeklyMealPlan;
 }
 
 export function MealPlanForm({ userId, existingPlan }: MealPlanFormProps) {
   const [isPending, startTransition] = useTransition();
   const [activeDay, setActiveDay] = useState<DayOfWeek>("sunday");
-  const [mealPlan, setMealPlan] = useState<WeeklyMealPlan>(() =>
-    existingPlan?.meal_plan
-      ? deepCloneMealPlan(existingPlan.meal_plan)
-      : deepCloneMealPlan(EMPTY_WEEKLY_MEAL_PLAN)
+  const idCounter = useRef(0);
+  const nextId = () => ++idCounter.current;
+
+  const [mealItems, setMealItems] = useState<WeeklyMealItems>(() =>
+    toMealItems(
+      existingPlan?.meal_plan ?? EMPTY_WEEKLY_MEAL_PLAN,
+      nextId
+    )
   );
 
   const addItem = (day: DayOfWeek, meal: MealCategory) => {
-    setMealPlan((prev) => {
-      const next = deepCloneMealPlan(prev);
-      next[day][meal].push("");
-      return next;
-    });
+    setMealItems((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [meal]: [...prev[day][meal], { id: nextId(), value: "" }],
+      },
+    }));
   };
 
-  const removeItem = (day: DayOfWeek, meal: MealCategory, index: number) => {
-    setMealPlan((prev) => {
-      const next = deepCloneMealPlan(prev);
-      next[day][meal].splice(index, 1);
-      return next;
-    });
+  const removeItem = (day: DayOfWeek, meal: MealCategory, id: number) => {
+    setMealItems((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [meal]: prev[day][meal].filter((item) => item.id !== id),
+      },
+    }));
   };
 
   const updateItem = (
     day: DayOfWeek,
     meal: MealCategory,
-    index: number,
+    id: number,
     value: string
   ) => {
-    setMealPlan((prev) => {
-      const next = deepCloneMealPlan(prev);
-      next[day][meal][index] = value;
-      return next;
-    });
+    setMealItems((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [meal]: prev[day][meal].map((item) =>
+          item.id === id ? { ...item, value } : item
+        ),
+      },
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Clean empty strings from arrays before saving
-    const cleaned = deepCloneMealPlan(mealPlan);
+    const plan = toWeeklyMealPlan(mealItems);
+
+    // Clean empty strings and check if any items remain
+    let hasItems = false;
     for (const day of ORDERED_DAYS) {
       for (const meal of ORDERED_MEALS) {
-        cleaned[day][meal] = cleaned[day][meal].filter(
-          (item) => item.trim() !== ""
-        );
+        plan[day][meal] = plan[day][meal].filter((v) => v.trim() !== "");
+        if (plan[day][meal].length > 0) hasItems = true;
       }
     }
 
+    if (!hasItems) {
+      toast.error("יש להוסיף לפחות פריט אחד");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await upsertMealPlan(userId, cleaned);
+      const result = await upsertMealPlan(userId, plan);
       if (result.success) {
         toast.success("תוכנית התזונה נשמרה בהצלחה");
       } else {
@@ -141,12 +182,12 @@ export function MealPlanForm({ userId, existingPlan }: MealPlanFormProps) {
                       {MEAL_LABELS_HE[meal]}
                     </h4>
                     <div className="space-y-2">
-                      {mealPlan[day][meal].map((item, index) => (
-                        <div key={index} className="flex gap-2">
+                      {mealItems[day][meal].map((item) => (
+                        <div key={item.id} className="flex gap-2">
                           <Input
-                            value={item}
+                            value={item.value}
                             onChange={(e) =>
-                              updateItem(day, meal, index, e.target.value)
+                              updateItem(day, meal, item.id, e.target.value)
                             }
                             placeholder="הזן פריט..."
                           />
@@ -154,7 +195,7 @@ export function MealPlanForm({ userId, existingPlan }: MealPlanFormProps) {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            onClick={() => removeItem(day, meal, index)}
+                            onClick={() => removeItem(day, meal, item.id)}
                           >
                             <X className="h-4 w-4" />
                           </Button>

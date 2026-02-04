@@ -120,7 +120,7 @@ export function SleepChart({ data }: SleepChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div style={{ width: "100%", height: 300 }} dir="ltr">
+        <div style={{ width: "100%", height: 300 }} dir="ltr" role="img" aria-label="גרף מגמת איכות שינה">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

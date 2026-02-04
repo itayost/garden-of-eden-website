@@ -22,6 +22,7 @@ export default async function AdminTraineeNutritionPage({
     .from("profiles")
     .select("*")
     .eq("id", userId)
+    .is("deleted_at", null)
     .single()) as unknown as { data: Profile | null };
 
   if (!trainee || trainee.role !== "trainee") {
