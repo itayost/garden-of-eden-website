@@ -11,14 +11,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-const OTP_LENGTH = 8;
+const PHONE_OTP_LENGTH = 6;
+const EMAIL_OTP_LENGTH = 8;
 
 export default function VerifyPage() {
-  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [verifyType, setVerifyType] = useState<"email" | "phone">("email");
+  const otpLength = verifyType === "phone" ? PHONE_OTP_LENGTH : EMAIL_OTP_LENGTH;
+  const [otp, setOtp] = useState<string[]>(Array(EMAIL_OTP_LENGTH).fill(""));
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [identifier, setIdentifier] = useState("");
-  const [verifyType, setVerifyType] = useState<"email" | "phone">("email");
   const [countdown, setCountdown] = useState(60);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
@@ -31,9 +33,11 @@ export default function VerifyPage() {
     if (storedType === "phone" && storedPhone) {
       setVerifyType("phone");
       setIdentifier(storedPhone);
+      setOtp(Array(PHONE_OTP_LENGTH).fill(""));
     } else if (storedType === "email" && storedEmail) {
       setVerifyType("email");
       setIdentifier(storedEmail);
+      setOtp(Array(EMAIL_OTP_LENGTH).fill(""));
     } else {
       router.push("/auth/login");
       return;
@@ -53,25 +57,27 @@ export default function VerifyPage() {
   const handleChange = (index: number, value: string) => {
     if (value.length > 1) {
       // Handle paste
-      const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH);
-      const newOtp = [...otp];
+      const digits = value.replace(/\D/g, "").slice(0, otpLength);
+      const newOtp = Array(otpLength).fill("");
+      for (let i = 0; i < otpLength; i++) newOtp[i] = otp[i] || "";
       digits.split("").forEach((digit, i) => {
-        if (index + i < OTP_LENGTH) {
+        if (index + i < otpLength) {
           newOtp[index + i] = digit;
         }
       });
       setOtp(newOtp);
-      const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
+      const nextIndex = Math.min(index + digits.length, otpLength - 1);
       inputRefs.current[nextIndex]?.focus();
       return;
     }
 
-    const newOtp = [...otp];
+    const newOtp = Array(otpLength).fill("");
+    for (let i = 0; i < otpLength; i++) newOtp[i] = otp[i] || "";
     newOtp[index] = value;
     setOtp(newOtp);
 
     // Move to next input
-    if (value && index < OTP_LENGTH - 1) {
+    if (value && index < otpLength - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -85,9 +91,9 @@ export default function VerifyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const code = otp.join("");
-    if (code.length !== OTP_LENGTH) {
-      toast.error(`נא להזין קוד בן ${OTP_LENGTH} ספרות`);
+    const code = otp.slice(0, otpLength).join("");
+    if (code.length !== otpLength) {
+      toast.error(`נא להזין קוד בן ${otpLength} ספרות`);
       return;
     }
 
@@ -119,7 +125,7 @@ export default function VerifyPage() {
       console.error("Verify error:", error);
       const errorMessage = error instanceof Error ? error.message : "קוד האימות שגוי";
       toast.error(errorMessage);
-      setOtp(Array(OTP_LENGTH).fill(""));
+      setOtp(Array(otpLength).fill(""));
       inputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
@@ -175,21 +181,21 @@ export default function VerifyPage() {
           <CardTitle className="text-2xl">אימות קוד</CardTitle>
           <CardDescription>
             {verifyType === "phone"
-              ? `הזינו את הקוד שנשלח למספר ${formatIdentifier()}`
+              ? `הזינו את הקוד שנשלח ב-WhatsApp למספר ${formatIdentifier()}`
               : `הזינו את הקוד שנשלח לאימייל ${formatIdentifier()}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex justify-center gap-2" dir="ltr">
-              {otp.map((digit, index) => (
+              {Array.from({ length: otpLength }, (_, index) => (
                 <Input
-                  key={index}
+                  key={`${verifyType}-${index}`}
                   ref={(el) => { inputRefs.current[index] = el; }}
                   type="text"
                   inputMode="numeric"
-                  maxLength={OTP_LENGTH}
-                  value={digit}
+                  maxLength={otpLength}
+                  value={otp[index] || ""}
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   className="w-10 h-12 text-center text-xl font-bold"

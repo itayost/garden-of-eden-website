@@ -224,14 +224,13 @@ CREATE TRIGGER on_auth_user_created
 
 -- Insert default trainers
 INSERT INTO trainers (name, active) VALUES
-  ('עדן', true),
-  ('לידור', true),
-  ('אביעד', true),
-  ('ליאור', true),
-  ('דין', true),
-  ('נדב', true),
-  ('עידו (אנליסט)', true),
-  ('דניאל (תזונאי)', true);
+  ('לידור חי זינטי', true),
+  ('דניאל קמרט', true),
+  ('נדב דטנר', true),
+  ('אביעד וכשטוק', true),
+  ('יונתן דנינו', true),
+  ('דין לוי', true),
+  ('עידו ברק', true);
 
 -- Insert sample workout videos (placeholders)
 INSERT INTO workout_videos (day_number, day_topic, title, youtube_url, description, duration_minutes, order_index) VALUES

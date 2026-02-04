@@ -17,7 +17,7 @@ function LoginForm() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [authType, setAuthType] = useState<"email" | "phone">("email");
+  const [authType, setAuthType] = useState<"email" | "phone">("phone");
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = getSafeRedirectUrl(searchParams.get("redirect"));
@@ -60,7 +60,7 @@ function LoginForm() {
       sessionStorage.setItem("verifyType", "phone");
       sessionStorage.setItem("redirectAfterAuth", redirect);
 
-      toast.success("קוד אימות נשלח לטלפון שלך");
+      toast.success("קוד אימות נשלח ב-WhatsApp");
       router.push("/auth/verify");
     } catch (error: unknown) {
       console.error("Login error:", error);
@@ -113,13 +113,13 @@ function LoginForm() {
   return (
     <Tabs value={authType} onValueChange={(v) => setAuthType(v as "email" | "phone")} className="w-full">
       <TabsList className="grid w-full grid-cols-2 mb-6">
-        <TabsTrigger value="email" className="gap-2">
-          <Mail className="h-4 w-4" />
-          אימייל
-        </TabsTrigger>
         <TabsTrigger value="phone" className="gap-2">
           <Phone className="h-4 w-4" />
           טלפון
+        </TabsTrigger>
+        <TabsTrigger value="email" className="gap-2">
+          <Mail className="h-4 w-4" />
+          אימייל
         </TabsTrigger>
       </TabsList>
 
@@ -179,7 +179,7 @@ function LoginForm() {
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              נשלח לכם קוד אימות ב-SMS
+              נשלח לכם קוד אימות ב-WhatsApp
             </p>
           </div>
 
