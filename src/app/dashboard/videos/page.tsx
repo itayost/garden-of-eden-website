@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+export const metadata: Metadata = {
+  title: "סרטונים | Garden of Eden",
+};
 import { VideoCard } from "@/components/dashboard/VideoCard";
 import { Clock, Calendar, Dumbbell } from "lucide-react";
 import type { WorkoutVideo, VideoProgress } from "@/types/database";

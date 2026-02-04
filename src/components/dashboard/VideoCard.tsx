@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,8 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
 
     if (!error) {
       setWatched(true);
+    } else {
+      toast.error("שגיאה בעדכון סטטוס הצפייה");
     }
   };
 

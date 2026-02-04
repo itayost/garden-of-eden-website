@@ -37,8 +37,9 @@ export default function Verify2FAPage() {
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
       if (!aalData) {
-        // Error getting AAL - redirect to dashboard (fail-open for availability)
-        router.push("/dashboard");
+        // Error getting AAL - sign out and redirect to login (fail-closed for security)
+        await supabase.auth.signOut();
+        router.push("/auth/login");
         return;
       }
 

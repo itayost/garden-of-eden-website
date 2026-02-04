@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Video, TrendingUp, Activity, Salad } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "ניהול | Garden of Eden",
+};
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
@@ -15,11 +20,11 @@ export default async function AdminDashboardPage() {
     { data: recentPreWorkout },
     { data: recentPostWorkout }
   ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }),
-    supabase.from("post_workout_forms").select("*", { count: "exact", head: true }),
-    supabase.from("nutrition_forms").select("*", { count: "exact", head: true }),
-    supabase.from("workout_videos").select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase.from("pre_workout_forms").select("id", { count: "exact", head: true }),
+    supabase.from("post_workout_forms").select("id", { count: "exact", head: true }),
+    supabase.from("nutrition_forms").select("id", { count: "exact", head: true }),
+    supabase.from("workout_videos").select("id", { count: "exact", head: true }),
     supabase
       .from("pre_workout_forms")
       .select("*, profiles(full_name)")

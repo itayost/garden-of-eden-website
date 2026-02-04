@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
@@ -71,13 +72,17 @@ export default function PostWorkoutFormPage() {
   useEffect(() => {
     const fetchTrainers = async () => {
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("trainers")
         .select("*")
         .eq("active", true)
-        .order("name") as unknown as { data: Trainer[] | null };
+        .order("name") as unknown as { data: Trainer[] | null; error: unknown };
 
-      if (data) setTrainers(data);
+      if (error) {
+        toast.error("שגיאה בטעינת רשימת המאמנים");
+      } else if (data) {
+        setTrainers(data);
+      }
     };
 
     fetchTrainers();

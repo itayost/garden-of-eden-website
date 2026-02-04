@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,10 @@ import { UserDataTable } from "@/components/admin/users/UserDataTable";
 import { UserImportDialog } from "@/components/admin/users/UserImportDialog";
 import { UserExportButton } from "@/components/admin/users/UserExportButton";
 import type { Profile } from "@/types/database";
+
+export const metadata: Metadata = {
+  title: "ניהול משתמשים | Garden of Eden",
+};
 
 interface PageProps {
   searchParams: Promise<{

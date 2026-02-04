@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, ClipboardCheck, Salad, CheckCircle2, ArrowLeft } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "טפסים | Garden of Eden",
+};
 
 export default async function FormsPage() {
   const supabase = await createClient();

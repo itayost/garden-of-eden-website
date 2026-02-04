@@ -57,7 +57,7 @@ export async function updateSession(request: NextRequest) {
       .from("profiles")
       .select("profile_completed")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     // Redirect to onboarding if profile is not complete
     if (profile && !profile.profile_completed) {
@@ -73,7 +73,7 @@ export async function updateSession(request: NextRequest) {
       .from("profiles")
       .select("role")
       .eq("id", user?.id || "")
-      .single();
+      .maybeSingle();
 
     if (profile?.role !== "admin" && profile?.role !== "trainer") {
       const url = request.nextUrl.clone();

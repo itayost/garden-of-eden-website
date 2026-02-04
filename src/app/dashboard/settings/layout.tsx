@@ -1,3 +1,9 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "הגדרות | Garden of Eden",
+};
+
 export default function SettingsLayout({
   children,
 }: {

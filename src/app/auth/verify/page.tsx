@@ -17,7 +17,8 @@ const EMAIL_OTP_LENGTH = 8;
 export default function VerifyPage() {
   const [verifyType, setVerifyType] = useState<"email" | "phone">("email");
   const otpLength = verifyType === "phone" ? PHONE_OTP_LENGTH : EMAIL_OTP_LENGTH;
-  const [otp, setOtp] = useState<string[]>(Array(EMAIL_OTP_LENGTH).fill(""));
+  const [otp, setOtp] = useState<string[]>([]);
+  const [isReady, setIsReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [identifier, setIdentifier] = useState("");
@@ -43,8 +44,9 @@ export default function VerifyPage() {
       return;
     }
 
-    // Focus first input
-    inputRefs.current[0]?.focus();
+    setIsReady(true);
+    // Focus first input after next render
+    setTimeout(() => inputRefs.current[0]?.focus(), 0);
   }, [router]);
 
   useEffect(() => {
@@ -186,63 +188,71 @@ export default function VerifyPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex justify-center gap-2" dir="ltr">
-              {Array.from({ length: otpLength }, (_, index) => (
-                <Input
-                  key={`${verifyType}-${index}`}
-                  ref={(el) => { inputRefs.current[index] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={otpLength}
-                  value={otp[index] || ""}
-                  onChange={(e) => handleChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="w-10 h-12 text-center text-xl font-bold"
-                  disabled={loading}
-                />
-              ))}
+          {!isReady ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="flex justify-center gap-2" dir="ltr">
+                  {Array.from({ length: otpLength }, (_, index) => (
+                    <Input
+                      key={`${verifyType}-${index}`}
+                      ref={(el) => { inputRefs.current[index] = el; }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={otpLength}
+                      value={otp[index] || ""}
+                      onChange={(e) => handleChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      className="w-10 h-12 text-center text-xl font-bold"
+                      disabled={loading}
+                    />
+                  ))}
+                </div>
 
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                  מאמת...
-                </>
-              ) : (
-                <>
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                  אימות והתחברות
-                </>
-              )}
-            </Button>
-          </form>
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                      מאמת...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                      אימות והתחברות
+                    </>
+                  )}
+                </Button>
+              </form>
 
-          <div className="mt-6 text-center space-y-4">
-            <Button
-              variant="ghost"
-              onClick={handleResend}
-              disabled={countdown > 0 || resending}
-              className="text-muted-foreground"
-            >
-              {resending ? (
-                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="ml-2 h-4 w-4" />
-              )}
-              {countdown > 0 ? `שליחה מחדש בעוד ${countdown} שניות` : "שלח קוד מחדש"}
-            </Button>
+              <div className="mt-6 text-center space-y-4">
+                <Button
+                  variant="ghost"
+                  onClick={handleResend}
+                  disabled={countdown > 0 || resending}
+                  className="text-muted-foreground"
+                >
+                  {resending ? (
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="ml-2 h-4 w-4" />
+                  )}
+                  {countdown > 0 ? `שליחה מחדש בעוד ${countdown} שניות` : "שלח קוד מחדש"}
+                </Button>
 
-            <div>
-              <Link
-                href="/auth/login"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {verifyType === "phone" ? "שינוי מספר טלפון" : "שינוי כתובת אימייל"}
-              </Link>
-            </div>
-          </div>
+                <div>
+                  <Link
+                    href="/auth/login"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {verifyType === "phone" ? "שינוי מספר טלפון" : "שינוי כתובת אימייל"}
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

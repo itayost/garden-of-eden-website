@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Video, Plus } from "lucide-react";
 import { VideoListClient } from "@/components/admin/videos/VideoListClient";
 import type { WorkoutVideo } from "@/types/database";
+
+export const metadata: Metadata = {
+  title: "ניהול סרטונים | Garden of Eden",
+};
 
 export default async function AdminVideosPage() {
   const supabase = await createClient();

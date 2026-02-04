@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+export const metadata: Metadata = {
+  title: "מבדקים | Garden of Eden",
+};
 import { Calendar, Target, TrendingUp, Activity, BarChart3, GitCompare } from "lucide-react";
 import { PlayerCard } from "@/components/player-card/PlayerCard";
 import {

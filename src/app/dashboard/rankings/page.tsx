@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { RankingsView, getRankingsData } from "@/features/rankings";
 import { getAgeGroup } from "@/types/assessment";
+
+export const metadata: Metadata = {
+  title: "דירוגים | Garden of Eden",
+};
 
 export default async function RankingsPage() {
   const supabase = await createClient();

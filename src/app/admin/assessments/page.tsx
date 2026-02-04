@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,10 @@ import { getAssessmentCompleteness, getAgeGroup } from "@/types/assessment";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 
+export const metadata: Metadata = {
+  title: "ניהול מבדקים | Garden of Eden",
+};
+
 export default async function AdminAssessmentsPage() {
   const supabase = await createClient();
 
@@ -24,6 +29,7 @@ export default async function AdminAssessmentsPage() {
     .from("profiles")
     .select("*")
     .eq("role", "trainee")
+    .is("deleted_at", null)
     .order("full_name") as unknown as { data: Profile[] | null };
 
   // Fetch all assessments to get latest per user
