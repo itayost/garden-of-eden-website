@@ -24,6 +24,7 @@ import {
   Target,
   Trophy,
   Shield,
+  Utensils,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/dashboard/assessments", label: "מבדקים", icon: Target },
   { href: "/dashboard/rankings", label: "דירוג", icon: Trophy },
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
+  { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
   // { href: "/dashboard/settings/security", label: "אבטחה", icon: Shield }, // Hidden - not fully ready
 ];

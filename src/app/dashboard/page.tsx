@@ -25,6 +25,7 @@ import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking"
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
 import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } from "@/features/achievements";
 import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
+import { NutritionMeetingBanner } from "@/features/nutrition";
 import type { UserAchievementRow } from "@/types/database";
 
 export default async function DashboardPage() {
@@ -242,6 +243,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Nutrition Meeting Banner (1 month after registration) */}
+      <NutritionMeetingBanner userCreatedAt={profile?.created_at || ""} />
 
       {/* Quick Actions */}
       <div>

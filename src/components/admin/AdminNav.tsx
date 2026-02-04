@@ -23,7 +23,8 @@ import {
   LogOut,
   Menu,
   Home,
-  Target
+  Target,
+  Utensils,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -33,6 +34,7 @@ const navItems = [
   { href: "/admin", label: "דשבורד", icon: LayoutDashboard },
   { href: "/admin/users", label: "משתמשים", icon: Users },
   { href: "/admin/assessments", label: "מבדקים", icon: Target },
+  { href: "/admin/nutrition", label: "תזונה", icon: Utensils },
   { href: "/admin/submissions", label: "שאלונים", icon: FileText },
   { href: "/admin/videos", label: "סרטונים", icon: Video },
 ];
