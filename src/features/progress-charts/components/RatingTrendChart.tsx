@@ -116,7 +116,7 @@ export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) 
                 variant={isActive ? "default" : "outline"}
                 size="sm"
                 className={cn(
-                  "text-xs h-7 px-2",
+                  "text-xs h-8 px-3",
                   isActive && "border-2"
                 )}
                 style={{

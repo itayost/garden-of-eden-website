@@ -12,7 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
@@ -21,7 +20,6 @@ import {
   Video,
   User as UserIcon,
   LogOut,
-  Menu,
   Home,
   Target,
   Utensils,
@@ -147,25 +145,6 @@ export function AdminNav({ user, profile }: AdminNavProps) {
               </Button>
             )}
 
-            {/* Mobile Menu */}
-            {mounted ? (
-              <Sheet>
-                <SheetTrigger asChild className="md:hidden">
-                  <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-64 bg-sidebar text-sidebar-foreground">
-                  <nav className="flex flex-col gap-2 mt-8">
-                    <NavLinks />
-                  </nav>
-                </SheetContent>
-              </Sheet>
-            ) : (
-              <Button variant="ghost" size="icon" className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent">
-                <Menu className="h-5 w-5" />
-              </Button>
-            )}
           </div>
         </div>
       </div>

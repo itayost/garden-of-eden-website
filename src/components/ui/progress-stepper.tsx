@@ -139,13 +139,19 @@ export function ProgressStepper({
                 disabled={!isClickable}
                 aria-label={`${step.title}, שלב ${index + 1}`}
                 className={cn(
-                  "w-3 h-3 rounded-full transition-all",
-                  state === "current" ? stepStyles.dot.current :
-                  state === "completed" ? stepStyles.dot.completed :
-                  stepStyles.dot.default,
+                  "flex items-center justify-center w-7 h-7 -m-2",
                   !isClickable && "cursor-not-allowed opacity-50"
                 )}
-              />
+              >
+                <span
+                  className={cn(
+                    "w-3 h-3 rounded-full transition-all",
+                    state === "current" ? stepStyles.dot.current :
+                    state === "completed" ? stepStyles.dot.completed :
+                    stepStyles.dot.default,
+                  )}
+                />
+              </button>
             );
           })}
         </div>

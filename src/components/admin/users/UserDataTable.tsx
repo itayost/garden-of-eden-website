@@ -18,10 +18,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { RoleBadge, StatusBadge } from "@/components/ui/badges";
 import { columns } from "./UserTableColumns";
 import { UserTableToolbar } from "./UserTableToolbar";
 import { UserTablePagination } from "./UserTablePagination";
 import type { Profile } from "@/types/database";
+
+function formatPhone(phone: string | null): string {
+  if (!phone) return "";
+  if (phone.startsWith("+972")) return "0" + phone.slice(4);
+  return phone;
+}
+
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
 
 interface UserDataTableProps {
   data: Profile[];
@@ -129,8 +142,47 @@ export function UserDataTable({
         onShowDeletedChange={handleShowDeletedChange}
       />
 
-      {/* Table */}
-      <div className="rounded-md border">
+      {/* Mobile: Card list */}
+      <div className="space-y-2 sm:hidden">
+        {table.getRowModel().rows?.length ? (
+          table.getRowModel().rows.map((row) => {
+            const user = row.original;
+            return (
+              <div
+                key={row.id}
+                className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleRowClick(user.id)}
+              >
+                <Avatar className="h-9 w-9 shrink-0">
+                  <AvatarImage src={user.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs">{getInitials(user.full_name)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium text-sm truncate ${user.deleted_at ? "text-muted-foreground line-through" : ""}`}>
+                      {user.full_name || "לא צוין"}
+                    </span>
+                    <RoleBadge role={user.role} />
+                  </div>
+                  {user.phone && (
+                    <p className="text-xs text-muted-foreground" dir="ltr">
+                      {formatPhone(user.phone)}
+                    </p>
+                  )}
+                </div>
+                <StatusBadge isActive={user.is_active} />
+              </div>
+            );
+          })
+        ) : (
+          <div className="h-24 flex items-center justify-center text-muted-foreground">
+            לא נמצאו משתמשים
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="rounded-md border hidden sm:block">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

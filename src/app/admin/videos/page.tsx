@@ -55,14 +55,14 @@ export default async function AdminVideosPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-2">ניהול סרטונים</h1>
           <p className="text-muted-foreground">
             צפייה, הוספה ועריכה של סרטוני התרגילים
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="self-start sm:self-auto">
           <Link href="/admin/videos/create">
             <Plus className="h-4 w-4 ml-2" />
             הוסף סרטון

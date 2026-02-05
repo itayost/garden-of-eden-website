@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
 import type { Profile } from "@/types/database";
 
 export default async function AdminLayout({
@@ -29,9 +30,10 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen bg-muted/30">
       <AdminNav user={user} profile={profile} />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 pt-8 pb-20 md:pb-8">
         {children}
       </main>
+      <AdminBottomNav />
     </div>
   );
 }

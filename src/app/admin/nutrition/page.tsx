@@ -122,64 +122,93 @@ export default async function AdminNutritionPage() {
         </CardHeader>
         <CardContent>
           {trainees && trainees.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-start">שם</TableHead>
-                  <TableHead className="text-start">תוכנית תזונה</TableHead>
-                  <TableHead className="text-start">המלצות</TableHead>
-                  <TableHead className="text-start">פעולות</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: Card list */}
+              <div className="space-y-2 sm:hidden">
                 {trainees.map((trainee) => {
                   const hasMealPlan = mealPlanUserIds.has(trainee.id);
-                  const hasRecommendation = recommendationUserIds.has(
-                    trainee.id
-                  );
+                  const hasRecommendation = recommendationUserIds.has(trainee.id);
 
                   return (
-                    <TableRow key={trainee.id}>
-                      <TableCell className="font-medium">
-                        {trainee.full_name || "ללא שם"}
-                      </TableCell>
-                      <TableCell>
-                        {hasMealPlan ? (
-                          <Badge
-                            variant="default"
-                            className="bg-green-600"
-                          >
-                            קיימת
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">אין</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {hasRecommendation ? (
-                          <Badge
-                            variant="default"
-                            className="bg-blue-600"
-                          >
-                            קיימות
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">אין</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button asChild size="sm">
-                          <Link href={`/admin/nutrition/${trainee.id}`}>
-                            <Edit className="h-4 w-4 ml-1" />
-                            ניהול
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                    <div key={trainee.id} className="flex items-center gap-3 p-3 rounded-lg border">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-sm truncate block">
+                          {trainee.full_name || "ללא שם"}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {hasMealPlan ? (
+                            <Badge variant="default" className="bg-green-600 text-xs">תזונה</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">אין תזונה</Badge>
+                          )}
+                          {hasRecommendation ? (
+                            <Badge variant="default" className="bg-blue-600 text-xs">המלצות</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">אין המלצות</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button asChild size="sm" className="shrink-0">
+                        <Link href={`/admin/nutrition/${trainee.id}`}>
+                          <Edit className="h-4 w-4 ml-1" />
+                          ניהול
+                        </Link>
+                      </Button>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-start">שם</TableHead>
+                      <TableHead className="text-start">תוכנית תזונה</TableHead>
+                      <TableHead className="text-start">המלצות</TableHead>
+                      <TableHead className="text-start">פעולות</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {trainees.map((trainee) => {
+                      const hasMealPlan = mealPlanUserIds.has(trainee.id);
+                      const hasRecommendation = recommendationUserIds.has(trainee.id);
+
+                      return (
+                        <TableRow key={trainee.id}>
+                          <TableCell className="font-medium">
+                            {trainee.full_name || "ללא שם"}
+                          </TableCell>
+                          <TableCell>
+                            {hasMealPlan ? (
+                              <Badge variant="default" className="bg-green-600">קיימת</Badge>
+                            ) : (
+                              <Badge variant="outline">אין</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {hasRecommendation ? (
+                              <Badge variant="default" className="bg-blue-600">קיימות</Badge>
+                            ) : (
+                              <Badge variant="outline">אין</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button asChild size="sm">
+                              <Link href={`/admin/nutrition/${trainee.id}`}>
+                                <Edit className="h-4 w-4 ml-1" />
+                                ניהול
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               אין חניכים רשומים

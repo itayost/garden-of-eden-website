@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Heebo, Bebas_Neue } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
 const heebo = Heebo({
   variable: "--font-heebo",
@@ -16,7 +17,15 @@ const bebasNeue = Bebas_Neue({
   weight: "400",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0A1F0A",
+};
+
 export const metadata: Metadata = {
+  manifest: "/manifest.json",
   title: "Garden of Eden - אקדמיית הכדורגל עם מעטפת מלאה | חיפה",
   description: "אקדמיית כדורגל מקצועית בחיפה עם מעטפת מלאה: אימוני כדורגל, אימוני אתלטיות, ליווי מנטלי, ליווי תזונה, אנליסט כדורגל וניהול קריירה.",
   keywords: ["אקדמיית כדורגל", "כדורגל חיפה", "אימוני אתלטיות", "ליווי מנטלי", "תזונת ספורטאים", "אנליסט כדורגל", "ניהול קריירה", "garden of eden", "שחקנים צעירים"],
@@ -73,6 +82,7 @@ export default function RootLayout({
           {children}
         </NuqsAdapter>
         <Toaster position="top-center" />
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

@@ -222,9 +222,9 @@ export default async function DashboardPage() {
       {/* Nutrition Alert */}
       {!hasCompletedNutrition && (
         <Card className="border-orange-500/50 bg-orange-500/5">
-          <CardContent className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-4">
-              <div className="bg-orange-500 rounded-full p-2">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center gap-4 py-4">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="bg-orange-500 rounded-full p-2 shrink-0">
                 <Salad className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -234,7 +234,7 @@ export default async function DashboardPage() {
                 </p>
               </div>
             </div>
-            <Button asChild>
+            <Button asChild className="shrink-0 self-start sm:self-auto">
               <Link href="/dashboard/forms/nutrition">
                 למילוי השאלון
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -278,7 +278,7 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div>
         <h2 className="text-xl font-semibold mb-4">הסטטיסטיקות שלי</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {/* Mini Rating Chart */}
           {assessments && assessments.length > 0 && (
             <Link href="/dashboard/assessments" className="lg:col-span-1">

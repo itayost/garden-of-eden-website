@@ -12,18 +12,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Home,
   FileText,
   Video,
   User as UserIcon,
   LogOut,
-  Menu,
   Settings,
   Target,
   Trophy,
-  Shield,
   Utensils,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -147,25 +144,6 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
               </Button>
             )}
 
-            {/* Mobile Menu */}
-            {mounted ? (
-              <Sheet>
-                <SheetTrigger asChild className="md:hidden">
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-64">
-                  <nav className="flex flex-col gap-2 mt-8">
-                    <NavLinks />
-                  </nav>
-                </SheetContent>
-              </Sheet>
-            ) : (
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
-            )}
           </div>
         </div>
       </div>

@@ -166,9 +166,9 @@ export function MealPlanForm({ userId, existingPlan }: MealPlanFormProps) {
             value={activeDay}
             onValueChange={(v) => setActiveDay(v as DayOfWeek)}
           >
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="flex w-full overflow-x-auto scrollbar-hide">
               {ORDERED_DAYS.map((day) => (
-                <TabsTrigger key={day} value={day} className="text-xs">
+                <TabsTrigger key={day} value={day} className="text-xs flex-1 min-w-[40px]">
                   {DAY_LABELS_HE[day]}
                 </TabsTrigger>
               ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,52 +100,89 @@ export function ShiftReportContent({ submissions }: { submissions: TrainerShiftR
       </CardHeader>
       <CardContent>
         {filtered.length > 0 ? (
-          <div className="overflow-x-auto" dir="rtl">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>מאמן</TableHead>
-                  <TableHead>תאריך</TableHead>
-                  <TableHead>סימונים</TableHead>
-                  <TableHead>הוגש</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((report) => (
-                  <ClickableTableRow
-                    key={report.id}
-                    href={`/admin/submissions/shift-reports/${report.id}`}
-                  >
-                    <TableCell className="font-medium">
-                      {report.trainer_name}
-                    </TableCell>
-                    <TableCell>
+          <>
+            {/* Mobile: Card list */}
+            <div className="space-y-2 sm:hidden">
+              {filtered.map((report) => (
+                <Link
+                  key={report.id}
+                  href={`/admin/submissions/shift-reports/${report.id}`}
+                  className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{report.trainer_name}</span>
+                    <span className="text-xs text-muted-foreground">
                       {new Date(report.report_date).toLocaleDateString("he-IL")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        <FlagBadge active={report.has_injuries} label="פציעה" />
-                        <FlagBadge active={report.has_discipline_issues} label="משמעת" />
-                        <FlagBadge active={report.has_poor_mental_state} label="מצב נפשי" />
-                        <FlagBadge active={report.has_complaints} label="תלונות" />
-                        <FlagBadge active={report.has_pro_candidates} label="PRO" />
-                        <FlagBadge active={!report.facility_left_clean} label="ניקיון" />
-                        {!report.has_injuries &&
-                          !report.has_discipline_issues &&
-                          !report.has_poor_mental_state &&
-                          !report.has_complaints &&
-                          !report.has_pro_candidates &&
-                          report.facility_left_clean && (
-                            <Badge variant="secondary" className="text-xs">תקין</Badge>
-                          )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDateTime(report.submitted_at)}</TableCell>
-                  </ClickableTableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <FlagBadge active={report.has_injuries} label="פציעה" />
+                    <FlagBadge active={report.has_discipline_issues} label="משמעת" />
+                    <FlagBadge active={report.has_poor_mental_state} label="מצב נפשי" />
+                    <FlagBadge active={report.has_complaints} label="תלונות" />
+                    <FlagBadge active={report.has_pro_candidates} label="PRO" />
+                    <FlagBadge active={!report.facility_left_clean} label="ניקיון" />
+                    {!report.has_injuries &&
+                      !report.has_discipline_issues &&
+                      !report.has_poor_mental_state &&
+                      !report.has_complaints &&
+                      !report.has_pro_candidates &&
+                      report.facility_left_clean && (
+                        <Badge variant="secondary" className="text-xs">תקין</Badge>
+                      )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="overflow-x-auto hidden sm:block" dir="rtl">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>מאמן</TableHead>
+                    <TableHead>תאריך</TableHead>
+                    <TableHead>סימונים</TableHead>
+                    <TableHead>הוגש</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((report) => (
+                    <ClickableTableRow
+                      key={report.id}
+                      href={`/admin/submissions/shift-reports/${report.id}`}
+                    >
+                      <TableCell className="font-medium">
+                        {report.trainer_name}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(report.report_date).toLocaleDateString("he-IL")}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          <FlagBadge active={report.has_injuries} label="פציעה" />
+                          <FlagBadge active={report.has_discipline_issues} label="משמעת" />
+                          <FlagBadge active={report.has_poor_mental_state} label="מצב נפשי" />
+                          <FlagBadge active={report.has_complaints} label="תלונות" />
+                          <FlagBadge active={report.has_pro_candidates} label="PRO" />
+                          <FlagBadge active={!report.facility_left_clean} label="ניקיון" />
+                          {!report.has_injuries &&
+                            !report.has_discipline_issues &&
+                            !report.has_poor_mental_state &&
+                            !report.has_complaints &&
+                            !report.has_pro_candidates &&
+                            report.facility_left_clean && (
+                              <Badge variant="secondary" className="text-xs">תקין</Badge>
+                            )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDateTime(report.submitted_at)}</TableCell>
+                    </ClickableTableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : submissions.length > 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />

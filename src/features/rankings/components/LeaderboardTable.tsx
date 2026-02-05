@@ -79,69 +79,127 @@ export function LeaderboardTable({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px] text-right">דירוג</TableHead>
-              <TableHead className="text-right">שם</TableHead>
-              <TableHead className="text-center">תוצאה</TableHead>
-              <TableHead className="text-center">אחוזון</TableHead>
-              <TableHead className="text-center hidden sm:table-cell">תאריך</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leaderboard.map((entry) => {
-              const isCurrentUser = entry.userId === currentUserId;
-              const rankIcon = getRankIcon(entry.rank);
+        {/* Mobile: Card list */}
+        <div className="space-y-2 sm:hidden">
+          {leaderboard.map((entry) => {
+            const isCurrentUser = entry.userId === currentUserId;
+            const rankIcon = getRankIcon(entry.rank);
 
-              return (
-                <TableRow
-                  key={entry.userId}
-                  className={cn(isCurrentUser && "bg-primary/5")}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {rankIcon || (
-                        <Badge variant={getRankBadgeVariant(entry.rank)}>
-                          {entry.rank}
-                        </Badge>
-                      )}
-                      {rankIcon && (
-                        <span className="font-bold">{entry.rank}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("font-medium", isCurrentUser && "text-primary")}>
-                        {entry.userName}
-                      </span>
-                      {isCurrentUser && (
-                        <Badge variant="outline" className="text-xs">
-                          אתה
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center font-mono">
-                    {entry.metricValue.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      variant={entry.percentile >= 75 ? "default" : "secondary"}
-                      className="font-mono"
-                    >
-                      {entry.percentile}%
+            return (
+              <div
+                key={entry.userId}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border",
+                  isCurrentUser && "bg-primary/5 border-primary/20"
+                )}
+              >
+                {/* Rank */}
+                <div className="flex items-center gap-1.5 w-10 shrink-0">
+                  {rankIcon || (
+                    <Badge variant={getRankBadgeVariant(entry.rank)}>
+                      {entry.rank}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-center text-muted-foreground hidden sm:table-cell">
-                    {formatDate(entry.assessmentDate)}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                  )}
+                  {rankIcon && (
+                    <span className="font-bold text-sm">{entry.rank}</span>
+                  )}
+                </div>
+
+                {/* Name */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className={cn("font-medium text-sm truncate", isCurrentUser && "text-primary")}>
+                      {entry.userName}
+                    </span>
+                    {isCurrentUser && (
+                      <Badge variant="outline" className="text-[10px] shrink-0">
+                        אתה
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Score + Percentile */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-mono text-sm">{entry.metricValue.toFixed(2)}</span>
+                  <Badge
+                    variant={entry.percentile >= 75 ? "default" : "secondary"}
+                    className="font-mono text-xs"
+                  >
+                    {entry.percentile}%
+                  </Badge>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: Table */}
+        <div className="hidden sm:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[80px] text-right">דירוג</TableHead>
+                <TableHead className="text-right">שם</TableHead>
+                <TableHead className="text-center">תוצאה</TableHead>
+                <TableHead className="text-center">אחוזון</TableHead>
+                <TableHead className="text-center hidden md:table-cell">תאריך</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {leaderboard.map((entry) => {
+                const isCurrentUser = entry.userId === currentUserId;
+                const rankIcon = getRankIcon(entry.rank);
+
+                return (
+                  <TableRow
+                    key={entry.userId}
+                    className={cn(isCurrentUser && "bg-primary/5")}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {rankIcon || (
+                          <Badge variant={getRankBadgeVariant(entry.rank)}>
+                            {entry.rank}
+                          </Badge>
+                        )}
+                        {rankIcon && (
+                          <span className="font-bold">{entry.rank}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("font-medium", isCurrentUser && "text-primary")}>
+                          {entry.userName}
+                        </span>
+                        {isCurrentUser && (
+                          <Badge variant="outline" className="text-xs">
+                            אתה
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center font-mono">
+                      {entry.metricValue.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        variant={entry.percentile >= 75 ? "default" : "secondary"}
+                        className="font-mono"
+                      >
+                        {entry.percentile}%
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-muted-foreground hidden md:table-cell">
+                      {formatDate(entry.assessmentDate)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

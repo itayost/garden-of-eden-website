@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,34 +138,58 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
       </CardHeader>
       <CardContent>
         {filtered.length > 0 ? (
-          <div className="overflow-x-auto" dir="rtl">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>שם</TableHead>
-                  <TableHead>גיל</TableHead>
-                  <TableHead>שינה</TableHead>
-                  <TableHead>תזונה</TableHead>
-                  <TableHead>פציעה</TableHead>
-                  <TableHead>תאריך</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((form) => (
-                  <ClickableTableRow key={form.id} href={`/admin/submissions/pre-workout/${form.id}`}>
-                    <TableCell className="font-medium">{form.full_name}</TableCell>
-                    <TableCell>{form.age || "-"}</TableCell>
-                    <TableCell>{form.sleep_hours || "-"}</TableCell>
-                    <TableCell>{translateValue(form.nutrition_status, nutritionStatusTranslations)}</TableCell>
-                    <TableCell>
-                      <HasBadge value={!!(form.recent_injury && form.recent_injury !== "אין")} />
-                    </TableCell>
-                    <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
-                  </ClickableTableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            {/* Mobile: Card list */}
+            <div className="space-y-2 sm:hidden">
+              {filtered.map((form) => (
+                <Link
+                  key={form.id}
+                  href={`/admin/submissions/pre-workout/${form.id}`}
+                  className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{form.full_name}</span>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(form.submitted_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    {form.sleep_hours && <span>שינה: {form.sleep_hours}</span>}
+                    <span>{translateValue(form.nutrition_status, nutritionStatusTranslations)}</span>
+                    <HasBadge value={!!(form.recent_injury && form.recent_injury !== "אין")} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="overflow-x-auto hidden sm:block" dir="rtl">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>שם</TableHead>
+                    <TableHead>גיל</TableHead>
+                    <TableHead>שינה</TableHead>
+                    <TableHead>תזונה</TableHead>
+                    <TableHead>פציעה</TableHead>
+                    <TableHead>תאריך</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((form) => (
+                    <ClickableTableRow key={form.id} href={`/admin/submissions/pre-workout/${form.id}`}>
+                      <TableCell className="font-medium">{form.full_name}</TableCell>
+                      <TableCell>{form.age || "-"}</TableCell>
+                      <TableCell>{form.sleep_hours || "-"}</TableCell>
+                      <TableCell>{translateValue(form.nutrition_status, nutritionStatusTranslations)}</TableCell>
+                      <TableCell>
+                        <HasBadge value={!!(form.recent_injury && form.recent_injury !== "אין")} />
+                      </TableCell>
+                      <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
+                    </ClickableTableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : submissions.length > 0 ? (
           <EmptyState icon={Activity} message="אין שאלונים בטווח התאריכים שנבחר" />
         ) : (
@@ -214,32 +239,61 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
       </CardHeader>
       <CardContent>
         {filtered.length > 0 ? (
-          <div className="overflow-x-auto" dir="rtl">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>שם</TableHead>
-                  <TableHead>מאמן</TableHead>
-                  <TableHead>קושי</TableHead>
-                  <TableHead>שביעות רצון</TableHead>
-                  <TableHead>הערות</TableHead>
-                  <TableHead>תאריך</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((form) => (
-                  <ClickableTableRow key={form.id} href={`/admin/submissions/post-workout/${form.id}`}>
-                    <TableCell className="font-medium">{form.full_name}</TableCell>
-                    <TableCell>{form.trainers?.name || "-"}</TableCell>
-                    <TableCell><DifficultyBadge level={form.difficulty_level} /></TableCell>
-                    <TableCell><SatisfactionBadge level={form.satisfaction_level} /></TableCell>
-                    <TableCell className="max-w-[200px] truncate">{form.comments || "-"}</TableCell>
-                    <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
-                  </ClickableTableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            {/* Mobile: Card list */}
+            <div className="space-y-2 sm:hidden">
+              {filtered.map((form) => (
+                <Link
+                  key={form.id}
+                  href={`/admin/submissions/post-workout/${form.id}`}
+                  className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{form.full_name}</span>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(form.submitted_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    {form.trainers?.name && (
+                      <span className="text-muted-foreground">{form.trainers.name}</span>
+                    )}
+                    <DifficultyBadge level={form.difficulty_level} />
+                    <SatisfactionBadge level={form.satisfaction_level} />
+                  </div>
+                  {form.comments && (
+                    <p className="text-xs text-muted-foreground truncate">{form.comments}</p>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="overflow-x-auto hidden sm:block" dir="rtl">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>שם</TableHead>
+                    <TableHead>מאמן</TableHead>
+                    <TableHead>קושי</TableHead>
+                    <TableHead>שביעות רצון</TableHead>
+                    <TableHead>הערות</TableHead>
+                    <TableHead>תאריך</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((form) => (
+                    <ClickableTableRow key={form.id} href={`/admin/submissions/post-workout/${form.id}`}>
+                      <TableCell className="font-medium">{form.full_name}</TableCell>
+                      <TableCell>{form.trainers?.name || "-"}</TableCell>
+                      <TableCell><DifficultyBadge level={form.difficulty_level} /></TableCell>
+                      <TableCell><SatisfactionBadge level={form.satisfaction_level} /></TableCell>
+                      <TableCell className="max-w-[200px] truncate">{form.comments || "-"}</TableCell>
+                      <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
+                    </ClickableTableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : submissions.length > 0 ? (
           <EmptyState icon={FileText} message="אין שאלונים בטווח התאריכים שנבחר" />
         ) : (
@@ -289,32 +343,57 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
       </CardHeader>
       <CardContent>
         {filtered.length > 0 ? (
-          <div className="overflow-x-auto" dir="rtl">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>שם</TableHead>
-                  <TableHead>גיל</TableHead>
-                  <TableHead>משקל</TableHead>
-                  <TableHead>גובה</TableHead>
-                  <TableHead>אלרגיות</TableHead>
-                  <TableHead>תאריך</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((form) => (
-                  <ClickableTableRow key={form.id} href={`/admin/submissions/nutrition/${form.id}`}>
-                    <TableCell className="font-medium">{form.full_name}</TableCell>
-                    <TableCell>{form.age}</TableCell>
-                    <TableCell>{form.weight ? `${form.weight} ק"ג` : "-"}</TableCell>
-                    <TableCell>{form.height ? `${form.height} מ'` : "-"}</TableCell>
-                    <TableCell><HasBadge value={form.allergies} /></TableCell>
-                    <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
-                  </ClickableTableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            {/* Mobile: Card list */}
+            <div className="space-y-2 sm:hidden">
+              {filtered.map((form) => (
+                <Link
+                  key={form.id}
+                  href={`/admin/submissions/nutrition/${form.id}`}
+                  className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{form.full_name}</span>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(form.submitted_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    {form.age && <span>גיל: {form.age}</span>}
+                    {form.weight && <span>{form.weight} ק&quot;ג</span>}
+                    {form.height && <span>{form.height} מ&apos;</span>}
+                    <HasBadge value={form.allergies} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="overflow-x-auto hidden sm:block" dir="rtl">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>שם</TableHead>
+                    <TableHead>גיל</TableHead>
+                    <TableHead>משקל</TableHead>
+                    <TableHead>גובה</TableHead>
+                    <TableHead>אלרגיות</TableHead>
+                    <TableHead>תאריך</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((form) => (
+                    <ClickableTableRow key={form.id} href={`/admin/submissions/nutrition/${form.id}`}>
+                      <TableCell className="font-medium">{form.full_name}</TableCell>
+                      <TableCell>{form.age}</TableCell>
+                      <TableCell>{form.weight ? `${form.weight} ק"ג` : "-"}</TableCell>
+                      <TableCell>{form.height ? `${form.height} מ'` : "-"}</TableCell>
+                      <TableCell><HasBadge value={form.allergies} /></TableCell>
+                      <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
+                    </ClickableTableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : submissions.length > 0 ? (
           <EmptyState icon={Salad} message="אין שאלונים בטווח התאריכים שנבחר" />
         ) : (

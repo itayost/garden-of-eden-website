@@ -35,7 +35,7 @@ export function CategoryLeaderCards({
   onCategorySelect,
 }: CategoryLeaderCardsProps) {
   return (
-    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-5">
       {leaders.map((leader) => {
         const Icon = CATEGORY_ICONS[leader.category];
         const config = RANKING_CATEGORIES[leader.category];

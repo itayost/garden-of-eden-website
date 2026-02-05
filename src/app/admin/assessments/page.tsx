@@ -109,18 +109,9 @@ export default async function AdminAssessmentsPage() {
         </CardHeader>
         <CardContent>
           {profiles && profiles.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>שם</TableHead>
-                  <TableHead>קבוצת גיל</TableHead>
-                  <TableHead>מבדקים</TableHead>
-                  <TableHead>מבדק אחרון</TableHead>
-                  <TableHead>שלמות</TableHead>
-                  <TableHead>פעולות</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: Card list */}
+              <div className="space-y-2 sm:hidden">
                 {profiles.map((profile) => {
                   const userAssessments = assessmentsByUser.get(profile.id) || [];
                   const latestAssessment = userAssessments[0];
@@ -130,70 +121,138 @@ export default async function AdminAssessmentsPage() {
                     : 0;
 
                   return (
-                    <TableRow key={profile.id}>
-                      <TableCell className="font-medium">
-                        {profile.full_name || "ללא שם"}
-                      </TableCell>
-                      <TableCell>
-                        {ageGroup ? (
-                          <Badge variant="outline">{ageGroup.label}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            לא הוגדר
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {userAssessments.length}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {latestAssessment ? (
-                          <span className="text-sm">
-                            {new Date(latestAssessment.assessment_date).toLocaleDateString("he-IL")}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">---</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {latestAssessment ? (
+                    <div key={profile.id} className="p-3 rounded-lg border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">
+                          {profile.full_name || "ללא שם"}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {ageGroup && (
+                            <Badge variant="outline" className="text-xs">{ageGroup.label}</Badge>
+                          )}
+                          <Badge variant="secondary" className="text-xs">
+                            {userAssessments.length} מבדקים
+                          </Badge>
+                        </div>
+                      </div>
+                      {latestAssessment && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>אחרון: {new Date(latestAssessment.assessment_date).toLocaleDateString("he-IL")}</span>
                           <Badge
-                            variant={
-                              completeness >= 80
-                                ? "default"
-                                : completeness >= 50
-                                ? "secondary"
-                                : "outline"
-                            }
+                            variant={completeness >= 80 ? "default" : completeness >= 50 ? "secondary" : "outline"}
+                            className="text-xs"
                           >
                             {completeness}%
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">---</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/admin/assessments/${profile.id}`}>
-                              צפייה
-                            </Link>
-                          </Button>
-                          <Button asChild size="sm">
-                            <Link href={`/admin/assessments/${profile.id}/new`}>
-                              <Plus className="h-4 w-4 ml-1" />
-                              מבדק חדש
-                            </Link>
-                          </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      )}
+                      <div className="flex gap-2">
+                        <Button asChild size="sm" variant="outline" className="flex-1">
+                          <Link href={`/admin/assessments/${profile.id}`}>
+                            צפייה
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" className="flex-1">
+                          <Link href={`/admin/assessments/${profile.id}/new`}>
+                            <Plus className="h-4 w-4 ml-1" />
+                            מבדק חדש
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>שם</TableHead>
+                      <TableHead>קבוצת גיל</TableHead>
+                      <TableHead>מבדקים</TableHead>
+                      <TableHead>מבדק אחרון</TableHead>
+                      <TableHead>שלמות</TableHead>
+                      <TableHead>פעולות</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {profiles.map((profile) => {
+                      const userAssessments = assessmentsByUser.get(profile.id) || [];
+                      const latestAssessment = userAssessments[0];
+                      const ageGroup = getAgeGroup(profile.birthdate);
+                      const completeness = latestAssessment
+                        ? getAssessmentCompleteness(latestAssessment)
+                        : 0;
+
+                      return (
+                        <TableRow key={profile.id}>
+                          <TableCell className="font-medium">
+                            {profile.full_name || "ללא שם"}
+                          </TableCell>
+                          <TableCell>
+                            {ageGroup ? (
+                              <Badge variant="outline">{ageGroup.label}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">
+                                לא הוגדר
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {userAssessments.length}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {latestAssessment ? (
+                              <span className="text-sm">
+                                {new Date(latestAssessment.assessment_date).toLocaleDateString("he-IL")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">---</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {latestAssessment ? (
+                              <Badge
+                                variant={
+                                  completeness >= 80
+                                    ? "default"
+                                    : completeness >= 50
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                              >
+                                {completeness}%
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">---</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button asChild size="sm" variant="outline">
+                                <Link href={`/admin/assessments/${profile.id}`}>
+                                  צפייה
+                                </Link>
+                              </Button>
+                              <Button asChild size="sm">
+                                <Link href={`/admin/assessments/${profile.id}/new`}>
+                                  <Plus className="h-4 w-4 ml-1" />
+                                  מבדק חדש
+                                </Link>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               אין שחקנים רשומים

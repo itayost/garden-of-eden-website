@@ -230,8 +230,8 @@ export default async function DashboardAssessmentsPage() {
         {/* Progress Charts Tab */}
         <TabsContent value="progress">
           <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-            {/* Left Column - Card Preview */}
-            <div className="space-y-4">
+            {/* Left Column - Card Preview (hidden on mobile) */}
+            <div className="hidden lg:block space-y-4">
               {calculatedRatings && (
                 <Card>
                   <CardHeader>
@@ -301,8 +301,8 @@ export default async function DashboardAssessmentsPage() {
         {/* History Tab */}
         <TabsContent value="history">
           <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-            {/* Left Column - Card Preview */}
-            <div className="space-y-4">
+            {/* Left Column - Card Preview (hidden on mobile) */}
+            <div className="hidden lg:block space-y-4">
               {calculatedRatings && (
                 <Card>
                   <CardHeader>
@@ -380,7 +380,7 @@ export default async function DashboardAssessmentsPage() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {/* Sprint Tests */}
                         <div>
                           <h4 className="font-medium mb-2 text-sm text-muted-foreground">

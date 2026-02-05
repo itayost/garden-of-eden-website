@@ -73,7 +73,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <Link
@@ -89,7 +89,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
             {userToEdit.full_name || "משתמש ללא שם"}
           </h1>
         </div>
-        <Button variant="outline" asChild>
+        <Button variant="outline" asChild className="self-start sm:self-auto">
           <Link href="/admin/users">
             <ArrowRight className="ml-2 h-4 w-4" />
             חזרה לרשימה

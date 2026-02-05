@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
+import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import type { Profile } from "@/types/database";
 
 export default async function DashboardLayout({
@@ -30,9 +31,10 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-muted/30">
       <DashboardNav user={user} profile={profile} />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 pt-8 pb-20 md:pb-8">
         {children}
       </main>
+      <DashboardBottomNav profile={profile} />
     </div>
   );
 }

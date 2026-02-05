@@ -195,7 +195,7 @@ export default function VerifyPage() {
           ) : (
             <>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="flex justify-center gap-2" dir="ltr">
+                <div className="flex justify-center gap-1 sm:gap-2" dir="ltr">
                   {Array.from({ length: otpLength }, (_, index) => (
                     <Input
                       key={`${verifyType}-${index}`}
@@ -206,7 +206,7 @@ export default function VerifyPage() {
                       value={otp[index] || ""}
                       onChange={(e) => handleChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
-                      className="w-10 h-12 text-center text-xl font-bold"
+                      className="w-8 sm:w-10 h-11 sm:h-12 text-center text-lg sm:text-xl font-bold px-0"
                       disabled={loading}
                     />
                   ))}
