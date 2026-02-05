@@ -50,6 +50,7 @@ function LoginForm() {
 
       const { error } = await supabase.auth.signInWithOtp({
         phone: `+${formattedPhone}`,
+        options: { shouldCreateUser: false },
       });
 
       if (error) {
@@ -87,7 +88,7 @@ function LoginForm() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: true,
+          shouldCreateUser: false,
         },
       });
 

@@ -145,12 +145,13 @@ export default function VerifyPage() {
       if (verifyType === "phone") {
         const { error } = await supabase.auth.signInWithOtp({
           phone: identifier,
+          options: { shouldCreateUser: false },
         });
         if (error) throw error;
       } else {
         const { error } = await supabase.auth.signInWithOtp({
           email: identifier,
-          options: { shouldCreateUser: true },
+          options: { shouldCreateUser: false },
         });
         if (error) throw error;
       }
