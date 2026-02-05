@@ -72,6 +72,7 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
         full_name,
         role,
         phone: formattedPhone,
+        ...(role !== "trainee" && { profile_completed: true }),
       })
       .eq("id", authData.user.id);
 
@@ -332,6 +333,7 @@ export async function bulkCreateUsersAction(users: CSVUserRow[]): Promise<BulkIm
           full_name: csvUser.name,
           role: csvUser.role,
           phone: formattedPhone,
+          ...(csvUser.role !== "trainee" && { profile_completed: true }),
         })
         .eq("id", authData.user.id);
 

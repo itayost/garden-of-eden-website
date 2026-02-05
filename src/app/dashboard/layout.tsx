@@ -23,8 +23,8 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .maybeSingle() as { data: Profile | null };
 
-  // Defense-in-depth: Redirect to onboarding if profile is not complete
-  if (profile && !profile.profile_completed) {
+  // Defense-in-depth: Redirect trainees to onboarding if profile is not complete
+  if (profile && !profile.profile_completed && profile.role !== "admin" && profile.role !== "trainer") {
     redirect("/onboarding/profile");
   }
 
