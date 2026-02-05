@@ -47,19 +47,22 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Profile completion check for dashboard routes (not onboarding or admin)
-  if (
-    user &&
-    request.nextUrl.pathname.startsWith("/dashboard") &&
-    !request.nextUrl.pathname.startsWith("/onboarding")
-  ) {
+  // Profile completion check for dashboard routes
+  if (user && request.nextUrl.pathname.startsWith("/dashboard")) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("profile_completed")
+      .select("profile_completed, role")
       .eq("id", user.id)
       .maybeSingle();
 
-    // Redirect to onboarding if profile is not complete
+    // Admin/trainer users should use the admin area (skip onboarding)
+    if (profile?.role === "admin" || profile?.role === "trainer") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin";
+      return NextResponse.redirect(url);
+    }
+
+    // Redirect trainees to onboarding if profile is not complete
     if (profile && !profile.profile_completed) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding/profile";

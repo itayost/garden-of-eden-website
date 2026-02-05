@@ -21,7 +21,7 @@ export default async function DashboardLayout({
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single() as { data: Profile | null };
+    .maybeSingle() as { data: Profile | null };
 
   // Defense-in-depth: Redirect to onboarding if profile is not complete
   if (profile && !profile.profile_completed) {
@@ -34,7 +34,7 @@ export default async function DashboardLayout({
       <main className="container mx-auto px-4 pt-8 pb-20 md:pb-8">
         {children}
       </main>
-      <DashboardBottomNav profile={profile} />
+      <DashboardBottomNav />
     </div>
   );
 }

@@ -20,7 +20,6 @@ import {
   Video,
   User as UserIcon,
   LogOut,
-  Home,
   Target,
   Utensils,
   ClipboardCheck,
@@ -84,13 +83,6 @@ export function AdminNav({ user, profile }: AdminNavProps) {
           {item.label}
         </Link>
       ))}
-      <Link
-        href="/dashboard"
-        className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors"
-      >
-        <Home className="h-5 w-5" />
-        אזור מתאמנים
-      </Link>
     </>
   );
 

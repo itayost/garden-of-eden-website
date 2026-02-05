@@ -12,7 +12,6 @@ import {
   Video,
   Utensils,
   ClipboardCheck,
-  Home,
 } from "lucide-react";
 import { BottomNav, type BottomNavItem } from "@/components/ui/bottom-nav";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -29,7 +28,6 @@ const moreItems = [
   { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck },
   { href: "/admin/nutrition", label: "תזונה", icon: Utensils },
   { href: "/admin/videos", label: "סרטונים", icon: Video },
-  { href: "/dashboard", label: "אזור מתאמנים", icon: Home },
 ];
 
 export function AdminBottomNav() {

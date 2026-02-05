@@ -18,7 +18,6 @@ import {
   Video,
   User as UserIcon,
   LogOut,
-  Settings,
   Target,
   Trophy,
   Utensils,
@@ -82,19 +81,6 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
           {item.label}
         </Link>
       ))}
-      {(profile?.role === "admin" || profile?.role === "trainer") && (
-        <Link
-          href="/admin"
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            pathname.startsWith("/admin")
-              ? "bg-primary text-primary-foreground"
-              : "hover:bg-muted"
-          }`}
-        >
-          <Settings className="h-5 w-5" />
-          ניהול
-        </Link>
-      )}
     </>
   );
 

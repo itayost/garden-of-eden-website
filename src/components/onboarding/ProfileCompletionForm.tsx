@@ -5,8 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
 import {
-  profileCompletionSchema,
-  type ProfileCompletionData,
+  onboardingSchema,
+  type OnboardingData,
 } from "@/lib/validations/profile";
 import { POSITIONS, POSITION_LABELS_HE } from "@/types/player-stats";
 import { Button } from "@/components/ui/button";
@@ -27,51 +27,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, UserCheck, Sparkles } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 interface ProfileCompletionFormProps {
   userId: string;
+  fullName: string;
   initialData?: {
-    full_name?: string | null;
     birthdate?: string | null;
     position?: string | null;
   };
 }
 
-export function ProfileCompletionForm({ userId, initialData }: ProfileCompletionFormProps) {
+export function ProfileCompletionForm({
+  userId,
+  fullName,
+  initialData,
+}: ProfileCompletionFormProps) {
   const [loading, setLoading] = useState(false);
 
-  const form = useForm<ProfileCompletionData>({
-    resolver: zodResolver(profileCompletionSchema),
+  const form = useForm<OnboardingData>({
+    resolver: zodResolver(onboardingSchema),
     defaultValues: {
-      full_name: initialData?.full_name || "",
       birthdate: initialData?.birthdate || "",
-      position: (initialData?.position as ProfileCompletionData["position"]) || undefined,
+      position:
+        (initialData?.position as OnboardingData["position"]) || undefined,
     },
   });
 
-  const onSubmit = async (data: ProfileCompletionData) => {
+  const onSubmit = async (data: OnboardingData) => {
     setLoading(true);
 
     try {
       const supabase = createClient();
 
-      // Authorization check: verify current user matches the userId prop
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user || user.id !== userId) {
         toast.error("אין הרשאה לעדכן פרופיל זה");
         setLoading(false);
         return;
       }
 
-      // Update profile (avatar is managed by admin/coaches only)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (supabase as any)
         .from("profiles")
         .update({
-          full_name: data.full_name,
           birthdate: data.birthdate,
           position: data.position || null,
           profile_completed: true,
@@ -86,9 +89,7 @@ export function ProfileCompletionForm({ userId, initialData }: ProfileCompletion
         return;
       }
 
-      toast.success("הפרופיל הושלם בהצלחה!");
-
-      // Hard redirect to dashboard (ensure cookies are properly set)
+      toast.success("!בואו נתחיל");
       window.location.href = "/dashboard";
     } catch (err) {
       console.error("Profile completion error:", err);
@@ -99,44 +100,29 @@ export function ProfileCompletionForm({ userId, initialData }: ProfileCompletion
 
   return (
     <Card className="w-full max-w-lg mx-auto border-[#22C55E]/20">
-      <CardHeader className="text-center space-y-2">
-        <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-          <Sparkles className="h-6 w-6 text-primary" />
+      {/* Welcome Section */}
+      <div className="px-6 pt-8 pb-2 text-center space-y-3">
+        <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-3xl">
+          ⚽
         </div>
-        <CardTitle className="text-2xl">השלמת פרופיל</CardTitle>
-        <CardDescription>
-          עוד כמה פרטים ואתה מוכן להתחיל!
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        <h1 className="text-2xl font-bold">
+          {fullName ? `ברוך הבא, ${fullName}!` : "!ברוך הבא"}
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          עוד רגע ואתה מוכן להתחיל באימונים
+        </p>
+      </div>
+
+      {/* Form Section */}
+      <CardContent className="pt-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Full Name - Required */}
-            <FormField
-              control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>שם מלא *</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="הזן את שמך המלא"
-                      disabled={loading}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Birthdate - Required */}
             <FormField
               control={form.control}
               name="birthdate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>תאריך לידה *</FormLabel>
+                  <FormLabel>תאריך לידה</FormLabel>
                   <FormControl>
                     <Input
                       type="date"
@@ -145,15 +131,12 @@ export function ProfileCompletionForm({ userId, initialData }: ProfileCompletion
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    משמש לחישוב קבוצת גיל
-                  </FormDescription>
+                  <FormDescription>משמש לחישוב קבוצת גיל</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Position - Optional */}
             <FormField
               control={form.control}
               name="position"
@@ -186,7 +169,6 @@ export function ProfileCompletionForm({ userId, initialData }: ProfileCompletion
               )}
             />
 
-            {/* Submit Button */}
             <Button
               type="submit"
               className="w-full"
@@ -200,8 +182,8 @@ export function ProfileCompletionForm({ userId, initialData }: ProfileCompletion
                 </>
               ) : (
                 <>
-                  <UserCheck className="ml-2 h-5 w-5" />
-                  סיום והמשך
+                  <ArrowLeft className="ml-2 h-5 w-5" />
+                  בואו נתחיל
                 </>
               )}
             </Button>

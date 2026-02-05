@@ -11,13 +11,10 @@ import {
   MoreHorizontal,
   Video,
   Utensils,
-  Settings,
 } from "lucide-react";
 import { BottomNav, type BottomNavItem } from "@/components/ui/bottom-nav";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import type { Profile } from "@/types/database";
-
 const mainItems: BottomNavItem[] = [
   { href: "/dashboard", label: "ראשי", icon: Home, exact: true },
   { href: "/dashboard/assessments", label: "מבדקים", icon: Target },
@@ -30,11 +27,7 @@ const moreItems = [
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
 ];
 
-interface DashboardBottomNavProps {
-  profile?: Profile | null;
-}
-
-export function DashboardBottomNav({ profile }: DashboardBottomNavProps) {
+export function DashboardBottomNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -83,16 +76,6 @@ export function DashboardBottomNav({ profile }: DashboardBottomNavProps) {
                   </Link>
                 );
               })}
-              {(profile?.role === "admin" || profile?.role === "trainer") && (
-                <Link
-                  href="/admin"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span className="font-medium">ניהול</span>
-                </Link>
-              )}
             </nav>
           </SheetContent>
         </Sheet>

@@ -20,19 +20,24 @@ export default async function OnboardingProfilePage() {
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single()) as { data: Profile | null };
+    .maybeSingle()) as { data: Profile | null };
 
-  // If profile is already complete, redirect to dashboard
+  // Admins/trainers don't need onboarding
+  if (profile?.role === "admin" || profile?.role === "trainer") {
+    redirect("/admin");
+  }
+
+  // If profile is already complete, go to dashboard
   if (profile?.profile_completed) {
     redirect("/dashboard");
   }
 
   return (
-    <div className="py-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
       <ProfileCompletionForm
         userId={user.id}
+        fullName={profile?.full_name || ""}
         initialData={{
-          full_name: profile?.full_name,
           birthdate: profile?.birthdate,
           position: profile?.position,
         }}
