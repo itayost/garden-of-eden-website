@@ -16,7 +16,7 @@ import { UserEditForm } from "@/components/admin/UserEditForm";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
-import type { Profile } from "@/types/database";
+import type { Profile, UserRole } from "@/types/database";
 
 interface UserEditPageProps {
   params: Promise<{ userId: string }>;
@@ -47,9 +47,11 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     .eq("id", currentUser.id)
     .single()) as { data: { role: string } | null };
 
-  if (currentProfile?.role !== "admin") {
+  if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/dashboard");
   }
+
+  const isAdmin = currentProfile?.role === "admin";
 
   // Get user to edit
   const { data: userToEdit } = (await supabase
@@ -60,6 +62,11 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
   if (!userToEdit) {
     notFound();
+  }
+
+  // Trainers can only access trainee profiles
+  if (!isAdmin && userToEdit.role !== "trainee") {
+    redirect("/admin/users");
   }
 
   const formatDate = (dateStr: string) => {
@@ -80,7 +87,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               href="/admin/users"
               className="hover:text-foreground transition-colors"
             >
-              ניהול משתמשים
+              {isAdmin ? "ניהול משתמשים" : "מתאמנים"}
             </Link>
             <ArrowRight className="h-4 w-4 rotate-180" />
             <span>עריכת משתמש</span>
@@ -111,15 +118,17 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <UserEditForm user={userToEdit} currentUserRole="admin" />
+              <UserEditForm user={userToEdit} currentUserRole={currentProfile?.role as UserRole} />
             </CardContent>
           </Card>
 
-          {/* User Actions */}
-          <UserActionsCard
-            user={userToEdit}
-            currentUserId={currentUser.id}
-          />
+          {/* User Actions (admin only) */}
+          {isAdmin && (
+            <UserActionsCard
+              user={userToEdit}
+              currentUserId={currentUser.id}
+            />
+          )}
         </div>
 
         {/* User Info Sidebar */}

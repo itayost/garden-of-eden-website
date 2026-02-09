@@ -22,6 +22,7 @@ interface UserTableToolbarProps {
   onRoleChange: (value: string | null) => void;
   onStatusChange: (value: string | null) => void;
   onShowDeletedChange: (value: boolean) => void;
+  isAdmin?: boolean;
 }
 
 /**
@@ -34,6 +35,7 @@ export function UserTableToolbar({
   onRoleChange,
   onStatusChange,
   onShowDeletedChange,
+  isAdmin = true,
 }: UserTableToolbarProps) {
   // URL state management with nuqs
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
@@ -112,18 +114,20 @@ export function UserTableToolbar({
           />
         </div>
 
-        {/* Role Filter */}
-        <Select value={role || "all"} onValueChange={handleRoleChange}>
-          <SelectTrigger className="w-full md:w-32">
-            <SelectValue placeholder="תפקיד" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">כל התפקידים</SelectItem>
-            <SelectItem value="admin">מנהל</SelectItem>
-            <SelectItem value="trainer">מאמן</SelectItem>
-            <SelectItem value="trainee">מתאמן</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Role Filter (admin only - trainers only see trainees) */}
+        {isAdmin && (
+          <Select value={role || "all"} onValueChange={handleRoleChange}>
+            <SelectTrigger className="w-full md:w-32">
+              <SelectValue placeholder="תפקיד" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל התפקידים</SelectItem>
+              <SelectItem value="admin">מנהל</SelectItem>
+              <SelectItem value="trainer">מאמן</SelectItem>
+              <SelectItem value="trainee">מתאמן</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
 
         {/* Status Filter */}
         <Select value={status || "all"} onValueChange={handleStatusChange}>
@@ -137,26 +141,28 @@ export function UserTableToolbar({
           </SelectContent>
         </Select>
 
-        {/* Show Deleted Toggle */}
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="show-deleted"
-            checked={showDeleted}
-            onCheckedChange={(checked) =>
-              handleShowDeletedChange(checked === true)
-            }
-          />
-          <Label htmlFor="show-deleted" className="text-sm cursor-pointer">
-            הצג מחוקים
-          </Label>
-        </div>
+        {/* Show Deleted Toggle (admin only) */}
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="show-deleted"
+              checked={showDeleted}
+              onCheckedChange={(checked) =>
+                handleShowDeletedChange(checked === true)
+              }
+            />
+            <Label htmlFor="show-deleted" className="text-sm cursor-pointer">
+              הצג מחוקים
+            </Label>
+          </div>
+        )}
       </div>
 
       {/* Create User Button */}
       <Button asChild>
         <Link href="/admin/users/create">
           <UserPlus className="h-4 w-4" />
-          יצירת משתמש
+          {isAdmin ? "יצירת משתמש" : "יצירת מתאמן"}
         </Link>
       </Button>
     </div>

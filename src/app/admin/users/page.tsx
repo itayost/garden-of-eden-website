@@ -39,15 +39,22 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
     .eq("id", currentUser.id)
     .single()) as { data: { role: string } | null };
 
-  if (currentProfile?.role !== "admin") {
+  if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/dashboard");
   }
 
-  // Fetch ALL users (including soft-deleted for admin filtering capability)
-  const { data: users, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const isAdmin = currentProfile?.role === "admin";
+
+  // Fetch users based on role:
+  // - Admins see ALL users (including soft-deleted)
+  // - Trainers see only trainees
+  let query = supabase.from("profiles").select("*");
+  if (!isAdmin) {
+    query = query.eq("role", "trainee");
+  }
+  const { data: users, error } = await query.order("created_at", {
+    ascending: false,
+  });
 
   if (error) {
     console.error("Failed to fetch users:", error);
@@ -63,13 +70,17 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">ניהול משתמשים</h1>
+          <h1 className="text-3xl font-bold mb-2">
+            {isAdmin ? "ניהול משתמשים" : "מתאמנים"}
+          </h1>
           <p className="text-muted-foreground">
-            צפייה וניהול של כל המשתמשים במערכת
+            {isAdmin
+              ? "צפייה וניהול של כל המשתמשים במערכת"
+              : "צפייה וניהול המתאמנים"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <UserImportDialog />
+          {isAdmin && <UserImportDialog />}
           <UserExportButton users={typedUsers.filter((u) => !u.deleted_at)} />
         </div>
       </div>
@@ -78,9 +89,15 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            רשימת משתמשים ({activeUserCount})
+            {isAdmin
+              ? `רשימת משתמשים (${activeUserCount})`
+              : `רשימת מתאמנים (${activeUserCount})`}
           </CardTitle>
-          <CardDescription>כל המשתמשים הרשומים במערכת</CardDescription>
+          <CardDescription>
+            {isAdmin
+              ? "כל המשתמשים הרשומים במערכת"
+              : "כל המתאמנים הרשומים במערכת"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <UserDataTable
@@ -89,6 +106,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
             initialRole={params.role || null}
             initialStatus={params.status || null}
             initialShowDeleted={params.deleted === "true"}
+            isAdmin={isAdmin}
           />
         </CardContent>
       </Card>

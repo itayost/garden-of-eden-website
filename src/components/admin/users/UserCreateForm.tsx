@@ -30,7 +30,11 @@ import {
 import { toast } from "sonner";
 import { Loader2, UserPlus } from "lucide-react";
 
-export function UserCreateForm() {
+interface UserCreateFormProps {
+  isAdmin?: boolean;
+}
+
+export function UserCreateForm({ isAdmin = true }: UserCreateFormProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -120,34 +124,36 @@ export function UserCreateForm() {
           )}
         />
 
-        {/* Role */}
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>תפקיד</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                disabled={loading}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="בחר תפקיד" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="trainee">מתאמן</SelectItem>
-                  <SelectItem value="trainer">מאמן</SelectItem>
-                  <SelectItem value="admin">מנהל</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>תפקיד המשתמש במערכת</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Role (admin only - trainers can only create trainees) */}
+        {isAdmin && (
+          <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>תפקיד</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={loading}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="בחר תפקיד" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="trainee">מתאמן</SelectItem>
+                    <SelectItem value="trainer">מאמן</SelectItem>
+                    <SelectItem value="admin">מנהל</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>תפקיד המשתמש במערכת</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* Email (Optional) */}
         <FormField

@@ -30,9 +30,11 @@ export default async function AdminCreateUserPage() {
     .eq("id", user.id)
     .single()) as { data: { role: string } | null };
 
-  if (profile?.role !== "admin") {
+  if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");
   }
+
+  const isAdmin = profile?.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -40,14 +42,18 @@ export default async function AdminCreateUserPage() {
       <Button variant="ghost" asChild>
         <Link href="/admin/users">
           <ArrowRight className="h-4 w-4 ml-2" />
-          חזרה לרשימת משתמשים
+          {isAdmin ? "חזרה לרשימת משתמשים" : "חזרה לרשימת מתאמנים"}
         </Link>
       </Button>
 
       {/* Page header */}
       <div>
-        <h1 className="text-3xl font-bold mb-2">יצירת משתמש חדש</h1>
-        <p className="text-muted-foreground">הוספת משתמש חדש למערכת</p>
+        <h1 className="text-3xl font-bold mb-2">
+          {isAdmin ? "יצירת משתמש חדש" : "יצירת מתאמן חדש"}
+        </h1>
+        <p className="text-muted-foreground">
+          {isAdmin ? "הוספת משתמש חדש למערכת" : "הוספת מתאמן חדש למערכת"}
+        </p>
       </div>
 
       {/* Form card */}
@@ -55,12 +61,14 @@ export default async function AdminCreateUserPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            פרטי המשתמש
+            {isAdmin ? "פרטי המשתמש" : "פרטי המתאמן"}
           </CardTitle>
-          <CardDescription>הזן את פרטי המשתמש החדש</CardDescription>
+          <CardDescription>
+            {isAdmin ? "הזן את פרטי המשתמש החדש" : "הזן את פרטי המתאמן החדש"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <UserCreateForm />
+          <UserCreateForm isAdmin={isAdmin} />
         </CardContent>
       </Card>
     </div>

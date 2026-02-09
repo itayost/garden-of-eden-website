@@ -23,6 +23,7 @@ import {
   Target,
   Utensils,
   ClipboardCheck,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/admin/nutrition", label: "תזונה", icon: Utensils },
   { href: "/admin/submissions", label: "שאלונים", icon: FileText },
   { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck },
+  { href: "/admin/shifts", label: "שעות עבודה", icon: Clock },
   { href: "/admin/videos", label: "סרטונים", icon: Video },
 ];
 

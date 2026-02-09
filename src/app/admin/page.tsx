@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Video, TrendingUp, Activity, Salad } from "lucide-react";
+import { ShiftStatusCard } from "@/components/admin/shifts/ShiftStatusCard";
+import type { Profile } from "@/types/database";
 
 export const metadata: Metadata = {
   title: "ניהול | Garden of Eden",
@@ -9,6 +11,30 @@ export const metadata: Metadata = {
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
+
+  // Get current user for shift status
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? ((await supabase
+        .from("profiles")
+        .select("role, full_name")
+        .eq("id", user.id)
+        .single()) as { data: Profile | null })
+    : { data: null };
+
+  // Check for active shift (for trainers/admins)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: activeShift } = user
+    ? await (supabase as any)
+        .from("trainer_shifts")
+        .select("id, start_time")
+        .eq("trainer_id", user.id)
+        .is("end_time", null)
+        .maybeSingle()
+    : { data: null };
 
   // Fetch stats
   const [
@@ -87,6 +113,11 @@ export default async function AdminDashboardPage() {
           סקירה כללית של הנתונים במערכת
         </p>
       </div>
+
+      {/* Shift Status Card - shown to trainers and admins */}
+      {(profile?.role === "trainer" || profile?.role === "admin") && (
+        <ShiftStatusCard initialShift={activeShift || null} />
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">

@@ -42,6 +42,7 @@ interface UserDataTableProps {
   initialRole?: string | null;
   initialStatus?: string | null;
   initialShowDeleted?: boolean;
+  isAdmin?: boolean;
 }
 
 /**
@@ -55,6 +56,7 @@ export function UserDataTable({
   initialRole = null,
   initialStatus = null,
   initialShowDeleted = false,
+  isAdmin = true,
 }: UserDataTableProps) {
   const router = useRouter();
 
@@ -140,6 +142,7 @@ export function UserDataTable({
         onRoleChange={handleRoleChange}
         onStatusChange={handleStatusChange}
         onShowDeletedChange={handleShowDeletedChange}
+        isAdmin={isAdmin}
       />
 
       {/* Mobile: Card list */}

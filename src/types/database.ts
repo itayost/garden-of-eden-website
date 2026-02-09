@@ -1011,6 +1011,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      trainer_shifts: {
+        Row: {
+          id: string;
+          trainer_id: string;
+          trainer_name: string;
+          start_time: string;
+          end_time: string | null;
+          auto_ended: boolean;
+          flagged_for_review: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trainer_id: string;
+          trainer_name: string;
+          start_time?: string;
+          end_time?: string | null;
+          auto_ended?: boolean;
+          flagged_for_review?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          trainer_id?: string;
+          trainer_name?: string;
+          start_time?: string;
+          end_time?: string | null;
+          auto_ended?: boolean;
+          flagged_for_review?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       nutrition_recommendations: {
         Row: {
           id: string;
@@ -1081,6 +1117,7 @@ export type PaymentRow = Database["public"]["Tables"]["payments"]["Row"];
 export type PaymentInsert = Database["public"]["Tables"]["payments"]["Insert"];
 export type PaymentUpdate = Database["public"]["Tables"]["payments"]["Update"];
 export type TrainerShiftReport = Database["public"]["Tables"]["trainer_shift_reports"]["Row"];
+export type TrainerShift = Database["public"]["Tables"]["trainer_shifts"]["Row"];
 
 /** Achievement badge types */
 export type AchievementBadgeType =

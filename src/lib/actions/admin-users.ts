@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { userCreateSchema, type CreateUserInput } from "@/lib/validations/user-create";
 import { type CSVUserRow } from "@/lib/validations/user-import";
-import { verifyAdmin } from "@/lib/actions/shared";
+import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID, formatPhoneToInternational } from "@/lib/validations/common";
 
 type ActionResult =
@@ -20,8 +20,8 @@ type ActionResult =
  * - Logs activity
  */
 export async function createUserAction(input: CreateUserInput): Promise<ActionResult> {
-  // 1. Verify admin
-  const { error: authError, user, adminProfile } = await verifyAdmin();
+  // 1. Verify admin or trainer
+  const { error: authError, user, profile: callerProfile } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   // 2. Validate input
@@ -33,7 +33,9 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
     };
   }
 
-  const { full_name, phone, role, email } = validated.data;
+  const { full_name, phone, email } = validated.data;
+  // Trainers can only create trainees
+  const role = callerProfile?.role === "admin" ? validated.data.role : "trainee";
 
   // 3. Format phone to +972 format for Supabase
   const formattedPhone = formatPhoneToInternational(phone);
@@ -86,7 +88,7 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
       user_id: authData.user.id,
       action: "user_created",
       actor_id: user!.id,
-      actor_name: adminProfile?.full_name || "מנהל",
+      actor_name: callerProfile?.full_name || (callerProfile?.role === "admin" ? "מנהל" : "מאמן"),
       changes: [
         { field: "role", old_value: null, new_value: role },
         { field: "full_name", old_value: null, new_value: full_name },
