@@ -15,6 +15,7 @@ import {
   serverErrorResponse,
 } from "@/lib/api/auth";
 import { uploadAvatarImage } from "@/lib/api/storage";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rate-limit";
 
 /**
  * POST /api/images/upload-original
@@ -35,6 +36,14 @@ export async function POST(request: NextRequest) {
     const authResult = await verifyAdminOrTrainer();
     if (!authResult.authorized) {
       return unauthorizedResponse();
+    }
+
+    // 1b. Rate limit check
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const identifier = getRateLimitIdentifier(authResult.userId, ip);
+    const rateLimitResult = await checkRateLimit(identifier, "general");
+    if (rateLimitResult.rateLimited) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     // 2. Parse FormData

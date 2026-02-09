@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { PlayerGoalRow, Profile } from "@/types/database";
+import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
+import type { PlayerGoalRow } from "@/types/database";
 
 /**
  * Get all goals for a player
@@ -11,28 +12,9 @@ export async function getPlayerGoals(
   userId: string,
   options?: { includeAchieved?: boolean }
 ): Promise<PlayerGoalRow[]> {
-  const supabase = await createClient();
-
-  // Verify caller is authenticated
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const { authorized, supabase } = await verifyUserAccess(userId);
+  if (!authorized) {
     return [];
-  }
-
-  // Check authorization: user can access their own goals, or trainer/admin can access any
-  if (user.id !== userId) {
-    const { data: profile } = (await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single()) as { data: Pick<Profile, "role"> | null };
-
-    if (!profile || !["trainer", "admin"].includes(profile.role)) {
-      console.error("Unauthorized access to goals data");
-      return [];
-    }
   }
 
   let query = supabase

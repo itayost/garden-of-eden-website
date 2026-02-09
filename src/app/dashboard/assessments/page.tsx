@@ -19,12 +19,7 @@ import {
   getAgeGroup,
   getAssessmentCompleteness,
 } from "@/types/assessment";
-import {
-  calculateNeutralRatings,
-  calculateCardRatings,
-  calculateGroupStats,
-  getLatestAssessmentsPerUser,
-} from "@/lib/assessment-to-rating";
+import { calculateUserRatings } from "@/lib/utils/calculate-user-ratings";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 import { AssessmentChartsWrapper } from "./AssessmentChartsWrapper";
@@ -58,52 +53,15 @@ export default async function DashboardAssessmentsPage() {
   // Get age group
   const ageGroup = getAgeGroup(profile?.birthdate || null);
 
-  // Calculate ratings and get group assessments
-  let calculatedRatings = null;
-  let groupAssessments: PlayerAssessment[] = [];
-
-  if (assessments && assessments.length > 0) {
-    const latestAssessment = assessments[assessments.length - 1];
-
-    if (ageGroup) {
-      // Fetch all players with same age group for comparison
-      const { data: ageGroupProfiles } = await supabase
-        .from("profiles")
-        .select("id, birthdate")
-        .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null };
-
-      const sameAgeGroupIds = ageGroupProfiles
-        ?.filter((p) => {
-          const pAgeGroup = getAgeGroup(p.birthdate);
-          return pAgeGroup?.id === ageGroup.id;
-        })
-        .map((p) => p.id) || [];
-
-      if (sameAgeGroupIds.length > 0) {
-        const { data: fetchedGroupAssessments } = await supabase
-          .from("player_assessments")
-          .select("*")
-          .in("user_id", sameAgeGroupIds);
-
-        if (fetchedGroupAssessments && fetchedGroupAssessments.length > 0) {
-          groupAssessments = fetchedGroupAssessments as PlayerAssessment[];
-
-          // Filter to only latest assessment per user for fair comparison
-          const latestAssessments = getLatestAssessmentsPerUser(groupAssessments);
-
-          if (latestAssessments.length > 1) {
-            const groupStats = calculateGroupStats(latestAssessments);
-            calculatedRatings = calculateCardRatings(latestAssessment, groupStats);
-          }
-        }
-      }
-    }
-
-    // Fallback to neutral ratings (50) if no group comparison available
-    if (!calculatedRatings) {
-      calculatedRatings = calculateNeutralRatings();
-    }
-  }
+  // Calculate FIFA-style ratings from assessments with age-group comparison
+  const userRatings = await calculateUserRatings(
+    user.id,
+    assessments || [],
+    profile?.birthdate || null,
+    supabase
+  );
+  const calculatedRatings = userRatings?.ratings ?? null;
+  const groupAssessments = userRatings?.groupAssessments ?? [];
 
   // Helper functions
   const formatValue = (key: string, value: number | null) => {

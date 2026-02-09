@@ -1,12 +1,11 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
 import type {
   NutritionData,
   TraineeMealPlanRow,
   NutritionRecommendationRow,
 } from "../../types";
-import type { Profile } from "@/types/database";
 import { aggregateSleepDataByMonth } from "../utils/sleep-analytics";
 
 const EMPTY_NUTRITION_DATA: NutritionData = {
@@ -20,27 +19,9 @@ const EMPTY_NUTRITION_DATA: NutritionData = {
  * Caller must be the user themselves or an admin/trainer.
  */
 export async function getNutritionData(userId: string): Promise<NutritionData> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const { authorized, supabase } = await verifyUserAccess(userId);
+  if (!authorized) {
     return EMPTY_NUTRITION_DATA;
-  }
-
-  // Allow self-access or admin/trainer access
-  if (user.id !== userId) {
-    const { data: profile } = (await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single()) as { data: Pick<Profile, "role"> | null };
-
-    if (!profile || !["trainer", "admin"].includes(profile.role)) {
-      return EMPTY_NUTRITION_DATA;
-    }
   }
 
   const [

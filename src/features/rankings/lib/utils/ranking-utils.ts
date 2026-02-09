@@ -1,7 +1,7 @@
 // Ranking Utility Functions
 
 import type { PlayerAssessment } from "@/types/assessment";
-import { calculatePercentile } from "@/features/progress-charts/lib/utils";
+import { calculatePercentile } from "@/lib/utils/math";
 import type { RankingEntry, GroupStatistics, DistributionBin } from "../../types";
 
 // ===========================================

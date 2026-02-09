@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { typedFrom } from "@/lib/supabase/helpers";
 import type { TrainerShift, Profile } from "@/types/database";
 import { TrainerShiftsView } from "@/components/admin/shifts/TrainerShiftsView";
 
@@ -48,9 +49,7 @@ export default async function AdminShiftsPage({
   const endDate = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
 
   // Fetch shifts for the month
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
-    .from("trainer_shifts")
+  let query = typedFrom(supabase, "trainer_shifts")
     .select("*")
     .gte("start_time", startDate)
     .lte("start_time", endDate)

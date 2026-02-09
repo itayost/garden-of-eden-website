@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/utils/uuid";
 import {
   Card,
@@ -126,9 +127,7 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
   }
 
   // Fetch report
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: report } = await (supabase as any)
-    .from("trainer_shift_reports")
+  const { data: report } = await typedFrom(supabase, "trainer_shift_reports")
     .select("*")
     .eq("id", id)
     .single() as { data: TrainerShiftReport | null };

@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { UserAchievementRow, Profile } from "@/types/database";
+import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
+import type { UserAchievementRow } from "@/types/database";
 import type { AchievementWithDisplay } from "../../types";
 import { enrichAchievement } from "../utils/achievement-utils";
 
@@ -12,28 +13,9 @@ import { enrichAchievement } from "../utils/achievement-utils";
 export async function getUserAchievements(
   userId: string
 ): Promise<AchievementWithDisplay[]> {
-  const supabase = await createClient();
-
-  // Verify caller is authenticated
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const { authorized, supabase } = await verifyUserAccess(userId);
+  if (!authorized) {
     return [];
-  }
-
-  // Check authorization: user can access their own achievements, or trainer/admin can access any
-  if (user.id !== userId) {
-    const { data: profile } = (await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single()) as { data: Pick<Profile, "role"> | null };
-
-    if (!profile || !["trainer", "admin"].includes(profile.role)) {
-      console.error("Unauthorized access to achievements data");
-      return [];
-    }
   }
 
   const { data, error } = await supabase

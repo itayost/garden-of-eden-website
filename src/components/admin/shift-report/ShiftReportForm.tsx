@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
+import { typedFrom } from "@/lib/supabase/helpers";
 import {
   shiftReportSchema,
   type ShiftReportFormData,
@@ -140,18 +141,14 @@ export function ShiftReportForm({
 
       if (reportId) {
         // Update existing report
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any)
-          .from("trainer_shift_reports")
+        const { error } = await typedFrom(supabase, "trainer_shift_reports")
           .update(reportData)
           .eq("id", reportId);
 
         if (error) throw error;
       } else {
         // Create new report
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: newReport, error } = await (supabase as any)
-          .from("trainer_shift_reports")
+        const { data: newReport, error } = await typedFrom(supabase, "trainer_shift_reports")
           .insert(reportData)
           .select("id")
           .single();

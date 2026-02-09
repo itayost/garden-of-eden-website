@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
+import { typedFrom } from "@/lib/supabase/helpers";
 import {
   onboardingSchema,
   type OnboardingData,
@@ -71,9 +72,7 @@ export function ProfileCompletionForm({
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await (supabase as any)
-        .from("profiles")
+      const { error: updateError } = await typedFrom(supabase, "profiles")
         .update({
           birthdate: data.birthdate,
           position: data.position || null,

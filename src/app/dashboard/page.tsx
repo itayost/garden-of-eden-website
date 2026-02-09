@@ -19,7 +19,7 @@ import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getAgeGroup } from "@/types/assessment";
-import { calculateCardRatings, calculateNeutralRatings, calculateGroupStats, getLatestAssessmentsPerUser } from "@/lib/assessment-to-rating";
+import { calculateUserRatings } from "@/lib/utils/calculate-user-ratings";
 import { MiniRatingChartWrapper } from "./MiniRatingChartWrapper";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
@@ -68,52 +68,16 @@ export default async function DashboardPage() {
 
   const hasCompletedNutrition = !!nutritionForm;
 
-  // Get age group and fetch group assessments for percentile calculations
+  // Calculate age group and FIFA-style ratings from assessments
   const ageGroup = getAgeGroup(profile?.birthdate || null);
-  let groupAssessments: PlayerAssessment[] = [];
-  let calculatedRatings = null;
-
-  if (assessments && assessments.length > 0) {
-    const latestAssessment = assessments[assessments.length - 1];
-
-    if (ageGroup) {
-      const { data: ageGroupProfiles } = await supabase
-        .from("profiles")
-        .select("id, birthdate")
-        .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null };
-
-      const sameAgeGroupIds = ageGroupProfiles
-        ?.filter((p) => {
-          const pAgeGroup = getAgeGroup(p.birthdate);
-          return pAgeGroup?.id === ageGroup.id;
-        })
-        .map((p) => p.id) || [];
-
-      if (sameAgeGroupIds.length > 0) {
-        const { data: fetchedGroupAssessments } = await supabase
-          .from("player_assessments")
-          .select("*")
-          .in("user_id", sameAgeGroupIds);
-
-        if (fetchedGroupAssessments && fetchedGroupAssessments.length > 0) {
-          groupAssessments = fetchedGroupAssessments as PlayerAssessment[];
-
-          // Filter to only latest assessment per user for fair comparison
-          const latestAssessments = getLatestAssessmentsPerUser(groupAssessments);
-
-          if (latestAssessments.length > 1) {
-            const groupStats = calculateGroupStats(latestAssessments);
-            calculatedRatings = calculateCardRatings(latestAssessment, groupStats);
-          }
-        }
-      }
-    }
-
-    // Fallback to neutral ratings (50) if no group comparison available
-    if (!calculatedRatings) {
-      calculatedRatings = calculateNeutralRatings();
-    }
-  }
+  const userRatings = await calculateUserRatings(
+    user.id,
+    assessments || [],
+    profile?.birthdate || null,
+    supabase
+  );
+  const calculatedRatings = userRatings?.ratings ?? null;
+  const groupAssessments = userRatings?.groupAssessments ?? [];
 
   const quickActions = [
     {

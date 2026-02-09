@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { typedFrom } from "@/lib/supabase/helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Video, TrendingUp, Activity, Salad } from "lucide-react";
 import { ShiftStatusCard } from "@/components/admin/shifts/ShiftStatusCard";
@@ -26,10 +27,8 @@ export default async function AdminDashboardPage() {
     : { data: null };
 
   // Check for active shift (for trainers/admins)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: activeShift } = user
-    ? await (supabase as any)
-        .from("trainer_shifts")
+    ? await typedFrom(supabase, "trainer_shifts")
         .select("id, start_time")
         .eq("trainer_id", user.id)
         .is("end_time", null)

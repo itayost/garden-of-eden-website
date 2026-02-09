@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { typedFrom } from "@/lib/supabase/helpers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, FileText, Salad, ClipboardCheck } from "lucide-react";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm, TrainerShiftReport } from "@/types/database";
@@ -43,9 +44,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
       .select("*")
       .order("submitted_at", { ascending: false })
       .limit(1000) as unknown as { data: NutritionForm[] | null },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any)
-      .from("trainer_shift_reports")
+    typedFrom(supabase, "trainer_shift_reports")
       .select("*")
       .order("report_date", { ascending: false })
       .limit(1000) as unknown as { data: TrainerShiftReport[] | null },

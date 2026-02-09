@@ -3,9 +3,26 @@
  *
  * These helpers exist because Supabase's generated types don't support dynamic table names.
  * Using `as any` in a centralized location is cleaner than scattering it across the codebase.
+ *
+ * Use `typedFrom()` for read queries (select, filter, etc.)
+ * Use the named helpers for write operations (insert, update, upsert)
  */
 
 import { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * Type-safe wrapper around supabase.from() for tables not in generated types.
+ * Centralizes the single `as any` cast so callers stay clean.
+ *
+ * Usage: `const { data } = await typedFrom(supabase, "my_table").select("*").eq("id", id).single();`
+ *
+ * When Supabase types are generated, update this single function instead of every call site.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function typedFrom(supabase: SupabaseClient, table: string): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (supabase as any).from(table);
+}
 
 /**
  * Insert data into a Supabase table dynamically
@@ -19,8 +36,7 @@ export async function insertIntoTable(
   table: string,
   data: Record<string, unknown>
 ): Promise<{ error: Error | null }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from(table).insert(data);
+  const { error } = await typedFrom(supabase, table).insert(data);
   return { error };
 }
 
@@ -36,8 +52,7 @@ export async function insertAndSelect<T>(
   table: string,
   data: Record<string, unknown>
 ): Promise<{ data: T | null; error: Error | null }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await (supabase as any).from(table).insert(data).select().single();
+  const result = await typedFrom(supabase, table).insert(data).select().single();
   return { data: result.data as T | null, error: result.error };
 }
 
@@ -57,8 +72,7 @@ export async function updateInTable(
   column: string,
   value: string | number
 ): Promise<{ error: Error | null }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from(table).update(data).eq(column, value);
+  const { error } = await typedFrom(supabase, table).update(data).eq(column, value);
   return { error };
 }
 
@@ -74,7 +88,6 @@ export async function upsertIntoTable(
   table: string,
   data: Record<string, unknown>
 ): Promise<{ error: Error | null }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from(table).upsert(data);
+  const { error } = await typedFrom(supabase, table).upsert(data);
   return { error };
 }

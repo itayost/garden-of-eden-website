@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { verifyAdmin, verifyAdminOrTrainer } from "./shared/verify-admin";
 import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
+import { isValidUUID } from "@/lib/validations/common";
 
 const MAX_SHIFT_HOURS = 12;
 
@@ -140,6 +141,8 @@ export async function checkAndAutoEndShiftAction(): Promise<{
 export async function adminEndShiftAction(
   shiftId: string
 ): Promise<ActionResult> {
+  if (!isValidUUID(shiftId)) return { error: "מזהה משמרת לא תקין" };
+
   const { error } = await verifyAdmin();
   if (error) return { error };
 
@@ -175,6 +178,8 @@ export async function adminEndShiftAction(
 export async function markShiftReviewedAction(
   shiftId: string
 ): Promise<ActionResult> {
+  if (!isValidUUID(shiftId)) return { error: "מזהה משמרת לא תקין" };
+
   const { error } = await verifyAdmin();
   if (error) return { error };
 
@@ -194,6 +199,8 @@ export async function markShiftReviewedAction(
 export async function deleteShiftAction(
   shiftId: string
 ): Promise<ActionResult> {
+  if (!isValidUUID(shiftId)) return { error: "מזהה משמרת לא תקין" };
+
   const { error } = await verifyAdmin();
   if (error) return { error };
 

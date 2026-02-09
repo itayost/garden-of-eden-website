@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
+import { typedFrom } from "@/lib/supabase/helpers";
 import {
   assessmentSchema,
   type AssessmentFormData,
@@ -125,19 +126,14 @@ export function AssessmentForm({
 
       if (assessmentId) {
         // Update existing assessment
-        // Type workaround: Supabase client type resolution issue with player_assessments table
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any)
-          .from("player_assessments")
+        const { error } = await typedFrom(supabase, "player_assessments")
           .update(assessmentData)
           .eq("id", assessmentId);
 
         if (error) throw error;
       } else {
         // Create new assessment (first step)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: newAssessment, error } = await (supabase as any)
-          .from("player_assessments")
+        const { data: newAssessment, error } = await typedFrom(supabase, "player_assessments")
           .insert(assessmentData)
           .select("id")
           .single();

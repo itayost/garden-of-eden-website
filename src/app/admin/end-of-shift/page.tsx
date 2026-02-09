@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { typedFrom } from "@/lib/supabase/helpers";
 import { ShiftReportForm } from "@/components/admin/shift-report/ShiftReportForm";
 import type { TrainerShiftReport } from "@/types/database";
 
@@ -29,9 +30,7 @@ export default async function EndOfShiftPage() {
   const today = new Date().toISOString().split("T")[0];
 
   // Check for existing report today
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existingReport } = await (supabase as any)
-    .from("trainer_shift_reports")
+  const { data: existingReport } = await typedFrom(supabase, "trainer_shift_reports")
     .select("*")
     .eq("trainer_id", user.id)
     .eq("report_date", today)

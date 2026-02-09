@@ -69,25 +69,8 @@ export function formatHebrewDate(dateStr: string, format: "short" | "long" = "sh
 // PERCENTILE UTILITIES
 // ===========================================
 
-/**
- * Calculate percentile for a value in a group
- * Returns 0-100 where higher = better (top of group)
- */
-export function calculatePercentile(
-  value: number,
-  allValues: number[],
-  lowerIsBetter: boolean
-): number {
-  if (allValues.length === 0) return 50;
-
-  // Count how many are worse than this value
-  const worseCount = allValues.filter((v) =>
-    lowerIsBetter ? v > value : v < value
-  ).length;
-
-  // Percentile = (number of worse values / total) * 100
-  return Math.round((worseCount / allValues.length) * 100);
-}
+// Re-export from shared math utils (canonical location)
+export { calculatePercentile } from "@/lib/utils/math";
 
 /**
  * Format percentile for display
