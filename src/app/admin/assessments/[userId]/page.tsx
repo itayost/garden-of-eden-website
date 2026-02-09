@@ -5,7 +5,7 @@ import { isValidUUID } from "@/lib/utils/uuid";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Plus, Calendar, Target } from "lucide-react";
+import { ArrowRight, Plus, Calendar, Target, Pencil } from "lucide-react";
 import { PlayerCard } from "@/components/player-card/PlayerCard";
 import { DeleteAssessmentDialog } from "@/components/admin/assessments/DeleteAssessmentDialog";
 import {
@@ -291,6 +291,12 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
                         <Badge variant={completeness >= 80 ? "default" : "secondary"}>
                           {completeness}% מלא
                         </Badge>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/admin/assessments/${userId}/${a.id}/edit`}>
+                            <Pencil className="h-4 w-4 ml-1" />
+                            {completeness < 100 ? "השלם" : "ערוך"}
+                          </Link>
+                        </Button>
                         <DeleteAssessmentDialog
                           assessmentId={a.id}
                           assessmentDate={a.assessment_date}

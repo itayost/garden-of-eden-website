@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ClipboardList, Users, Calendar } from "lucide-react";
+import { Plus, ClipboardList, Users, Calendar, Pencil } from "lucide-react";
 import { getAssessmentCompleteness, getAgeGroup } from "@/types/assessment";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
@@ -36,6 +36,7 @@ export default async function AdminAssessmentsPage() {
   const { data: assessments } = await supabase
     .from("player_assessments")
     .select("*")
+    .is("deleted_at", null)
     .order("assessment_date", { ascending: false }) as unknown as { data: PlayerAssessment[] | null };
 
   // Group assessments by user
@@ -152,12 +153,21 @@ export default async function AdminAssessmentsPage() {
                             צפייה
                           </Link>
                         </Button>
-                        <Button asChild size="sm" className="flex-1">
-                          <Link href={`/admin/assessments/${profile.id}/new`}>
-                            <Plus className="h-4 w-4 ml-1" />
-                            מבדק חדש
-                          </Link>
-                        </Button>
+                        {latestAssessment && completeness < 100 ? (
+                          <Button asChild size="sm" className="flex-1">
+                            <Link href={`/admin/assessments/${profile.id}/${latestAssessment.id}/edit`}>
+                              <Pencil className="h-4 w-4 ml-1" />
+                              השלם מבדק
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button asChild size="sm" className="flex-1">
+                            <Link href={`/admin/assessments/${profile.id}/new`}>
+                              <Plus className="h-4 w-4 ml-1" />
+                              מבדק חדש
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
@@ -238,12 +248,21 @@ export default async function AdminAssessmentsPage() {
                                   צפייה
                                 </Link>
                               </Button>
-                              <Button asChild size="sm">
-                                <Link href={`/admin/assessments/${profile.id}/new`}>
-                                  <Plus className="h-4 w-4 ml-1" />
-                                  מבדק חדש
-                                </Link>
-                              </Button>
+                              {latestAssessment && completeness < 100 ? (
+                                <Button asChild size="sm">
+                                  <Link href={`/admin/assessments/${profile.id}/${latestAssessment.id}/edit`}>
+                                    <Pencil className="h-4 w-4 ml-1" />
+                                    השלם מבדק
+                                  </Link>
+                                </Button>
+                              ) : (
+                                <Button asChild size="sm">
+                                  <Link href={`/admin/assessments/${profile.id}/new`}>
+                                    <Plus className="h-4 w-4 ml-1" />
+                                    מבדק חדש
+                                  </Link>
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
