@@ -4,14 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createClient } from "@/lib/supabase/client";
-import { updateInTable, insertIntoTable } from "@/lib/supabase/helpers";
+import { updateUserAction } from "@/lib/actions/admin-users";
 import {
   userEditSchema,
   type UserEditFormData,
   getUserEditDefaults,
-  getFieldChanges,
-  getActionType,
 } from "@/lib/validations/user-edit";
 import {
   Form,
@@ -54,91 +51,18 @@ export function UserEditForm({ user, currentUserRole }: UserEditFormProps) {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
+      const result = await updateUserAction(user.id, data);
 
-      if (!currentUser) {
-        toast.error("נא להתחבר מחדש");
+      if ("error" in result) {
+        toast.error(result.error);
         return;
       }
 
-      // Get current admin profile for logging
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: adminProfile, error: profileError } = await (supabase as any)
-        .from("profiles")
-        .select("full_name, role")
-        .eq("id", currentUser.id)
-        .single();
-
-      if (profileError) {
-        console.error("Failed to fetch admin profile:", profileError);
-        toast.error("שגיאה בטעינת פרופיל המשתמש");
-        return;
+      if (result.message) {
+        toast.info(result.message);
+      } else {
+        toast.success("המשתמש עודכן בהצלחה!");
       }
-
-      if (adminProfile?.role !== "admin") {
-        toast.error("אין הרשאה לעדכן משתמש");
-        return;
-      }
-
-      // Detect changes for activity log
-      const changes = getFieldChanges(user, data);
-
-      if (changes.length === 0) {
-        toast.info("לא בוצעו שינויים");
-        return;
-      }
-
-      // Prevent self-modification of role or is_active
-      if (user.id === currentUser.id) {
-        const roleChanged = changes.some((c) => c.field === "role");
-        const statusChanged = changes.some((c) => c.field === "is_active");
-
-        if (roleChanged || statusChanged) {
-          toast.error("לא ניתן לשנות את התפקיד או הסטטוס של עצמך");
-          return;
-        }
-      }
-
-      // Prepare update data, handling empty strings
-      const updateData = {
-        full_name: data.full_name,
-        phone: data.phone || null,
-        birthdate: data.birthdate || null,
-        role: data.role,
-        is_active: data.is_active,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Update profile using helper
-      const { error: updateError } = await updateInTable(
-        supabase,
-        "profiles",
-        updateData,
-        "id",
-        user.id
-      );
-
-      if (updateError) throw updateError;
-
-      // Log activity
-      const actionType = getActionType(changes);
-      const { error: logError } = await insertIntoTable(supabase, "activity_logs", {
-        user_id: user.id,
-        action: actionType,
-        actor_id: currentUser.id,
-        actor_name: adminProfile?.full_name || "מנהל",
-        changes: changes,
-      });
-
-      if (logError) {
-        console.error("Failed to log activity:", logError);
-        // Don't fail the entire operation, but log it
-      }
-
-      toast.success("המשתמש עודכן בהצלחה!");
       router.refresh();
     } catch (error) {
       console.error("Update error:", error);
