@@ -12,6 +12,7 @@ import {
   clockOutAction,
   checkAndAutoEndShiftAction,
 } from "@/lib/actions/trainer-shifts";
+import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
 
 interface ShiftStatusCardProps {
   initialShift: { id: string; start_time: string } | null;
@@ -38,7 +39,16 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
   const [elapsed, setElapsed] = useState(
     initialShift ? formatElapsed(initialShift.start_time) : ""
   );
+  const [isSaturday, setIsSaturday] = useState(false);
   const router = useRouter();
+
+  // Check Saturday status on mount and every minute
+  useEffect(() => {
+    const check = () => setIsSaturday(isSaturdayInIsrael());
+    check();
+    const interval = setInterval(check, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Sync local state when server data changes (after router.refresh)
   useEffect(() => {
@@ -159,6 +169,16 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
                 )}
                 סיים משמרת
               </Button>
+            ) : isSaturday ? (
+              <div className="text-center">
+                <Button disabled size="lg" className="min-w-[140px]" variant="secondary">
+                  <PlayCircle className="h-4 w-4 ml-2" />
+                  התחל משמרת
+                </Button>
+                <p className="text-sm text-muted-foreground mt-2">
+                  לא ניתן להתחיל משמרת בשבת
+                </p>
+              </div>
             ) : (
               <Button
                 onClick={handleClockIn}

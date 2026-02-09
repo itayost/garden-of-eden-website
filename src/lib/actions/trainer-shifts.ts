@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { verifyAdmin, verifyAdminOrTrainer } from "./shared/verify-admin";
+import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
 
 const MAX_SHIFT_HOURS = 12;
 
@@ -16,11 +17,15 @@ export async function clockInAction(): Promise<ActionResult> {
   const user = result.user!;
   const profile = result.profile!;
 
+  // Block clock-in on Saturday (Israel time)
+  if (isSaturdayInIsrael()) {
+    return { error: "לא ניתן להתחיל משמרת בשבת" };
+  }
+
   const supabase = await createClient();
 
   // Check for existing active shift
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existingShift } = await (supabase as any)
+  const { data: existingShift } = await supabase
     .from("trainer_shifts")
     .select("id")
     .eq("trainer_id", user.id)
@@ -31,8 +36,7 @@ export async function clockInAction(): Promise<ActionResult> {
     return { error: "כבר יש לך משמרת פעילה" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertError } = await (supabase as any)
+  const { error: insertError } = await supabase
     .from("trainer_shifts")
     .insert({
       trainer_id: user.id,
@@ -55,8 +59,7 @@ export async function clockOutAction(): Promise<ActionResult> {
 
   const supabase = await createClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: activeShift, error: fetchError } = await (supabase as any)
+  const { data: activeShift, error: fetchError } = await supabase
     .from("trainer_shifts")
     .select("id, start_time")
     .eq("trainer_id", user.id)
@@ -73,8 +76,7 @@ export async function clockOutAction(): Promise<ActionResult> {
     (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
   const flagForReview = hoursDiff > MAX_SHIFT_HOURS;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (supabase as any)
+  const { error: updateError } = await supabase
     .from("trainer_shifts")
     .update({
       end_time: now.toISOString(),
@@ -102,8 +104,7 @@ export async function checkAndAutoEndShiftAction(): Promise<{
 
   const supabase = await createClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: activeShift } = await (supabase as any)
+  const { data: activeShift } = await supabase
     .from("trainer_shifts")
     .select("id, start_time")
     .eq("trainer_id", user.id)
@@ -120,8 +121,7 @@ export async function checkAndAutoEndShiftAction(): Promise<{
     (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
 
   if (hoursDiff >= MAX_SHIFT_HOURS) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    await supabase
       .from("trainer_shifts")
       .update({
         end_time: now.toISOString(),
@@ -146,8 +146,7 @@ export async function adminEndShiftAction(
   const supabase = await createClient();
 
   // Verify shift exists and is active
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: shift } = await (supabase as any)
+  const { data: shift } = await supabase
     .from("trainer_shifts")
     .select("id, end_time")
     .eq("id", shiftId)
@@ -156,8 +155,7 @@ export async function adminEndShiftAction(
   if (!shift) return { error: "משמרת לא נמצאה" };
   if (shift.end_time) return { error: "המשמרת כבר הסתיימה" };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (supabase as any)
+  const { error: updateError } = await supabase
     .from("trainer_shifts")
     .update({
       end_time: new Date().toISOString(),
@@ -182,8 +180,7 @@ export async function markShiftReviewedAction(
 
   const supabase = await createClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (supabase as any)
+  const { error: updateError } = await supabase
     .from("trainer_shifts")
     .update({ flagged_for_review: false })
     .eq("id", shiftId);
@@ -202,8 +199,7 @@ export async function deleteShiftAction(
 
   const supabase = await createClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: deleteError } = await (supabase as any)
+  const { error: deleteError } = await supabase
     .from("trainer_shifts")
     .delete()
     .eq("id", shiftId);
