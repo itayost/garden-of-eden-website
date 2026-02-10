@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   SleepChart,
-  MealPlanDisplay,
+  MealPlanPdfViewer,
   NutritionRecommendations,
   getNutritionData,
 } from "@/features/nutrition";
@@ -72,9 +72,7 @@ export default async function NutritionPage() {
         <>
           <SleepChart data={nutritionData.sleepData} />
 
-          <MealPlanDisplay
-            mealPlan={nutritionData.mealPlan?.meal_plan ?? null}
-          />
+          <MealPlanPdfViewer mealPlan={nutritionData.mealPlan} />
 
           <NutritionRecommendations
             recommendation={nutritionData.recommendation}

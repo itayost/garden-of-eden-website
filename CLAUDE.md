@@ -89,7 +89,7 @@ src/
 ### Server Actions
 - All server actions use `"use server"` directive
 - Admin-only actions call `verifyAdmin()` from `src/lib/actions/shared/`
-- Trainer-accessible actions call `verifyAdminOrTrainer()` from the same module
+- Trainer-accessible actions call `verifyAdminOrTrainer()` from the same module — returns discriminated union `{ error, user, profile }`; after early-return on `error`, use `user!` for TS narrowing
 - Feature actions accessing user data call `verifyUserAccess(userId)` from `src/lib/actions/shared/`
 - Actions live in `src/lib/actions/` or inside `src/features/<name>/lib/actions/`
 - Large action files are split into focused files (e.g., `admin-users-create.ts`, `admin-users-update.ts`) with a barrel re-export in the original file
@@ -110,6 +110,7 @@ src/
   - `createAdminClient()` from `lib/supabase/admin.ts` — service role, bypasses RLS
 - DB helper utilities in `lib/supabase/helpers.ts`: `insertIntoTable`, `insertAndSelect`, `updateInTable`, `upsertIntoTable`
 - `typedFrom(supabase, "table_name")` from `lib/supabase/helpers.ts` — use instead of `(supabase as any).from()` for tables not in generated types
+- Supabase Storage: `avatars` bucket (public) stores all uploads — avatars, meal plan PDFs, etc. Path pattern: `{userId}/{type}/{timestamp}.{ext}`
 
 ### Components
 - UI primitives based on shadcn/ui (Radix + Tailwind)
@@ -134,6 +135,7 @@ src/
 - Never expose Supabase service role key to the client
 - All admin endpoints must verify role before proceeding
 - Rate limiting via Upstash Redis on sensitive endpoints
+- File upload API routes follow pattern in `src/app/api/images/` — FormData, auth check, rate limit, validate, upload via `uploadToStorage()`, return URL
 - Security headers configured in `next.config.ts` (X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy, Permissions-Policy)
 - Startup env validation in `src/lib/env.ts` (called via `src/instrumentation.ts`)
 - UUID validation via `isValidUUID()` from `src/lib/validations/common.ts` — use on all action params that accept IDs
@@ -166,6 +168,7 @@ CRON_SECRET                    # Protects /api/cron/* endpoints
 - **Migration numbering**: Older migrations use `001_` prefix, newer ones use Supabase timestamp format. Both work — don't renumber old ones.
 - **`"use client"` boundary**: Radix UI components require client-side rendering. If a page only needs a small interactive part, extract it into a client component and keep the page as a server component.
 - **Testing**: No mock-based tests — the project has real data in Supabase. Existing tests cover pure utility functions only (validations, ranking-utils, webhook-security).
+- **Nutrition meal plans**: `trainee_meal_plans` table supports PDF upload (`pdf_url`, `pdf_path` columns). The old JSONB `meal_plan` column is nullable and unused for new entries.
 
 ## Claude Code Automations
 

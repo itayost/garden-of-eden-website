@@ -29,7 +29,9 @@ export type WeeklyMealPlan = Record<DayOfWeek, DayMealPlan>;
 export interface TraineeMealPlanRow {
   id: string;
   user_id: string;
-  meal_plan: WeeklyMealPlan;
+  meal_plan: WeeklyMealPlan | null;
+  pdf_url: string | null;
+  pdf_path: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

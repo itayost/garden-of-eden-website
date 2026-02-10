@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { Profile } from "@/types/database";
 import { getNutritionData, SleepChart } from "@/features/nutrition";
-import { MealPlanForm } from "@/components/admin/nutrition/MealPlanForm";
+import { MealPlanPdfUpload } from "@/components/admin/nutrition/MealPlanPdfUpload";
 import { RecommendationForm } from "@/components/admin/nutrition/RecommendationForm";
 
 interface PageProps {
@@ -51,7 +51,7 @@ export default async function AdminTraineeNutritionPage({
 
       <SleepChart data={nutritionData.sleepData} />
 
-      <MealPlanForm
+      <MealPlanPdfUpload
         userId={userId}
         existingPlan={nutritionData.mealPlan}
       />

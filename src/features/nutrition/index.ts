@@ -27,12 +27,15 @@ export {
 // Server Actions
 export { getNutritionData } from "./lib/actions/get-nutrition-data";
 export { upsertMealPlan } from "./lib/actions/upsert-meal-plan";
+export { upsertMealPlanPdf } from "./lib/actions/upsert-meal-plan-pdf";
+export { deleteMealPlanPdf } from "./lib/actions/delete-meal-plan-pdf";
 export { upsertRecommendation } from "./lib/actions/upsert-recommendation";
 
 // Components
 export {
   SleepChart,
   MealPlanDisplay,
+  MealPlanPdfViewer,
   NutritionRecommendations,
   NutritionMeetingBanner,
 } from "./components";
