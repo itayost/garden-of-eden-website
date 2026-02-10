@@ -37,7 +37,7 @@ export default async function AdminVideosPage() {
     .single()) as { data: { role: string } | null };
 
   if (currentProfile?.role !== "admin") {
-    redirect("/dashboard");
+    redirect("/admin");
   }
 
   // Fetch all workout videos ordered by day_number and order_index

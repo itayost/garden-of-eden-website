@@ -33,7 +33,7 @@ export default async function AdminLayout({
       <main className="container mx-auto px-4 pt-8 pb-20 md:pb-8">
         {children}
       </main>
-      <AdminBottomNav />
+      <AdminBottomNav isAdmin={profile?.role === "admin"} />
     </div>
   );
 }

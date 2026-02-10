@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import { TableToolbar } from "@/components/admin/TableToolbar";
 import {
   Table,
@@ -166,16 +167,12 @@ export function TrainerShiftsView({
   };
 
   const handleDelete = async (shiftId: string) => {
-    if (!confirm("האם אתה בטוח שברצונך למחוק משמרת זו?")) return;
-    setActionLoading(shiftId);
     const result = await deleteShiftAction(shiftId);
     if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("המשמרת נמחקה");
-      router.refresh();
+      return { error: result.error };
     }
-    setActionLoading(null);
+    router.refresh();
+    return { success: true as const };
   };
 
   const totalHours = summaries.reduce((sum, s) => sum + s.totalMinutes, 0);
@@ -347,20 +344,23 @@ export function TrainerShiftsView({
                                   סמן כנבדק
                                 </Button>
                               )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDelete(shift.id)}
-                                disabled={actionLoading === shift.id}
-                                className="text-xs h-7 text-destructive hover:text-destructive"
-                              >
-                                {actionLoading === shift.id ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-3 w-3" />
-                                )}
-                                מחק
-                              </Button>
+                              <DeleteConfirmDialog
+                                title="מחיקת משמרת"
+                                description="האם אתה בטוח שברצונך למחוק משמרת זו? פעולה זו אינה הפיכה."
+                                successMessage="המשמרת נמחקה"
+                                errorMessage="שגיאה במחיקת המשמרת"
+                                onDelete={() => handleDelete(shift.id)}
+                                trigger={
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs h-7 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    מחק
+                                  </Button>
+                                }
+                              />
                             </div>
                           )}
                         </div>
@@ -481,22 +481,23 @@ export function TrainerShiftsView({
                                       )}
                                     </Button>
                                   )}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(shift.id);
-                                    }}
-                                    disabled={actionLoading === shift.id}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    {actionLoading === shift.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-3 w-3" />
-                                    )}
-                                  </Button>
+                                  <DeleteConfirmDialog
+                                    title="מחיקת משמרת"
+                                    description="האם אתה בטוח שברצונך למחוק משמרת זו? פעולה זו אינה הפיכה."
+                                    successMessage="המשמרת נמחקה"
+                                    errorMessage="שגיאה במחיקת המשמרת"
+                                    onDelete={() => handleDelete(shift.id)}
+                                    trigger={
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    }
+                                  />
                                 </div>
                               </TableCell>
                             )}

@@ -30,14 +30,14 @@ import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
 
 const navItems = [
-  { href: "/admin", label: "דשבורד", icon: LayoutDashboard },
-  { href: "/admin/users", label: "משתמשים", icon: Users },
-  { href: "/admin/assessments", label: "מבדקים", icon: Target },
-  { href: "/admin/nutrition", label: "תזונה", icon: Utensils },
-  { href: "/admin/submissions", label: "שאלונים", icon: FileText },
-  { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck },
-  { href: "/admin/shifts", label: "שעות עבודה", icon: Clock },
-  { href: "/admin/videos", label: "סרטונים", icon: Video },
+  { href: "/admin", label: "דשבורד", icon: LayoutDashboard, adminOnly: false },
+  { href: "/admin/users", label: "משתמשים", icon: Users, adminOnly: false },
+  { href: "/admin/assessments", label: "מבדקים", icon: Target, adminOnly: false },
+  { href: "/admin/nutrition", label: "תזונה", icon: Utensils, adminOnly: false },
+  { href: "/admin/submissions", label: "שאלונים", icon: FileText, adminOnly: false },
+  { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, adminOnly: false },
+  { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, adminOnly: false },
+  { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: true },
 ];
 
 interface AdminNavProps {
@@ -69,9 +69,15 @@ export function AdminNav({ user, profile }: AdminNavProps) {
     return pathname.startsWith(href);
   };
 
+  const isAdmin = profile?.role === "admin";
+
+  const visibleNavItems = navItems.filter(
+    (item) => !item.adminOnly || isAdmin
+  );
+
   const NavLinks = () => (
     <>
-      {navItems.map((item) => (
+      {visibleNavItems.map((item) => (
         <Link
           key={item.href}
           href={item.href}

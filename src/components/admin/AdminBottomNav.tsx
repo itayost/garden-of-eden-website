@@ -26,17 +26,25 @@ const mainItems: BottomNavItem[] = [
 ];
 
 const moreItems = [
-  { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck },
-  { href: "/admin/shifts", label: "שעות עבודה", icon: Clock },
-  { href: "/admin/nutrition", label: "תזונה", icon: Utensils },
-  { href: "/admin/videos", label: "סרטונים", icon: Video },
+  { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, adminOnly: false },
+  { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, adminOnly: false },
+  { href: "/admin/nutrition", label: "תזונה", icon: Utensils, adminOnly: false },
+  { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: true },
 ];
 
-export function AdminBottomNav() {
+interface AdminBottomNavProps {
+  isAdmin?: boolean;
+}
+
+export function AdminBottomNav({ isAdmin = false }: AdminBottomNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const moreActive = moreItems.some(
+  const visibleMoreItems = moreItems.filter(
+    (item) => !item.adminOnly || isAdmin
+  );
+
+  const moreActive = visibleMoreItems.some(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
   );
 
@@ -59,7 +67,7 @@ export function AdminBottomNav() {
           <SheetContent side="bottom" className="rounded-t-2xl pb-safe">
             <SheetTitle className="sr-only">תפריט נוסף</SheetTitle>
             <nav className="flex flex-col gap-1 pt-2">
-              {moreItems.map((item) => {
+              {visibleMoreItems.map((item) => {
                 const active =
                   pathname === item.href ||
                   pathname.startsWith(item.href + "/");
