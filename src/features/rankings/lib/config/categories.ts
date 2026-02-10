@@ -24,7 +24,7 @@ export const RANKING_CATEGORIES: Record<RankingCategory, CategoryConfig> = {
     labelHe: "זריזות",
     metrics: ["blaze_spot_time"],
     primaryMetric: "blaze_spot_time",
-    lowerIsBetter: true,
+    lowerIsBetter: false,
     icon: "Shuffle",
   },
   flexibility: {

@@ -83,13 +83,13 @@ describe('isImprovement', () => {
     });
   });
 
-  describe('for blaze_spot_time (lower is better)', () => {
-    it('should return true when time decreased', () => {
-      expect(isImprovement('blaze_spot_time', -2)).toBe(true);
+  describe('for blaze_spot_time (higher is better - hit count)', () => {
+    it('should return true when count increased', () => {
+      expect(isImprovement('blaze_spot_time', 5)).toBe(true);
     });
 
-    it('should return false when time increased', () => {
-      expect(isImprovement('blaze_spot_time', 3)).toBe(false);
+    it('should return false when count decreased', () => {
+      expect(isImprovement('blaze_spot_time', -3)).toBe(false);
     });
   });
 
@@ -141,7 +141,7 @@ describe('formatDelta', () => {
 
   it('should include correct units for each field', () => {
     expect(formatDelta(10, 'kick_power_kaiser')).toBe('+10%');
-    expect(formatDelta(-2, 'blaze_spot_time')).toBe('-2 שניות');
+    expect(formatDelta(-2, 'blaze_spot_time')).toBe('-2 פגיעות');
     expect(formatDelta(3, 'flexibility_knee')).toBe('+3 ס"מ');
   });
 

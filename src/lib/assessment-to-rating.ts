@@ -120,13 +120,13 @@ export function calculateGroupStats(assessments: PlayerAssessment[]): GroupStats
   };
 
   return {
-    // Lower is better (sprints, reaction)
+    // Lower is better (sprints)
     sprint_5m: getMinMax(assessments.map((a) => a.sprint_5m), true),
     sprint_10m: getMinMax(assessments.map((a) => a.sprint_10m), true),
     sprint_20m: getMinMax(assessments.map((a) => a.sprint_20m), true),
-    blaze_spot_time: getMinMax(assessments.map((a) => a.blaze_spot_time), true),
 
-    // Higher is better (jumps, flexibility, power)
+    // Higher is better (blaze spot count, jumps, flexibility, power)
+    blaze_spot_time: getMinMax(assessments.map((a) => a.blaze_spot_time), false),
     jump_2leg_distance: getMinMax(assessments.map((a) => a.jump_2leg_distance), false),
     jump_right_leg: getMinMax(assessments.map((a) => a.jump_right_leg), false),
     jump_left_leg: getMinMax(assessments.map((a) => a.jump_left_leg), false),
@@ -239,7 +239,7 @@ export function calculateCardRatings(
     groupStats.jump_2leg_height.worst
   );
 
-  const blazeSpotRating = calculateRatingLowerBetter(
+  const blazeSpotRating = calculateRatingHigherBetter(
     assessment.blaze_spot_time,
     groupStats.blaze_spot_time.best,
     groupStats.blaze_spot_time.worst
@@ -336,7 +336,7 @@ export function calculateCardRatingsAbsolute(assessment: PlayerAssessment): Calc
     jump_right_leg: { best: 200, worst: 120 },
     jump_left_leg: { best: 200, worst: 120 },
     jump_2leg_height: { best: 50, worst: 25 },
-    blaze_spot_time: { best: 2.0, worst: 5.0 },
+    blaze_spot_time: { best: 80, worst: 20 },
     flexibility_ankle: { best: 15, worst: 5 },
     flexibility_knee: { best: 20, worst: 8 },
     flexibility_hip: { best: 25, worst: 10 },

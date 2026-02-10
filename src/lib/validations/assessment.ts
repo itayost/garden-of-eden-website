@@ -20,8 +20,8 @@ export const assessmentSchema = z.object({
   jump_left_leg: z.number().positive().max(400).optional().nullable(),
   jump_2leg_height: z.number().positive().max(200).optional().nullable(),
 
-  // Agility (seconds) with reasonable max
-  blaze_spot_time: z.number().positive().max(120).optional().nullable(),
+  // Blaze Spot (count - correct hits in 1 minute, higher is better)
+  blaze_spot_time: z.number().nonnegative().max(200).optional().nullable(),
 
   // Flexibility (cm) - positive numbers with reasonable max
   flexibility_ankle: z.number().nonnegative().max(100).optional().nullable(),

@@ -177,7 +177,7 @@ export function AssessmentPdfDocument({
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={styles.tableCellHeader}>תאריך</Text>
-            <Text style={styles.tableCellHeader}>זמן Blaze</Text>
+            <Text style={styles.tableCellHeader}>בלייז ספוט (פגיעות)</Text>
             <Text style={styles.tableCellHeader}>כוח בעיטה</Text>
           </View>
           {assessments.map((a) => (

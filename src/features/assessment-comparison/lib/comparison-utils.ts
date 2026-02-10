@@ -88,10 +88,10 @@ export function isImprovement(
   const lowerIsBetter = isLowerBetter(fieldName);
 
   if (lowerIsBetter) {
-    // For sprint times and blaze_spot_time, a negative delta (decrease) is improvement
+    // For sprint times, a negative delta (decrease) is improvement
     return delta < 0;
   } else {
-    // For jumps, flexibility, power - a positive delta (increase) is improvement
+    // For jumps, flexibility, power, blaze spot - a positive delta (increase) is improvement
     return delta > 0;
   }
 }

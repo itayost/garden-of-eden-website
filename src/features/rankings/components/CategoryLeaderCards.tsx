@@ -72,7 +72,7 @@ export function CategoryLeaderCards({
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {(leader.leader.metricValue ?? 0).toFixed(2)}{" "}
-                    {config.lowerIsBetter ? "שניות" : "ס״מ"}
+                    {leader.category === "sprint" ? "שניות" : leader.category === "agility" ? "פגיעות" : leader.category === "power" ? "%" : "ס״מ"}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {leader.totalPlayers} משתתפים

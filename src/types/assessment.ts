@@ -80,7 +80,7 @@ export interface PlayerAssessment {
   jump_left_leg: number | null;
   jump_2leg_height: number | null;
 
-  // Agility (seconds)
+  // Blaze Spot (count - correct hits in 1 minute, higher is better)
   blaze_spot_time: number | null;
 
   // Flexibility (cm)
@@ -162,7 +162,7 @@ export const ASSESSMENT_UNITS: Record<string, string> = {
   jump_right_leg: 'ס"מ',
   jump_left_leg: 'ס"מ',
   jump_2leg_height: 'ס"מ',
-  blaze_spot_time: "שניות",
+  blaze_spot_time: "פגיעות",
   flexibility_ankle: 'ס"מ',
   flexibility_knee: 'ס"מ',
   flexibility_hip: 'ס"מ',
@@ -225,7 +225,7 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
 
 // Check if a test value indicates "lower is better"
 export function isLowerBetter(fieldName: string): boolean {
-  return ["sprint_5m", "sprint_10m", "sprint_20m", "blaze_spot_time"].includes(fieldName);
+  return ["sprint_5m", "sprint_10m", "sprint_20m"].includes(fieldName);
 }
 
 // Get completion percentage for an assessment

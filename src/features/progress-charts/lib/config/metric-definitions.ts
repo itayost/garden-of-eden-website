@@ -64,12 +64,12 @@ export const METRIC_DEFINITIONS: Record<PhysicalMetricKey, MetricDefinition> = {
     category: "jump",
   },
 
-  // Agility (lower is better)
+  // Agility - Blaze Spot (higher is better - correct hits in 1 minute)
   blaze_spot_time: {
     key: "blaze_spot_time",
     labelHe: ASSESSMENT_LABELS_HE.blaze_spot_time,
     unit: ASSESSMENT_UNITS.blaze_spot_time,
-    lowerIsBetter: true,
+    lowerIsBetter: false,
     color: "hsl(var(--chart-1))",
     category: "agility",
   },

@@ -30,7 +30,12 @@ function StatItem({ label, value, icon }: StatItemProps) {
 
 export function GroupStatisticsCard({ statistics, category }: GroupStatisticsCardProps) {
   const config = RANKING_CATEGORIES[category];
-  const unit = config.lowerIsBetter ? "שניות" : "ס״מ";
+  const unitMap: Record<string, string> = {
+    sprint: "שניות",
+    agility: "פגיעות",
+    power: "%",
+  };
+  const unit = unitMap[category] ?? "ס״מ";
 
   if (!statistics) {
     return (

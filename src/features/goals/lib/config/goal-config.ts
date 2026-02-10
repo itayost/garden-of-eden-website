@@ -20,12 +20,11 @@ export const GOAL_METRICS: PhysicalMetricKey[] = [
   "kick_power_kaiser",
 ];
 
-/** Metrics where lower values are better (sprints, agility) */
+/** Metrics where lower values are better (sprints only) */
 export const LOWER_IS_BETTER_METRICS: PhysicalMetricKey[] = [
   "sprint_5m",
   "sprint_10m",
   "sprint_20m",
-  "blaze_spot_time",
 ];
 
 /** Storage key for tracking celebrated goals */
@@ -66,7 +65,7 @@ export const METRIC_UNITS: Record<PhysicalMetricKey, string> = {
   jump_2leg_height: 'ס"מ',
   jump_right_leg: 'ס"מ',
   jump_left_leg: 'ס"מ',
-  blaze_spot_time: "שניות",
+  blaze_spot_time: "פגיעות",
   flexibility_ankle: 'ס"מ',
   flexibility_knee: 'ס"מ',
   flexibility_hip: 'ס"מ',

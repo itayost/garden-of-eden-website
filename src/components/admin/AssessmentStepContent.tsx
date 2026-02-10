@@ -262,11 +262,11 @@ export function AssessmentStepContent({
               זריזות וגמישות
             </CardTitle>
             <CardDescription>
-              בלייז ספוט בשניות, גמישות בסנטימטרים
+              בלייז ספוט - מספר פגיעות בדקה, גמישות בסנטימטרים
             </CardDescription>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-6">
-            <NumberInput name="blaze_spot_time" step="0.01" />
+            <NumberInput name="blaze_spot_time" step="1" />
             <NumberInput name="flexibility_ankle" step="0.1" />
             <NumberInput name="flexibility_knee" step="0.1" />
             <NumberInput name="flexibility_hip" step="0.1" />
