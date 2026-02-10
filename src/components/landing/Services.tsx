@@ -152,7 +152,7 @@ export function Services() {
                 {plan.extraFeatures.length > 0 && (
                   <button
                     onClick={() => toggleExpand(index)}
-                    className="flex items-center gap-2 text-black/40 hover:text-black/60 text-sm mb-6 transition-colors"
+                    className="flex items-center gap-2 text-black/50 hover:text-black/70 text-sm mb-6 transition-colors"
                   >
                     <motion.span
                       animate={{ rotate: expandedPlan === index ? 180 : 0 }}
@@ -208,7 +208,7 @@ export function Services() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center text-black/40 text-sm mt-8 space-y-1"
+          className="text-center text-black/50 text-sm mt-8 space-y-1"
         >
           <p>* כל האימונים משולבים עם כדור</p>
           <p>* מתקדמים ו-PRO בהתחייבות ל-4 חודשים, ניתן לבטל בהתראה של 7 ימי עסקים לפני מועד התשלום</p>

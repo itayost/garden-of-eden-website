@@ -84,7 +84,7 @@ export function AdminNav({ user, profile }: AdminNavProps) {
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
             isActive(item.href)
               ? "bg-primary text-primary-foreground"
-              : "hover:bg-muted"
+              : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           }`}
         >
           <item.icon className="h-5 w-5" />
@@ -103,7 +103,7 @@ export function AdminNav({ user, profile }: AdminNavProps) {
             <Link href="/admin" className="text-xl font-black">
               GARDEN OF EDEN
             </Link>
-            <Badge variant="secondary" className="bg-sidebar-accent">
+            <Badge variant="secondary" className="bg-sidebar-accent text-sidebar-accent-foreground">
               ניהול
             </Badge>
           </div>
@@ -118,7 +118,7 @@ export function AdminNav({ user, profile }: AdminNavProps) {
             {mounted ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 text-sidebar-foreground hover:bg-sidebar-accent">
+                  <Button variant="ghost" className="gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                     <UserIcon className="h-5 w-5" />
                     <span className="hidden sm:inline">
                       {profile?.full_name || user.phone || "מנהל"}
@@ -137,7 +137,7 @@ export function AdminNav({ user, profile }: AdminNavProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="ghost" className="gap-2 text-sidebar-foreground hover:bg-sidebar-accent">
+              <Button variant="ghost" className="gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <UserIcon className="h-5 w-5" />
                 <span className="hidden sm:inline">
                   {profile?.full_name || user.phone || "מנהל"}
