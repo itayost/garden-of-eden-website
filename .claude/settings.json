@@ -1,4 +1,9 @@
 {
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": false,
+    "firebase@claude-plugins-official": false,
+    "seo-content-creation@claude-code-workflows": false
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -18,6 +23,15 @@
           {
             "type": "command",
             "command": "case \"$CLAUDE_FILE_PATH\" in *.ts|*.tsx|*.js|*.jsx|*.mjs) npx eslint --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null || true;; esac"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_FILE_PATH\" in *.ts|*.tsx) npx tsc --noEmit --pretty 2>&1 | head -20 || true;; esac"
           }
         ]
       }

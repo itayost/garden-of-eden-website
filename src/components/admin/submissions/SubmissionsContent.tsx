@@ -3,8 +3,6 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -15,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
 import { SubmissionExportButton } from "@/components/admin/exports/SubmissionExportButton";
+import { TableToolbar, ToolbarDateRange } from "@/components/admin/TableToolbar";
 import { HasBadge, DifficultyBadge, SatisfactionBadge } from "@/components/ui/badges";
 import { Activity, FileText, Salad, type LucideIcon } from "lucide-react";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
@@ -43,53 +42,20 @@ function EmptyState({ icon: Icon, message }: { icon: LucideIcon; message: string
   );
 }
 
-/** Date filter component */
-function DateFilter({
-  startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange,
-  formType,
-}: {
-  startDate: string;
-  endDate: string;
-  onStartDateChange: (value: string) => void;
-  onEndDateChange: (value: string) => void;
-  formType: string;
-}) {
-  return (
-    <div className="flex items-end gap-4 flex-wrap">
-      <div>
-        <Label htmlFor={`start-date-${formType}`}>מתאריך</Label>
-        <Input
-          id={`start-date-${formType}`}
-          type="date"
-          value={startDate}
-          onChange={(e) => onStartDateChange(e.target.value)}
-          className="w-40"
-        />
-      </div>
-      <div>
-        <Label htmlFor={`end-date-${formType}`}>עד תאריך</Label>
-        <Input
-          id={`end-date-${formType}`}
-          type="date"
-          value={endDate}
-          onChange={(e) => onEndDateChange(e.target.value)}
-          className="w-40"
-        />
-      </div>
-    </div>
-  );
-}
-
-/** Filter submissions by date range */
-function filterByDate<T extends { submitted_at: string }>(
+/** Filter submissions by name, start date, and end date */
+function filterSubmissions<T extends { submitted_at: string; full_name: string }>(
   submissions: T[],
+  search: string,
   startDate: string,
   endDate: string
 ): T[] {
   let filtered = submissions;
+
+  if (search) {
+    const searchLower = search.toLowerCase();
+    filtered = filtered.filter((s) => s.full_name.toLowerCase().includes(searchLower));
+  }
+
   if (startDate) {
     filtered = filtered.filter((s) => s.submitted_at >= startDate);
   }
@@ -101,12 +67,13 @@ function filterByDate<T extends { submitted_at: string }>(
 
 // Pre-workout content component
 export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm[] }) {
+  const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const filtered = useMemo(
-    () => filterByDate(submissions, startDate, endDate),
-    [submissions, startDate, endDate]
+    () => filterSubmissions(submissions, search, startDate, endDate),
+    [submissions, search, startDate, endDate]
   );
 
   return (
@@ -127,12 +94,18 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
               submissions={filtered}
             />
           </div>
-          <DateFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            formType="pre_workout"
+          <TableToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="חיפוש לפי שם..."
+            filters={
+              <ToolbarDateRange
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+              />
+            }
           />
         </div>
       </CardHeader>
@@ -191,7 +164,7 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
             </div>
           </>
         ) : submissions.length > 0 ? (
-          <EmptyState icon={Activity} message="אין שאלונים בטווח התאריכים שנבחר" />
+          <EmptyState icon={Activity} message="אין שאלונים מתאימים לחיפוש" />
         ) : (
           <EmptyState icon={Activity} message="אין שאלונים עדיין" />
         )}
@@ -202,12 +175,13 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
 
 // Post-workout content component
 export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWithTrainer[] }) {
+  const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const filtered = useMemo(
-    () => filterByDate(submissions, startDate, endDate),
-    [submissions, startDate, endDate]
+    () => filterSubmissions(submissions, search, startDate, endDate),
+    [submissions, search, startDate, endDate]
   );
 
   return (
@@ -228,12 +202,18 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
               submissions={filtered}
             />
           </div>
-          <DateFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            formType="post_workout"
+          <TableToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="חיפוש לפי שם..."
+            filters={
+              <ToolbarDateRange
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+              />
+            }
           />
         </div>
       </CardHeader>
@@ -295,7 +275,7 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
             </div>
           </>
         ) : submissions.length > 0 ? (
-          <EmptyState icon={FileText} message="אין שאלונים בטווח התאריכים שנבחר" />
+          <EmptyState icon={FileText} message="אין שאלונים מתאימים לחיפוש" />
         ) : (
           <EmptyState icon={FileText} message="אין שאלונים עדיין" />
         )}
@@ -306,12 +286,13 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
 
 // Nutrition content component
 export function NutritionContent({ submissions }: { submissions: NutritionForm[] }) {
+  const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const filtered = useMemo(
-    () => filterByDate(submissions, startDate, endDate),
-    [submissions, startDate, endDate]
+    () => filterSubmissions(submissions, search, startDate, endDate),
+    [submissions, search, startDate, endDate]
   );
 
   return (
@@ -332,12 +313,18 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
               submissions={filtered}
             />
           </div>
-          <DateFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            formType="nutrition"
+          <TableToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="חיפוש לפי שם..."
+            filters={
+              <ToolbarDateRange
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+              />
+            }
           />
         </div>
       </CardHeader>
@@ -395,7 +382,7 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
             </div>
           </>
         ) : submissions.length > 0 ? (
-          <EmptyState icon={Salad} message="אין שאלונים בטווח התאריכים שנבחר" />
+          <EmptyState icon={Salad} message="אין שאלונים מתאימים לחיפוש" />
         ) : (
           <EmptyState icon={Salad} message="אין שאלונים עדיין" />
         )}

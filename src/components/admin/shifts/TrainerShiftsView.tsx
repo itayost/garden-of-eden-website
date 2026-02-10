@@ -1,10 +1,11 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TableToolbar } from "@/components/admin/TableToolbar";
 import {
   Table,
   TableBody,
@@ -127,8 +128,17 @@ export function TrainerShiftsView({
   const router = useRouter();
   const [expandedTrainer, setExpandedTrainer] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
-  const summaries = aggregateByTrainer(shifts);
+  const allSummaries = aggregateByTrainer(shifts);
+
+  const summaries = useMemo(() => {
+    if (!search) return allSummaries;
+    const searchLower = search.toLowerCase();
+    return allSummaries.filter((s) =>
+      s.trainerName.toLowerCase().includes(searchLower)
+    );
+  }, [allSummaries, search]);
 
   const navigateMonth = (direction: -1 | 1) => {
     let newMonth = month + direction;
@@ -233,6 +243,15 @@ export function TrainerShiftsView({
           </Card>
         )}
       </div>
+
+      {/* Search */}
+      {allSummaries.length > 0 && (
+        <TableToolbar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="חיפוש לפי שם מאמן..."
+        />
+      )}
 
       {/* Trainer Summary Table */}
       {summaries.length === 0 ? (

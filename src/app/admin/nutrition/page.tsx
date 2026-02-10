@@ -1,22 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Users, Utensils, Lightbulb } from "lucide-react";
+import { Users, Utensils, Lightbulb } from "lucide-react";
+import { NutritionTable } from "@/components/admin/nutrition/NutritionTable";
+
 export default async function AdminNutritionPage() {
   const supabase = await createClient();
 
@@ -44,18 +35,17 @@ export default async function AdminNutritionPage() {
       },
     ]);
 
-  const mealPlanUserIds = new Set(
-    (mealPlans || []).map((mp) => mp.user_id)
-  );
-  const recommendationUserIds = new Set(
-    (recommendations || []).map((rec) => rec.user_id)
-  );
+  // Pass as arrays (serializable) — the client component will create Sets
+  const mealPlanUserIds = (mealPlans || []).map((mp) => mp.user_id);
+  const recommendationUserIds = (recommendations || []).map((rec) => rec.user_id);
 
   const totalTrainees = trainees?.length || 0;
+  const mealPlanSet = new Set(mealPlanUserIds);
+  const recSet = new Set(recommendationUserIds);
   const traineesWithMealPlans =
-    trainees?.filter((t) => mealPlanUserIds.has(t.id)).length || 0;
+    trainees?.filter((t) => mealPlanSet.has(t.id)).length || 0;
   const traineesWithRecommendations =
-    trainees?.filter((t) => recommendationUserIds.has(t.id)).length || 0;
+    trainees?.filter((t) => recSet.has(t.id)).length || 0;
 
   return (
     <div className="space-y-6">
@@ -121,99 +111,11 @@ export default async function AdminNutritionPage() {
           <CardTitle>חניכים</CardTitle>
         </CardHeader>
         <CardContent>
-          {trainees && trainees.length > 0 ? (
-            <>
-              {/* Mobile: Card list */}
-              <div className="space-y-2 sm:hidden">
-                {trainees.map((trainee) => {
-                  const hasMealPlan = mealPlanUserIds.has(trainee.id);
-                  const hasRecommendation = recommendationUserIds.has(trainee.id);
-
-                  return (
-                    <div key={trainee.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-sm truncate block">
-                          {trainee.full_name || "ללא שם"}
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          {hasMealPlan ? (
-                            <Badge variant="default" className="bg-green-600 text-xs">תזונה</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">אין תזונה</Badge>
-                          )}
-                          {hasRecommendation ? (
-                            <Badge variant="default" className="bg-blue-600 text-xs">המלצות</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">אין המלצות</Badge>
-                          )}
-                        </div>
-                      </div>
-                      <Button asChild size="sm" className="shrink-0">
-                        <Link href={`/admin/nutrition/${trainee.id}`}>
-                          <Edit className="h-4 w-4 ml-1" />
-                          ניהול
-                        </Link>
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Desktop: Table */}
-              <div className="hidden sm:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-start">שם</TableHead>
-                      <TableHead className="text-start">תוכנית תזונה</TableHead>
-                      <TableHead className="text-start">המלצות</TableHead>
-                      <TableHead className="text-start">פעולות</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {trainees.map((trainee) => {
-                      const hasMealPlan = mealPlanUserIds.has(trainee.id);
-                      const hasRecommendation = recommendationUserIds.has(trainee.id);
-
-                      return (
-                        <TableRow key={trainee.id}>
-                          <TableCell className="font-medium">
-                            {trainee.full_name || "ללא שם"}
-                          </TableCell>
-                          <TableCell>
-                            {hasMealPlan ? (
-                              <Badge variant="default" className="bg-green-600">קיימת</Badge>
-                            ) : (
-                              <Badge variant="outline">אין</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {hasRecommendation ? (
-                              <Badge variant="default" className="bg-blue-600">קיימות</Badge>
-                            ) : (
-                              <Badge variant="outline">אין</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button asChild size="sm">
-                              <Link href={`/admin/nutrition/${trainee.id}`}>
-                                <Edit className="h-4 w-4 ml-1" />
-                                ניהול
-                              </Link>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              אין חניכים רשומים
-            </div>
-          )}
+          <NutritionTable
+            trainees={trainees || []}
+            mealPlanUserIds={mealPlanUserIds}
+            recommendationUserIds={recommendationUserIds}
+          />
         </CardContent>
       </Card>
     </div>

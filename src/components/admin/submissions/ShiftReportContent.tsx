@@ -3,8 +3,6 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -15,46 +13,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
+import { TableToolbar, ToolbarDateRange } from "@/components/admin/TableToolbar";
 import { ClipboardCheck } from "lucide-react";
 import type { TrainerShiftReport } from "@/types/database";
 import { formatDateTime } from "@/lib/utils/date";
-
-function DateFilter({
-  startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange,
-}: {
-  startDate: string;
-  endDate: string;
-  onStartDateChange: (value: string) => void;
-  onEndDateChange: (value: string) => void;
-}) {
-  return (
-    <div className="flex items-end gap-4 flex-wrap">
-      <div>
-        <Label htmlFor="start-date-shift">מתאריך</Label>
-        <Input
-          id="start-date-shift"
-          type="date"
-          value={startDate}
-          onChange={(e) => onStartDateChange(e.target.value)}
-          className="w-40"
-        />
-      </div>
-      <div>
-        <Label htmlFor="end-date-shift">עד תאריך</Label>
-        <Input
-          id="end-date-shift"
-          type="date"
-          value={endDate}
-          onChange={(e) => onEndDateChange(e.target.value)}
-          className="w-40"
-        />
-      </div>
-    </div>
-  );
-}
 
 function FlagBadge({ active, label }: { active: boolean; label: string }) {
   if (!active) return null;
@@ -62,11 +24,18 @@ function FlagBadge({ active, label }: { active: boolean; label: string }) {
 }
 
 export function ShiftReportContent({ submissions }: { submissions: TrainerShiftReport[] }) {
+  const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const filtered = useMemo(() => {
     let result = submissions;
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      result = result.filter((s) => s.trainer_name.toLowerCase().includes(searchLower));
+    }
+
     if (startDate) {
       result = result.filter((s) => s.report_date >= startDate);
     }
@@ -74,7 +43,7 @@ export function ShiftReportContent({ submissions }: { submissions: TrainerShiftR
       result = result.filter((s) => s.report_date <= endDate);
     }
     return result;
-  }, [submissions, startDate, endDate]);
+  }, [submissions, search, startDate, endDate]);
 
   return (
     <Card>
@@ -90,11 +59,18 @@ export function ShiftReportContent({ submissions }: { submissions: TrainerShiftR
               </CardDescription>
             </div>
           </div>
-          <DateFilter
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
+          <TableToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="חיפוש לפי שם מאמן..."
+            filters={
+              <ToolbarDateRange
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+              />
+            }
           />
         </div>
       </CardHeader>
@@ -186,7 +162,7 @@ export function ShiftReportContent({ submissions }: { submissions: TrainerShiftR
         ) : submissions.length > 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>אין דוחות בטווח התאריכים שנבחר</p>
+            <p>אין דוחות מתאימים לחיפוש</p>
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">

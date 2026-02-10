@@ -44,14 +44,14 @@ supabase db push     # Push migrations to Supabase
 ```
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── admin/              # Admin dashboard pages
+│   ├── admin/              # Admin dashboard (users, assessments, nutrition, videos, shifts, submissions, stats, end-of-shift)
 │   ├── dashboard/          # Trainee dashboard pages
 │   ├── auth/               # Auth flow (OTP login)
 │   ├── onboarding/         # New user onboarding
 │   └── api/                # API routes (cron, images, payments, webhooks)
 ├── components/
 │   ├── ui/                 # Shared UI primitives (shadcn/ui based)
-│   ├── admin/              # Admin-specific components
+│   ├── admin/              # Admin-specific components (tables, forms, toolbars)
 │   ├── dashboard/          # Dashboard components
 │   ├── landing/            # Landing page sections
 │   ├── forms/              # Pre/post workout forms
@@ -90,7 +90,9 @@ src/
 - All server actions use `"use server"` directive
 - Admin-only actions call `verifyAdmin()` from `src/lib/actions/shared/`
 - Trainer-accessible actions call `verifyAdminOrTrainer()` from the same module
+- Feature actions accessing user data call `verifyUserAccess(userId)` from `src/lib/actions/shared/`
 - Actions live in `src/lib/actions/` or inside `src/features/<name>/lib/actions/`
+- Large action files are split into focused files (e.g., `admin-users-create.ts`, `admin-users-update.ts`) with a barrel re-export in the original file
 
 ### Feature Modules
 - Self-contained features go in `src/features/<name>/`
@@ -107,11 +109,22 @@ src/
   - `createClient()` from `lib/supabase/server.ts` — server components/actions (uses cookies)
   - `createAdminClient()` from `lib/supabase/admin.ts` — service role, bypasses RLS
 - DB helper utilities in `lib/supabase/helpers.ts`: `insertIntoTable`, `insertAndSelect`, `updateInTable`, `upsertIntoTable`
+- `typedFrom(supabase, "table_name")` from `lib/supabase/helpers.ts` — use instead of `(supabase as any).from()` for tables not in generated types
 
 ### Components
 - UI primitives based on shadcn/ui (Radix + Tailwind)
 - Use `sonner` for toast notifications
 - Mobile-first responsive design with bottom nav for mobile
+- Reusable `DeleteConfirmDialog` in `src/components/admin/` — use for all delete confirmations
+- Reusable `TablePagination` in `src/components/admin/` — use for all paginated tables
+- Reusable `TableToolbar` in `src/components/admin/TableToolbar.tsx` — shared search + filter toolbar with composable sub-components (`ToolbarSelect`, `ToolbarCheckbox`, `ToolbarDateRange`). Parent owns state, toolbar handles debounce.
+- Shared `useCSVExport` hook in `src/hooks/` — use for CSV export buttons
+- Shared `useFormSubmission` hook in `src/hooks/` — handles form submit state and error handling
+- Shared `useIsMobile` / `useMediaQuery` hooks in `src/hooks/` — responsive breakpoint detection
+
+### Shared Utilities
+- `calculatePercentile()` from `src/lib/utils/math.ts` — shared stats calculation
+- `calculateUserRatings()` from `src/lib/utils/calculate-user-ratings.ts` — dashboard rating computation
 
 ### Commits
 - Follow conventional commits: `feat(scope):`, `fix(scope):`, `refactor(scope):`
@@ -121,6 +134,9 @@ src/
 - Never expose Supabase service role key to the client
 - All admin endpoints must verify role before proceeding
 - Rate limiting via Upstash Redis on sensitive endpoints
+- Security headers configured in `next.config.ts` (X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy, Permissions-Policy)
+- Startup env validation in `src/lib/env.ts` (called via `src/instrumentation.ts`)
+- UUID validation via `isValidUUID()` from `src/lib/validations/common.ts` — use on all action params that accept IDs
 - Do not edit `.env.local` files
 
 ## Environment Variables
@@ -135,7 +151,12 @@ NEXT_PUBLIC_SITE_URL           # Site URL for auth callbacks
 GROW_USER_ID                   # Meshulam payment gateway
 GROW_PAGE_CODE                 # Meshulam page code
 GROW_API_URL                   # Meshulam API endpoint
+GROW_WEBHOOK_SECRET            # HMAC-SHA256 signature verification for webhooks
+GROW_PROCESS_TOKEN             # Fallback token for webhook verification
 REMOVEBG_API_KEY               # Remove.bg for FIFA card processing
+UPSTASH_REDIS_REST_URL         # Upstash Redis for rate limiting
+UPSTASH_REDIS_REST_TOKEN       # Upstash Redis token
+CRON_SECRET                    # Protects /api/cron/* endpoints
 ```
 
 ## Gotchas
@@ -144,3 +165,19 @@ REMOVEBG_API_KEY               # Remove.bg for FIFA card processing
 - **RTL layout**: CSS `left`/`right` are swapped. Use logical properties (`start`/`end`) or test manually. Framer Motion animations may need direction adjustment.
 - **Migration numbering**: Older migrations use `001_` prefix, newer ones use Supabase timestamp format. Both work — don't renumber old ones.
 - **`"use client"` boundary**: Radix UI components require client-side rendering. If a page only needs a small interactive part, extract it into a client component and keep the page as a server component.
+- **Testing**: No mock-based tests — the project has real data in Supabase. Existing tests cover pure utility functions only (validations, ranking-utils, webhook-security).
+
+## Claude Code Automations
+
+### Hooks (`.claude/settings.json`)
+- **PreToolUse**: Blocks editing `.env*` files (exit code 2)
+- **PostToolUse**: Auto-runs ESLint fix on `.ts/.tsx/.js/.jsx/.mjs` files after edit
+- **PostToolUse**: Runs `tsc --noEmit` type-check on `.ts/.tsx` files after edit
+
+### Skills
+- `/deploy` — Type-check, build, and deploy to Vercel production
+- `/migration` — Create and apply a Supabase migration with RLS validation
+
+### Agents
+- `code-reviewer` — Reviews for security (RLS, auth), TypeScript errors, and convention violations
+- `security-reviewer` — Deep security audit: RLS gaps, auth verification, service-role exposure, webhook security
