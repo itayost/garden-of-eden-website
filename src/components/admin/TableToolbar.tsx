@@ -174,7 +174,7 @@ export function ToolbarDateRange({
           type="date"
           value={startDate}
           onChange={(e) => onStartDateChange(e.target.value)}
-          className="w-40"
+          className="w-full sm:w-40"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -183,7 +183,7 @@ export function ToolbarDateRange({
           type="date"
           value={endDate}
           onChange={(e) => onEndDateChange(e.target.value)}
-          className="w-40"
+          className="w-full sm:w-40"
         />
       </div>
     </>

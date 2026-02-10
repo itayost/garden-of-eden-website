@@ -253,7 +253,7 @@ export function TrainerShiftsView({
         />
       )}
 
-      {/* Trainer Summary Table */}
+      {/* Trainer Summary */}
       {summaries.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -266,140 +266,248 @@ export function TrainerShiftsView({
             <CardTitle>סיכום לפי מאמן</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">מאמן</TableHead>
-                  <TableHead className="text-right">משמרות</TableHead>
-                  <TableHead className="text-right">סה&quot;כ שעות</TableHead>
-                  {isAdmin && (
-                    <TableHead className="text-right">סטטוס</TableHead>
+            {/* Mobile: Card list */}
+            <div className="space-y-3 sm:hidden">
+              {summaries.map((summary) => (
+                <div key={summary.trainerId} className="rounded-lg border">
+                  <button
+                    className="w-full p-3 flex items-center justify-between"
+                    onClick={() =>
+                      setExpandedTrainer(
+                        expandedTrainer === summary.trainerId
+                          ? null
+                          : summary.trainerId
+                      )
+                    }
+                  >
+                    <div className="flex-1 text-start">
+                      <p className="font-medium text-sm">{summary.trainerName}</p>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <span>{summary.shiftCount} משמרות</span>
+                        <span className="font-mono">{formatDuration(summary.totalMinutes)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isAdmin && summary.flaggedCount > 0 && (
+                        <Badge variant="destructive" className="gap-1 text-xs">
+                          <AlertTriangle className="h-3 w-3" />
+                          {summary.flaggedCount}
+                        </Badge>
+                      )}
+                      {expandedTrainer === summary.trainerId ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Expanded shifts for mobile */}
+                  {expandedTrainer === summary.trainerId && (
+                    <div className="border-t divide-y">
+                      {summary.shifts.map((shift) => (
+                        <div key={shift.id} className="p-3 bg-muted/30 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">
+                              {formatDate(shift.start_time)}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {shift.auto_ended && (
+                                <Badge variant="outline" className="text-xs">אוטומטי</Badge>
+                              )}
+                              {shift.flagged_for_review && (
+                                <Badge variant="destructive" className="text-xs">לבדיקה</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span>
+                              {formatTime(shift.start_time)} -{" "}
+                              {shift.end_time ? formatTime(shift.end_time) : "פעילה"}
+                            </span>
+                            <span className="font-mono">
+                              {shift.end_time ? formatDuration(calcDurationMinutes(shift)) : "-"}
+                            </span>
+                          </div>
+                          {isAdmin && (
+                            <div className="flex items-center gap-2">
+                              {shift.flagged_for_review && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleMarkReviewed(shift.id)}
+                                  disabled={actionLoading === shift.id}
+                                  className="text-xs h-7"
+                                >
+                                  {actionLoading === shift.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-3 w-3" />
+                                  )}
+                                  סמן כנבדק
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(shift.id)}
+                                disabled={actionLoading === shift.id}
+                                className="text-xs h-7 text-destructive hover:text-destructive"
+                              >
+                                {actionLoading === shift.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" />
+                                )}
+                                מחק
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  <TableHead className="text-right w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summaries.map((summary) => (
-                  <Fragment key={summary.trainerId}>
-                    <TableRow
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() =>
-                        setExpandedTrainer(
-                          expandedTrainer === summary.trainerId
-                            ? null
-                            : summary.trainerId
-                        )
-                      }
-                    >
-                      <TableCell className="font-medium">
-                        {summary.trainerName}
-                      </TableCell>
-                      <TableCell>{summary.shiftCount}</TableCell>
-                      <TableCell className="font-mono">
-                        {formatDuration(summary.totalMinutes)}
-                      </TableCell>
-                      {isAdmin && (
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">מאמן</TableHead>
+                    <TableHead className="text-right">משמרות</TableHead>
+                    <TableHead className="text-right">סה&quot;כ שעות</TableHead>
+                    {isAdmin && (
+                      <TableHead className="text-right">סטטוס</TableHead>
+                    )}
+                    <TableHead className="text-right w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {summaries.map((summary) => (
+                    <Fragment key={summary.trainerId}>
+                      <TableRow
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() =>
+                          setExpandedTrainer(
+                            expandedTrainer === summary.trainerId
+                              ? null
+                              : summary.trainerId
+                          )
+                        }
+                      >
+                        <TableCell className="font-medium">
+                          {summary.trainerName}
+                        </TableCell>
+                        <TableCell>{summary.shiftCount}</TableCell>
+                        <TableCell className="font-mono">
+                          {formatDuration(summary.totalMinutes)}
+                        </TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            {summary.flaggedCount > 0 && (
+                              <Badge variant="destructive" className="gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                {summary.flaggedCount} לבדיקה
+                              </Badge>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell>
-                          {summary.flaggedCount > 0 && (
-                            <Badge variant="destructive" className="gap-1">
-                              <AlertTriangle className="h-3 w-3" />
-                              {summary.flaggedCount} לבדיקה
-                            </Badge>
+                          {expandedTrainer === summary.trainerId ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
                           )}
                         </TableCell>
-                      )}
-                      <TableCell>
-                        {expandedTrainer === summary.trainerId ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </TableCell>
-                    </TableRow>
+                      </TableRow>
 
-                    {/* Expanded shift details */}
-                    {expandedTrainer === summary.trainerId &&
-                      summary.shifts.map((shift) => (
-                        <TableRow
-                          key={shift.id}
-                          className="bg-muted/30"
-                        >
-                          <TableCell className="pr-8 text-sm text-muted-foreground">
-                            {formatDate(shift.start_time)}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {formatTime(shift.start_time)} -{" "}
-                            {shift.end_time
-                              ? formatTime(shift.end_time)
-                              : "פעילה"}
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {shift.end_time
-                              ? formatDuration(calcDurationMinutes(shift))
-                              : "-"}
-                            {shift.auto_ended && (
-                              <Badge
-                                variant="outline"
-                                className="mr-2 text-xs"
-                              >
-                                אוטומטי
-                              </Badge>
-                            )}
-                            {shift.flagged_for_review && (
-                              <Badge
-                                variant="destructive"
-                                className="mr-2 text-xs"
-                              >
-                                לבדיקה
-                              </Badge>
-                            )}
-                          </TableCell>
-                          {isAdmin && (
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                {shift.flagged_for_review && (
+                      {/* Expanded shift details */}
+                      {expandedTrainer === summary.trainerId &&
+                        summary.shifts.map((shift) => (
+                          <TableRow
+                            key={shift.id}
+                            className="bg-muted/30"
+                          >
+                            <TableCell className="ps-8 text-sm text-muted-foreground">
+                              {formatDate(shift.start_time)}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {formatTime(shift.start_time)} -{" "}
+                              {shift.end_time
+                                ? formatTime(shift.end_time)
+                                : "פעילה"}
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">
+                              {shift.end_time
+                                ? formatDuration(calcDurationMinutes(shift))
+                                : "-"}
+                              {shift.auto_ended && (
+                                <Badge
+                                  variant="outline"
+                                  className="ms-2 text-xs"
+                                >
+                                  אוטומטי
+                                </Badge>
+                              )}
+                              {shift.flagged_for_review && (
+                                <Badge
+                                  variant="destructive"
+                                  className="ms-2 text-xs"
+                                >
+                                  לבדיקה
+                                </Badge>
+                              )}
+                            </TableCell>
+                            {isAdmin && (
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  {shift.flagged_for_review && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMarkReviewed(shift.id);
+                                      }}
+                                      disabled={actionLoading === shift.id}
+                                    >
+                                      {actionLoading === shift.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <CheckCircle className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleMarkReviewed(shift.id);
+                                      handleDelete(shift.id);
                                     }}
                                     disabled={actionLoading === shift.id}
+                                    className="text-destructive hover:text-destructive"
                                   >
                                     {actionLoading === shift.id ? (
                                       <Loader2 className="h-3 w-3 animate-spin" />
                                     ) : (
-                                      <CheckCircle className="h-3 w-3" />
+                                      <Trash2 className="h-3 w-3" />
                                     )}
                                   </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(shift.id);
-                                  }}
-                                  disabled={actionLoading === shift.id}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  {actionLoading === shift.id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </div>
-                            </TableCell>
-                          )}
-                          <TableCell />
-                        </TableRow>
-                      ))}
-                  </Fragment>
-                ))}
-              </TableBody>
-            </Table>
+                                </div>
+                              </TableCell>
+                            )}
+                            <TableCell />
+                          </TableRow>
+                        ))}
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

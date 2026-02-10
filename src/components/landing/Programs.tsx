@@ -133,7 +133,7 @@ export function Programs() {
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
-                  className="h-full p-6 flex flex-col relative min-h-[450px]"
+                  className="h-full p-6 flex flex-col relative min-h-[300px] md:min-h-[450px]"
                   style={{
                     backgroundImage: `url(${program.image})`,
                     backgroundSize: "cover",

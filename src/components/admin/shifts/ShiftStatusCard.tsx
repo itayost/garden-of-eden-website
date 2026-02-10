@@ -140,7 +140,7 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
 
           <div className="flex items-center gap-4">
             {activeShift && (
-              <div className="text-left">
+              <div className="text-end">
                 <p className="text-3xl font-mono font-bold tabular-nums">
                   {elapsed}
                 </p>
