@@ -115,7 +115,10 @@ export function FAQ() {
               className="bg-white rounded-2xl border border-black/10 overflow-hidden"
             >
               <button
+                id={`${item.id}-trigger`}
                 onClick={() => toggleItem(index)}
+                aria-expanded={openIndex === index}
+                aria-controls={`${item.id}-content`}
                 className="w-full px-6 py-5 flex items-center justify-between text-right hover:bg-black/[0.02] transition-colors"
               >
                 <span className="font-medium text-black">{item.question}</span>
@@ -131,6 +134,9 @@ export function FAQ() {
               <AnimatePresence>
                 {openIndex === index && (
                   <motion.div
+                    id={`${item.id}-content`}
+                    role="region"
+                    aria-labelledby={`${item.id}-trigger`}
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}

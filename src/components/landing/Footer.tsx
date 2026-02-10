@@ -207,19 +207,19 @@ export function Footer() {
 
           {/* Bottom */}
           <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/10">
-            <p className="text-white/30 text-sm mb-4 md:mb-0">
+            <p className="text-white/50 text-sm mb-4 md:mb-0">
               Copyright &copy; {currentYear} Garden of Eden. כל הזכויות שמורות.
             </p>
             <div className="flex gap-6">
               <Link
                 href="/terms-of-service"
-                className="text-white/30 hover:text-white/50 text-sm transition-colors"
+                className="text-white/50 hover:text-white/70 text-sm transition-colors"
               >
                 תנאי שימוש
               </Link>
               <Link
                 href="/privacy-policy"
-                className="text-white/30 hover:text-white/50 text-sm transition-colors"
+                className="text-white/50 hover:text-white/70 text-sm transition-colors"
               >
                 מדיניות פרטיות
               </Link>

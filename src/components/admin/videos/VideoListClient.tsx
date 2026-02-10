@@ -56,13 +56,14 @@ export function VideoListClient({ videos }: VideoListClientProps) {
         size="icon"
         onClick={() => handleEditClick(video)}
         title="ערוך סרטון"
+        aria-label="ערוך סרטון"
       >
         <Pencil className="h-4 w-4" />
       </Button>
       <DeleteVideoDialog
         video={video}
         trigger={
-          <Button variant="ghost" size="icon" title="מחק סרטון">
+          <Button variant="ghost" size="icon" title="מחק סרטון" aria-label="מחק סרטון">
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         }

@@ -4,6 +4,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { MotionProvider } from "@/components/MotionProvider";
 
 const heebo = Heebo({
   variable: "--font-heebo",
@@ -78,9 +79,11 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" className="overflow-x-hidden">
       <body className={`${heebo.variable} ${bebasNeue.variable} font-sans antialiased overflow-x-hidden`}>
-        <NuqsAdapter>
-          {children}
-        </NuqsAdapter>
+        <MotionProvider>
+          <NuqsAdapter>
+            {children}
+          </NuqsAdapter>
+        </MotionProvider>
         <Toaster position="top-center" />
         <ServiceWorkerRegistration />
       </body>

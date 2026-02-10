@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Dumbbell, Zap, Activity, Target, ArrowLeft, X, Clock, Users, Calendar, MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 
 const programs = [
@@ -94,6 +94,26 @@ export function Programs() {
   };
 
   const currentProgram = selectedProgram !== null ? programs[selectedProgram] : null;
+
+  const closeModal = useCallback(() => setSelectedProgram(null), []);
+
+  // Keyboard escape to close modal
+  useEffect(() => {
+    if (selectedProgram === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeModal();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedProgram, closeModal]);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (selectedProgram !== null) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [selectedProgram]);
 
   return (
     <>
@@ -223,11 +243,11 @@ export function Programs() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-            onClick={() => setSelectedProgram(null)}
+            onClick={closeModal}
           >
             {/* Close button */}
             <button
-              onClick={() => setSelectedProgram(null)}
+              onClick={closeModal}
               className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
               aria-label="סגור"
             >
@@ -236,11 +256,14 @@ export function Programs() {
 
             {/* Modal content */}
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label={currentProgram?.title}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] rounded-3xl overflow-hidden"
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] rounded-3xl"
             >
               {/* Header */}
               <div className="p-8 border-b border-white/10">
