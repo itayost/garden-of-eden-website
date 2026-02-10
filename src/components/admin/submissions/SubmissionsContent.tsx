@@ -16,6 +16,7 @@ import { SubmissionExportButton } from "@/components/admin/exports/SubmissionExp
 import { TableToolbar, ToolbarDateRange } from "@/components/admin/TableToolbar";
 import { HasBadge, DifficultyBadge, SatisfactionBadge } from "@/components/ui/badges";
 import { Activity, FileText, Salad, type LucideIcon } from "lucide-react";
+import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
 import { formatDateTime } from "@/lib/utils/date";
 
@@ -66,14 +67,26 @@ function filterSubmissions<T extends { submitted_at: string; full_name: string }
 }
 
 // Pre-workout content component
+const PAGE_SIZE = 20;
+
 export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm[] }) {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(0);
 
   const filtered = useMemo(
     () => filterSubmissions(submissions, search, startDate, endDate),
     [submissions, search, startDate, endDate]
+  );
+
+  const handleSearchChange = (v: string) => { setSearch(v); setPage(0); };
+  const handleStartDateChange = (v: string) => { setStartDate(v); setPage(0); };
+  const handleEndDateChange = (v: string) => { setEndDate(v); setPage(0); };
+
+  const paginated = useMemo(
+    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [filtered, page]
   );
 
   return (
@@ -96,14 +109,14 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
           </div>
           <TableToolbar
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             searchPlaceholder="חיפוש לפי שם..."
             filters={
               <ToolbarDateRange
                 startDate={startDate}
                 endDate={endDate}
-                onStartDateChange={setStartDate}
-                onEndDateChange={setEndDate}
+                onStartDateChange={handleStartDateChange}
+                onEndDateChange={handleEndDateChange}
               />
             }
           />
@@ -114,7 +127,7 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
           <>
             {/* Mobile: Card list */}
             <div className="space-y-2 sm:hidden">
-              {filtered.map((form) => (
+              {paginated.map((form) => (
                 <Link
                   key={form.id}
                   href={`/admin/submissions/pre-workout/${form.id}`}
@@ -147,7 +160,7 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((form) => (
+                  {paginated.map((form) => (
                     <ClickableTableRow key={form.id} href={`/admin/submissions/pre-workout/${form.id}`}>
                       <TableCell className="font-medium">{form.full_name}</TableCell>
                       <TableCell>{form.age || "-"}</TableCell>
@@ -162,6 +175,14 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
                 </TableBody>
               </Table>
             </div>
+
+            <SimpleTablePagination
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              currentPage={page}
+              onPageChange={setPage}
+              itemLabel="שאלונים"
+            />
           </>
         ) : submissions.length > 0 ? (
           <EmptyState icon={Activity} message="אין שאלונים מתאימים לחיפוש" />
@@ -178,10 +199,20 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(0);
 
   const filtered = useMemo(
     () => filterSubmissions(submissions, search, startDate, endDate),
     [submissions, search, startDate, endDate]
+  );
+
+  const handleSearchChange = (v: string) => { setSearch(v); setPage(0); };
+  const handleStartDateChange = (v: string) => { setStartDate(v); setPage(0); };
+  const handleEndDateChange = (v: string) => { setEndDate(v); setPage(0); };
+
+  const paginated = useMemo(
+    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [filtered, page]
   );
 
   return (
@@ -204,14 +235,14 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
           </div>
           <TableToolbar
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             searchPlaceholder="חיפוש לפי שם..."
             filters={
               <ToolbarDateRange
                 startDate={startDate}
                 endDate={endDate}
-                onStartDateChange={setStartDate}
-                onEndDateChange={setEndDate}
+                onStartDateChange={handleStartDateChange}
+                onEndDateChange={handleEndDateChange}
               />
             }
           />
@@ -222,7 +253,7 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
           <>
             {/* Mobile: Card list */}
             <div className="space-y-2 sm:hidden">
-              {filtered.map((form) => (
+              {paginated.map((form) => (
                 <Link
                   key={form.id}
                   href={`/admin/submissions/post-workout/${form.id}`}
@@ -260,7 +291,7 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((form) => (
+                  {paginated.map((form) => (
                     <ClickableTableRow key={form.id} href={`/admin/submissions/post-workout/${form.id}`}>
                       <TableCell className="font-medium">{form.full_name}</TableCell>
                       <TableCell>{form.trainers?.name || "-"}</TableCell>
@@ -273,6 +304,14 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
                 </TableBody>
               </Table>
             </div>
+
+            <SimpleTablePagination
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              currentPage={page}
+              onPageChange={setPage}
+              itemLabel="שאלונים"
+            />
           </>
         ) : submissions.length > 0 ? (
           <EmptyState icon={FileText} message="אין שאלונים מתאימים לחיפוש" />
@@ -289,10 +328,20 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(0);
 
   const filtered = useMemo(
     () => filterSubmissions(submissions, search, startDate, endDate),
     [submissions, search, startDate, endDate]
+  );
+
+  const handleSearchChange = (v: string) => { setSearch(v); setPage(0); };
+  const handleStartDateChange = (v: string) => { setStartDate(v); setPage(0); };
+  const handleEndDateChange = (v: string) => { setEndDate(v); setPage(0); };
+
+  const paginated = useMemo(
+    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [filtered, page]
   );
 
   return (
@@ -315,14 +364,14 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
           </div>
           <TableToolbar
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             searchPlaceholder="חיפוש לפי שם..."
             filters={
               <ToolbarDateRange
                 startDate={startDate}
                 endDate={endDate}
-                onStartDateChange={setStartDate}
-                onEndDateChange={setEndDate}
+                onStartDateChange={handleStartDateChange}
+                onEndDateChange={handleEndDateChange}
               />
             }
           />
@@ -333,7 +382,7 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
           <>
             {/* Mobile: Card list */}
             <div className="space-y-2 sm:hidden">
-              {filtered.map((form) => (
+              {paginated.map((form) => (
                 <Link
                   key={form.id}
                   href={`/admin/submissions/nutrition/${form.id}`}
@@ -367,7 +416,7 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((form) => (
+                  {paginated.map((form) => (
                     <ClickableTableRow key={form.id} href={`/admin/submissions/nutrition/${form.id}`}>
                       <TableCell className="font-medium">{form.full_name}</TableCell>
                       <TableCell>{form.age}</TableCell>
@@ -380,6 +429,14 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
                 </TableBody>
               </Table>
             </div>
+
+            <SimpleTablePagination
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              currentPage={page}
+              onPageChange={setPage}
+              itemLabel="שאלונים"
+            />
           </>
         ) : submissions.length > 0 ? (
           <EmptyState icon={Salad} message="אין שאלונים מתאימים לחיפוש" />

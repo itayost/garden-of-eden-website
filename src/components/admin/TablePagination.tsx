@@ -98,3 +98,68 @@ export function TablePagination<TData>({
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  Simple pagination for manually-filtered arrays (no TanStack)      */
+/* ------------------------------------------------------------------ */
+
+interface SimpleTablePaginationProps {
+  /** Total number of items after filtering */
+  totalItems: number;
+  /** Items per page (default 20) */
+  pageSize?: number;
+  /** Current 0-indexed page */
+  currentPage: number;
+  /** Page change callback */
+  onPageChange: (page: number) => void;
+  /** Optional label for the item type, e.g. "שחקנים" */
+  itemLabel?: string;
+}
+
+/**
+ * Pagination controls for plain arrays.
+ * Same visual style as the TanStack-based TablePagination.
+ */
+export function SimpleTablePagination({
+  totalItems,
+  pageSize = 20,
+  currentPage,
+  onPageChange,
+  itemLabel,
+}: SimpleTablePaginationProps) {
+  const pageCount = Math.ceil(totalItems / pageSize);
+  if (pageCount <= 1) return null;
+
+  const start = totalItems === 0 ? 0 : currentPage * pageSize + 1;
+  const end = Math.min((currentPage + 1) * pageSize, totalItems);
+
+  return (
+    <div className="flex items-center justify-between px-2 py-4">
+      <span className="text-sm text-muted-foreground">
+        מציג {start}-{end} מתוך {totalItems}
+        {itemLabel ? ` ${itemLabel}` : ""}
+      </span>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 0}
+          aria-label="עמוד קודם"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= pageCount - 1}
+          aria-label="עמוד הבא"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}

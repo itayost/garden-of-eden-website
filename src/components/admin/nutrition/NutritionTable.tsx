@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Edit } from "lucide-react";
 import { TableToolbar, ToolbarSelect } from "@/components/admin/TableToolbar";
+import { SimpleTablePagination } from "@/components/admin/TablePagination";
 
 interface Trainee {
   id: string;
@@ -26,6 +27,8 @@ interface NutritionTableProps {
   mealPlanUserIds: string[];
   recommendationUserIds: string[];
 }
+
+const PAGE_SIZE = 20;
 
 const planFilterOptions = [
   { value: "all", label: "כולם" },
@@ -77,16 +80,26 @@ export function NutritionTable({
     });
   }, [trainees, search, planFilter, recFilter, mealPlanSet, recSet]);
 
+  const [page, setPage] = useState(0);
+
+  const paginatedTrainees = useMemo(
+    () => filteredTrainees.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [filteredTrainees, page]
+  );
+
   const handleSearchChange = (value: string) => {
     setSearch(value || null);
+    setPage(0);
   };
 
   const handlePlanFilterChange = (value: string) => {
     setPlanFilter(value === "all" ? null : value);
+    setPage(0);
   };
 
   const handleRecFilterChange = (value: string) => {
     setRecFilter(value === "all" ? null : value);
+    setPage(0);
   };
 
   return (
@@ -117,7 +130,7 @@ export function NutritionTable({
         <>
           {/* Mobile: Card list */}
           <div className="space-y-2 sm:hidden">
-            {filteredTrainees.map((trainee) => {
+            {paginatedTrainees.map((trainee) => {
               const hasMealPlan = mealPlanSet.has(trainee.id);
               const hasRecommendation = recSet.has(trainee.id);
 
@@ -174,7 +187,7 @@ export function NutritionTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTrainees.map((trainee) => {
+                {paginatedTrainees.map((trainee) => {
                   const hasMealPlan = mealPlanSet.has(trainee.id);
                   const hasRecommendation = recSet.has(trainee.id);
 
@@ -215,6 +228,14 @@ export function NutritionTable({
               </TableBody>
             </Table>
           </div>
+
+          <SimpleTablePagination
+            totalItems={filteredTrainees.length}
+            pageSize={PAGE_SIZE}
+            currentPage={page}
+            onPageChange={setPage}
+            itemLabel="חניכים"
+          />
         </>
       ) : (
         <div className="text-center py-8 text-muted-foreground">

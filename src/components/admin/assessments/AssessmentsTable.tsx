@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil } from "lucide-react";
 import { TableToolbar, ToolbarSelect } from "@/components/admin/TableToolbar";
+import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import { AGE_GROUPS, getAgeGroup, getAssessmentCompleteness } from "@/types/assessment";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
@@ -23,6 +24,8 @@ interface AssessmentsTableProps {
   profiles: Profile[];
   assessmentsByUser: Record<string, PlayerAssessment[]>;
 }
+
+const PAGE_SIZE = 20;
 
 const ageGroupOptions = [
   { value: "all", label: "כל קבוצות הגיל" },
@@ -55,12 +58,21 @@ export function AssessmentsTable({
     });
   }, [profiles, search, ageGroup]);
 
+  const [page, setPage] = useState(0);
+
+  const paginatedProfiles = useMemo(
+    () => filteredProfiles.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [filteredProfiles, page]
+  );
+
   const handleSearchChange = (value: string) => {
     setSearch(value || null);
+    setPage(0);
   };
 
   const handleAgeGroupChange = (value: string) => {
     setAgeGroup(value === "all" ? null : value);
+    setPage(0);
   };
 
   return (
@@ -83,7 +95,7 @@ export function AssessmentsTable({
         <>
           {/* Mobile: Card list */}
           <div className="space-y-2 sm:hidden">
-            {filteredProfiles.map((profile) => {
+            {paginatedProfiles.map((profile) => {
               const userAssessments = assessmentsByUser[profile.id] || [];
               const latestAssessment = userAssessments[0];
               const group = getAgeGroup(profile.birthdate);
@@ -173,7 +185,7 @@ export function AssessmentsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProfiles.map((profile) => {
+                {paginatedProfiles.map((profile) => {
                   const userAssessments = assessmentsByUser[profile.id] || [];
                   const latestAssessment = userAssessments[0];
                   const group = getAgeGroup(profile.birthdate);
@@ -266,6 +278,14 @@ export function AssessmentsTable({
               </TableBody>
             </Table>
           </div>
+
+          <SimpleTablePagination
+            totalItems={filteredProfiles.length}
+            pageSize={PAGE_SIZE}
+            currentPage={page}
+            onPageChange={setPage}
+            itemLabel="שחקנים"
+          />
         </>
       ) : (
         <div className="text-center py-8 text-muted-foreground">
