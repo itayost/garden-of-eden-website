@@ -2,17 +2,53 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdmin, verifyAdminOrTrainer } from "./shared/verify-admin";
 import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
 import { isValidUUID } from "@/lib/validations/common";
 
 const MAX_SHIFT_HOURS = 12;
+const MAX_TIMESTAMP_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 type ActionResult =
   | { error: string; success?: never }
   | { success: true; error?: never };
 
-export async function clockInAction(): Promise<ActionResult> {
+/**
+ * Validate and resolve a client-provided timestamp.
+ * Returns a valid ISO string, or falls back to server time.
+ * Rejects timestamps older than 2 hours.
+ */
+function resolveTimestamp(
+  clientTimestamp?: string
+): { value: string } | { error: string } {
+  if (!clientTimestamp) {
+    return { value: new Date().toISOString() };
+  }
+
+  const parsed = new Date(clientTimestamp);
+  if (isNaN(parsed.getTime())) {
+    return { value: new Date().toISOString() };
+  }
+
+  const now = Date.now();
+
+  // Reject future timestamps — use server time instead
+  if (parsed.getTime() > now + 60_000) {
+    return { value: new Date().toISOString() };
+  }
+
+  // Reject timestamps older than 2 hours
+  if (now - parsed.getTime() > MAX_TIMESTAMP_AGE_MS) {
+    return { error: "חלפו יותר משעתיים מאז הפעולה - נא לבצע שוב" };
+  }
+
+  return { value: parsed.toISOString() };
+}
+
+export async function clockInAction(
+  clientTimestamp?: string
+): Promise<ActionResult> {
   const result = await verifyAdminOrTrainer();
   if (result.error) return { error: result.error };
   const user = result.user!;
@@ -37,11 +73,15 @@ export async function clockInAction(): Promise<ActionResult> {
     return { error: "כבר יש לך משמרת פעילה" };
   }
 
+  const timestamp = resolveTimestamp(clientTimestamp);
+  if ("error" in timestamp) return { error: timestamp.error };
+
   const { error: insertError } = await supabase
     .from("trainer_shifts")
     .insert({
       trainer_id: user.id,
       trainer_name: profile.full_name || "מאמן",
+      start_time: timestamp.value,
     });
 
   if (insertError) {
@@ -53,7 +93,9 @@ export async function clockInAction(): Promise<ActionResult> {
   return { success: true };
 }
 
-export async function clockOutAction(): Promise<ActionResult> {
+export async function clockOutAction(
+  clientTimestamp?: string
+): Promise<ActionResult> {
   const result = await verifyAdminOrTrainer();
   if (result.error) return { error: result.error };
   const user = result.user!;
@@ -71,16 +113,19 @@ export async function clockOutAction(): Promise<ActionResult> {
     return { error: "לא נמצאה משמרת פעילה" };
   }
 
+  const timestamp = resolveTimestamp(clientTimestamp);
+  if ("error" in timestamp) return { error: timestamp.error };
+
   const startTime = new Date(activeShift.start_time);
-  const now = new Date();
+  const endTime = new Date(timestamp.value);
   const hoursDiff =
-    (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
   const flagForReview = hoursDiff > MAX_SHIFT_HOURS;
 
   const { error: updateError } = await supabase
     .from("trainer_shifts")
     .update({
-      end_time: now.toISOString(),
+      end_time: timestamp.value,
       flagged_for_review: flagForReview,
     })
     .eq("id", activeShift.id);
@@ -212,6 +257,59 @@ export async function deleteShiftAction(
     .eq("id", shiftId);
 
   if (deleteError) return { error: "שגיאה במחיקה" };
+
+  revalidatePath("/admin/shifts");
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Failed shift sync management (admin only)
+// ---------------------------------------------------------------------------
+
+export interface FailedShiftSync {
+  id: string;
+  trainer_id: string;
+  trainer_name: string;
+  action_type: string;
+  client_timestamp: string;
+  failure_reason: string;
+  resolved: boolean;
+  created_at: string;
+}
+
+export async function getFailedShiftSyncsAction(): Promise<{
+  data: FailedShiftSync[];
+  error?: string;
+}> {
+  const { error } = await verifyAdmin();
+  if (error) return { data: [], error };
+
+  const supabase = await createClient();
+
+  const { data, error: fetchError } = await typedFrom(supabase, "failed_shift_syncs")
+    .select("*")
+    .eq("resolved", false)
+    .order("created_at", { ascending: false });
+
+  if (fetchError) return { data: [], error: "שגיאה בטעינת נתונים" };
+  return { data: (data as FailedShiftSync[]) || [] };
+}
+
+export async function resolveFailedSyncAction(
+  syncId: string
+): Promise<ActionResult> {
+  if (!isValidUUID(syncId)) return { error: "מזהה לא תקין" };
+
+  const { error } = await verifyAdmin();
+  if (error) return { error };
+
+  const supabase = await createClient();
+
+  const { error: updateError } = await typedFrom(supabase, "failed_shift_syncs")
+    .update({ resolved: true })
+    .eq("id", syncId);
+
+  if (updateError) return { error: "שגיאה בעדכון" };
 
   revalidatePath("/admin/shifts");
   return { success: true };

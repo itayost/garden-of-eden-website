@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
-import type { TrainerShift, Profile } from "@/types/database";
+import type { TrainerShift } from "@/types/database";
+import type { FailedShiftSync } from "@/lib/actions/trainer-shifts";
 import { TrainerShiftsView } from "@/components/admin/shifts/TrainerShiftsView";
+import { FailedSyncsBanner } from "@/components/admin/shifts/FailedSyncsBanner";
 
 export const metadata: Metadata = {
   title: "שעות מאמנים | Garden of Eden",
@@ -62,6 +64,18 @@ export default async function AdminShiftsPage({
 
   const { data: shifts } = (await query) as { data: TrainerShift[] | null };
 
+  // Fetch unresolved failed syncs (admin only)
+  let failedSyncs: FailedShiftSync[] = [];
+  if (isAdmin) {
+    const { data: syncs } = (await typedFrom(supabase, "failed_shift_syncs")
+      .select("*")
+      .eq("resolved", false)
+      .order("created_at", { ascending: false })) as {
+      data: FailedShiftSync[] | null;
+    };
+    failedSyncs = syncs || [];
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -74,6 +88,10 @@ export default async function AdminShiftsPage({
             : "סיכום שעות העבודה שלך"}
         </p>
       </div>
+
+      {isAdmin && failedSyncs.length > 0 && (
+        <FailedSyncsBanner failedSyncs={failedSyncs} />
+      )}
 
       <TrainerShiftsView
         shifts={shifts || []}
