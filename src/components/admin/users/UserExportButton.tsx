@@ -3,6 +3,7 @@
 import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { toast } from "sonner";
 import type { Profile } from "@/types/database";
 
 interface UserExportButtonProps {
@@ -19,6 +20,11 @@ interface UserExportButtonProps {
  */
 export function UserExportButton({ users, variant = "outline" }: UserExportButtonProps) {
   const handleExport = () => {
+    if (users.length === 0) {
+      toast.error("אין נתונים לייצוא");
+      return;
+    }
+
     // Transform users to export format with Hebrew column names
     const csvData = users.map((user) => ({
       "שם": user.full_name || "",
@@ -43,12 +49,14 @@ export function UserExportButton({ users, variant = "outline" }: UserExportButto
 
     // Cleanup
     URL.revokeObjectURL(link.href);
+
+    toast.success(`יוצאו ${users.length} משתמשים`);
   };
 
   return (
     <Button variant={variant} onClick={handleExport} disabled={users.length === 0}>
       <Download className="h-4 w-4 ml-2" />
-      ייצוא ל-CSV
+      ייצוא ל-CSV ({users.length})
     </Button>
   );
 }

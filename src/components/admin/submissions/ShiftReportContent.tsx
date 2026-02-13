@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
 import { TableToolbar, ToolbarDateRange } from "@/components/admin/TableToolbar";
+import { ShiftReportExportButton } from "@/components/admin/exports/ShiftReportExportButton";
 import { ClipboardCheck } from "lucide-react";
 import type { TrainerShiftReport } from "@/types/database";
 import { formatDateTime } from "@/lib/utils/date";
@@ -58,6 +59,7 @@ export function ShiftReportContent({ submissions }: { submissions: TrainerShiftR
                   : `מציג ${filtered.length} מתוך ${submissions.length} דוחות`}
               </CardDescription>
             </div>
+            <ShiftReportExportButton submissions={filtered} />
           </div>
           <TableToolbar
             searchValue={search}
