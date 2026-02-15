@@ -1,14 +1,29 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, RefreshCw } from "lucide-react";
 import { AgeGroupFilter } from "./AgeGroupFilter";
 import { CategoryLeaderCards } from "./CategoryLeaderCards";
 import { LeaderboardTable } from "./LeaderboardTable";
 import { GroupStatisticsCard } from "./GroupStatisticsCard";
-import { DistributionChart } from "./DistributionChart";
+
+const DistributionChart = dynamic(
+  () => import("./DistributionChart").then((m) => m.DistributionChart),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardContent className="p-6">
+          <Skeleton className="h-[250px] w-full" />
+        </CardContent>
+      </Card>
+    ),
+  }
+);
 import type { RankingsData } from "../lib/actions/get-rankings";
 import type { RankingCategory } from "../types";
 import { getRankingsData } from "../lib/actions/get-rankings";

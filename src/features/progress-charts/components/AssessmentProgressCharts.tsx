@@ -1,13 +1,42 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { PlayerAssessment } from "@/types/assessment";
 import { calculateGroupStats, getLatestAssessmentsPerUser } from "@/lib/assessment-to-rating";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { RatingTrendChart } from "./RatingTrendChart";
-import { PhysicalMetricChart } from "./PhysicalMetricChart";
 import { PercentileCard } from "./PercentileCard";
+
+const RatingTrendChart = dynamic(
+  () => import("./RatingTrendChart").then((m) => m.RatingTrendChart),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardContent className="p-6">
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    ),
+  }
+);
+
+const PhysicalMetricChart = dynamic(
+  () => import("./PhysicalMetricChart").then((m) => m.PhysicalMetricChart),
+  {
+    ssr: false,
+    loading: () => (
+      <Card>
+        <CardContent className="p-6">
+          <Skeleton className="h-[200px] w-full" />
+        </CardContent>
+      </Card>
+    ),
+  }
+);
 import { useDateRangeFilter } from "../hooks/useDateRangeFilter";
 import {
   transformToPhysicalChartData,
