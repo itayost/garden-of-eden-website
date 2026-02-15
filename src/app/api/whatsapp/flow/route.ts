@@ -40,9 +40,26 @@ export async function POST(request: NextRequest) {
     // Replace literal \n with actual newlines
     const privateKey = privateKeyPem.replace(/\\n/g, "\n");
 
-    const { decryptedData, aesKeyBuffer, initialVectorBuffer } =
-      decryptFlowRequest(body, privateKey);
+    // Log key diagnostics on first request
+    console.log("[WhatsApp Flow] Key starts with:", privateKey.substring(0, 27));
+    console.log("[WhatsApp Flow] Key length:", privateKey.length);
+    console.log("[WhatsApp Flow] Has BEGIN marker:", privateKey.includes("-----BEGIN"));
+    console.log("[WhatsApp Flow] Has real newlines:", privateKey.includes("\n"));
+    console.log("[WhatsApp Flow] Body keys:", Object.keys(body));
 
+    let decrypted;
+    try {
+      decrypted = decryptFlowRequest(body, privateKey);
+    } catch (decryptError) {
+      // Per Meta docs: return 421 when decryption fails
+      console.error("[WhatsApp Flow] Decryption failed:", decryptError);
+      return NextResponse.json(
+        { error: "RSA-OAEP failed encrypt/decrypt." },
+        { status: 421 }
+      );
+    }
+
+    const { decryptedData, aesKeyBuffer, initialVectorBuffer } = decrypted;
     const action = decryptedData.action as string;
     const screen = decryptedData.screen as string | undefined;
     const data = (decryptedData.data as Record<string, unknown>) || {};
