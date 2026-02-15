@@ -138,14 +138,24 @@ async function handleInit(
 
 /**
  * Handle data_exchange action — route to next screen based on current screen
+ *
+ * Each screen transition only receives the CURRENT screen's form data,
+ * so we save incrementally at each step (matching the worker pattern).
  */
 async function handleDataExchange(
   currentScreen: string | undefined,
   data: Record<string, unknown>,
   flowToken: string
 ): Promise<Record<string, unknown>> {
+  const phone = extractPhoneFromToken(flowToken);
+  console.log("[WhatsApp Flow] Data exchange:", { currentScreen, data, phone });
+
   switch (currentScreen) {
     case "AGE_SELECTION":
+      // Save age immediately
+      if (phone) {
+        await saveFlowField(phone, { flow_age_group: data.age as string });
+      }
       return {
         version: FLOW_VERSION,
         screen: "TEAM_SELECTION",
@@ -167,6 +177,13 @@ async function handleDataExchange(
           },
         };
       }
+      // Save team immediately (use other_team text if "other" selected)
+      if (phone) {
+        const teamValue = data.team === "team_other"
+          ? (data.other_team as string)
+          : (data.team as string);
+        await saveFlowField(phone, { flow_team: teamValue });
+      }
       return {
         version: FLOW_VERSION,
         screen: "FREQUENCY_SELECTION",
@@ -176,7 +193,11 @@ async function handleDataExchange(
       };
 
     case "FREQUENCY_SELECTION":
-      await saveFlowData(data, flowToken);
+      // Save frequency and mark flow complete
+      if (phone) {
+        await saveFlowField(phone, { flow_frequency: data.frequency as string });
+        await saveFlowResponse(phone, flowToken, data);
+      }
       return {
         version: FLOW_VERSION,
         screen: "CONFIRMATION",
@@ -258,13 +279,46 @@ function handleBack(
 }
 
 /**
- * Save flow data to Supabase — update lead and log flow response
+ * Extract phone number from flow token (format: session_972XXXXXXXXX_timestamp_random)
  */
-async function saveFlowData(
-  data: Record<string, unknown>,
-  flowToken: string
+function extractPhoneFromToken(flowToken: string): string | null {
+  const match = flowToken?.match(/session_(\d+)_/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Save a single flow field to the lead record (incremental update)
+ */
+async function saveFlowField(
+  phone: string,
+  fields: Record<string, string>
 ): Promise<void> {
-  const phone = flowToken.split("_")[1] || "";
+  if (!/^972\d{9}$/.test(phone)) return;
+
+  try {
+    const supabase = createAdminClient();
+    const { error } = await typedFrom(supabase, "leads")
+      .update(fields)
+      .eq("phone", phone);
+
+    if (error) {
+      console.error("[WhatsApp Flow] Error saving field:", error);
+    } else {
+      console.log("[WhatsApp Flow] Saved fields for", phone, ":", fields);
+    }
+  } catch (error) {
+    console.error("[WhatsApp Flow] Error saving flow field:", error);
+  }
+}
+
+/**
+ * Save complete flow response record
+ */
+async function saveFlowResponse(
+  phone: string,
+  flowToken: string,
+  data: Record<string, unknown>
+): Promise<void> {
   if (!/^972\d{9}$/.test(phone)) return;
 
   try {
@@ -276,14 +330,6 @@ async function saveFlowData(
       .single();
 
     if (!lead) return;
-
-    await typedFrom(supabase, "leads")
-      .update({
-        flow_age_group: data.age_group as string,
-        flow_team: data.team as string,
-        flow_frequency: data.frequency as string,
-      })
-      .eq("id", lead.id);
 
     await typedFrom(supabase, "lead_flow_responses").upsert(
       {
@@ -300,6 +346,6 @@ async function saveFlowData(
       { onConflict: "flow_token" }
     );
   } catch (error) {
-    console.error("[WhatsApp Flow] Error saving flow data:", error);
+    console.error("[WhatsApp Flow] Error saving flow response:", error);
   }
 }
