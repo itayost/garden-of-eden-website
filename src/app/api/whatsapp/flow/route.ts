@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "active" });
     }
 
-    const privateKeyPem = process.env.WHATSAPP_FLOW_PRIVATE_KEY;
+    const privateKeyPem = process.env.WHATSAPP_FLOW_PRIVATE_KEY?.trim();
     if (!privateKeyPem) {
       console.error("[WhatsApp Flow] WHATSAPP_FLOW_PRIVATE_KEY not configured");
       return NextResponse.json(

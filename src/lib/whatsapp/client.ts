@@ -7,9 +7,9 @@ interface WhatsAppConfig {
 }
 
 function getConfig(): WhatsAppConfig {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const flowId = process.env.WHATSAPP_FLOW_ID;
+  const token = process.env.WHATSAPP_TOKEN?.trim();
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const flowId = process.env.WHATSAPP_FLOW_ID?.trim();
   if (!token || !phoneNumberId) {
     throw new Error("WhatsApp environment variables not configured");
   }

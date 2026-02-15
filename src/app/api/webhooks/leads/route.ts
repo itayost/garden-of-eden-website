@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   try {
     // Verify API key with timing-safe comparison
     const apiKey = request.headers.get("x-api-key");
-    const expectedKey = process.env.LEADS_WEBHOOK_API_KEY;
+    const expectedKey = process.env.LEADS_WEBHOOK_API_KEY?.trim();
     if (!apiKey || !expectedKey) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
