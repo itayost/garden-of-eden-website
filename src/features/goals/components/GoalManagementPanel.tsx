@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useActionState } from "react";
 import { toast } from "sonner";
 import { Target, Plus, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -23,25 +23,36 @@ export function GoalManagementPanel({
 }: GoalManagementPanelProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
-  // Calculate progress for all goals
-  const goalsWithProgress = existingGoals.map(calculateGoalProgress);
-  const activeGoals = goalsWithProgress.filter((g) => !g.is_achieved);
-  const achievedGoals = goalsWithProgress.filter((g) => g.is_achieved);
+  type DeleteState = { success: boolean; error: string | undefined };
 
-  const handleDeleteGoal = (goalId: string) => {
-    setDeletingGoalId(goalId);
-    startTransition(async () => {
+  const [, deleteFormAction, isDeleting] = useActionState(
+    async (prevState: DeleteState, formData: FormData) => {
+      const goalId = formData.get("goalId") as string;
+      if (!goalId) {
+        toast.error("מזהה יעד חסר");
+        setDeletingGoalId(null);
+        return prevState;
+      }
+
       const result = await deleteGoal(goalId);
+
       if (result.success) {
         toast.success("היעד נמחק בהצלחה");
       } else {
         toast.error(result.error || "שגיאה במחיקת היעד");
       }
       setDeletingGoalId(null);
-    });
-  };
+
+      return { success: result.success, error: result.error };
+    },
+    { success: false, error: undefined }
+  );
+
+  // Calculate progress for all goals
+  const goalsWithProgress = existingGoals.map(calculateGoalProgress);
+  const activeGoals = goalsWithProgress.filter((g) => !g.is_achieved);
+  const achievedGoals = goalsWithProgress.filter((g) => g.is_achieved);
 
   return (
     <>
@@ -86,15 +97,24 @@ export function GoalManagementPanel({
                 {activeGoals.map((goal) => (
                   <div key={goal.id} className="relative group">
                     <GoalCard goal={goal} />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleDeleteGoal(goal.id)}
-                      disabled={isPending && deletingGoalId === goal.id}
+                    <form
+                      action={(formData: FormData) => {
+                        setDeletingGoalId(goal.id);
+                        deleteFormAction(formData);
+                      }}
+                      className="absolute top-2 left-2"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <input type="hidden" name="goalId" value={goal.id} />
+                      <Button
+                        type="submit"
+                        variant="destructive"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={isDeleting && deletingGoalId === goal.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </form>
                   </div>
                 ))}
               </div>
@@ -114,15 +134,24 @@ export function GoalManagementPanel({
                 {achievedGoals.map((goal) => (
                   <div key={goal.id} className="relative group">
                     <GoalCard goal={goal} />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDeleteGoal(goal.id)}
-                      disabled={isPending && deletingGoalId === goal.id}
+                    <form
+                      action={(formData: FormData) => {
+                        setDeletingGoalId(goal.id);
+                        deleteFormAction(formData);
+                      }}
+                      className="absolute top-2 left-2"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <input type="hidden" name="goalId" value={goal.id} />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                        disabled={isDeleting && deletingGoalId === goal.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </form>
                   </div>
                 ))}
               </div>

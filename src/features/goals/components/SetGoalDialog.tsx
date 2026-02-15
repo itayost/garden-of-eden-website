@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useActionState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -35,10 +35,8 @@ export function SetGoalDialog({
   currentMetrics,
   existingGoals,
 }: SetGoalDialogProps) {
-  const [isPending, startTransition] = useTransition();
   const [selectedMetric, setSelectedMetric] = useState<PhysicalMetricKey | "">("");
   const [targetValue, setTargetValue] = useState("");
-
   // Get available metrics (exclude those that already have active goals)
   const activeGoalMetrics = existingGoals
     .filter((g) => g.achieved_at === null)
@@ -53,19 +51,22 @@ export function SetGoalDialog({
   const unit = selectedMetric ? METRIC_UNITS[selectedMetric] : "";
   const isLowerBetter = selectedMetric ? isLowerBetterMetric(selectedMetric) : false;
 
-  const handleSubmit = () => {
-    if (!selectedMetric || !targetValue) {
-      toast.error("יש למלא את כל השדות");
-      return;
-    }
+  const [, formAction, isPending] = useActionState(
+    async (
+      prevState: { success: boolean; error: string | undefined },
+      /* formData */ _: FormData
+    ) => {
+      if (!selectedMetric || !targetValue) {
+        toast.error("יש למלא את כל השדות");
+        return prevState;
+      }
 
-    const parsedValue = parseFloat(targetValue);
-    if (isNaN(parsedValue) || parsedValue <= 0) {
-      toast.error("יש להזין ערך מספרי חיובי");
-      return;
-    }
+      const parsedValue = parseFloat(targetValue);
+      if (isNaN(parsedValue) || parsedValue <= 0) {
+        toast.error("יש להזין ערך מספרי חיובי");
+        return prevState;
+      }
 
-    startTransition(async () => {
       const result = await setGoal({
         userId,
         metricKey: selectedMetric,
@@ -81,8 +82,11 @@ export function SetGoalDialog({
       } else {
         toast.error(result.error || "שגיאה ביצירת היעד");
       }
-    });
-  };
+
+      return { success: result.success, error: result.error };
+    },
+    { success: false, error: undefined }
+  );
 
   const handleClose = () => {
     if (!isPending) {
@@ -180,12 +184,14 @@ export function SetGoalDialog({
           <Button variant="outline" onClick={handleClose} disabled={isPending}>
             ביטול
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={isPending || !selectedMetric || !targetValue || availableMetrics.length === 0}
-          >
-            {isPending ? "יוצר יעד..." : "צור יעד"}
-          </Button>
+          <form action={formAction}>
+            <Button
+              type="submit"
+              disabled={isPending || !selectedMetric || !targetValue || availableMetrics.length === 0}
+            >
+              {isPending ? "יוצר יעד..." : "צור יעד"}
+            </Button>
+          </form>
         </DialogFooter>
       </DialogContent>
     </Dialog>

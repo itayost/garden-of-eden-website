@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useActionState } from "react";
 import { toast } from "sonner";
 import {
   Card,
@@ -24,28 +24,31 @@ export function RecommendationForm({
   userId,
   existingRecommendation,
 }: RecommendationFormProps) {
-  const [isPending, startTransition] = useTransition();
   const [text, setText] = useState(
     existingRecommendation?.recommendation_text || ""
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  type FormState = { success: boolean; error: string | undefined };
 
-    if (text.trim().length < 10) {
-      toast.error("ההמלצה חייבת להכיל לפחות 10 תווים");
-      return;
-    }
+  const [, formAction, isPending] = useActionState(
+    async (prevState: FormState, /* formData */ _: FormData) => {
+      if (text.trim().length < 10) {
+        toast.error("ההמלצה חייבת להכיל לפחות 10 תווים");
+        return prevState;
+      }
 
-    startTransition(async () => {
       const result = await upsertRecommendation(userId, text);
+
       if (result.success) {
         toast.success("ההמלצות נשמרו בהצלחה");
       } else {
         toast.error(result.error || "שגיאה בשמירת ההמלצות");
       }
-    });
-  };
+
+      return { success: result.success, error: result.error };
+    },
+    { success: false, error: undefined }
+  );
 
   return (
     <Card>
@@ -59,7 +62,7 @@ export function RecommendationForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form action={formAction} className="space-y-4">
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}

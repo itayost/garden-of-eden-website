@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useActionState } from "react";
 import { toast } from "sonner";
 import {
   Card,
@@ -71,17 +71,20 @@ function toWeeklyMealPlan(items: WeeklyMealItems): WeeklyMealPlan {
 }
 
 export function MealPlanForm({ userId, existingPlan }: MealPlanFormProps) {
-  const [isPending, startTransition] = useTransition();
   const [activeDay, setActiveDay] = useState<DayOfWeek>("sunday");
   const idCounter = useRef(0);
   const nextId = () => ++idCounter.current;
 
-  const [mealItems, setMealItems] = useState<WeeklyMealItems>(() =>
-    toMealItems(
+  const [mealItems, setMealItems] = useState<WeeklyMealItems>(() => {
+    let counter = 0;
+    const getId = () => ++counter;
+    const items = toMealItems(
       existingPlan?.meal_plan ?? EMPTY_WEEKLY_MEAL_PLAN,
-      nextId
-    )
-  );
+      getId
+    );
+    idCounter.current = counter;
+    return items;
+  });
 
   const addItem = (day: DayOfWeek, meal: MealCategory) => {
     setMealItems((prev) => ({
@@ -120,34 +123,38 @@ export function MealPlanForm({ userId, existingPlan }: MealPlanFormProps) {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  type FormState = { success: boolean; error: string | undefined };
 
-    const plan = toWeeklyMealPlan(mealItems);
+  const [, formAction, isPending] = useActionState(
+    async (prevState: FormState, /* formData */ _: FormData) => {
+      const plan = toWeeklyMealPlan(mealItems);
 
-    // Clean empty strings and check if any items remain
-    let hasItems = false;
-    for (const day of ORDERED_DAYS) {
-      for (const meal of ORDERED_MEALS) {
-        plan[day][meal] = plan[day][meal].filter((v) => v.trim() !== "");
-        if (plan[day][meal].length > 0) hasItems = true;
+      // Clean empty strings and check if any items remain
+      let hasItems = false;
+      for (const day of ORDERED_DAYS) {
+        for (const meal of ORDERED_MEALS) {
+          plan[day][meal] = plan[day][meal].filter((v) => v.trim() !== "");
+          if (plan[day][meal].length > 0) hasItems = true;
+        }
       }
-    }
 
-    if (!hasItems) {
-      toast.error("יש להוסיף לפחות פריט אחד");
-      return;
-    }
+      if (!hasItems) {
+        toast.error("יש להוסיף לפחות פריט אחד");
+        return prevState;
+      }
 
-    startTransition(async () => {
       const result = await upsertMealPlan(userId, plan);
+
       if (result.success) {
         toast.success("תוכנית התזונה נשמרה בהצלחה");
       } else {
         toast.error(result.error || "שגיאה בשמירת תוכנית התזונה");
       }
-    });
-  };
+
+      return { success: result.success, error: result.error };
+    },
+    { success: false, error: undefined }
+  );
 
   return (
     <Card>
@@ -161,7 +168,7 @@ export function MealPlanForm({ userId, existingPlan }: MealPlanFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form action={formAction} className="space-y-6">
           <Tabs
             value={activeDay}
             onValueChange={(v) => setActiveDay(v as DayOfWeek)}
