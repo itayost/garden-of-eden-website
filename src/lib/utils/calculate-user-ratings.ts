@@ -53,9 +53,10 @@ export async function calculateUserRatings(
         .map((p) => p.id) || [];
 
     if (sameAgeGroupIds.length > 0) {
+      // Only select columns used by calculateCardRatings / calculateGroupStats
       const { data: fetchedGroupAssessments } = await supabase
         .from("player_assessments")
-        .select("*")
+        .select("id, user_id, assessment_date, sprint_5m, sprint_10m, sprint_20m, jump_2leg_distance, jump_right_leg, jump_left_leg, jump_2leg_height, blaze_spot_time, flexibility_ankle, flexibility_knee, flexibility_hip, kick_power_kaiser, coordination, body_structure, leg_power_technique")
         .in("user_id", sameAgeGroupIds);
 
       if (fetchedGroupAssessments && fetchedGroupAssessments.length > 0) {

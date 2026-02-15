@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { RankingsView, getRankingsData } from "@/features/rankings";
+import dynamic from "next/dynamic";
+import { getRankingsData } from "@/features/rankings";
 import { getAgeGroup } from "@/types/assessment";
+
+const RankingsView = dynamic(
+  () => import("@/features/rankings").then(m => ({ default: m.RankingsView }))
+);
 
 export const metadata: Metadata = {
   title: "דירוגים | Garden of Eden",

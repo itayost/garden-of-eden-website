@@ -2,8 +2,7 @@
  * Shared image validation utilities for API routes
  */
 
-// UUID validation regex
-export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidUUID } from "@/lib/validations/common";
 
 // Allowed file types
 export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png"] as const;
@@ -27,7 +26,7 @@ export const AVATARS_BUCKET = "avatars";
  */
 export function validateUUID(id: string | null | undefined): id is string {
   if (!id) return false;
-  return UUID_REGEX.test(id);
+  return isValidUUID(id);
 }
 
 /**

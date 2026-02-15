@@ -33,21 +33,21 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
       .from("pre_workout_forms")
       .select("*")
       .order("submitted_at", { ascending: false })
-      .limit(1000) as unknown as { data: PreWorkoutForm[] | null },
+      .limit(200) as unknown as { data: PreWorkoutForm[] | null },
     supabase
       .from("post_workout_forms")
       .select("*, trainers(name)")
       .order("submitted_at", { ascending: false })
-      .limit(1000) as unknown as { data: PostWorkoutWithTrainer[] | null },
+      .limit(200) as unknown as { data: PostWorkoutWithTrainer[] | null },
     supabase
       .from("nutrition_forms")
       .select("*")
       .order("submitted_at", { ascending: false })
-      .limit(1000) as unknown as { data: NutritionForm[] | null },
+      .limit(200) as unknown as { data: NutritionForm[] | null },
     typedFrom(supabase, "trainer_shift_reports")
       .select("*")
       .order("report_date", { ascending: false })
-      .limit(1000) as unknown as { data: TrainerShiftReport[] | null },
+      .limit(200) as unknown as { data: TrainerShiftReport[] | null },
   ]);
 
   const defaultTab = tab || "pre-workout";

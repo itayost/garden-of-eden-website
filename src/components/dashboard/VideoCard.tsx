@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
+import { markVideoWatchedAction } from "@/lib/actions/video-progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,22 +28,12 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
   const markAsWatched = async () => {
     if (watched) return;
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const result = await markVideoWatchedAction(video.id);
 
-    if (!user) return;
-
-    const { error } = await supabase.from("video_progress").upsert({
-      user_id: user.id,
-      video_id: video.id,
-      watched: true,
-      watched_at: new Date().toISOString(),
-    });
-
-    if (!error) {
-      setWatched(true);
+    if (result.error) {
+      toast.error(result.error);
     } else {
-      toast.error("שגיאה בעדכון סטטוס הצפייה");
+      setWatched(true);
     }
   };
 

@@ -9,6 +9,7 @@ const requiredServerVars = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
+  "GROW_API_URL",
 ] as const;
 
 const optionalServerVars = [
@@ -17,7 +18,7 @@ const optionalServerVars = [
   "CRON_SECRET",
   "GROW_USER_ID",
   "GROW_PAGE_CODE",
-  "GROW_API_URL",
+  "GROW_PAGE_CODE_RECURRING",
   "GROW_WEBHOOK_SECRET",
   "GROW_PROCESS_TOKEN",
   "REMOVEBG_API_KEY",

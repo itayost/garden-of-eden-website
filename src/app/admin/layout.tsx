@@ -16,12 +16,12 @@ export default async function AdminLayout({
     redirect("/auth/login?redirect=/admin");
   }
 
-  // Check if user is admin or trainer
+  // Check if user is admin or trainer - only columns needed by AdminNav/AdminBottomNav
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select("full_name, avatar_url, processed_avatar_url, role")
     .eq("id", user.id)
-    .single() as { data: Profile | null };
+    .single() as unknown as { data: Profile | null };
 
   if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");

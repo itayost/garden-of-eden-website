@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,13 +21,16 @@ import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getAgeGroup } from "@/types/assessment";
 import { calculateUserRatings } from "@/lib/utils/calculate-user-ratings";
-import { MiniRatingChartWrapper } from "./MiniRatingChartWrapper";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
 import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } from "@/features/achievements";
 import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
 import { NutritionMeetingBanner } from "@/features/nutrition";
 import type { UserAchievementRow } from "@/types/database";
+
+const MiniRatingChartWrapper = dynamic(
+  () => import("./MiniRatingChartWrapper").then(m => ({ default: m.MiniRatingChartWrapper }))
+);
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -49,15 +53,15 @@ export default async function DashboardPage() {
     { data: goalsData },
     { data: achievementsData }
   ] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
+    supabase.from("profiles").select("full_name, birthdate, position, created_at, processed_avatar_url, avatar_url").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
     supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").limit(1).maybeSingle() as unknown as { data: { id: string } | null },
     supabase.from("player_assessments").select("*").eq("user_id", user?.id || "").order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
     supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
     supabase.from("post_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
     supabase.from("video_progress").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "").eq("watched", true) as unknown as { count: number | null },
-    supabase.from("user_streaks").select("*").eq("user_id", user?.id || "").single() as unknown as { data: UserStreakRow | null },
+    supabase.from("user_streaks").select("user_id, current_streak, longest_streak, last_activity_date, total_activities").eq("user_id", user?.id || "").single() as unknown as { data: UserStreakRow | null },
     supabase.from("player_goals").select("*").eq("user_id", user?.id || "").order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
-    supabase.from("user_achievements").select("*").eq("user_id", user?.id || "").order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null }
+    supabase.from("user_achievements").select("id, achievement_id, badge_type, unlocked_at, celebrated").eq("user_id", user?.id || "").order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null }
   ]);
 
   // Calculate goal progress for display

@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createClient } from "@/lib/supabase/client";
-import { updateInTable, insertAndSelect, insertIntoTable } from "@/lib/supabase/helpers";
+import { savePlayerStatsAction } from "@/lib/actions/admin-player-stats";
 import {
   playerStatsSchema,
   type PlayerStatsFormData,
@@ -118,72 +117,14 @@ export function PlayerStatsForm({
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const result = await savePlayerStatsAction(userId, data, existingStats?.id || null);
 
-      if (!user) {
-        throw new Error("נא להתחבר מחדש");
+      if (result.error) {
+        toast.error(result.error);
+        return;
       }
 
-      const overall_rating = calculateOverall(data);
-
-      const statsData = {
-        user_id: userId,
-        ...data,
-        overall_rating,
-        last_updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      };
-
-      // History data for tracking changes
-      const historyData = {
-        user_id: userId,
-        overall_rating,
-        pace: data.pace,
-        shooting: data.shooting,
-        passing: data.passing,
-        dribbling: data.dribbling,
-        defending: data.defending,
-        physical: data.physical,
-        updated_by: user.id,
-      };
-
-      if (existingStats) {
-        // Update existing stats
-        const { error } = await updateInTable(supabase, "player_stats", statsData, "id", existingStats.id);
-        if (error) throw error;
-
-        // Add to history
-        await insertIntoTable(supabase, "player_stats_history", {
-          player_stats_id: existingStats.id,
-          ...historyData,
-          update_reason: "עדכון סטטיסטיקות",
-        });
-
-        toast.success("הסטטיסטיקות עודכנו בהצלחה!");
-      } else {
-        // Create new stats
-        const { data: newStats, error } = await insertAndSelect<{ id: string }>(
-          supabase,
-          "player_stats",
-          statsData
-        );
-
-        if (error) throw error;
-        if (!newStats) throw new Error("Failed to create stats");
-
-        // Add initial history entry
-        await insertIntoTable(supabase, "player_stats_history", {
-          player_stats_id: newStats.id,
-          ...historyData,
-          update_reason: "יצירת כרטיס ראשוני",
-        });
-
-        toast.success("כרטיס השחקן נוצר בהצלחה!");
-      }
-
+      toast.success(existingStats ? "הסטטיסטיקות עודכנו בהצלחה!" : "כרטיס השחקן נוצר בהצלחה!");
       router.refresh();
     } catch (error: unknown) {
       console.error("Submit error:", error);

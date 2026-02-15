@@ -16,12 +16,12 @@ export default async function DashboardLayout({
     redirect("/auth/login?redirect=/dashboard");
   }
 
-  // Get user profile
+  // Get user profile - only columns needed by DashboardNav + onboarding check
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select("full_name, avatar_url, processed_avatar_url, profile_completed, role")
     .eq("id", user.id)
-    .maybeSingle() as { data: Profile | null };
+    .maybeSingle() as unknown as { data: Profile | null };
 
   // Defense-in-depth: Redirect trainees to onboarding if profile is not complete
   if (profile && !profile.profile_completed && profile.role !== "admin" && profile.role !== "trainer") {

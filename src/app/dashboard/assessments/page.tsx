@@ -22,7 +22,11 @@ import {
 import { calculateUserRatings } from "@/lib/utils/calculate-user-ratings";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
-import { AssessmentChartsWrapper } from "./AssessmentChartsWrapper";
+import dynamic from "next/dynamic";
+
+const AssessmentChartsWrapper = dynamic(
+  () => import("./AssessmentChartsWrapper").then(m => ({ default: m.AssessmentChartsWrapper }))
+);
 import { ComparisonSelector } from "@/features/assessment-comparison";
 
 export default async function DashboardAssessmentsPage() {

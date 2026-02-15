@@ -4,7 +4,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { Profile } from "@/types/database";
-import { getNutritionData, SleepChart } from "@/features/nutrition";
+import dynamic from "next/dynamic";
+import { getNutritionData } from "@/features/nutrition";
+
+const SleepChart = dynamic(
+  () => import("@/features/nutrition").then(m => ({ default: m.SleepChart }))
+);
 import { MealPlanPdfUpload } from "@/components/admin/nutrition/MealPlanPdfUpload";
 import { RecommendationForm } from "@/components/admin/nutrition/RecommendationForm";
 
