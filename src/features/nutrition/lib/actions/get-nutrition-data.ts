@@ -1,6 +1,7 @@
 "use server";
 
 import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
+import { isValidUUID } from "@/lib/validations/common";
 import type {
   NutritionData,
   TraineeMealPlanRow,
@@ -19,6 +20,8 @@ const EMPTY_NUTRITION_DATA: NutritionData = {
  * Caller must be the user themselves or an admin/trainer.
  */
 export async function getNutritionData(userId: string): Promise<NutritionData> {
+  if (!isValidUUID(userId)) return EMPTY_NUTRITION_DATA;
+
   const { authorized, supabase } = await verifyUserAccess(userId);
   if (!authorized) {
     return EMPTY_NUTRITION_DATA;

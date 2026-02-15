@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
+import { isValidUUID } from "@/lib/validations/common";
 import type { UserAchievementRow } from "@/types/database";
 import type { AchievementWithDisplay } from "../../types";
 import { enrichAchievement } from "../utils/achievement-utils";
@@ -13,6 +14,8 @@ import { enrichAchievement } from "../utils/achievement-utils";
 export async function getUserAchievements(
   userId: string
 ): Promise<AchievementWithDisplay[]> {
+  if (!isValidUUID(userId)) return [];
+
   const { authorized, supabase } = await verifyUserAccess(userId);
   if (!authorized) {
     return [];
@@ -84,6 +87,8 @@ export async function getUncelebratedAchievements(): Promise<AchievementWithDisp
 export async function markAchievementCelebrated(
   achievementId: string
 ): Promise<boolean> {
+  if (!isValidUUID(achievementId)) return false;
+
   const supabase = await createClient();
 
   // Verify user is authenticated
@@ -118,6 +123,7 @@ export async function markAchievementsCelebrated(
   achievementIds: string[]
 ): Promise<boolean> {
   if (achievementIds.length === 0) return true;
+  if (achievementIds.some((id) => !isValidUUID(id))) return false;
 
   const supabase = await createClient();
 
