@@ -86,7 +86,7 @@ export function LeadCloseDealDialog({
             <Label>תשלום חודשי (₪)</Label>
             <Input
               type="number"
-              min={0}
+              min={1}
               value={payment}
               onChange={(e) =>
                 setPayment(e.target.value === "" ? "" : Number(e.target.value))

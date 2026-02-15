@@ -380,7 +380,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">טלפון</Label>
-                  <Input dir="ltr" {...register("phone")} />
+                  <Input dir="ltr" placeholder="050-1234567" {...register("phone")} />
                   {errors.phone && (
                     <p className="text-xs text-destructive">
                       {errors.phone.message}

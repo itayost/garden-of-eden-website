@@ -119,11 +119,10 @@ export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) 
               <Input
                 id="phone"
                 dir="ltr"
-                placeholder="972501234567"
+                placeholder="050-1234567"
                 {...register("phone")}
               />
             </div>
-            <p className="text-xs text-muted-foreground">פורמט: 972 + 9 ספרות</p>
             {errors.phone && (
               <p className="text-xs text-destructive">{errors.phone.message}</p>
             )}
@@ -143,7 +142,9 @@ export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) 
               <SelectContent>
                 {(
                   Object.entries(LEAD_STATUS_LABELS) as [LeadStatus, string][]
-                ).map(([value, label]) => (
+                )
+                  .filter(([value]) => value !== "closed")
+                  .map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>
