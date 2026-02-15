@@ -232,8 +232,8 @@ describe('growWebhookSchema', () => {
     });
 
     it('should accept payerBankAccountDetails default to empty string', () => {
-      const { payerBankAccountDetails, ...dataWithoutBank } = validWebhookPayload.data;
-      const payload = { ...validWebhookPayload, data: dataWithoutBank };
+      // validWebhookPayload.data already omits payerBankAccountDetails
+      const payload = { ...validWebhookPayload };
       const result = growWebhookSchema.safeParse(payload);
       expect(result.success).toBe(true);
       if (result.success) {

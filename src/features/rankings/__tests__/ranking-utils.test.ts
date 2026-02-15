@@ -172,30 +172,33 @@ describe("calculateGroupStatistics", () => {
   it("should calculate basic statistics correctly", () => {
     const values = [10, 20, 30, 40, 50];
     const stats = calculateGroupStatistics(values);
+    expect(stats).not.toBeNull();
 
-    expect(stats.count).toBe(5);
-    expect(stats.min).toBe(10);
-    expect(stats.max).toBe(50);
-    expect(stats.average).toBe(30);
-    expect(stats.median).toBe(30);
+    expect(stats!.count).toBe(5);
+    expect(stats!.min).toBe(10);
+    expect(stats!.max).toBe(50);
+    expect(stats!.average).toBe(30);
+    expect(stats!.median).toBe(30);
   });
 
   it("should handle even number of values for median", () => {
     const values = [10, 20, 30, 40];
     const stats = calculateGroupStatistics(values);
+    expect(stats).not.toBeNull();
 
-    expect(stats.median).toBe(25); // (20 + 30) / 2
+    expect(stats!.median).toBe(25); // (20 + 30) / 2
   });
 
   it("should handle single value", () => {
     const values = [42];
     const stats = calculateGroupStatistics(values);
+    expect(stats).not.toBeNull();
 
-    expect(stats.count).toBe(1);
-    expect(stats.min).toBe(42);
-    expect(stats.max).toBe(42);
-    expect(stats.average).toBe(42);
-    expect(stats.median).toBe(42);
+    expect(stats!.count).toBe(1);
+    expect(stats!.min).toBe(42);
+    expect(stats!.max).toBe(42);
+    expect(stats!.average).toBe(42);
+    expect(stats!.median).toBe(42);
   });
 
   it("should return null for empty array", () => {

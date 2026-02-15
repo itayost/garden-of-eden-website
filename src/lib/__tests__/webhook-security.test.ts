@@ -183,7 +183,7 @@ describe('verifyGrowProcessToken', () => {
 
   it('should handle non-string processToken type', () => {
     const payload = { processToken: 12345 };
-    const result = verifyGrowProcessToken(payload as { processToken: string }, expectedToken);
+    const result = verifyGrowProcessToken(payload as unknown as { processToken: string }, expectedToken);
     expect(result.valid).toBe(false);
     expect(result.error).toBe('Invalid processToken type');
   });
