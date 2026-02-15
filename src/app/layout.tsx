@@ -2,9 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Heebo, Bebas_Neue } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
-import { MotionProvider } from "@/components/MotionProvider";
 
 const heebo = Heebo({
   variable: "--font-heebo",
@@ -79,13 +80,13 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" className="overflow-x-hidden">
       <body className={`${heebo.variable} ${bebasNeue.variable} font-sans antialiased overflow-x-hidden`}>
-        <MotionProvider>
-          <NuqsAdapter>
-            {children}
-          </NuqsAdapter>
-        </MotionProvider>
+        <NuqsAdapter>
+          {children}
+        </NuqsAdapter>
         <Toaster position="top-center" />
         <ServiceWorkerRegistration />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

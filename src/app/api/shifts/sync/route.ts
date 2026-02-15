@@ -1,34 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
+import { resolveTimestamp } from "@/lib/utils/resolve-timestamp";
 
 const MAX_SHIFT_HOURS = 12;
-const MAX_TIMESTAMP_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 interface SyncAction {
   type: "clock_in" | "clock_out";
   clientTimestamp: string;
-}
-
-function resolveTimestamp(
-  clientTimestamp: string
-): { value: string } | { error: string } {
-  const parsed = new Date(clientTimestamp);
-  if (isNaN(parsed.getTime())) {
-    return { value: new Date().toISOString() };
-  }
-
-  const now = Date.now();
-
-  if (parsed.getTime() > now + 60_000) {
-    return { value: new Date().toISOString() };
-  }
-
-  if (now - parsed.getTime() > MAX_TIMESTAMP_AGE_MS) {
-    return { error: "expired" };
-  }
-
-  return { value: parsed.toISOString() };
 }
 
 /**

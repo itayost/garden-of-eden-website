@@ -44,11 +44,11 @@ supabase db push     # Push migrations to Supabase
 ```
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── admin/              # Admin dashboard (users, assessments, nutrition, videos, shifts, submissions, stats, end-of-shift)
+│   ├── admin/              # Admin dashboard (users, assessments, nutrition, videos, shifts, submissions, end-of-shift)
 │   ├── dashboard/          # Trainee dashboard pages
 │   ├── auth/               # Auth flow (OTP login)
 │   ├── onboarding/         # New user onboarding
-│   └── api/                # API routes (cron, images, payments, webhooks)
+│   └── api/                # API routes (cron, health, images, nutrition, payments, shifts, webhooks)
 ├── components/
 │   ├── ui/                 # Shared UI primitives (shadcn/ui based)
 │   ├── admin/              # Admin-specific components (tables, forms, toolbars)
@@ -119,7 +119,7 @@ src/
 - Reusable `DeleteConfirmDialog` in `src/components/admin/` — use for all delete confirmations
 - Reusable `TablePagination` in `src/components/admin/` — use for all paginated tables
 - Reusable `TableToolbar` in `src/components/admin/TableToolbar.tsx` — shared search + filter toolbar with composable sub-components (`ToolbarSelect`, `ToolbarCheckbox`, `ToolbarDateRange`). Parent owns state, toolbar handles debounce.
-- Shared `useCSVExport` hook in `src/hooks/` — use for CSV export buttons
+- CSV export buttons in `src/components/admin/exports/` — per-entity export with Hebrew headers, BOM, and Papa.unparse
 - Shared `useFormSubmission` hook in `src/hooks/` — handles form submit state and error handling
 - Shared `useIsMobile` / `useMediaQuery` hooks in `src/hooks/` — responsive breakpoint detection
 

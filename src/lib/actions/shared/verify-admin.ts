@@ -45,6 +45,7 @@ export async function verifyAdmin(): Promise<AdminVerifyResult> {
     .from("profiles")
     .select("role, full_name")
     .eq("id", user.id)
+    .is("deleted_at", null)
     .single();
 
   if (adminProfile?.role !== "admin") {
@@ -93,6 +94,7 @@ export async function verifyAdminOrTrainer(): Promise<TrainerVerifyResult> {
     .from("profiles")
     .select("role, full_name")
     .eq("id", user.id)
+    .is("deleted_at", null)
     .single();
 
   if (profile?.role !== "admin" && profile?.role !== "trainer") {

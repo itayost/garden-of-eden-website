@@ -53,6 +53,7 @@ export async function verifyUserAccess(
     .from("profiles")
     .select("role")
     .eq("id", user.id)
+    .is("deleted_at", null)
     .single()) as { data: Pick<Profile, "role"> | null };
 
   if (!profile || !["trainer", "admin"].includes(profile.role)) {

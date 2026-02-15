@@ -33,6 +33,20 @@ export async function bulkCreateUsersAction(users: CSVUserRow[]): Promise<BulkIm
     };
   }
 
+  const MAX_BULK_IMPORT = 100;
+
+  if (users.length > MAX_BULK_IMPORT) {
+    return {
+      success: false,
+      created: 0,
+      errors: [{ row: 0, phone: "", error: `ניתן לייבא עד ${MAX_BULK_IMPORT} משתמשים בפעם אחת` }],
+    };
+  }
+
+  if (users.length === 0) {
+    return { success: false, created: 0, errors: [{ row: 0, phone: "", error: "לא נמצאו משתמשים לייבוא" }] };
+  }
+
   const adminClient = createAdminClient();
   const created: string[] = [];
   const errors: Array<{ row: number; phone: string; error: string }> = [];

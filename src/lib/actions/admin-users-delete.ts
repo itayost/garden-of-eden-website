@@ -111,7 +111,7 @@ export async function resetUserCredentialsAction(userId: string): Promise<Action
     // 4. Generate credentials based on available contact method
     if (targetUser.user.email) {
       // Generate magic link for email users
-      const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+      const { error: linkError } = await adminClient.auth.admin.generateLink({
         type: "magiclink",
         email: targetUser.user.email,
         options: {
@@ -123,10 +123,6 @@ export async function resetUserCredentialsAction(userId: string): Promise<Action
         console.error("Generate link error:", linkError);
         return { error: linkError.message || "שגיאה ביצירת קישור כניסה" };
       }
-
-      // Log the link (in production, send via email service)
-      console.log("Magic link generated for", targetUser.user.email);
-      console.log("Link:", linkData?.properties?.action_link);
 
       message = `קישור כניסה נוצר עבור ${targetUser.user.email}. יש לשלוח את הקישור למשתמש.`;
     } else if (targetUser.user.phone) {

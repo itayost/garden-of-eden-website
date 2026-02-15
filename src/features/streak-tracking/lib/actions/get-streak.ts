@@ -2,6 +2,7 @@
 
 import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
 import type { UserStreak } from "../../types";
+import { isValidUUID } from "@/lib/validations/common";
 
 /**
  * Get user's streak data from database
@@ -9,6 +10,8 @@ import type { UserStreak } from "../../types";
  * Authorization: User can only access their own streak, trainers/admins can access any
  */
 export async function getUserStreak(userId: string): Promise<UserStreak | null> {
+  if (!isValidUUID(userId)) return null;
+
   const { authorized, supabase } = await verifyUserAccess(userId);
   if (!authorized) {
     return null;

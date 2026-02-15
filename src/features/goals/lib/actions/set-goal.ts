@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { PhysicalMetricKey } from "../../types";
 import type { Profile, PlayerGoalRow } from "@/types/database";
 import { isLowerBetterMetric, GOAL_METRICS } from "../config/goal-config";
+import { isValidUUID } from "@/lib/validations/common";
 
 interface SetGoalParams {
   userId: string;
@@ -24,6 +25,10 @@ interface SetGoalResult {
  * Only trainers and admins can create goals
  */
 export async function setGoal(params: SetGoalParams): Promise<SetGoalResult> {
+  if (!isValidUUID(params.userId)) {
+    return { success: false, error: "מזהה משתמש לא תקין" };
+  }
+
   const supabase = await createClient();
 
   // Verify caller is trainer or admin

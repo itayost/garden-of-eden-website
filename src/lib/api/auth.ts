@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { verifyAdmin as verifyAdminShared, verifyAdminOrTrainer as verifyAdminOrTrainerShared } from "@/lib/actions/shared/verify-admin";
 
 type AuthResult =
   | { authorized: true; userId: string }
@@ -13,48 +13,18 @@ type AuthResult =
  * Verify current user is authenticated and has admin or trainer role
  */
 export async function verifyAdminOrTrainer(): Promise<AuthResult> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { authorized: false, userId: null };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || (profile.role !== "admin" && profile.role !== "trainer")) {
-    return { authorized: false, userId: null };
-  }
-
-  return { authorized: true, userId: user.id };
+  const result = await verifyAdminOrTrainerShared();
+  if (result.error) return { authorized: false, userId: null };
+  return { authorized: true, userId: result.user!.id };
 }
 
 /**
  * Verify current user is authenticated and has admin role only
  */
 export async function verifyAdmin(): Promise<AuthResult> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { authorized: false, userId: null };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "admin") {
-    return { authorized: false, userId: null };
-  }
-
-  return { authorized: true, userId: user.id };
+  const result = await verifyAdminShared();
+  if (result.error) return { authorized: false, userId: null };
+  return { authorized: true, userId: result.user!.id };
 }
 
 /**

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { WeeklyMealPlan, DayOfWeek, MealCategory } from "../../types";
 import type { Json, Profile } from "@/types/database";
+import { isValidUUID } from "@/lib/validations/common";
 
 const VALID_DAYS: DayOfWeek[] = [
   "sunday", "monday", "tuesday", "wednesday",
@@ -44,6 +45,10 @@ export async function upsertMealPlan(
   userId: string,
   mealPlan: WeeklyMealPlan
 ): Promise<UpsertMealPlanResult> {
+  if (!isValidUUID(userId)) {
+    return { success: false, error: "מזהה משתמש לא תקין" };
+  }
+
   if (!validateMealPlan(mealPlan)) {
     return { success: false, error: "מבנה תוכנית התזונה אינו תקין" };
   }

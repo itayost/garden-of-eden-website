@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { Profile } from "@/types/database";
+import { isValidUUID } from "@/lib/validations/common";
 
 interface DeleteGoalResult {
   success: boolean;
@@ -14,6 +15,10 @@ interface DeleteGoalResult {
  * Only trainers and admins can delete goals
  */
 export async function deleteGoal(goalId: string): Promise<DeleteGoalResult> {
+  if (!isValidUUID(goalId)) {
+    return { success: false, error: "מזהה יעד לא תקין" };
+  }
+
   const supabase = await createClient();
 
   // Verify caller is trainer or admin

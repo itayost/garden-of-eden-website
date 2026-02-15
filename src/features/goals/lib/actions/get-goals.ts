@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
 import type { PlayerGoalRow } from "@/types/database";
+import { isValidUUID } from "@/lib/validations/common";
 
 /**
  * Get all goals for a player
@@ -12,6 +13,8 @@ export async function getPlayerGoals(
   userId: string,
   options?: { includeAchieved?: boolean }
 ): Promise<PlayerGoalRow[]> {
+  if (!isValidUUID(userId)) return [];
+
   const { authorized, supabase } = await verifyUserAccess(userId);
   if (!authorized) {
     return [];

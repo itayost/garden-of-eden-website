@@ -47,14 +47,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Profile completion check for dashboard routes
-  if (user && request.nextUrl.pathname.startsWith("/dashboard")) {
-    const { data: profile } = await supabase
+  // Fetch profile once for all protected-path checks
+  let profile: { profile_completed: boolean; role: string } | null = null;
+
+  if (user && isProtectedPath) {
+    const { data } = await supabase
       .from("profiles")
       .select("profile_completed, role")
       .eq("id", user.id)
+      .is("deleted_at", null)
       .maybeSingle();
+    profile = data;
+  }
 
+  // Profile completion check for dashboard routes
+  if (user && request.nextUrl.pathname.startsWith("/dashboard")) {
     // Admin/trainer users should use the admin area (skip onboarding)
     if (profile?.role === "admin" || profile?.role === "trainer") {
       const url = request.nextUrl.clone();
@@ -72,12 +79,6 @@ export async function updateSession(request: NextRequest) {
 
   // Admin-only routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user?.id || "")
-      .maybeSingle();
-
     if (profile?.role !== "admin" && profile?.role !== "trainer") {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";

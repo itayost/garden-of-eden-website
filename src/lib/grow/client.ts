@@ -4,7 +4,7 @@
  */
 
 // Environment variables
-const GROW_API_URL = process.env.GROW_API_URL || 'https://sandbox.meshulam.co.il/api/light/server/1.0';
+const GROW_API_URL = process.env.GROW_API_URL;
 const GROW_USER_ID = process.env.GROW_USER_ID;
 const GROW_PAGE_CODE_ONE_TIME = process.env.GROW_PAGE_CODE; // Regular credit card payments
 const GROW_PAGE_CODE_RECURRING = process.env.GROW_PAGE_CODE_RECURRING; // Direct debit (הוראת קבע)
@@ -177,9 +177,13 @@ export async function createPaymentProcess(
   // Select correct page code based on payment type
   const pageCode = request.isRecurring ? GROW_PAGE_CODE_RECURRING : GROW_PAGE_CODE_ONE_TIME;
 
-  if (!GROW_USER_ID || !pageCode) {
-    const missingCode = request.isRecurring ? 'GROW_PAGE_CODE_RECURRING' : 'GROW_PAGE_CODE';
-    throw new Error(`GROW credentials not configured: missing ${missingCode}`);
+  if (!GROW_API_URL || !GROW_USER_ID || !pageCode) {
+    const missing = [
+      !GROW_API_URL && 'GROW_API_URL',
+      !GROW_USER_ID && 'GROW_USER_ID',
+      !pageCode && (request.isRecurring ? 'GROW_PAGE_CODE_RECURRING' : 'GROW_PAGE_CODE'),
+    ].filter(Boolean).join(', ');
+    throw new Error(`GROW credentials not configured: missing ${missing}`);
   }
 
   const formData = new FormData();
@@ -238,7 +242,7 @@ export async function approveTransaction(
   // Select correct page code based on payment type
   const pageCode = isRecurring ? GROW_PAGE_CODE_RECURRING : GROW_PAGE_CODE_ONE_TIME;
 
-  if (!pageCode) {
+  if (!GROW_API_URL || !pageCode) {
     throw new Error('GROW credentials not configured');
   }
 

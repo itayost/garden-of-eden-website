@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { NutritionRecommendationRow } from "../../types";
 import type { Profile } from "@/types/database";
+import { isValidUUID } from "@/lib/validations/common";
 
 interface UpsertRecommendationResult {
   success: boolean;
@@ -18,6 +19,10 @@ export async function upsertRecommendation(
   userId: string,
   recommendationText: string
 ): Promise<UpsertRecommendationResult> {
+  if (!isValidUUID(userId)) {
+    return { success: false, error: "מזהה משתמש לא תקין" };
+  }
+
   const supabase = await createClient();
 
   const {

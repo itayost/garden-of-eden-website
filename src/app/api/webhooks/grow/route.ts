@@ -60,7 +60,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[GROW Webhook] Received payload:", JSON.stringify(payload, null, 2));
+    console.log("[GROW Webhook] Received:", {
+      processId: payload.data?.processId,
+      statusCode: payload.data?.statusCode,
+      sum: payload.data?.sum,
+    });
 
     // If no HMAC secret, fall back to process token validation
     if (!hasWebhookSecret) {
@@ -82,8 +86,11 @@ export async function POST(request: NextRequest) {
 
         console.log("[GROW Webhook] Process token verified successfully");
       } else {
-        // Neither HMAC nor process token configured - log warning but proceed
-        console.warn("[GROW Webhook] No signature verification configured (GROW_WEBHOOK_SECRET or GROW_PROCESS_TOKEN)");
+        console.error("[GROW Webhook] CRITICAL: No verification mechanism configured. Set GROW_WEBHOOK_SECRET or GROW_PROCESS_TOKEN.");
+        return NextResponse.json(
+          { error: "Webhook verification not configured" },
+          { status: 500 }
+        );
       }
     }
 
