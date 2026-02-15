@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useTransition, useCallback, useRef } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,16 +13,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, RefreshCw } from "lucide-react";
 import { TableToolbar, ToolbarSelect } from "@/components/admin/TableToolbar";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import { AGE_GROUPS, getAgeGroup, getAssessmentCompleteness } from "@/types/assessment";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
+import { getAssessmentsPaginated } from "@/lib/actions/admin-assessments-list";
 
 interface AssessmentsTableProps {
-  profiles: Profile[];
-  assessmentsByUser: Record<string, PlayerAssessment[]>;
+  initialProfiles: Profile[];
+  initialAssessmentsByUser: Record<string, PlayerAssessment[]>;
+  initialTotal: number;
 }
 
 const PAGE_SIZE = 20;
@@ -33,69 +35,80 @@ const ageGroupOptions = [
 ];
 
 export function AssessmentsTable({
-  profiles,
-  assessmentsByUser,
+  initialProfiles,
+  initialAssessmentsByUser,
+  initialTotal,
 }: AssessmentsTableProps) {
+  const [profiles, setProfiles] = useState(initialProfiles);
+  const [assessmentsByUser, setAssessmentsByUser] = useState(initialAssessmentsByUser);
+  const [total, setTotal] = useState(initialTotal);
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
   const [ageGroup, setAgeGroup] = useQueryState("age", parseAsString.withDefault("all"));
-
-  const filteredProfiles = useMemo(() => {
-    return profiles.filter((profile) => {
-      // Search filter
-      if (search) {
-        const searchLower = search.toLowerCase();
-        const nameMatch = profile.full_name?.toLowerCase().includes(searchLower);
-        if (!nameMatch) return false;
-      }
-
-      // Age group filter
-      if (ageGroup && ageGroup !== "all") {
-        const group = getAgeGroup(profile.birthdate);
-        if (!group || group.id !== ageGroup) return false;
-      }
-
-      return true;
-    });
-  }, [profiles, search, ageGroup]);
-
   const [page, setPage] = useState(0);
+  const [isPending, startTransition] = useTransition();
+  const requestIdRef = useRef(0);
 
-  const paginatedProfiles = useMemo(
-    () => filteredProfiles.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [filteredProfiles, page]
+  const fetchData = useCallback(
+    (newPage: number, newSearch: string, newAgeGroup: string) => {
+      const currentRequestId = ++requestIdRef.current;
+      startTransition(async () => {
+        const result = await getAssessmentsPaginated({
+          page: newPage,
+          pageSize: PAGE_SIZE,
+          search: newSearch || undefined,
+          ageGroupId: newAgeGroup !== "all" ? newAgeGroup : undefined,
+        });
+        if (currentRequestId === requestIdRef.current) {
+          setProfiles(result.profiles);
+          setAssessmentsByUser(result.assessmentsByUser);
+          setTotal(result.total);
+        }
+      });
+    },
+    []
   );
 
   const handleSearchChange = (value: string) => {
     setSearch(value || null);
     setPage(0);
+    fetchData(0, value, ageGroup || "all");
   };
 
   const handleAgeGroupChange = (value: string) => {
     setAgeGroup(value === "all" ? null : value);
     setPage(0);
+    fetchData(0, search, value);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchData(newPage, search, ageGroup || "all");
   };
 
   return (
     <div className="space-y-4">
-      <TableToolbar
-        searchValue={search}
-        onSearchChange={handleSearchChange}
-        searchPlaceholder="חיפוש לפי שם..."
-        filters={
-          <ToolbarSelect
-            value={ageGroup || "all"}
-            onValueChange={handleAgeGroupChange}
-            options={ageGroupOptions}
-            placeholder="קבוצת גיל"
-          />
-        }
-      />
+      <div className="flex items-center gap-2">
+        <TableToolbar
+          searchValue={search}
+          onSearchChange={handleSearchChange}
+          searchPlaceholder="חיפוש לפי שם..."
+          filters={
+            <ToolbarSelect
+              value={ageGroup || "all"}
+              onValueChange={handleAgeGroupChange}
+              options={ageGroupOptions}
+              placeholder="קבוצת גיל"
+            />
+          }
+        />
+        {isPending && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+      </div>
 
-      {filteredProfiles.length > 0 ? (
+      {profiles.length > 0 ? (
         <>
           {/* Mobile: Card list */}
           <div className="space-y-2 sm:hidden">
-            {paginatedProfiles.map((profile) => {
+            {profiles.map((profile) => {
               const userAssessments = assessmentsByUser[profile.id] || [];
               const latestAssessment = userAssessments[0];
               const group = getAgeGroup(profile.birthdate);
@@ -185,7 +198,7 @@ export function AssessmentsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedProfiles.map((profile) => {
+                {profiles.map((profile) => {
                   const userAssessments = assessmentsByUser[profile.id] || [];
                   const latestAssessment = userAssessments[0];
                   const group = getAgeGroup(profile.birthdate);
@@ -280,10 +293,10 @@ export function AssessmentsTable({
           </div>
 
           <SimpleTablePagination
-            totalItems={filteredProfiles.length}
+            totalItems={total}
             pageSize={PAGE_SIZE}
             currentPage={page}
-            onPageChange={setPage}
+            onPageChange={handlePageChange}
             itemLabel="שחקנים"
           />
         </>

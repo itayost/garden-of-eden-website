@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useTransition, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,10 +15,16 @@ import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
 import { SubmissionExportButton } from "@/components/admin/exports/SubmissionExportButton";
 import { TableToolbar, ToolbarDateRange } from "@/components/admin/TableToolbar";
 import { HasBadge, DifficultyBadge, SatisfactionBadge } from "@/components/ui/badges";
-import { Activity, FileText, Salad, type LucideIcon } from "lucide-react";
+import { Activity, FileText, Salad, RefreshCw, type LucideIcon } from "lucide-react";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
 import { formatDateTime } from "@/lib/utils/date";
+import {
+  getPreWorkoutPaginated,
+  getPostWorkoutPaginated,
+  getNutritionPaginated,
+} from "@/lib/actions/admin-submissions-list";
+import type { SubmissionQueryParams } from "@/lib/actions/admin-submissions-list";
 
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
 
@@ -43,68 +49,87 @@ function EmptyState({ icon: Icon, message }: { icon: LucideIcon; message: string
   );
 }
 
-/** Filter submissions by name, start date, and end date */
-function filterSubmissions<T extends { submitted_at: string; full_name: string }>(
-  submissions: T[],
-  search: string,
-  startDate: string,
-  endDate: string
-): T[] {
-  let filtered = submissions;
-
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filtered = filtered.filter((s) => s.full_name.toLowerCase().includes(searchLower));
-  }
-
-  if (startDate) {
-    filtered = filtered.filter((s) => s.submitted_at >= startDate);
-  }
-  if (endDate) {
-    filtered = filtered.filter((s) => s.submitted_at <= endDate + "T23:59:59");
-  }
-  return filtered;
-}
-
-// Pre-workout content component
 const PAGE_SIZE = 20;
 
-export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm[] }) {
+// Pre-workout content component
+export function PreWorkoutContent({
+  initialItems,
+  initialTotal,
+}: {
+  initialItems: PreWorkoutForm[];
+  initialTotal: number;
+}) {
+  const [items, setItems] = useState(initialItems);
+  const [total, setTotal] = useState(initialTotal);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(0);
+  const [isPending, startTransition] = useTransition();
+  const requestIdRef = useRef(0);
 
-  const filtered = useMemo(
-    () => filterSubmissions(submissions, search, startDate, endDate),
-    [submissions, search, startDate, endDate]
+  const fetchData = useCallback(
+    (newPage: number, newSearch: string, newStartDate: string, newEndDate: string) => {
+      const currentRequestId = ++requestIdRef.current;
+      startTransition(async () => {
+        const params: SubmissionQueryParams = {
+          page: newPage,
+          pageSize: PAGE_SIZE,
+          search: newSearch || undefined,
+          startDate: newStartDate || undefined,
+          endDate: newEndDate || undefined,
+        };
+        const result = await getPreWorkoutPaginated(params);
+        if (currentRequestId === requestIdRef.current) {
+          setItems(result.items);
+          setTotal(result.total);
+        }
+      });
+    },
+    []
   );
 
-  const handleSearchChange = (v: string) => { setSearch(v); setPage(0); };
-  const handleStartDateChange = (v: string) => { setStartDate(v); setPage(0); };
-  const handleEndDateChange = (v: string) => { setEndDate(v); setPage(0); };
+  const handleSearchChange = (v: string) => {
+    setSearch(v);
+    setPage(0);
+    fetchData(0, v, startDate, endDate);
+  };
+  const handleStartDateChange = (v: string) => {
+    setStartDate(v);
+    setPage(0);
+    fetchData(0, search, v, endDate);
+  };
+  const handleEndDateChange = (v: string) => {
+    setEndDate(v);
+    setPage(0);
+    fetchData(0, search, startDate, v);
+  };
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchData(newPage, search, startDate, endDate);
+  };
 
-  const paginated = useMemo(
-    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [filtered, page]
-  );
+  const hasFilters = !!(search || startDate || endDate);
 
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>שאלונים לפני אימון</CardTitle>
-              <CardDescription>
-                {filtered.length === submissions.length
-                  ? `כל השאלונים שהוגשו לפני אימונים`
-                  : `מציג ${filtered.length} מתוך ${submissions.length} שאלונים`}
-              </CardDescription>
+            <div className="flex items-center gap-2">
+              <div>
+                <CardTitle>שאלונים לפני אימון</CardTitle>
+                <CardDescription>
+                  {hasFilters
+                    ? `מציג ${items.length} מתוך ${total} שאלונים`
+                    : `כל השאלונים שהוגשו לפני אימונים`}
+                </CardDescription>
+              </div>
+              {isPending && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
             <SubmissionExportButton
               formType="pre_workout"
-              submissions={filtered}
+              submissions={items}
             />
           </div>
           <TableToolbar
@@ -123,11 +148,11 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
         </div>
       </CardHeader>
       <CardContent>
-        {filtered.length > 0 ? (
+        {items.length > 0 ? (
           <>
             {/* Mobile: Card list */}
             <div className="space-y-2 sm:hidden">
-              {paginated.map((form) => (
+              {items.map((form) => (
                 <Link
                   key={form.id}
                   href={`/admin/submissions/pre-workout/${form.id}`}
@@ -160,7 +185,7 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginated.map((form) => (
+                  {items.map((form) => (
                     <ClickableTableRow key={form.id} href={`/admin/submissions/pre-workout/${form.id}`}>
                       <TableCell className="font-medium">{form.full_name}</TableCell>
                       <TableCell>{form.age || "-"}</TableCell>
@@ -177,14 +202,14 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
             </div>
 
             <SimpleTablePagination
-              totalItems={filtered.length}
+              totalItems={total}
               pageSize={PAGE_SIZE}
               currentPage={page}
-              onPageChange={setPage}
+              onPageChange={handlePageChange}
               itemLabel="שאלונים"
             />
           </>
-        ) : submissions.length > 0 ? (
+        ) : hasFilters ? (
           <EmptyState icon={Activity} message="אין שאלונים מתאימים לחיפוש" />
         ) : (
           <EmptyState icon={Activity} message="אין שאלונים עדיין" />
@@ -195,42 +220,84 @@ export function PreWorkoutContent({ submissions }: { submissions: PreWorkoutForm
 }
 
 // Post-workout content component
-export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWithTrainer[] }) {
+export function PostWorkoutContent({
+  initialItems,
+  initialTotal,
+}: {
+  initialItems: PostWorkoutWithTrainer[];
+  initialTotal: number;
+}) {
+  const [items, setItems] = useState(initialItems);
+  const [total, setTotal] = useState(initialTotal);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(0);
+  const [isPending, startTransition] = useTransition();
+  const requestIdRef = useRef(0);
 
-  const filtered = useMemo(
-    () => filterSubmissions(submissions, search, startDate, endDate),
-    [submissions, search, startDate, endDate]
+  const fetchData = useCallback(
+    (newPage: number, newSearch: string, newStartDate: string, newEndDate: string) => {
+      const currentRequestId = ++requestIdRef.current;
+      startTransition(async () => {
+        const params: SubmissionQueryParams = {
+          page: newPage,
+          pageSize: PAGE_SIZE,
+          search: newSearch || undefined,
+          startDate: newStartDate || undefined,
+          endDate: newEndDate || undefined,
+        };
+        const result = await getPostWorkoutPaginated(params);
+        if (currentRequestId === requestIdRef.current) {
+          setItems(result.items);
+          setTotal(result.total);
+        }
+      });
+    },
+    []
   );
 
-  const handleSearchChange = (v: string) => { setSearch(v); setPage(0); };
-  const handleStartDateChange = (v: string) => { setStartDate(v); setPage(0); };
-  const handleEndDateChange = (v: string) => { setEndDate(v); setPage(0); };
+  const handleSearchChange = (v: string) => {
+    setSearch(v);
+    setPage(0);
+    fetchData(0, v, startDate, endDate);
+  };
+  const handleStartDateChange = (v: string) => {
+    setStartDate(v);
+    setPage(0);
+    fetchData(0, search, v, endDate);
+  };
+  const handleEndDateChange = (v: string) => {
+    setEndDate(v);
+    setPage(0);
+    fetchData(0, search, startDate, v);
+  };
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchData(newPage, search, startDate, endDate);
+  };
 
-  const paginated = useMemo(
-    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [filtered, page]
-  );
+  const hasFilters = !!(search || startDate || endDate);
 
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>שאלונים אחרי אימון</CardTitle>
-              <CardDescription>
-                {filtered.length === submissions.length
-                  ? `כל השאלונים שהוגשו אחרי אימונים`
-                  : `מציג ${filtered.length} מתוך ${submissions.length} שאלונים`}
-              </CardDescription>
+            <div className="flex items-center gap-2">
+              <div>
+                <CardTitle>שאלונים אחרי אימון</CardTitle>
+                <CardDescription>
+                  {hasFilters
+                    ? `מציג ${items.length} מתוך ${total} שאלונים`
+                    : `כל השאלונים שהוגשו אחרי אימונים`}
+                </CardDescription>
+              </div>
+              {isPending && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
             <SubmissionExportButton
               formType="post_workout"
-              submissions={filtered}
+              submissions={items}
             />
           </div>
           <TableToolbar
@@ -249,11 +316,11 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
         </div>
       </CardHeader>
       <CardContent>
-        {filtered.length > 0 ? (
+        {items.length > 0 ? (
           <>
             {/* Mobile: Card list */}
             <div className="space-y-2 sm:hidden">
-              {paginated.map((form) => (
+              {items.map((form) => (
                 <Link
                   key={form.id}
                   href={`/admin/submissions/post-workout/${form.id}`}
@@ -291,7 +358,7 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginated.map((form) => (
+                  {items.map((form) => (
                     <ClickableTableRow key={form.id} href={`/admin/submissions/post-workout/${form.id}`}>
                       <TableCell className="font-medium">{form.full_name}</TableCell>
                       <TableCell>{form.trainers?.name || "-"}</TableCell>
@@ -306,14 +373,14 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
             </div>
 
             <SimpleTablePagination
-              totalItems={filtered.length}
+              totalItems={total}
               pageSize={PAGE_SIZE}
               currentPage={page}
-              onPageChange={setPage}
+              onPageChange={handlePageChange}
               itemLabel="שאלונים"
             />
           </>
-        ) : submissions.length > 0 ? (
+        ) : hasFilters ? (
           <EmptyState icon={FileText} message="אין שאלונים מתאימים לחיפוש" />
         ) : (
           <EmptyState icon={FileText} message="אין שאלונים עדיין" />
@@ -324,42 +391,84 @@ export function PostWorkoutContent({ submissions }: { submissions: PostWorkoutWi
 }
 
 // Nutrition content component
-export function NutritionContent({ submissions }: { submissions: NutritionForm[] }) {
+export function NutritionContent({
+  initialItems,
+  initialTotal,
+}: {
+  initialItems: NutritionForm[];
+  initialTotal: number;
+}) {
+  const [items, setItems] = useState(initialItems);
+  const [total, setTotal] = useState(initialTotal);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(0);
+  const [isPending, startTransition] = useTransition();
+  const requestIdRef = useRef(0);
 
-  const filtered = useMemo(
-    () => filterSubmissions(submissions, search, startDate, endDate),
-    [submissions, search, startDate, endDate]
+  const fetchData = useCallback(
+    (newPage: number, newSearch: string, newStartDate: string, newEndDate: string) => {
+      const currentRequestId = ++requestIdRef.current;
+      startTransition(async () => {
+        const params: SubmissionQueryParams = {
+          page: newPage,
+          pageSize: PAGE_SIZE,
+          search: newSearch || undefined,
+          startDate: newStartDate || undefined,
+          endDate: newEndDate || undefined,
+        };
+        const result = await getNutritionPaginated(params);
+        if (currentRequestId === requestIdRef.current) {
+          setItems(result.items);
+          setTotal(result.total);
+        }
+      });
+    },
+    []
   );
 
-  const handleSearchChange = (v: string) => { setSearch(v); setPage(0); };
-  const handleStartDateChange = (v: string) => { setStartDate(v); setPage(0); };
-  const handleEndDateChange = (v: string) => { setEndDate(v); setPage(0); };
+  const handleSearchChange = (v: string) => {
+    setSearch(v);
+    setPage(0);
+    fetchData(0, v, startDate, endDate);
+  };
+  const handleStartDateChange = (v: string) => {
+    setStartDate(v);
+    setPage(0);
+    fetchData(0, search, v, endDate);
+  };
+  const handleEndDateChange = (v: string) => {
+    setEndDate(v);
+    setPage(0);
+    fetchData(0, search, startDate, v);
+  };
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchData(newPage, search, startDate, endDate);
+  };
 
-  const paginated = useMemo(
-    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [filtered, page]
-  );
+  const hasFilters = !!(search || startDate || endDate);
 
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>שאלוני תזונה</CardTitle>
-              <CardDescription>
-                {filtered.length === submissions.length
-                  ? `כל שאלוני התזונה שהוגשו`
-                  : `מציג ${filtered.length} מתוך ${submissions.length} שאלונים`}
-              </CardDescription>
+            <div className="flex items-center gap-2">
+              <div>
+                <CardTitle>שאלוני תזונה</CardTitle>
+                <CardDescription>
+                  {hasFilters
+                    ? `מציג ${items.length} מתוך ${total} שאלונים`
+                    : `כל שאלוני התזונה שהוגשו`}
+                </CardDescription>
+              </div>
+              {isPending && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
             <SubmissionExportButton
               formType="nutrition"
-              submissions={filtered}
+              submissions={items}
             />
           </div>
           <TableToolbar
@@ -378,11 +487,11 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
         </div>
       </CardHeader>
       <CardContent>
-        {filtered.length > 0 ? (
+        {items.length > 0 ? (
           <>
             {/* Mobile: Card list */}
             <div className="space-y-2 sm:hidden">
-              {paginated.map((form) => (
+              {items.map((form) => (
                 <Link
                   key={form.id}
                   href={`/admin/submissions/nutrition/${form.id}`}
@@ -416,7 +525,7 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginated.map((form) => (
+                  {items.map((form) => (
                     <ClickableTableRow key={form.id} href={`/admin/submissions/nutrition/${form.id}`}>
                       <TableCell className="font-medium">{form.full_name}</TableCell>
                       <TableCell>{form.age}</TableCell>
@@ -431,14 +540,14 @@ export function NutritionContent({ submissions }: { submissions: NutritionForm[]
             </div>
 
             <SimpleTablePagination
-              totalItems={filtered.length}
+              totalItems={total}
               pageSize={PAGE_SIZE}
               currentPage={page}
-              onPageChange={setPage}
+              onPageChange={handlePageChange}
               itemLabel="שאלונים"
             />
           </>
-        ) : submissions.length > 0 ? (
+        ) : hasFilters ? (
           <EmptyState icon={Salad} message="אין שאלונים מתאימים לחיפוש" />
         ) : (
           <EmptyState icon={Salad} message="אין שאלונים עדיין" />
