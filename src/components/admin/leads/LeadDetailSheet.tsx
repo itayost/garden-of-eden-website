@@ -252,11 +252,11 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
 
   if (!lead) return null;
 
-  const statuses: LeadStatus[] = [
+  // "closed" is excluded — only the Close Deal dialog can set it
+  const editableStatuses: LeadStatus[] = [
     "new",
     "callback",
     "in_progress",
-    "closed",
     "disqualified",
   ];
 
@@ -325,26 +325,42 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
               </div>
             )}
 
-            {/* Quick Status Change */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">שינוי סטטוס מהיר</Label>
-              <div className="flex flex-wrap gap-2">
-                {statuses.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleStatusChange(s)}
-                    disabled={statusLoading !== null || currentStatus === s}
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-opacity ${LEAD_STATUS_COLORS[s]} ${currentStatus === s ? "ring-2 ring-offset-1 ring-gray-400" : "opacity-60 hover:opacity-100"} disabled:cursor-not-allowed`}
-                  >
-                    {statusLoading === s ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      LEAD_STATUS_LABELS[s]
+            {/* Quick Status Change — hidden when closed (use Close Deal instead) */}
+            {isClosed ? (
+              <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-center">
+                <p className="text-sm font-medium text-green-800">עסקה סגורה</p>
+                {lead.total_payment != null && (
+                  <p className="text-lg font-bold text-green-900">
+                    {lead.total_payment.toLocaleString()}₪
+                    {lead.payment != null && lead.months != null && (
+                      <span className="text-sm font-normal text-green-700">
+                        {" "}({lead.payment.toLocaleString()}₪ × {lead.months} חודשים)
+                      </span>
                     )}
-                  </button>
-                ))}
+                  </p>
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">שינוי סטטוס מהיר</Label>
+                <div className="flex flex-wrap gap-2">
+                  {editableStatuses.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleStatusChange(s)}
+                      disabled={statusLoading !== null || currentStatus === s}
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-opacity ${LEAD_STATUS_COLORS[s]} ${currentStatus === s ? "ring-2 ring-offset-1 ring-gray-400" : "opacity-60 hover:opacity-100"} disabled:cursor-not-allowed`}
+                    >
+                      {statusLoading === s ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        LEAD_STATUS_LABELS[s]
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Separator />
 
@@ -381,21 +397,23 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
                     onValueChange={(v) =>
                       setValue("status", v as LeadStatus, { shouldValidate: true })
                     }
+                    disabled={isClosed}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(
-                        Object.entries(LEAD_STATUS_LABELS) as [
-                          LeadStatus,
-                          string,
-                        ][]
-                      ).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
+                      {isClosed ? (
+                        <SelectItem value="closed">
+                          {LEAD_STATUS_LABELS.closed}
                         </SelectItem>
-                      ))}
+                      ) : (
+                        editableStatuses.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {LEAD_STATUS_LABELS[value]}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -412,36 +430,6 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
                       מחיפה
                     </Label>
                   </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">תשלום</Label>
-                  <Input
-                    type="number"
-                    {...register("payment", {
-                      setValueAs: (v: string) => v === "" ? null : Number(v),
-                    })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">חודשים</Label>
-                  <Input
-                    type="number"
-                    {...register("months", {
-                      setValueAs: (v: string) => v === "" ? null : Number(v),
-                    })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">סה״כ</Label>
-                  <Input
-                    type="number"
-                    {...register("total_payment", {
-                      setValueAs: (v: string) => v === "" ? null : Number(v),
-                    })}
-                  />
                 </div>
               </div>
 
