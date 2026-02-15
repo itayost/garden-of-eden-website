@@ -26,9 +26,10 @@ const plans = [
     description: "מעטפת מלאה לשחקן",
     price: "2,190",
     priceNumber: 2190,
-    period: "עד 3 תשלומים",
+    period: "תוקף 3 חודשים",
     paymentType: "one_time" as const,
     features: [
+      "10 אימונים",
       "קורס דיגיטלי מתנה",
       "ליווי תזונה",
       "גישה לספורטרפיסת ופיזיוטרפיסת",
@@ -68,6 +69,21 @@ const plans = [
     extraFeatures: [],
     highlighted: false,
   },
+  {
+    name: "פגישת ניתוח וידיאו",
+    description: "מפגש ניתוח וידאו עם אנליסט",
+    price: "450",
+    priceNumber: 450,
+    period: "חד פעמי",
+    paymentType: "one_time" as const,
+    features: [
+      "ניתוח פעולות באמצעות וידאו מקצועי",
+      "משוב לשיפור הבנה טקטית וטכנית",
+      "הצבת יעדים לפי עמדת השחקן",
+    ],
+    extraFeatures: [],
+    highlighted: false,
+  },
 ];
 
 export function Services() {
@@ -96,7 +112,7 @@ export function Services() {
         </motion.div>
 
         {/* Pricing cards */}
-        <div className="grid md:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-5 gap-6 max-w-6xl mx-auto">
           {plans.map((plan, index) => (
             <motion.div
               key={plan.name}
