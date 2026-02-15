@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
-import { sendFlowTemplate, sendTextMessage } from "@/lib/whatsapp/client";
+import { sendFlowInteractive, sendTextMessage } from "@/lib/whatsapp/client";
 import type { Lead } from "@/types/leads";
 
 type ActionResult =
@@ -69,11 +69,11 @@ export async function sendWhatsAppFlowAction(leadId: string): Promise<ActionResu
   if ("error" in leadResult) return { error: leadResult.error };
 
   try {
-    const result = await sendFlowTemplate(leadResult.lead.phone, leadResult.lead.name);
+    const result = await sendFlowInteractive(leadResult.lead.phone, leadResult.lead.name);
     if (!result.success) {
       return { error: result.error || "שגיאה בשליחת פלואו WhatsApp" };
     }
-    await logWhatsAppMessage(leadId, result.messageId, "template", "נשלחה תבנית פלואו WhatsApp");
+    await logWhatsAppMessage(leadId, result.messageId, "flow", "נשלח פלואו WhatsApp אינטראקטיבי");
     return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
