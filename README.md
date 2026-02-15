@@ -1,36 +1,164 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Garden of Eden - Football Academy Website
+
+**Garden of Eden** is a Hebrew (RTL) football academy platform for managing trainees, trainers, and administrative operations.
+
+Production: [https://www.edengarden.co.il](https://www.edengarden.co.il)
+
+## Overview
+
+A full-stack web application serving a football academy with three user roles:
+
+- **Trainee** -- Dashboard with assessments, progress tracking, nutrition plans, goals, and achievements
+- **Trainer** -- Shift management, trainee submissions review, and workout forms
+- **Admin** -- Full management of users, assessments, nutrition, videos, shifts, and reports
+
+Authentication is handled via WhatsApp OTP through Supabase Auth.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router), React 19, TypeScript (strict) |
+| Styling | Tailwind CSS 4, Radix UI primitives, Framer Motion |
+| Database | Supabase (Postgres + Auth + Row Level Security) |
+| Hosting | Vercel |
+| Caching | Upstash Redis (rate limiting) |
+| Payments | Meshulam payment gateway |
+| Testing | Vitest + React Testing Library |
+| Forms | React Hook Form + Zod validation |
+
+## Prerequisites
+
+- Node.js >= 20
+- npm
+- [Supabase](https://supabase.com/) account and project
+- [Vercel](https://vercel.com/) account (for deployment)
+- [Upstash Redis](https://upstash.com/) instance (for rate limiting)
 
 ## Getting Started
 
-First, run the development server:
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/<your-org>/garden-of-eden-website.git
+   cd garden-of-eden-website
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**
+
+   Copy the example file and fill in your values:
+
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+   See the [Environment Variables](#environment-variables) section below for the full list.
+
+4. **Run the development server**
+
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Available Commands
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev          # Start development server
+npm run build        # Production build
+npm run lint         # Run ESLint
+npm run test         # Run Vitest in watch mode
+npm run test:run     # Run Vitest (single run)
+npx tsc --noEmit     # Type-check without emitting files
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+vercel               # Preview deployment
+vercel --prod        # Production deployment
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Database
 
-## Learn More
+```bash
+supabase db push     # Push migrations to Supabase
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/                # Next.js App Router pages and API routes
+│   ├── admin/          # Admin dashboard
+│   ├── dashboard/      # Trainee dashboard
+│   ├── auth/           # Authentication flow (OTP login)
+│   ├── onboarding/     # New user onboarding
+│   └── api/            # API routes (cron, health, images, payments, webhooks)
+├── components/
+│   ├── ui/             # Shared UI primitives (shadcn/ui based)
+│   ├── admin/          # Admin-specific components
+│   ├── dashboard/      # Dashboard components
+│   ├── landing/        # Landing page sections
+│   └── forms/          # Pre/post workout forms
+├── features/           # Self-contained feature modules
+│   ├── achievements/
+│   ├── goals/
+│   ├── nutrition/
+│   ├── progress-charts/
+│   ├── rankings/
+│   └── streak-tracking/
+├── hooks/              # Shared React hooks
+├── lib/
+│   ├── actions/        # Server Actions
+│   ├── supabase/       # Supabase client helpers
+│   ├── validations/    # Zod schemas
+│   └── utils/          # Utility functions
+├── middleware.ts        # Session refresh and route protection
+└── types/              # TypeScript type definitions
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment Variables
 
-## Deploy on Vercel
+Create a `.env.local` file based on `.env.local.example`. The following variables are required:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key (public) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server only) |
+| `NEXT_PUBLIC_SITE_URL` | Site URL for auth callbacks |
+| `GROW_USER_ID` | Meshulam payment gateway user ID |
+| `GROW_PAGE_CODE` | Meshulam page code |
+| `GROW_API_URL` | Meshulam API endpoint |
+| `GROW_WEBHOOK_SECRET` | HMAC-SHA256 webhook signature secret |
+| `GROW_PROCESS_TOKEN` | Fallback webhook verification token |
+| `REMOVEBG_API_KEY` | Remove.bg API key (FIFA card processing) |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis URL (rate limiting) |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token |
+| `CRON_SECRET` | Secret for protecting `/api/cron/*` endpoints |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+The application is deployed on [Vercel](https://vercel.com/).
+
+1. Link your repository to a Vercel project.
+2. Configure all environment variables in the Vercel dashboard under **Settings > Environment Variables**.
+3. Deploy:
+
+   ```bash
+   vercel --prod
+   ```
+
+Vercel automatically deploys preview builds on pull requests and production builds on merges to the `main` branch.
+
+## License
+
+Private -- all rights reserved.
