@@ -60,7 +60,10 @@ export const contactLogSchema = z.object({
 export type ContactLogInput = z.infer<typeof contactLogSchema>;
 
 export const leadWebhookSchema = z.object({
-  phone: z.string().regex(leadPhoneRegex, "Invalid phone format (expected: 972501234567)"),
+  phone: z
+    .string()
+    .transform((v) => normalizeLeadPhone(v) ?? v)
+    .pipe(z.string().regex(leadPhoneRegex, "Invalid phone format")),
   name: z.string().min(1).max(100),
   is_from_haifa: z.boolean().optional().default(false),
   note: z.string().max(2000).optional(),
