@@ -1,21 +1,23 @@
 export const AGE_GROUPS = [
-  { id: "ages_5_7", title: "גילאי 5-7" },
-  { id: "ages_8_10", title: "גילאי 8-10" },
-  { id: "ages_11_13", title: "גילאי 11-13" },
-  { id: "ages_14_16", title: "גילאי 14-16" },
-  { id: "ages_17_plus", title: "גילאי 17+" },
+  { id: "age_7_12", title: "7-12" },
+  { id: "age_13_16", title: "13-16" },
+  { id: "age_16_plus", title: "16+" },
 ];
 
 export const TEAMS = [
-  { id: "team_a", title: "קבוצה א'" },
-  { id: "team_b", title: "קבוצה ב'" },
-  { id: "team_c", title: "קבוצה ג'" },
-  { id: "not_sure", title: "לא יודע/ת" },
+  { id: "team_maccabi_haifa", title: "מכבי חיפה" },
+  { id: "team_hapoel_haifa", title: "הפועל חיפה" },
+  { id: "team_nave_yosef", title: "נווה יוסף" },
+  { id: "team_beitar_haifa", title: 'בית"ר חיפה' },
+  { id: "team_nave_shanan", title: "נווה שאנן" },
+  { id: "team_ms_carmel", title: "מ.ס כרמל" },
+  { id: "team_tzirei_haifa", title: "צעירי חיפה" },
+  { id: "team_kiryat_yam", title: "קרית ים" },
+  { id: "team_maccabi_atlit", title: "מכבי עתלית" },
+  { id: "team_other", title: "אחר" },
 ];
 
 export const FREQUENCY_OPTIONS = [
-  { id: "once_week", title: "פעם בשבוע" },
-  { id: "twice_week", title: "פעמיים בשבוע" },
-  { id: "three_week", title: "3 פעמים בשבוע" },
-  { id: "four_plus", title: "4+ פעמים בשבוע" },
+  { id: "freq_once", title: "פעם בשבוע" },
+  { id: "freq_twice", title: "פעמיים בשבוע" },
 ];
