@@ -1,4 +1,6 @@
-const GRAPH_API_URL = "https://graph.facebook.com/v18.0";
+import { AGE_GROUPS } from "./flow-constants";
+
+const GRAPH_API_URL = "https://graph.facebook.com/v21.0";
 
 interface WhatsAppConfig {
   token: string;
@@ -41,11 +43,17 @@ async function callWhatsAppAPI(
   );
 
   if (!response.ok) {
-    let errorMessage = "WhatsApp API error";
+    let errorMessage = `WhatsApp API error (${response.status})`;
     try {
       const error = await response.json();
-      console.error("WhatsApp API error:", error);
-      errorMessage = error?.error?.message || errorMessage;
+      console.error("WhatsApp API error:", JSON.stringify(error, null, 2));
+      const meta = error?.error;
+      if (meta) {
+        errorMessage = `[${meta.code || response.status}] ${meta.message || "Unknown error"}`;
+        if (meta.error_data?.details) {
+          errorMessage += ` — ${meta.error_data.details}`;
+        }
+      }
     } catch {
       console.error("WhatsApp API error: status", response.status);
     }
@@ -101,6 +109,56 @@ export async function sendFlowInteractive(
           flow_cta: "מלא פרטים",
         },
       },
+    },
+  });
+
+  if (result.success) {
+    return { ...result, flowToken };
+  }
+  return result;
+}
+
+export async function sendFlowTemplate(
+  phone: string,
+  name: string
+): Promise<WhatsAppResult> {
+  const { token, phoneNumberId, flowId } = getConfig();
+  if (!flowId) {
+    return { success: false, error: "WHATSAPP_FLOW_ID not configured" };
+  }
+
+  const flowToken = `session_${phone}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  const result = await callWhatsAppAPI(phoneNumberId, token, {
+    messaging_product: "whatsapp",
+    to: phone,
+    type: "template",
+    template: {
+      name: "provide_details_template",
+      language: { code: "he" },
+      components: [
+        {
+          type: "header",
+          parameters: [{ type: "text", text: name || "חבר/ה" }],
+        },
+        {
+          type: "button",
+          sub_type: "flow",
+          index: "0",
+          parameters: [
+            {
+              type: "action",
+              action: {
+                flow_token: flowToken,
+                flow_action_data: {
+                  customer_name: name || "חבר/ה",
+                  age_groups: AGE_GROUPS,
+                },
+              },
+            },
+          ],
+        },
+      ],
     },
   });
 

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
-import { sendFlowInteractive, sendTextMessage } from "@/lib/whatsapp/client";
+import { sendFlowTemplate, sendTextMessage } from "@/lib/whatsapp/client";
 import type { Lead } from "@/types/leads";
 
 type ActionResult =
@@ -69,15 +69,16 @@ export async function sendWhatsAppFlowAction(leadId: string): Promise<ActionResu
   if ("error" in leadResult) return { error: leadResult.error };
 
   try {
-    const result = await sendFlowInteractive(leadResult.lead.phone, leadResult.lead.name);
+    const result = await sendFlowTemplate(leadResult.lead.phone, leadResult.lead.name);
     if (!result.success) {
       return { error: result.error || "שגיאה בשליחת פלואו WhatsApp" };
     }
-    await logWhatsAppMessage(leadId, result.messageId, "flow", "נשלח פלואו WhatsApp");
+    await logWhatsAppMessage(leadId, result.messageId, "template", "נשלחה תבנית פלואו WhatsApp");
     return { success: true };
   } catch (err) {
-    console.error("Send WhatsApp flow error:", err);
-    return { error: "שגיאה בשליחת פלואו WhatsApp" };
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Send WhatsApp flow error:", msg);
+    return { error: `שגיאה בשליחת פלואו WhatsApp: ${msg}` };
   }
 }
 
@@ -105,7 +106,8 @@ export async function sendWhatsAppTextAction(
     await logWhatsAppMessage(leadId, result.messageId, "text", truncatedNote);
     return { success: true };
   } catch (err) {
-    console.error("Send WhatsApp text error:", err);
-    return { error: "שגיאה בשליחת הודעת WhatsApp" };
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Send WhatsApp text error:", msg);
+    return { error: `שגיאה בשליחת הודעת WhatsApp: ${msg}` };
   }
 }
