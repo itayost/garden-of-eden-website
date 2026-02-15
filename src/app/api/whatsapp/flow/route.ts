@@ -11,6 +11,8 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 
+const FLOW_VERSION = "3.0";
+
 /**
  * WhatsApp Flow data_exchange endpoint
  *
@@ -23,9 +25,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Handle unencrypted ping
+    // Handle unencrypted ping (return base64-encoded JSON like original worker)
     if (body.action === "ping") {
-      return NextResponse.json({ status: "active" });
+      const responseData = { version: FLOW_VERSION, data: { status: "active" } };
+      const base64 = Buffer.from(JSON.stringify(responseData)).toString("base64");
+      return new NextResponse(base64, {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      });
     }
 
     const privateKeyPem = process.env.WHATSAPP_FLOW_PRIVATE_KEY?.trim();
@@ -37,15 +44,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Replace literal \n with actual newlines
+    // Replace literal \n with actual newlines (Vercel env format)
     const privateKey = privateKeyPem.replace(/\\n/g, "\n");
-
-    // Log key diagnostics on first request
-    console.log("[WhatsApp Flow] Key starts with:", privateKey.substring(0, 27));
-    console.log("[WhatsApp Flow] Key length:", privateKey.length);
-    console.log("[WhatsApp Flow] Has BEGIN marker:", privateKey.includes("-----BEGIN"));
-    console.log("[WhatsApp Flow] Has real newlines:", privateKey.includes("\n"));
-    console.log("[WhatsApp Flow] Body keys:", Object.keys(body));
 
     let decrypted;
     try {
@@ -65,22 +65,24 @@ export async function POST(request: NextRequest) {
     const data = (decryptedData.data as Record<string, unknown>) || {};
     const flowToken = decryptedData.flow_token as string;
 
+    console.log("[WhatsApp Flow] Processing:", { action, screen, flowToken });
+
     let responseData: Record<string, unknown>;
 
-    if (action === "INIT") {
+    // Handle encrypted ping (health check)
+    if (action === "ping") {
+      responseData = {
+        version: FLOW_VERSION,
+        data: { status: "active" },
+      };
+    } else if (action === "INIT") {
       responseData = await handleInit(flowToken);
     } else if (action === "BACK") {
       responseData = handleBack(screen);
-    } else if (screen === "AGE_SELECTION") {
-      responseData = handleAgeSelection();
-    } else if (screen === "TEAM_SELECTION") {
-      responseData = handleTeamSelection();
-    } else if (screen === "FREQUENCY_SELECTION") {
-      responseData = await handleFrequencySelection(data, flowToken);
-    } else if (screen === "CONFIRMATION") {
-      responseData = handleConfirmation(flowToken);
+    } else if (action === "data_exchange") {
+      responseData = await handleDataExchange(screen, data, flowToken);
     } else {
-      console.error("[WhatsApp Flow] Unknown action/screen:", action, screen);
+      console.error("[WhatsApp Flow] Unknown action:", action);
       responseData = await handleInit(flowToken);
     }
 
@@ -93,10 +95,11 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "text/plain" },
     });
   } catch (error) {
+    // Per Meta docs: return 421 for any processing errors
     console.error("[WhatsApp Flow] Error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 421 }
     );
   }
 }
@@ -107,9 +110,8 @@ export async function POST(request: NextRequest) {
 async function handleInit(
   flowToken: string
 ): Promise<Record<string, unknown>> {
-  // Extract phone from flow token: session_{phone}_{timestamp}_{random}
   const phone = flowToken.split("_")[1] || "";
-  let customerName = "";
+  let customerName = "חבר/ה";
 
   if (/^972\d{9}$/.test(phone)) {
     try {
@@ -118,19 +120,96 @@ async function handleInit(
         .select("name")
         .eq("phone", phone)
         .maybeSingle();
-      customerName = lead?.name || "";
+      if (lead?.name) customerName = lead.name;
     } catch {
-      // Ignore — use empty name
+      // Ignore — use default name
     }
   }
 
   return {
+    version: FLOW_VERSION,
     screen: "AGE_SELECTION",
     data: {
       customer_name: customerName,
       age_groups: AGE_GROUPS,
     },
   };
+}
+
+/**
+ * Handle data_exchange action — route to next screen based on current screen
+ */
+async function handleDataExchange(
+  currentScreen: string | undefined,
+  data: Record<string, unknown>,
+  flowToken: string
+): Promise<Record<string, unknown>> {
+  switch (currentScreen) {
+    case "AGE_SELECTION":
+      return {
+        version: FLOW_VERSION,
+        screen: "TEAM_SELECTION",
+        data: {
+          teams: TEAMS,
+          show_other_field: false,
+        },
+      };
+
+    case "TEAM_SELECTION":
+      // If "other" selected but no text provided, stay on screen
+      if (data.team === "team_other" && !data.other_team) {
+        return {
+          version: FLOW_VERSION,
+          screen: "TEAM_SELECTION",
+          data: {
+            teams: TEAMS,
+            show_other_field: true,
+          },
+        };
+      }
+      return {
+        version: FLOW_VERSION,
+        screen: "FREQUENCY_SELECTION",
+        data: {
+          frequency_options: FREQUENCY_OPTIONS,
+        },
+      };
+
+    case "FREQUENCY_SELECTION":
+      await saveFlowData(data, flowToken);
+      return {
+        version: FLOW_VERSION,
+        screen: "CONFIRMATION",
+        data: {
+          website_url: "https://www.edengarden.co.il/",
+        },
+      };
+
+    case "CONFIRMATION":
+      return {
+        version: FLOW_VERSION,
+        screen: "SUCCESS",
+        data: {
+          extension_message_response: {
+            params: {
+              flow_token: flowToken,
+              status: "completed",
+            },
+          },
+        },
+      };
+
+    default:
+      console.error("[WhatsApp Flow] Unknown screen:", currentScreen);
+      return {
+        version: FLOW_VERSION,
+        screen: "AGE_SELECTION",
+        data: {
+          customer_name: "חבר/ה",
+          age_groups: AGE_GROUPS,
+        },
+      };
+  }
 }
 
 /**
@@ -142,14 +221,16 @@ function handleBack(
   switch (currentScreen) {
     case "TEAM_SELECTION":
       return {
+        version: FLOW_VERSION,
         screen: "AGE_SELECTION",
         data: {
-          customer_name: "",
+          customer_name: "חבר/ה",
           age_groups: AGE_GROUPS,
         },
       };
     case "FREQUENCY_SELECTION":
       return {
+        version: FLOW_VERSION,
         screen: "TEAM_SELECTION",
         data: {
           teams: TEAMS,
@@ -158,6 +239,7 @@ function handleBack(
       };
     case "CONFIRMATION":
       return {
+        version: FLOW_VERSION,
         screen: "FREQUENCY_SELECTION",
         data: {
           frequency_options: FREQUENCY_OPTIONS,
@@ -165,9 +247,10 @@ function handleBack(
       };
     default:
       return {
+        version: FLOW_VERSION,
         screen: "AGE_SELECTION",
         data: {
-          customer_name: "",
+          customer_name: "חבר/ה",
           age_groups: AGE_GROUPS,
         },
       };
@@ -175,99 +258,48 @@ function handleBack(
 }
 
 /**
- * AGE_SELECTION submit → return TEAM_SELECTION
+ * Save flow data to Supabase — update lead and log flow response
  */
-function handleAgeSelection(): Record<string, unknown> {
-  return {
-    screen: "TEAM_SELECTION",
-    data: {
-      teams: TEAMS,
-      show_other_field: false,
-    },
-  };
-}
-
-/**
- * TEAM_SELECTION submit → return FREQUENCY_SELECTION
- */
-function handleTeamSelection(): Record<string, unknown> {
-  return {
-    screen: "FREQUENCY_SELECTION",
-    data: {
-      frequency_options: FREQUENCY_OPTIONS,
-    },
-  };
-}
-
-/**
- * FREQUENCY_SELECTION submit → save flow data, return CONFIRMATION
- */
-async function handleFrequencySelection(
+async function saveFlowData(
   data: Record<string, unknown>,
   flowToken: string
-): Promise<Record<string, unknown>> {
-  // Extract phone from flow token: session_{phone}_{timestamp}_{random}
+): Promise<void> {
   const phone = flowToken.split("_")[1] || "";
+  if (!/^972\d{9}$/.test(phone)) return;
 
-  if (/^972\d{9}$/.test(phone)) {
-    try {
-      const supabase = createAdminClient();
+  try {
+    const supabase = createAdminClient();
 
-      const { data: lead } = await typedFrom(supabase, "leads")
-        .select("id")
-        .eq("phone", phone)
-        .single();
+    const { data: lead } = await typedFrom(supabase, "leads")
+      .select("id")
+      .eq("phone", phone)
+      .single();
 
-      if (lead) {
-        await typedFrom(supabase, "leads")
-          .update({
-            flow_age_group: data.age_group as string,
-            flow_team: data.team as string,
-            flow_frequency: data.frequency as string,
-          })
-          .eq("id", lead.id);
+    if (!lead) return;
 
-        await typedFrom(supabase, "lead_flow_responses").upsert(
-          {
-            flow_token: flowToken,
-            lead_id: lead.id,
-            screen: "FREQUENCY_SELECTION",
-            data: {
-              age_group: data.age_group,
-              team: data.team,
-              frequency: data.frequency,
-            },
-            is_complete: true,
-          },
-          { onConflict: "flow_token" }
-        );
-      }
-    } catch (error) {
-      console.error("[WhatsApp Flow] Error saving flow data:", error);
-    }
-  }
+    await typedFrom(supabase, "leads")
+      .update({
+        flow_age_group: data.age_group as string,
+        flow_team: data.team as string,
+        flow_frequency: data.frequency as string,
+      })
+      .eq("id", lead.id);
 
-  return {
-    screen: "CONFIRMATION",
-    data: {
-      website_url: "https://www.edengarden.co.il/",
-    },
-  };
-}
-
-/**
- * CONFIRMATION submit → return SUCCESS (closes the flow)
- */
-function handleConfirmation(flowToken: string): Record<string, unknown> {
-  return {
-    screen: "SUCCESS",
-    data: {
-      extension_message_response: {
-        params: {
-          flow_token: flowToken,
-          status: "completed",
+    await typedFrom(supabase, "lead_flow_responses").upsert(
+      {
+        flow_token: flowToken,
+        lead_id: lead.id,
+        screen: "COMPLETE",
+        data: {
+          age_group: data.age_group,
+          team: data.team,
+          frequency: data.frequency,
         },
+        is_complete: true,
       },
-    },
-  };
+      { onConflict: "flow_token" }
+    );
+  } catch (error) {
+    console.error("[WhatsApp Flow] Error saving flow data:", error);
+  }
 }
