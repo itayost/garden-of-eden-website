@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
-import { sendFlowInteractive, sendTextMessage } from "@/lib/whatsapp/client";
+import { sendFlowTemplate, sendTextMessage } from "@/lib/whatsapp/client";
 import type { Lead } from "@/types/leads";
 
 type ActionResult =
@@ -59,7 +59,7 @@ async function logWhatsAppMessage(
 }
 
 /**
- * Send a WhatsApp flow interactive message to a lead
+ * Send a WhatsApp flow template message to a lead
  */
 export async function sendWhatsAppFlowAction(leadId: string): Promise<ActionResult> {
   const { error: authError } = await verifyAdminOrTrainer();
@@ -69,16 +69,16 @@ export async function sendWhatsAppFlowAction(leadId: string): Promise<ActionResu
   if ("error" in leadResult) return { error: leadResult.error };
 
   try {
-    const result = await sendFlowInteractive(leadResult.lead.phone, leadResult.lead.name);
+    const result = await sendFlowTemplate(leadResult.lead.phone, leadResult.lead.name);
     if (!result.success) {
-      return { error: result.error || "שגיאה בשליחת פלואו WhatsApp" };
+      return { error: result.error || "שגיאה בשליחת תבנית WhatsApp" };
     }
-    await logWhatsAppMessage(leadId, result.messageId, "flow", "נשלח פלואו WhatsApp אינטראקטיבי");
+    await logWhatsAppMessage(leadId, result.messageId, "template", "נשלחה תבנית פלואו WhatsApp");
     return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Send WhatsApp flow error:", msg);
-    return { error: `שגיאה בשליחת פלואו WhatsApp: ${msg}` };
+    return { error: `שגיאה בשליחת תבנית WhatsApp: ${msg}` };
   }
 }
 

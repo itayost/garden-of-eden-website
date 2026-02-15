@@ -30,23 +30,27 @@ async function callWhatsAppAPI(
   token: string,
   body: Record<string, unknown>
 ): Promise<WhatsAppResult> {
-  const response = await fetch(
-    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    }
-  );
+  const url = `${GRAPH_API_URL}/${phoneNumberId}/messages`;
+  console.log("[WhatsApp] Sending to:", url);
+  console.log("[WhatsApp] Request body:", JSON.stringify(body, null, 2));
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const responseText = await response.text();
+  console.log("[WhatsApp] Response status:", response.status);
+  console.log("[WhatsApp] Response body:", responseText);
 
   if (!response.ok) {
     let errorMessage = `WhatsApp API error (${response.status})`;
     try {
-      const error = await response.json();
-      console.error("WhatsApp API error:", JSON.stringify(error, null, 2));
+      const error = JSON.parse(responseText);
       const meta = error?.error;
       if (meta) {
         errorMessage = `[${meta.code || response.status}] ${meta.message || "Unknown error"}`;
@@ -55,13 +59,15 @@ async function callWhatsAppAPI(
         }
       }
     } catch {
-      console.error("WhatsApp API error: status", response.status);
+      errorMessage += ` — ${responseText}`;
     }
     return { success: false, error: errorMessage };
   }
 
-  const data = await response.json();
-  return { success: true, messageId: data.messages?.[0]?.id };
+  const data = JSON.parse(responseText);
+  const messageId = data.messages?.[0]?.id;
+  console.log("[WhatsApp] Success! Message ID:", messageId);
+  return { success: true, messageId };
 }
 
 export async function sendTextMessage(
