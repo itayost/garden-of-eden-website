@@ -56,19 +56,6 @@ async function callWhatsAppAPI(
   return { success: true, messageId: data.messages?.[0]?.id };
 }
 
-export async function sendTemplateMessage(
-  phone: string,
-  templateName: string
-): Promise<WhatsAppResult> {
-  const { token, phoneNumberId } = getConfig();
-  return callWhatsAppAPI(phoneNumberId, token, {
-    messaging_product: "whatsapp",
-    to: phone,
-    type: "template",
-    template: { name: templateName, language: { code: "he" } },
-  });
-}
-
 export async function sendTextMessage(
   phone: string,
   text: string

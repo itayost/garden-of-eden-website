@@ -43,7 +43,6 @@ import {
   updateLeadAction,
   updateLeadStatusAction,
   deleteLeadAction,
-  sendWhatsAppTemplateAction,
   sendWhatsAppFlowAction,
   sendWhatsAppTextAction,
 } from "@/lib/actions/admin-leads";
@@ -181,24 +180,6 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
       toast.error("שגיאה בעדכון סטטוס");
     } finally {
       setStatusLoading(null);
-    }
-  };
-
-  const handleWhatsAppTemplate = async () => {
-    if (!lead) return;
-    setWaLoading("template");
-    try {
-      const result = await sendWhatsAppTemplateAction(lead.id);
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("תבנית WhatsApp נשלחה");
-      loadDetails(lead.id);
-    } catch {
-      toast.error("שגיאה בשליחה");
-    } finally {
-      setWaLoading(null);
     }
   };
 
@@ -426,19 +407,6 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
             <div className="space-y-2">
               <Label className="text-sm font-medium">פעולות WhatsApp</Label>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleWhatsAppTemplate}
-                  disabled={waLoading !== null}
-                >
-                  {waLoading === "template" ? (
-                    <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                  ) : (
-                    <FileText className="h-4 w-4 ml-2" />
-                  )}
-                  שלח תבנית
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"

@@ -7,7 +7,7 @@
  * - admin-leads-update.ts   — updateLeadAction, updateLeadStatusAction
  * - admin-leads-delete.ts   — deleteLeadAction
  * - admin-leads-contact.ts  — addContactLogAction, getContactLogAction
- * - admin-leads-whatsapp.ts — sendWhatsAppTemplateAction, sendWhatsAppFlowAction, sendWhatsAppTextAction
+ * - admin-leads-whatsapp.ts — sendWhatsAppFlowAction, sendWhatsAppTextAction
  *
  * Each file has its own "use server" directive.
  */
@@ -17,4 +17,4 @@ export { createLeadAction } from "./admin-leads-create";
 export { updateLeadAction, updateLeadStatusAction } from "./admin-leads-update";
 export { deleteLeadAction } from "./admin-leads-delete";
 export { addContactLogAction, getContactLogAction } from "./admin-leads-contact";
-export { sendWhatsAppTemplateAction, sendWhatsAppFlowAction, sendWhatsAppTextAction } from "./admin-leads-whatsapp";
+export { sendWhatsAppFlowAction, sendWhatsAppTextAction } from "./admin-leads-whatsapp";

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
-import { sendTemplateMessage, sendFlowInteractive, sendTextMessage } from "@/lib/whatsapp/client";
+import { sendFlowInteractive, sendTextMessage } from "@/lib/whatsapp/client";
 import type { Lead } from "@/types/leads";
 
 type ActionResult =
@@ -56,29 +56,6 @@ async function logWhatsAppMessage(
   ]);
 
   revalidatePath("/admin/leads");
-}
-
-/**
- * Send a WhatsApp template message to a lead
- */
-export async function sendWhatsAppTemplateAction(leadId: string): Promise<ActionResult> {
-  const { error: authError } = await verifyAdminOrTrainer();
-  if (authError) return { error: authError };
-
-  const leadResult = await getLeadForWhatsApp(leadId);
-  if ("error" in leadResult) return { error: leadResult.error };
-
-  try {
-    const result = await sendTemplateMessage(leadResult.lead.phone, "hello_world");
-    if (!result.success) {
-      return { error: result.error || "שגיאה בשליחת תבנית WhatsApp" };
-    }
-    await logWhatsAppMessage(leadId, result.messageId, "template", "נשלחה תבנית WhatsApp");
-    return { success: true };
-  } catch (err) {
-    console.error("Send WhatsApp template error:", err);
-    return { error: "שגיאה בשליחת תבנית WhatsApp" };
-  }
 }
 
 /**
