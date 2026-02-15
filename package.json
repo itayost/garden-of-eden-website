@@ -13,7 +13,9 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx}": ["eslint --fix"]
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -53,7 +55,6 @@
     "react-hook-form": "^7.69.0",
     "react-icons": "^5.5.0",
     "recharts": "^2.15.4",
-    "remove.bg": "^1.3.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "use-debounce": "^10.1.0",

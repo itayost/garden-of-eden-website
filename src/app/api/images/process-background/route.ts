@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { removeBackgroundFromImageBase64 } from "remove.bg";
 import { createClient } from "@/lib/supabase/server";
 import {
   validateUUID,
@@ -90,34 +89,42 @@ export async function POST(request: NextRequest) {
       return serverErrorResponse("Background removal service not configured");
     }
 
-    // 8. Process with remove.bg
-    let processedBase64: string;
-    try {
-      const result = await removeBackgroundFromImageBase64({
-        base64img: imageBase64,
-        apiKey,
+    // 8. Process with remove.bg via direct API call (JSON body for base64 input)
+    const removeBgResponse = await fetch("https://api.remove.bg/v1.0/removebg", {
+      method: "POST",
+      headers: {
+        "X-Api-Key": apiKey,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        image_file_b64: imageBase64,
         size: "regular",
         type: "person",
         format: "png",
-        outputFile: undefined,
-      });
-      processedBase64 = result.base64img;
-    } catch (removeBgError: unknown) {
-      console.error("[Process Background] remove.bg error:", removeBgError);
+      }),
+    });
 
-      const errorMessage = removeBgError instanceof Error ? removeBgError.message : String(removeBgError);
-      if (errorMessage.includes("429") || errorMessage.toLowerCase().includes("rate limit")) {
+    if (!removeBgResponse.ok) {
+      if (removeBgResponse.status === 429) {
         return NextResponse.json(
           { error: "Rate limit exceeded. Please try again later" },
           { status: 429 }
         );
       }
-
+      const errorBody = await removeBgResponse.text();
+      console.error("[Process Background] remove.bg error:", removeBgResponse.status, errorBody);
       return serverErrorResponse("Failed to remove background from image");
     }
 
-    // 9. Upload processed image
-    const processedBuffer = Buffer.from(processedBase64, "base64");
+    // 9. Upload processed image (API returns base64 in JSON when Accept: application/json)
+    const removeBgData = await removeBgResponse.json();
+    const resultBase64: unknown = removeBgData?.data?.result_b64;
+    if (typeof resultBase64 !== "string") {
+      console.error("[Process Background] Unexpected remove.bg response shape:", JSON.stringify(removeBgData).slice(0, 500));
+      return serverErrorResponse("Failed to remove background from image");
+    }
+    const processedBuffer = Buffer.from(resultBase64, "base64");
     const processedPath = generateUniqueFilename(traineeUserId, "processed", "png");
 
     const processedResult = await uploadAvatarImage(
