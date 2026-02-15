@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { UserPlus } from "lucide-react";
 import { LeadDataTable } from "@/components/admin/leads/LeadDataTable";
-import { LeadStatsPanel } from "@/components/admin/leads/LeadStatsPanel";
 import { LeadExportButton } from "@/components/admin/exports/LeadExportButton";
 import type { Lead } from "@/types/leads";
 
@@ -62,8 +61,6 @@ export default async function AdminLeadsPage({ searchParams }: PageProps) {
         </div>
         <LeadExportButton leads={typedLeads} />
       </div>
-
-      <LeadStatsPanel leads={typedLeads} />
 
       <Card>
         <CardHeader>

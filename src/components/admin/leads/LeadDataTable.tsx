@@ -17,13 +17,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { columns } from "./LeadTableColumns";
 import { LeadTableToolbar } from "./LeadTableToolbar";
+import { LeadStatsPanel } from "./LeadStatsPanel";
 import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadDetailSheet } from "./LeadDetailSheet";
 import { LeadCreateDialog } from "./LeadCreateDialog";
 import { TablePagination } from "@/components/admin/TablePagination";
-import type { Lead } from "@/types/leads";
+import type { Lead, LeadStatus } from "@/types/leads";
 
 interface LeadDataTableProps {
   data: Lead[];
@@ -50,6 +52,8 @@ export function LeadDataTable({
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string | null>(initialStatus);
   const [haifaFilter, setHaifaFilter] = useState(initialHaifa);
+  const [teamFilter, setTeamFilter] = useState<string | null>(null);
+  const [flowFilter, setFlowFilter] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -66,9 +70,16 @@ export function LeadDataTable({
       }
       if (statusFilter && lead.status !== statusFilter) return false;
       if (haifaFilter && !lead.is_from_haifa) return false;
+      if (teamFilter && lead.flow_team !== teamFilter) return false;
+      if (flowFilter) {
+        if (flowFilter === "complete" && lead.flow_age_group === null)
+          return false;
+        if (flowFilter === "pending" && lead.flow_age_group !== null)
+          return false;
+      }
       return true;
     });
-  }, [data, globalFilter, statusFilter, haifaFilter]);
+  }, [data, globalFilter, statusFilter, haifaFilter, teamFilter, flowFilter]);
 
   const table = useReactTable({
     data: filteredData,
@@ -92,15 +103,39 @@ export function LeadDataTable({
     []
   );
   const handleHaifaChange = useCallback((v: boolean) => setHaifaFilter(v), []);
+  const handleTeamChange = useCallback(
+    (v: string | null) => setTeamFilter(v),
+    []
+  );
+  const handleFlowChange = useCallback(
+    (v: string | null) => setFlowFilter(v),
+    []
+  );
   const handleCreateClick = useCallback(() => setCreateOpen(true), []);
+
+  const handleStatStatusFilter = useCallback(
+    (status: LeadStatus | null) => {
+      setStatusFilter(status);
+    },
+    []
+  );
 
   return (
     <div className="space-y-4">
+      <LeadStatsPanel
+        leads={data}
+        onStatusFilter={handleStatStatusFilter}
+        activeStatus={statusFilter}
+      />
+
       <LeadTableToolbar
         onSearchChange={handleSearchChange}
         onStatusChange={handleStatusChange}
         onHaifaChange={handleHaifaChange}
+        onTeamChange={handleTeamChange}
+        onFlowChange={handleFlowChange}
         onCreateClick={handleCreateClick}
+        statusValue={statusFilter}
       />
 
       {/* Mobile: Card list */}
@@ -120,10 +155,22 @@ export function LeadDataTable({
                       {lead.name}
                     </span>
                     <LeadStatusBadge status={lead.status} />
+                    {lead.flow_age_group !== null ? (
+                      <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+                    ) : (
+                      <span className="h-2 w-2 rounded-full bg-gray-300 shrink-0" />
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground" dir="ltr">
-                    {formatPhone(lead.phone)}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground" dir="ltr">
+                      {formatPhone(lead.phone)}
+                    </p>
+                    {lead.total_payment && (
+                      <Badge variant="outline" className="text-xs px-1.5 py-0">
+                        {lead.total_payment.toLocaleString()}₪
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <span className="text-xs text-muted-foreground">
                   {new Date(lead.created_at).toLocaleDateString("he-IL")}

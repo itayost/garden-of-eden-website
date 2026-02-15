@@ -6,10 +6,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Loader2,
-  MessageCircle,
   Send,
-  FileText,
+  ScrollText,
   Trash2,
+  Target,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -37,6 +37,7 @@ import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadContactLogForm } from "./LeadContactLogForm";
 import { LeadContactTimeline } from "./LeadContactTimeline";
+import { LeadCloseDealDialog } from "./LeadCloseDealDialog";
 import { leadUpdateSchema, type LeadUpdateInput } from "@/lib/validations/leads";
 import {
   getLeadByIdAction,
@@ -47,6 +48,11 @@ import {
   sendWhatsAppTextAction,
 } from "@/lib/actions/admin-leads";
 import {
+  AGE_GROUPS,
+  TEAMS,
+  FREQUENCY_OPTIONS,
+} from "@/lib/whatsapp/flow-constants";
+import {
   LEAD_STATUS_LABELS,
   LEAD_STATUS_COLORS,
   LEAD_MESSAGE_TYPE_LABELS,
@@ -56,6 +62,11 @@ import {
   type LeadSentMessage,
   type LeadFlowResponse,
 } from "@/types/leads";
+
+// Build lookup maps from flow-constants arrays
+const AGE_GROUP_MAP = Object.fromEntries(AGE_GROUPS.map((g) => [g.id, g.title]));
+const TEAM_MAP = Object.fromEntries(TEAMS.map((t) => [t.id, t.title]));
+const FREQUENCY_MAP = Object.fromEntries(FREQUENCY_OPTIONS.map((f) => [f.id, f.title]));
 
 interface LeadDetailSheetProps {
   lead: Lead | null;
@@ -81,6 +92,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
   const [sentMessages, setSentMessages] = useState<LeadSentMessage[]>([]);
   const [flowResponses, setFlowResponses] = useState<LeadFlowResponse[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [closeDealOpen, setCloseDealOpen] = useState(false);
 
   const {
     register,
@@ -234,6 +246,10 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
     if (lead) loadDetails(lead.id);
   };
 
+  const handleCloseDealSuccess = () => {
+    if (lead) loadDetails(lead.id);
+  };
+
   if (!lead) return null;
 
   const statuses: LeadStatus[] = [
@@ -243,6 +259,9 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
     "closed",
     "disqualified",
   ];
+
+  const hasFlowData = lead.flow_age_group !== null;
+  const isClosed = currentStatus === "closed" || lead.status === "closed";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -270,6 +289,42 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
           </div>
         ) : (
           <div className="space-y-6 px-4 pb-8">
+            {/* Close Deal Button — hidden when already closed */}
+            {!isClosed && (
+              <Button
+                onClick={() => setCloseDealOpen(true)}
+                className="w-full bg-amber-600 hover:bg-amber-700"
+              >
+                <Target className="h-4 w-4 ml-2" />
+                סגירת עסקה
+              </Button>
+            )}
+
+            {/* Flow Data Summary */}
+            {hasFlowData && (
+              <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                <p className="text-sm font-medium">נתוני Flow</p>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">גיל: </span>
+                    {AGE_GROUP_MAP[lead.flow_age_group!] || lead.flow_age_group}
+                  </div>
+                  {lead.flow_team && (
+                    <div>
+                      <span className="text-muted-foreground">קבוצה: </span>
+                      {TEAM_MAP[lead.flow_team] || lead.flow_team}
+                    </div>
+                  )}
+                  {lead.flow_frequency && (
+                    <div>
+                      <span className="text-muted-foreground">תדירות: </span>
+                      {FREQUENCY_MAP[lead.flow_frequency] || lead.flow_frequency}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Quick Status Change */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">שינוי סטטוס מהיר</Label>
@@ -407,19 +462,21 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
             <div className="space-y-2">
               <Label className="text-sm font-medium">פעולות WhatsApp</Label>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleWhatsAppFlow}
-                  disabled={waLoading !== null}
-                >
-                  {waLoading === "flow" ? (
-                    <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                  ) : (
-                    <MessageCircle className="h-4 w-4 ml-2" />
-                  )}
-                  שלח פלואו
-                </Button>
+                {!hasFlowData && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleWhatsAppFlow}
+                    disabled={waLoading !== null}
+                  >
+                    {waLoading === "flow" ? (
+                      <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+                    ) : (
+                      <ScrollText className="h-4 w-4 ml-2" />
+                    )}
+                    שלח תבנית פלואו
+                  </Button>
+                )}
               </div>
               <div className="flex gap-2">
                 <Input
@@ -553,6 +610,14 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
           </div>
         )}
       </SheetContent>
+
+      {/* Close Deal Dialog */}
+      <LeadCloseDealDialog
+        lead={lead}
+        open={closeDealOpen}
+        onOpenChange={setCloseDealOpen}
+        onSuccess={handleCloseDealSuccess}
+      />
     </Sheet>
   );
 }

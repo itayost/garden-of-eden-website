@@ -67,6 +67,61 @@ export const columns: ColumnDef<Lead>[] = [
     enableSorting: false,
   },
   {
+    accessorKey: "payment",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        תשלום
+        <ArrowUpDown className="mr-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const payment = row.original.payment;
+      return payment ? `${payment.toLocaleString()}₪` : "—";
+    },
+  },
+  {
+    accessorKey: "total_payment",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        סה״כ
+        <ArrowUpDown className="mr-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const total = row.original.total_payment;
+      return total ? (
+        <span className="font-bold text-green-700">
+          {total.toLocaleString()}₪
+        </span>
+      ) : (
+        "—"
+      );
+    },
+  },
+  {
+    id: "flow",
+    header: "Flow",
+    cell: ({ row }) => {
+      const hasFlow = row.original.flow_age_group !== null;
+      return hasFlow ? (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          ✓ הושלם
+        </Badge>
+      ) : (
+        <Badge variant="outline" className="text-muted-foreground">
+          ממתין
+        </Badge>
+      );
+    },
+    enableSorting: false,
+  },
+  {
     accessorKey: "created_at",
     header: ({ column }) => (
       <Button

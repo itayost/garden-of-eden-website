@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { leadCreateSchema, type LeadCreateInput } from "@/lib/validations/leads";
-import { createLeadAction } from "@/lib/actions/admin-leads";
+import { createLeadAction, sendWhatsAppFlowAction } from "@/lib/actions/admin-leads";
 import { LEAD_STATUS_LABELS, type LeadStatus } from "@/types/leads";
 
 interface LeadCreateDialogProps {
@@ -37,6 +37,7 @@ interface LeadCreateDialogProps {
 export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [autoSendFlow, setAutoSendFlow] = useState(true);
 
   const {
     register,
@@ -68,8 +69,24 @@ export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) 
         toast.error(result.error);
         return;
       }
-      toast.success("ליד נוצר בהצלחה");
+
+      if (autoSendFlow) {
+        try {
+          const flowResult = await sendWhatsAppFlowAction(result.data.id);
+          if ("error" in flowResult) {
+            toast.success("ליד נוצר בהצלחה • שגיאה בשליחת Flow");
+          } else {
+            toast.success("ליד נוצר בהצלחה • תבנית Flow נשלחה");
+          }
+        } catch {
+          toast.success("ליד נוצר בהצלחה • שגיאה בשליחת Flow");
+        }
+      } else {
+        toast.success("ליד נוצר בהצלחה");
+      }
+
       reset();
+      setAutoSendFlow(true);
       onOpenChange(false);
       router.refresh();
     } catch {
@@ -159,6 +176,17 @@ export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) 
             {errors.note && (
               <p className="text-xs text-destructive">{errors.note.message}</p>
             )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="auto-send-flow"
+              checked={autoSendFlow}
+              onCheckedChange={(checked) => setAutoSendFlow(checked === true)}
+            />
+            <Label htmlFor="auto-send-flow" className="text-sm cursor-pointer">
+              שלח תבנית WhatsApp Flow אוטומטית
+            </Label>
           </div>
 
           <div className="flex gap-2 justify-end">
