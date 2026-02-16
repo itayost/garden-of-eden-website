@@ -123,7 +123,7 @@ export const ASSESSMENT_LABELS_HE: Record<string, string> = {
   jump_2leg_distance: "ניתור למרחק 2 רגליים",
   jump_right_leg: "ניתור למרחק רגל ימין",
   jump_left_leg: "ניתור למרחק רגל שמאל",
-  jump_2leg_height: "ניתור לגובה (קייזר)",
+  jump_2leg_height: "ניתור לגובה",
 
   // Agility
   blaze_spot_time: "בלייז ספוט (חשיבה מהירה)",

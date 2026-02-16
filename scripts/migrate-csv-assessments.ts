@@ -289,16 +289,26 @@ function mapCoordination(
 
 // ---------------------------------------------------------------------------
 // Kaiser / Height column parser
+// The CSV "kaiserHeight" column contains combined values like "204 7%"
+// where 204 is the jump height (cm) and 7% is the kick power percentage.
 // ---------------------------------------------------------------------------
 
-function parseKaiserPower(value: string): number | null {
+/** Extract jump height (cm) — the large number (> 20) from the kaiser column. */
+function parseKaiserJumpHeight(value: string): number | null {
   if (!value) return null;
-  // Extract ALL numbers and return the largest one.
-  // This handles formats like "204 7%", "7% 146", "%3 71", "248 שיא 7%"
-  // The percentage (3%, 5%, 7%) is always small; the Kaiser value is always larger.
   const matches = value.match(/\d+/g);
   if (!matches) return null;
-  const numbers = matches.map(Number).filter((n) => n > 0);
+  const numbers = matches.map(Number).filter((n) => n > 20);
+  if (numbers.length === 0) return null;
+  return Math.max(...numbers);
+}
+
+/** Extract kick power (%) — the small number (<= 20) from the kaiser column. */
+function parseKaiserKickPower(value: string): number | null {
+  if (!value) return null;
+  const matches = value.match(/\d+/g);
+  if (!matches) return null;
+  const numbers = matches.map(Number).filter((n) => n > 0 && n <= 20);
   if (numbers.length === 0) return null;
   return Math.max(...numbers);
 }
@@ -356,6 +366,7 @@ interface AssessmentData {
   jump_2leg_distance: number | null;
   jump_right_leg: number | null;
   jump_left_leg: number | null;
+  jump_2leg_height: number | null;
   kick_power_kaiser: number | null;
   coordination: "deficient" | "basic" | "advanced" | null;
   assessed_by: string | null;
@@ -396,8 +407,9 @@ function buildAssessmentData(
   // Single-leg jumps
   const legJumps = parseSingleLegJump(row.singleLegJump);
 
-  // Kaiser power
-  const kaiserPower = parseKaiserPower(row.kaiserHeight);
+  // Kaiser column: jump height (cm) + kick power (%)
+  const kaiserJumpHeight = parseKaiserJumpHeight(row.kaiserHeight);
+  const kaiserKickPower = parseKaiserKickPower(row.kaiserHeight);
 
   // Coordination
   const coordination = mapCoordination(row.coordination);
@@ -411,7 +423,8 @@ function buildAssessmentData(
       jump_2leg_distance: jump2legDistance,
       jump_right_leg: legJumps.right,
       jump_left_leg: legJumps.left,
-      kick_power_kaiser: kaiserPower,
+      jump_2leg_height: kaiserJumpHeight,
+      kick_power_kaiser: kaiserKickPower,
       coordination: coordination,
       assessed_by: null,
     },
@@ -467,14 +480,14 @@ function printReport(results: MigrationResult[]) {
 
   console.log("\n--- IMPORTED ASSESSMENTS ---");
   console.log(
-    `${"Name".padEnd(25)} ${"Sprint5m".padEnd(10)} ${"Sprint10m".padEnd(10)} ${"Jump2leg".padEnd(10)} ${"JumpR".padEnd(10)} ${"JumpL".padEnd(10)} ${"Kaiser".padEnd(10)} ${"Coord".padEnd(12)}`
+    `${"Name".padEnd(25)} ${"Sprint5m".padEnd(10)} ${"Sprint10m".padEnd(10)} ${"Jump2leg".padEnd(10)} ${"JumpR".padEnd(10)} ${"JumpL".padEnd(10)} ${"JumpH".padEnd(10)} ${"Kaiser%".padEnd(10)} ${"Coord".padEnd(12)}`
   );
-  console.log("-".repeat(97));
+  console.log("-".repeat(107));
 
   for (const r of succeeded) {
     const a = r.assessment!;
     console.log(
-      `${r.name.padEnd(25)} ${fmt(a.sprint_5m, "s").padEnd(10)} ${fmt(a.sprint_10m, "s").padEnd(10)} ${fmt(a.jump_2leg_distance, "cm").padEnd(10)} ${fmt(a.jump_right_leg, "cm").padEnd(10)} ${fmt(a.jump_left_leg, "cm").padEnd(10)} ${fmt(a.kick_power_kaiser, "").padEnd(10)} ${(a.coordination || "-").padEnd(12)}`
+      `${r.name.padEnd(25)} ${fmt(a.sprint_5m, "s").padEnd(10)} ${fmt(a.sprint_10m, "s").padEnd(10)} ${fmt(a.jump_2leg_distance, "cm").padEnd(10)} ${fmt(a.jump_right_leg, "cm").padEnd(10)} ${fmt(a.jump_left_leg, "cm").padEnd(10)} ${fmt(a.jump_2leg_height, "cm").padEnd(10)} ${fmt(a.kick_power_kaiser, "%").padEnd(10)} ${(a.coordination || "-").padEnd(12)}`
     );
   }
 
@@ -594,6 +607,7 @@ async function main() {
             assessment.jump_2leg_distance,
             assessment.jump_right_leg,
             assessment.jump_left_leg,
+            assessment.jump_2leg_height,
             assessment.kick_power_kaiser,
             assessment.coordination,
           ].some((v) => v !== null);
