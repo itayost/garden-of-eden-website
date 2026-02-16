@@ -117,9 +117,9 @@ async function main() {
     const sprint_10m = parseNum(fields[2]);
     const kaiser = parseKaiser(fields[3]);
 
-    let jump_2leg = normalizeJump(parseNum(fields[4]));
-    let jump_right = normalizeJump(parseNum(fields[5]));
-    let jump_left = normalizeJump(parseNum(fields[6]));
+    const jump_2leg = normalizeJump(parseNum(fields[4]));
+    const jump_right = normalizeJump(parseNum(fields[5]));
+    const jump_left = normalizeJump(parseNum(fields[6]));
 
     const blaze = parseNum(fields[7]);
 

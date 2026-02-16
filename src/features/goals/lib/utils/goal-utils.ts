@@ -21,7 +21,7 @@ export function calculateGoalProgress(goal: PlayerGoalRow): PlayerGoalWithProgre
 
   let progressPercentage = 0;
   let status: PlayerGoalWithProgress["status"] = "not_started";
-  let isAchieved = goal.achieved_at !== null;
+  const isAchieved = goal.achieved_at !== null;
 
   if (isAchieved) {
     progressPercentage = 100;
