@@ -112,14 +112,16 @@ describe('growWebhookSchema', () => {
   });
 
   it('should reject missing processId', () => {
-    const { processId, ...dataWithoutProcessId } = validWebhookPayload.data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { processId: _processId, ...dataWithoutProcessId } = validWebhookPayload.data;
     const payload = { ...validWebhookPayload, data: dataWithoutProcessId };
     const result = growWebhookSchema.safeParse(payload);
     expect(result.success).toBe(false);
   });
 
   it('should reject missing processToken', () => {
-    const { processToken, ...dataWithoutProcessToken } = validWebhookPayload.data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { processToken: _processToken, ...dataWithoutProcessToken } = validWebhookPayload.data;
     const payload = { ...validWebhookPayload, data: dataWithoutProcessToken };
     const result = growWebhookSchema.safeParse(payload);
     expect(result.success).toBe(false);
@@ -244,21 +246,24 @@ describe('growWebhookSchema', () => {
 
   describe('required fields', () => {
     it('should reject missing status in data', () => {
-      const { status, ...dataWithoutStatus } = validWebhookPayload.data;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { status: _status, ...dataWithoutStatus } = validWebhookPayload.data;
       const payload = { ...validWebhookPayload, data: dataWithoutStatus };
       const result = growWebhookSchema.safeParse(payload);
       expect(result.success).toBe(false);
     });
 
     it('should reject missing transactionId', () => {
-      const { transactionId, ...dataWithoutTxId } = validWebhookPayload.data;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { transactionId: _transactionId, ...dataWithoutTxId } = validWebhookPayload.data;
       const payload = { ...validWebhookPayload, data: dataWithoutTxId };
       const result = growWebhookSchema.safeParse(payload);
       expect(result.success).toBe(false);
     });
 
     it('should reject missing asmachta', () => {
-      const { asmachta, ...dataWithoutAsmachta } = validWebhookPayload.data;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { asmachta: _asmachta, ...dataWithoutAsmachta } = validWebhookPayload.data;
       const payload = { ...validWebhookPayload, data: dataWithoutAsmachta };
       const result = growWebhookSchema.safeParse(payload);
       expect(result.success).toBe(false);

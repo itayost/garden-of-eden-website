@@ -89,7 +89,7 @@ export function ProfileCompletionForm({
       }
 
       toast.success("!בואו נתחיל");
-      window.location.href = "/dashboard";
+      window.location.assign("/dashboard");
     } catch (err) {
       console.error("Profile completion error:", err);
       toast.error("שגיאה בשמירת הפרופיל. נסה שוב.");

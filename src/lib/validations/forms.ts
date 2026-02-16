@@ -20,13 +20,6 @@ const optionalNumericString = z.string().max(MAX_SHORT_TEXT).optional().refine(
   { message: "נא להזין מספר תקין" }
 );
 
-// Validation helper for required numeric strings
-const requiredNumericString = (errorMsg: string) =>
-  z.string().min(1, errorMsg).max(MAX_SHORT_TEXT).refine(
-    (val) => !isNaN(parseFloat(val)),
-    { message: "נא להזין מספר תקין" }
-  );
-
 export const preWorkoutSchema = z.object({
   group_training: optionalSelect,
   urine_color: optionalSelect,

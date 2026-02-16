@@ -108,7 +108,7 @@ export default async function VideosPage() {
       {/* Day Tabs */}
       <Tabs defaultValue="1" className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-2 bg-transparent p-0">
-          {dayTopics.map(({ day, topic, icon }) => {
+          {dayTopics.map(({ day, icon }) => {
             const dayVideos = videosByDay[day] || [];
             const dayWatched = dayVideos.filter((v) => progressMap[v.id]?.watched).length;
             const isComplete = dayVideos.length > 0 && dayWatched === dayVideos.length;

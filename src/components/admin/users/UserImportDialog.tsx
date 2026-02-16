@@ -101,7 +101,7 @@ export function UserImportDialog({ trigger }: UserImportDialogProps) {
       if (importResult.errors.length > 0) {
         toast.error(`${importResult.errors.length} שגיאות ביבוא`);
       }
-    } catch (error) {
+    } catch {
       toast.error("שגיאה ביבוא המשתמשים");
     } finally {
       setImporting(false);

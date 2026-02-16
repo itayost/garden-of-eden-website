@@ -95,8 +95,39 @@ export function useGoalCelebration(
     }
 
     lastProcessedRef.current = processKey;
-    checkAndCelebrate();
-  }, [userId, achievedGoalIds, checkAndCelebrate]);
+
+    if (!userId || !goals.length) return;
+
+    const achievedGoals = goals.filter(
+      (goal) => goal.achieved_at !== null && !wasGoalCelebrated(userId, goal.id)
+    );
+
+    if (achievedGoals.length === 0) return;
+
+    achievedGoals.forEach((goal) => {
+      markGoalCelebrated(userId, goal.id);
+    });
+
+    timeoutIdsRef.current.forEach(clearTimeout);
+    timeoutIdsRef.current = [];
+
+    achievedGoals.forEach((goal, index) => {
+      const celebration = getGoalCelebrationMessage(goal);
+
+      const timeoutId = setTimeout(
+        () => {
+          toast.success(`${celebration.emoji} ${celebration.title}`, {
+            description: celebration.message,
+            duration: celebration.duration,
+            position: "top-center",
+          });
+        },
+        index * 1000
+      );
+      timeoutIdsRef.current.push(timeoutId);
+    });
+
+  }, [userId, achievedGoalIds, goals]);
 
   return {
     checkAndCelebrate,

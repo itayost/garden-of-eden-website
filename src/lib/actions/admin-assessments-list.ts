@@ -56,7 +56,7 @@ export async function getAssessmentsPaginated(
 
   // If age group filter is set, we need to fetch all profiles, filter, then paginate manually
   if (params.ageGroupId) {
-    const { data: allProfiles, count: totalCount } = (await supabase
+    const { data: allProfiles } = (await supabase
       .from("profiles")
       .select("*", { count: "exact" })
       .eq("role", "trainee")
@@ -102,15 +102,6 @@ export async function getAssessmentsPaginated(
       .select("*", { count: "exact", head: true })
       .is("deleted_at", null);
 
-    const allAssessmentUserIds = new Set(
-      (allProfiles || [])
-        .filter((p) => {
-          // Check if this profile has assessments - need to query
-          return true; // We'll compute this from the full data
-        })
-        .map((p) => p.id)
-    );
-
     return {
       profiles: paginatedProfiles,
       assessmentsByUser,
@@ -148,16 +139,11 @@ export async function getAssessmentsPaginated(
   });
 
   // Get summary stats
-  const [{ count: totalAssessments }, { count: totalTrainees }] =
+  const [{ count: totalAssessments }] =
     await Promise.all([
       supabase
         .from("player_assessments")
         .select("*", { count: "exact", head: true })
-        .is("deleted_at", null),
-      supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("role", "trainee")
         .is("deleted_at", null),
     ]);
 

@@ -38,10 +38,13 @@ export function useFormDraft<TFormData extends FieldValues>(
     autoSaveInterval = DEFAULT_AUTO_SAVE_INTERVAL,
   } = options;
 
-  const [isDraftAvailable, setIsDraftAvailable] = useState(false);
+  const [isDraftAvailable, setIsDraftAvailable] = useState(() => !!loadDraft<TFormData>(formId));
   const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(() => {
+    const draft = loadDraft<TFormData>(formId);
+    return draft ? new Date(draft.metadata.savedAt) : null;
+  });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(() => !!loadDraft<TFormData>(formId));
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialLoadDoneRef = useRef(false);
@@ -66,17 +69,6 @@ export function useFormDraft<TFormData extends FieldValues>(
     toast.success("הטיוטה נמחקה");
   }, [clearDraft, form, defaultValues]);
 
-  // Restore draft to form
-  const restoreDraft = useCallback(() => {
-    const draft = loadDraft<TFormData>(formId);
-    if (draft) {
-      form.reset(draft.data);
-      setIsDraftAvailable(false);
-      setHasUnsavedChanges(true);
-      toast.success("הטיוטה שוחזרה");
-    }
-  }, [form, formId]);
-
   // Check for existing draft on mount
   useEffect(() => {
     if (initialLoadDoneRef.current) return;
@@ -84,12 +76,8 @@ export function useFormDraft<TFormData extends FieldValues>(
 
     const draft = loadDraft<TFormData>(formId);
     if (draft) {
-      setIsDraftAvailable(true);
-      setLastSaved(new Date(draft.metadata.savedAt));
-
       // Restore draft immediately and show toast with discard option
       form.reset(draft.data);
-      setHasUnsavedChanges(true);
 
       const savedDate = new Date(draft.metadata.savedAt);
       const formattedDate = savedDate.toLocaleDateString("he-IL", {

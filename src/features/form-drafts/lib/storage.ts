@@ -2,7 +2,7 @@
  * localStorage-based draft storage utility
  */
 
-import type { Draft, DraftMetadata } from "../types";
+import type { Draft } from "../types";
 
 const DRAFT_PREFIX = "goe_form_draft_";
 const DEFAULT_EXPIRY_DAYS = 7;

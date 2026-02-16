@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Video, TrendingUp, Activity, Salad } from "lucide-react";
+import { Users, FileText, Video, Activity, Salad } from "lucide-react";
 import { ShiftStatusCard } from "@/components/admin/shifts/ShiftStatusCard";
 import type { Profile } from "@/types/database";
 

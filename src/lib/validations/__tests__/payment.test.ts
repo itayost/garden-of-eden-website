@@ -39,6 +39,7 @@ describe('createPaymentSchema', () => {
 
   describe('description validation', () => {
     it('should reject missing description', () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { description: _, ...dataWithoutDescription } = validPaymentData;
       const result = createPaymentSchema.safeParse(dataWithoutDescription);
       expect(result.success).toBe(false);
@@ -191,6 +192,7 @@ describe('createPaymentSchema', () => {
     });
 
     it('should allow omitting email entirely', () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { payerEmail: _, ...dataWithoutEmail } = validPaymentData;
       const result = createPaymentSchema.safeParse(dataWithoutEmail);
       expect(result.success).toBe(true);

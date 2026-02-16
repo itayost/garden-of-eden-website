@@ -43,7 +43,6 @@ export function RankingsView({
   initialData,
   currentUserId,
   isTrainee = false,
-  userAgeGroupId,
   userAgeGroupLabel,
 }: RankingsViewProps) {
   const [data, setData] = useState<RankingsData>(initialData);

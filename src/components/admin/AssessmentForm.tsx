@@ -10,7 +10,6 @@ import {
   assessmentSchema,
   type AssessmentFormData,
   DEFAULT_ASSESSMENT,
-  ASSESSMENT_FIELDS,
 } from "@/lib/validations/assessment";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";

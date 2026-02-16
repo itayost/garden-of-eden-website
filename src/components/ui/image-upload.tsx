@@ -37,39 +37,41 @@ export function ImageUpload({
   className,
 }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
+  const [prevValue, setPrevValue] = useState<File | string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Validate URL is safe (prevents XSS via javascript: protocol)
-  const isSafeUrl = (url: string): boolean => {
+  const isSafeUrl = useCallback((url: string): boolean => {
     try {
       const parsed = new URL(url, window.location.origin);
       return ["http:", "https:", "blob:", "data:"].includes(parsed.protocol);
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  // Generate preview URL with proper cleanup
-  useEffect(() => {
-    let objectUrl: string | null = null;
-
+  // Derive preview from value prop (React-recommended pattern for derived state)
+  if (value !== prevValue) {
+    setPrevValue(value);
     if (value instanceof File) {
-      objectUrl = URL.createObjectURL(value);
-      setPreview(objectUrl);
+      setPreview(URL.createObjectURL(value));
     } else if (typeof value === "string" && value && isSafeUrl(value)) {
       setPreview(value);
     } else {
       setPreview(null);
     }
+  }
 
+  // Cleanup blob URLs when preview changes or on unmount
+  useEffect(() => {
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
+      if (preview && preview.startsWith("blob:")) {
+        URL.revokeObjectURL(preview);
       }
     };
-  }, [value]);
+  }, [preview]);
 
   const validateFile = useCallback(
     (file: File): { valid: boolean; error?: string } => {
@@ -160,6 +162,7 @@ export function ImageUpload({
       >
         {preview ? (
           <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={preview}
               alt="Preview"

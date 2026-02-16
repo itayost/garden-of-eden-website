@@ -190,6 +190,7 @@ export function TraineeImageUpload({
         <div className="flex flex-col items-center gap-4 w-full max-w-sm">
           {currentAvatarUrl && (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={currentAvatarUrl}
                 alt="תמונה נוכחית"
@@ -242,6 +243,7 @@ export function TraineeImageUpload({
       {step === "preview" && previewUrl && (
         <div className="flex flex-col items-center gap-4 w-full max-w-sm">
           <div className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={previewUrl}
               alt="תצוגה מקדימה"
@@ -303,6 +305,7 @@ export function TraineeImageUpload({
         <div className="flex flex-col items-center gap-4 w-full max-w-sm">
           <div className="flex gap-4">
             <div className="flex flex-col items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={uploadedUrls.original}
                 alt="תמונה מקורית"
@@ -312,6 +315,7 @@ export function TraineeImageUpload({
             </div>
             <div className="flex flex-col items-center gap-2">
               <div className="w-32 h-32 rounded-lg border bg-[url('/checkerboard.svg')] bg-repeat flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={uploadedUrls.processed}
                   alt="תמונה מעובדת"

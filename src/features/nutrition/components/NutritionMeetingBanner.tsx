@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback, useSyncExternalStore } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, ArrowLeft, X } from "lucide-react";
@@ -9,6 +9,15 @@ import { cn } from "@/lib/utils";
 import { shouldShowNutritionMeeting } from "../lib/utils";
 
 const DISMISS_KEY = "nutrition-meeting-banner-dismissed";
+
+function useDismissed() {
+  const subscribe = useCallback((callback: () => void) => {
+    window.addEventListener("storage", callback);
+    return () => window.removeEventListener("storage", callback);
+  }, []);
+  const getSnapshot = useCallback(() => localStorage.getItem(DISMISS_KEY) === "true", []);
+  return useSyncExternalStore(subscribe, getSnapshot, () => true);
+}
 
 interface NutritionMeetingBannerProps {
   userCreatedAt: string;
@@ -19,14 +28,12 @@ export function NutritionMeetingBanner({
   userCreatedAt,
   className,
 }: NutritionMeetingBannerProps) {
-  const [dismissed, setDismissed] = useState(true);
-
-  useEffect(() => {
-    setDismissed(localStorage.getItem(DISMISS_KEY) === "true");
-  }, []);
+  const dismissed = useDismissed();
+  const [localDismissed, setLocalDismissed] = useState(false);
 
   if (
     dismissed ||
+    localDismissed ||
     !userCreatedAt ||
     !shouldShowNutritionMeeting(userCreatedAt)
   ) {
@@ -35,7 +42,7 @@ export function NutritionMeetingBanner({
 
   const handleDismiss = () => {
     localStorage.setItem(DISMISS_KEY, "true");
-    setDismissed(true);
+    setLocalDismissed(true);
   };
 
   return (

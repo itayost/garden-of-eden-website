@@ -99,6 +99,7 @@ export default function NutritionFormPage() {
     checkExisting();
   }, []);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const previousCounseling = form.watch("previous_counseling");
   const hasAllergies = form.watch("allergies");
   const hasConditions = form.watch("chronic_conditions");

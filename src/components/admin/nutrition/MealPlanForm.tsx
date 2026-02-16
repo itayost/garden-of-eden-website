@@ -126,6 +126,7 @@ export function MealPlanForm({ userId, existingPlan }: MealPlanFormProps) {
   type FormState = { success: boolean; error: string | undefined };
 
   const [, formAction, isPending] = useActionState(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (prevState: FormState, /* formData */ _: FormData) => {
       const plan = toWeeklyMealPlan(mealItems);
 

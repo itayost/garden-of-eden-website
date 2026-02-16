@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -36,43 +36,24 @@ const navItems = [
   // { href: "/dashboard/settings/security", label: "אבטחה", icon: Shield }, // Hidden - not fully ready
 ];
 
-interface DashboardNavProps {
-  user: User;
-  profile: Profile | null;
+const emptySubscribe = () => () => {};
+
+function isActiveHref(pathname: string, href: string) {
+  if (href === "/dashboard") {
+    return pathname === "/dashboard";
+  }
+  return pathname.startsWith(href);
 }
 
-export function DashboardNav({ user, profile }: DashboardNavProps) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  // Prevent hydration mismatch with Radix UI components
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    toast.success("התנתקת בהצלחה");
-    router.push("/");
-  };
-
-  const isActive = (href: string) => {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard";
-    }
-    return pathname.startsWith(href);
-  };
-
-  const NavLinks = () => (
+function NavLinks({ pathname }: { pathname: string }) {
+  return (
     <>
       {navItems.map((item) => (
         <Link
           key={item.href}
           href={item.href}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            isActive(item.href)
+            isActiveHref(pathname, item.href)
               ? "bg-primary text-primary-foreground"
               : "hover:bg-muted"
           }`}
@@ -83,6 +64,26 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
       ))}
     </>
   );
+}
+
+interface DashboardNavProps {
+  user: User;
+  profile: Profile | null;
+}
+
+export function DashboardNav({ user, profile }: DashboardNavProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Prevent hydration mismatch with Radix UI components
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    toast.success("התנתקת בהצלחה");
+    router.push("/");
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-background border-b">
@@ -95,7 +96,7 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-2">
-            <NavLinks />
+            <NavLinks pathname={pathname} />
           </nav>
 
           {/* User Menu */}

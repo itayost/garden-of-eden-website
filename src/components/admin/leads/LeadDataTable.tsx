@@ -81,6 +81,7 @@ export function LeadDataTable({
     });
   }, [data, globalFilter, statusFilter, haifaFilter, teamFilter, flowFilter]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: filteredData,
     columns,

@@ -42,78 +42,84 @@ export const WIZARD_STEPS = [
   { key: "mental", title: "מנטלי", icon: Brain },
 ];
 
-interface AssessmentStepContentProps {
-  step: number;
+// Helper to get previous value for comparison
+function getPreviousValue(
+  previousAssessment: PlayerAssessment | null | undefined,
+  fieldName: keyof PlayerAssessment
+): string | null {
+  if (!previousAssessment) return null;
+  const value = previousAssessment[fieldName];
+  if (value === null || value === undefined) return null;
+
+  const unit = ASSESSMENT_UNITS[fieldName];
+  if (typeof value === "number") {
+    return unit ? `${value} ${unit}` : value.toString();
+  }
+
+  // Handle categorical values
+  const categoricalMappings: Record<string, { value: string; label: string }[]> = {
+    coordination: COORDINATION_OPTIONS,
+    leg_power_technique: LEG_POWER_OPTIONS,
+    body_structure: BODY_STRUCTURE_OPTIONS,
+  };
+  const options = categoricalMappings[fieldName];
+  if (options) {
+    return options.find(o => o.value === value)?.label || null;
+  }
+
+  return typeof value === "string" ? value : null;
+}
+
+// Shared field wrapper - reduces duplication across input types
+interface AssessmentFieldProps {
+  name: keyof AssessmentFormData;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  children: (field: any) => React.ReactNode;
+  truncatePrevious?: boolean;
   form: UseFormReturn<AssessmentFormData>;
   previousAssessment?: PlayerAssessment | null;
 }
 
-export function AssessmentStepContent({
-  step,
+function AssessmentField({
+  name,
+  children,
+  truncatePrevious = false,
   form,
   previousAssessment,
-}: AssessmentStepContentProps) {
-  // Helper to get previous value for comparison
-  const getPreviousValue = (fieldName: keyof PlayerAssessment): string | null => {
-    if (!previousAssessment) return null;
-    const value = previousAssessment[fieldName];
-    if (value === null || value === undefined) return null;
+}: AssessmentFieldProps) {
+  const previousValue = getPreviousValue(previousAssessment, name as keyof PlayerAssessment);
 
-    const unit = ASSESSMENT_UNITS[fieldName];
-    if (typeof value === "number") {
-      return unit ? `${value} ${unit}` : value.toString();
-    }
+  return (
+    <FormField
+      control={form.control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{ASSESSMENT_LABELS_HE[name]}</FormLabel>
+          {children(field)}
+          {previousValue && (
+            <FormDescription className={`text-xs ${truncatePrevious ? "line-clamp-2" : ""}`}>
+              אחרון: {previousValue}
+            </FormDescription>
+          )}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
 
-    // Handle categorical values
-    const categoricalMappings: Record<string, { value: string; label: string }[]> = {
-      coordination: COORDINATION_OPTIONS,
-      leg_power_technique: LEG_POWER_OPTIONS,
-      body_structure: BODY_STRUCTURE_OPTIONS,
-    };
-    const options = categoricalMappings[fieldName];
-    if (options) {
-      return options.find(o => o.value === value)?.label || null;
-    }
+// Simplified input components using shared wrapper
+interface NumberInputProps {
+  name: keyof AssessmentFormData;
+  step?: string;
+  form: UseFormReturn<AssessmentFormData>;
+  previousAssessment?: PlayerAssessment | null;
+}
 
-    return typeof value === "string" ? value : null;
-  };
-
-  // Shared field wrapper - reduces duplication across input types
-  const AssessmentField = ({
-    name,
-    children,
-    truncatePrevious = false,
-  }: {
-    name: keyof AssessmentFormData;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    children: (field: any) => React.ReactNode;
-    truncatePrevious?: boolean;
-  }) => {
-    const previousValue = getPreviousValue(name as keyof PlayerAssessment);
-
-    return (
-      <FormField
-        control={form.control}
-        name={name}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{ASSESSMENT_LABELS_HE[name]}</FormLabel>
-            {children(field)}
-            {previousValue && (
-              <FormDescription className={`text-xs ${truncatePrevious ? "line-clamp-2" : ""}`}>
-                אחרון: {previousValue}
-              </FormDescription>
-            )}
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    );
-  };
-
-  // Simplified input components using shared wrapper
-  const NumberInput = ({ name, step: inputStep = "0.01" }: { name: keyof AssessmentFormData; step?: string }) => (
-    <AssessmentField name={name}>
+function NumberInput({ name, step: inputStep = "0.01", form, previousAssessment }: NumberInputProps) {
+  return (
+    <AssessmentField name={name} form={form} previousAssessment={previousAssessment}>
       {(field) => (
         <FormControl>
           <div className="relative">
@@ -140,9 +146,18 @@ export function AssessmentStepContent({
       )}
     </AssessmentField>
   );
+}
 
-  const SelectInput = ({ name, options }: { name: keyof AssessmentFormData; options: { value: string; label: string }[] }) => (
-    <AssessmentField name={name}>
+interface SelectInputProps {
+  name: keyof AssessmentFormData;
+  options: { value: string; label: string }[];
+  form: UseFormReturn<AssessmentFormData>;
+  previousAssessment?: PlayerAssessment | null;
+}
+
+function SelectInput({ name, options, form, previousAssessment }: SelectInputProps) {
+  return (
+    <AssessmentField name={name} form={form} previousAssessment={previousAssessment}>
       {(field) => (
         <Select onValueChange={field.onChange} value={typeof field.value === "string" ? field.value : undefined}>
           <FormControl>
@@ -159,9 +174,18 @@ export function AssessmentStepContent({
       )}
     </AssessmentField>
   );
+}
 
-  const TextareaInput = ({ name, placeholder }: { name: keyof AssessmentFormData; placeholder: string }) => (
-    <AssessmentField name={name} truncatePrevious>
+interface TextareaInputProps {
+  name: keyof AssessmentFormData;
+  placeholder: string;
+  form: UseFormReturn<AssessmentFormData>;
+  previousAssessment?: PlayerAssessment | null;
+}
+
+function TextareaInput({ name, placeholder, form, previousAssessment }: TextareaInputProps) {
+  return (
+    <AssessmentField name={name} form={form} previousAssessment={previousAssessment} truncatePrevious>
       {(field) => (
         <FormControl>
           <Textarea
@@ -174,7 +198,19 @@ export function AssessmentStepContent({
       )}
     </AssessmentField>
   );
+}
 
+interface AssessmentStepContentProps {
+  step: number;
+  form: UseFormReturn<AssessmentFormData>;
+  previousAssessment?: PlayerAssessment | null;
+}
+
+export function AssessmentStepContent({
+  step,
+  form,
+  previousAssessment,
+}: AssessmentStepContentProps) {
   // Render content based on step
   switch (step) {
     case 0: // Date
@@ -225,9 +261,9 @@ export function AssessmentStepContent({
             </CardDescription>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-3 gap-6">
-            <NumberInput name="sprint_5m" step="0.001" />
-            <NumberInput name="sprint_10m" step="0.001" />
-            <NumberInput name="sprint_20m" step="0.001" />
+            <NumberInput name="sprint_5m" step="0.001" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="sprint_10m" step="0.001" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="sprint_20m" step="0.001" form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );
@@ -245,10 +281,10 @@ export function AssessmentStepContent({
             </CardDescription>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-6">
-            <NumberInput name="jump_2leg_distance" step="0.1" />
-            <NumberInput name="jump_right_leg" step="0.1" />
-            <NumberInput name="jump_left_leg" step="0.1" />
-            <NumberInput name="jump_2leg_height" step="0.1" />
+            <NumberInput name="jump_2leg_distance" step="0.1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="jump_right_leg" step="0.1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="jump_left_leg" step="0.1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="jump_2leg_height" step="0.1" form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );
@@ -266,10 +302,10 @@ export function AssessmentStepContent({
             </CardDescription>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-6">
-            <NumberInput name="blaze_spot_time" step="1" />
-            <NumberInput name="flexibility_ankle" step="0.1" />
-            <NumberInput name="flexibility_knee" step="0.1" />
-            <NumberInput name="flexibility_hip" step="0.1" />
+            <NumberInput name="blaze_spot_time" step="1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="flexibility_ankle" step="0.1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="flexibility_knee" step="0.1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="flexibility_hip" step="0.1" form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );
@@ -287,9 +323,9 @@ export function AssessmentStepContent({
             </CardDescription>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-3 gap-6">
-            <SelectInput name="coordination" options={COORDINATION_OPTIONS} />
-            <SelectInput name="leg_power_technique" options={LEG_POWER_OPTIONS} />
-            <SelectInput name="body_structure" options={BODY_STRUCTURE_OPTIONS} />
+            <SelectInput name="coordination" options={COORDINATION_OPTIONS} form={form} previousAssessment={previousAssessment} />
+            <SelectInput name="leg_power_technique" options={LEG_POWER_OPTIONS} form={form} previousAssessment={previousAssessment} />
+            <SelectInput name="body_structure" options={BODY_STRUCTURE_OPTIONS} form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );
@@ -307,7 +343,7 @@ export function AssessmentStepContent({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <NumberInput name="kick_power_kaiser" step="0.1" />
+            <NumberInput name="kick_power_kaiser" step="0.1" form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );
@@ -325,12 +361,12 @@ export function AssessmentStepContent({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <TextareaInput name="concentration_notes" placeholder="הערות על ריכוז..." />
-            <TextareaInput name="decision_making_notes" placeholder="הערות על קבלת החלטות..." />
-            <TextareaInput name="work_ethic_notes" placeholder="הערות על מוסר עבודה..." />
-            <TextareaInput name="recovery_notes" placeholder="הערות על התאוששות..." />
-            <TextareaInput name="nutrition_notes" placeholder="הערות על תזונה..." />
-            <TextareaInput name="notes" placeholder="הערות כלליות נוספות..." />
+            <TextareaInput name="concentration_notes" placeholder="הערות על ריכוז..." form={form} previousAssessment={previousAssessment} />
+            <TextareaInput name="decision_making_notes" placeholder="הערות על קבלת החלטות..." form={form} previousAssessment={previousAssessment} />
+            <TextareaInput name="work_ethic_notes" placeholder="הערות על מוסר עבודה..." form={form} previousAssessment={previousAssessment} />
+            <TextareaInput name="recovery_notes" placeholder="הערות על התאוששות..." form={form} previousAssessment={previousAssessment} />
+            <TextareaInput name="nutrition_notes" placeholder="הערות על תזונה..." form={form} previousAssessment={previousAssessment} />
+            <TextareaInput name="notes" placeholder="הערות כלליות נוספות..." form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );

@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { NutritionRecommendationRow } from "../../types";
 import type { Profile } from "@/types/database";
 import { isValidUUID } from "@/lib/validations/common";
 

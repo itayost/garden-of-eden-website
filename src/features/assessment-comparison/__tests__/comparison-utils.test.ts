@@ -6,8 +6,6 @@ import {
   formatDelta,
   getComparisonColor,
   compareAssessments,
-  type AssessmentDelta,
-  type ComparisonResult,
 } from '../lib/comparison-utils';
 
 // Helper to create mock assessment

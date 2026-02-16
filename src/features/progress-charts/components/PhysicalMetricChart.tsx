@@ -19,6 +19,21 @@ interface PhysicalMetricChartProps {
   height?: number;
 }
 
+function PhysicalMetricTooltip({ active, payload, unit }: { active?: boolean; payload?: { payload: ChartDataPoint }[]; unit: string }) {
+  if (active && payload && payload.length) {
+    const dataPoint = payload[0].payload;
+    return (
+      <div className="bg-background border rounded-lg shadow-lg p-2 text-sm" dir="rtl">
+        <p className="font-medium">{dataPoint.dateDisplay}</p>
+        <p className="text-muted-foreground">
+          {dataPoint.value} {unit}
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
 export function PhysicalMetricChart({ data, height = 200 }: PhysicalMetricChartProps) {
   if (data.data.length === 0) {
     return (
@@ -43,22 +58,6 @@ export function PhysicalMetricChart({ data, height = 200 }: PhysicalMetricChartP
       : trend.direction === "down"
       ? TrendingDown
       : Minus;
-
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: ChartDataPoint }[] }) => {
-    if (active && payload && payload.length) {
-      const dataPoint = payload[0].payload;
-      return (
-        <div className="bg-background border rounded-lg shadow-lg p-2 text-sm" dir="rtl">
-          <p className="font-medium">{dataPoint.dateDisplay}</p>
-          <p className="text-muted-foreground">
-            {dataPoint.value} {data.unit}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <Card>
@@ -99,7 +98,7 @@ export function PhysicalMetricChart({ data, height = 200 }: PhysicalMetricChartP
                 className="fill-muted-foreground"
                 domain={["auto", "auto"]}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<PhysicalMetricTooltip unit={data.unit} />} />
               <Line
                 type="monotone"
                 dataKey="value"

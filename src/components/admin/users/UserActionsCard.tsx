@@ -34,7 +34,7 @@ export function UserActionsCard({ user, currentUserId }: UserActionsCardProps) {
       } else {
         toast.success("נשלח אימייל לאיפוס סיסמה");
       }
-    } catch (error) {
+    } catch {
       toast.error("שגיאה באיפוס הסיסמה");
     } finally {
       setResetLoading(false);

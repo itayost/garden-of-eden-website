@@ -54,6 +54,7 @@ export function SetGoalDialog({
   const [, formAction, isPending] = useActionState(
     async (
       prevState: { success: boolean; error: string | undefined },
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       /* formData */ _: FormData
     ) => {
       if (!selectedMetric || !targetValue) {

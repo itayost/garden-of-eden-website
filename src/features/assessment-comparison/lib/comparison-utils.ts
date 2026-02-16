@@ -1,4 +1,4 @@
-import type { PlayerAssessment, CoordinationLevel, LegPowerTechnique, BodyStructure } from "@/types/assessment";
+import type { PlayerAssessment } from "@/types/assessment";
 import { isLowerBetter, ASSESSMENT_UNITS } from "@/types/assessment";
 
 // ===========================================

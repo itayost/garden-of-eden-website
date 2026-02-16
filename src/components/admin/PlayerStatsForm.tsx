@@ -52,7 +52,6 @@ interface PlayerStatsFormProps {
 
 export function PlayerStatsForm({
   userId,
-  playerName,
   existingStats,
 }: PlayerStatsFormProps) {
   const [loading, setLoading] = useState(false);
@@ -104,14 +103,6 @@ export function PlayerStatsForm({
     resolver: zodResolver(playerStatsSchema),
     defaultValues,
   });
-
-  // Calculate overall rating from main stats
-  const calculateOverall = (data: PlayerStatsFormData): number => {
-    const { pace, shooting, passing, dribbling, defending, physical } = data;
-    return Math.round(
-      (pace + shooting + passing + dribbling + defending + physical) / 6
-    );
-  };
 
   const onSubmit = async (data: PlayerStatsFormData) => {
     setLoading(true);

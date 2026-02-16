@@ -88,6 +88,7 @@ export default function PostWorkoutFormPage() {
     fetchTrainers();
   }, []);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const difficultyValue = form.watch("difficulty_level");
   const satisfactionValue = form.watch("satisfaction_level");
 

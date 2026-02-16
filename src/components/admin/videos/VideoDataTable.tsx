@@ -60,6 +60,7 @@ export function VideoDataTable({ data, renderActions }: VideoDataTableProps) {
   }, [data, globalFilter, dayFilter]);
 
   // Initialize TanStack Table
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: filteredData,
     columns,

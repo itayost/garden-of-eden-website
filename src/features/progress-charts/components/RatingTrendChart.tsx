@@ -26,6 +26,38 @@ type RatingStat = "overall_rating" | "pace" | "shooting" | "passing" | "dribblin
 
 const ALL_STATS: RatingStat[] = ["overall_rating", "pace", "shooting", "passing", "dribbling", "defending", "physical"];
 
+function RatingTrendTooltip({
+  active,
+  payload
+}: {
+  active?: boolean;
+  payload?: Array<{ dataKey: string; value: number; color: string; payload: RatingDataPoint }>
+}) {
+  if (active && payload && payload.length) {
+    const dataPoint = payload[0].payload;
+    return (
+      <div className="bg-background border rounded-lg shadow-lg p-3 text-sm" dir="rtl">
+        <p className="font-medium mb-2">{dataPoint.dateDisplay}</p>
+        <div className="space-y-1">
+          {payload.map((entry) => (
+            <div key={entry.dataKey} className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: entry.color }}
+                />
+                {RATING_LABELS_HE[entry.dataKey]}
+              </span>
+              <span className="font-medium">{entry.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
 export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) {
   const [visibleStats, setVisibleStats] = useState<RatingStat[]>(["overall_rating"]);
 
@@ -45,39 +77,6 @@ export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) 
   const latestRating = data[data.length - 1].overall_rating;
   const firstRating = data[0].overall_rating;
   const ratingChange = latestRating - firstRating;
-
-  // Custom tooltip
-  const CustomTooltip = ({
-    active,
-    payload
-  }: {
-    active?: boolean;
-    payload?: Array<{ dataKey: string; value: number; color: string; payload: RatingDataPoint }>
-  }) => {
-    if (active && payload && payload.length) {
-      const dataPoint = payload[0].payload;
-      return (
-        <div className="bg-background border rounded-lg shadow-lg p-3 text-sm" dir="rtl">
-          <p className="font-medium mb-2">{dataPoint.dateDisplay}</p>
-          <div className="space-y-1">
-            {payload.map((entry) => (
-              <div key={entry.dataKey} className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: entry.color }}
-                  />
-                  {RATING_LABELS_HE[entry.dataKey]}
-                </span>
-                <span className="font-medium">{entry.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   const toggleStat = (stat: RatingStat) => {
     setVisibleStats((prev) => {
@@ -151,7 +150,7 @@ export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) 
                 domain={[0, 99]}
                 className="fill-muted-foreground"
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<RatingTrendTooltip />} />
               <Legend
                 wrapperStyle={{ paddingTop: "10px" }}
                 formatter={(value: string) => RATING_LABELS_HE[value]}

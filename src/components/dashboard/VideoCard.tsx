@@ -58,6 +58,7 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
                 aria-label={`צפה בסרטון: ${video.title}`}
               >
                 {youtubeId ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={`https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`}
                     alt={video.title}

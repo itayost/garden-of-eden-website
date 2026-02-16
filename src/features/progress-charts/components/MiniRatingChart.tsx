@@ -15,6 +15,25 @@ interface MiniRatingChartProps {
   height?: number;
 }
 
+function MiniRatingTooltip({
+  active,
+  payload
+}: {
+  active?: boolean;
+  payload?: Array<{ value: number; payload: RatingDataPoint }>
+}) {
+  if (active && payload && payload.length) {
+    const dataPoint = payload[0].payload;
+    return (
+      <div className="bg-background border rounded-lg shadow-lg p-2 text-xs" dir="rtl">
+        <p className="font-medium">{dataPoint.dateDisplay}</p>
+        <p className="text-muted-foreground">דירוג: {dataPoint.overall_rating}</p>
+      </div>
+    );
+  }
+  return null;
+}
+
 export function MiniRatingChart({ data, height = 80 }: MiniRatingChartProps) {
   if (data.length === 0) {
     return (
@@ -44,26 +63,6 @@ export function MiniRatingChart({ data, height = 80 }: MiniRatingChartProps) {
     trendColor = "text-red-500";
   }
 
-  // Custom tooltip
-  const CustomTooltip = ({
-    active,
-    payload
-  }: {
-    active?: boolean;
-    payload?: Array<{ value: number; payload: RatingDataPoint }>
-  }) => {
-    if (active && payload && payload.length) {
-      const dataPoint = payload[0].payload;
-      return (
-        <div className="bg-background border rounded-lg shadow-lg p-2 text-xs" dir="rtl">
-          <p className="font-medium">{dataPoint.dateDisplay}</p>
-          <p className="text-muted-foreground">דירוג: {dataPoint.overall_rating}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <Card>
       <CardHeader className="pb-1">
@@ -84,7 +83,7 @@ export function MiniRatingChart({ data, height = 80 }: MiniRatingChartProps) {
         <div style={{ width: "100%", height }} dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<MiniRatingTooltip />} />
               <Line
                 type="monotone"
                 dataKey="overall_rating"

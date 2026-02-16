@@ -2,10 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, ArrowLeft, ArrowRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ArrowLeft } from "lucide-react";
 import type { PlayerAssessment } from "@/types/assessment";
 import { ASSESSMENT_LABELS_HE, ASSESSMENT_SECTIONS, ASSESSMENT_UNITS } from "@/types/assessment";
-import { compareAssessments, getComparisonColor, type ComparisonResult } from "../lib/comparison-utils";
+import { compareAssessments, getComparisonColor } from "../lib/comparison-utils";
 import { cn } from "@/lib/utils";
 
 interface AssessmentComparisonProps {

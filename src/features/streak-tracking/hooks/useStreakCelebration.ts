@@ -58,8 +58,23 @@ export function useStreakCelebration(
     }
 
     lastProcessedRef.current = processKey;
-    checkAndCelebrate();
-  }, [userId, currentStreak, checkAndCelebrate]);
+
+    if (!streak) return;
+
+    const milestone = findMilestoneReached(streak.current_streak);
+    if (!milestone) return;
+
+    if (wasMilestoneCelebrated(streak.user_id, milestone.value)) {
+      return;
+    }
+
+    toast.success(`${milestone.emoji} ${milestone.label}`, {
+      duration: milestone.duration,
+      position: "top-center",
+    });
+
+    markMilestoneCelebrated(streak.user_id, milestone.value);
+  }, [userId, currentStreak, streak]);
 
   return {
     checkAndCelebrate,

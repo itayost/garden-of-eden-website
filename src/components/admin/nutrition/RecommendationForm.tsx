@@ -31,6 +31,7 @@ export function RecommendationForm({
   type FormState = { success: boolean; error: string | undefined };
 
   const [, formAction, isPending] = useActionState(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (prevState: FormState, /* formData */ _: FormData) => {
       if (text.trim().length < 10) {
         toast.error("ההמלצה חייבת להכיל לפחות 10 תווים");

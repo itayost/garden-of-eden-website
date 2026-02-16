@@ -25,6 +25,7 @@ export const columns: ColumnDef<WorkoutVideo>[] = [
         );
       }
       return (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={getYouTubeThumbnail(videoId, "mqdefault")}
           alt={row.original.title}
