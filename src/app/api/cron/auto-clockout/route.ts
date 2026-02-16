@@ -53,11 +53,17 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const now = new Date().toISOString();
 
-  // Fetch active shift IDs first for logging
+  // Trainers excluded from scheduled auto clock-out (manage their own hours)
+  const EXCLUDED_TRAINER_IDS = [
+    "15f0cf63-0306-4186-9a7f-51ef21a39117", // עידו ברק
+  ];
+
+  // Fetch active shift IDs first for logging (excluding specific trainers)
   const { data: activeShifts, error: fetchError } = await supabase
     .from("trainer_shifts")
     .select("id, trainer_id, trainer_name, start_time")
-    .is("end_time", null);
+    .is("end_time", null)
+    .not("trainer_id", "in", `(${EXCLUDED_TRAINER_IDS.join(",")})`);
 
   if (fetchError) {
     console.error("[Auto-Clockout] Error fetching active shifts:", fetchError);
@@ -68,7 +74,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (!activeShifts || activeShifts.length === 0) {
-    console.log("[Auto-Clockout] No active shifts to end");
+    console.log(
+      "[Auto-Clockout] No active shifts to end" +
+        (EXCLUDED_TRAINER_IDS.length > 0
+          ? ` (${EXCLUDED_TRAINER_IDS.length} trainer(s) excluded)`
+          : "")
+    );
     return NextResponse.json({
       success: true,
       action: "no_active_shifts",
