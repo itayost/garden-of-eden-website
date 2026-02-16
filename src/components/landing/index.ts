@@ -3,6 +3,7 @@ export { Hero } from "./Hero";
 export { About } from "./About";
 export { Services } from "./Services";
 export { Programs } from "./Programs";
+export { Staff } from "./Staff";
 export { Testimonials } from "./Testimonials";
 export { FAQ } from "./FAQ";
 export { Contact } from "./Contact";

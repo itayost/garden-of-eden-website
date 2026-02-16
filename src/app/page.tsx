@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Navbar, Hero, About, Services, Programs, Testimonials, FAQ, Contact, Footer } from "@/components/landing";
+import { Navbar, Hero, About, Services, Programs, Staff, Testimonials, FAQ, Contact, Footer } from "@/components/landing";
 import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
 import { MotionProvider } from "@/components/MotionProvider";
 
@@ -12,6 +12,7 @@ export default function HomePage() {
         <About />
         <Services />
         <Programs />
+        <Staff />
         <Testimonials />
         <FAQ />
         <Contact />
