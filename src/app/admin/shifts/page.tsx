@@ -64,6 +64,22 @@ export default async function AdminShiftsPage({
 
   const { data: shifts } = (await query) as { data: TrainerShift[] | null };
 
+  // Fetch trainers list for shift creation (admin only)
+  let trainers: { id: string; name: string }[] = [];
+  if (isAdmin) {
+    const { data: trainerProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("role", ["trainer", "admin"])
+      .eq("is_active", true)
+      .order("full_name");
+
+    trainers = (trainerProfiles || []).map((p) => ({
+      id: p.id,
+      name: p.full_name || "ללא שם",
+    }));
+  }
+
   // Fetch unresolved failed syncs (admin only)
   let failedSyncs: FailedShiftSync[] = [];
   if (isAdmin) {
@@ -98,6 +114,7 @@ export default async function AdminShiftsPage({
         month={month}
         year={year}
         isAdmin={isAdmin}
+        trainers={isAdmin ? trainers : undefined}
       />
     </div>
   );

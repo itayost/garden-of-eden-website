@@ -230,6 +230,125 @@ export async function deleteShiftAction(
   return { success: true };
 }
 
+export async function adminCreateShiftAction(data: {
+  trainerId: string;
+  startTime: string;
+  endTime: string;
+}): Promise<ActionResult> {
+  if (!isValidUUID(data.trainerId)) return { error: "מזהה מאמן לא תקין" };
+
+  const { error } = await verifyAdmin();
+  if (error) return { error };
+
+  // Validate timestamps
+  const start = new Date(data.startTime);
+  const end = new Date(data.endTime);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return { error: "תאריך או שעה לא תקינים" };
+  }
+  if (end <= start) {
+    return { error: "שעת סיום חייבת להיות אחרי שעת התחלה" };
+  }
+  const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  if (durationHours > MAX_SHIFT_HOURS) {
+    return { error: `משמרת לא יכולה להיות ארוכה יותר מ-${MAX_SHIFT_HOURS} שעות` };
+  }
+
+  const supabase = await createClient();
+
+  // Look up trainer name and verify role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", data.trainerId)
+    .in("role", ["trainer", "admin"])
+    .single();
+
+  if (!profile) return { error: "מאמן לא נמצא" };
+
+  // Check for overlapping shifts
+  const { data: overlapping } = await supabase
+    .from("trainer_shifts")
+    .select("id")
+    .eq("trainer_id", data.trainerId)
+    .lt("start_time", data.endTime)
+    .gt("end_time", data.startTime)
+    .limit(1);
+
+  if (overlapping && overlapping.length > 0) {
+    return { error: "קיימת משמרת חופפת לזמנים אלו" };
+  }
+
+  const { error: insertError } = await supabase
+    .from("trainer_shifts")
+    .insert({
+      trainer_id: data.trainerId,
+      trainer_name: profile.full_name || "מאמן",
+      start_time: data.startTime,
+      end_time: data.endTime,
+    });
+
+  if (insertError) {
+    console.error("Admin create shift error:", insertError);
+    return { error: "שגיאה ביצירת משמרת" };
+  }
+
+  revalidatePath("/admin/shifts");
+  return { success: true };
+}
+
+export async function adminEditShiftAction(data: {
+  shiftId: string;
+  startTime: string;
+  endTime: string;
+}): Promise<ActionResult> {
+  if (!isValidUUID(data.shiftId)) return { error: "מזהה משמרת לא תקין" };
+
+  const { error } = await verifyAdmin();
+  if (error) return { error };
+
+  // Validate timestamps
+  const start = new Date(data.startTime);
+  const end = new Date(data.endTime);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return { error: "תאריך או שעה לא תקינים" };
+  }
+  if (end <= start) {
+    return { error: "שעת סיום חייבת להיות אחרי שעת התחלה" };
+  }
+  const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  if (durationHours > MAX_SHIFT_HOURS) {
+    return { error: `משמרת לא יכולה להיות ארוכה יותר מ-${MAX_SHIFT_HOURS} שעות` };
+  }
+
+  const supabase = await createClient();
+
+  // Verify shift exists
+  const { data: existing } = await supabase
+    .from("trainer_shifts")
+    .select("id")
+    .eq("id", data.shiftId)
+    .maybeSingle();
+
+  if (!existing) return { error: "משמרת לא נמצאה" };
+
+  const { error: updateError } = await supabase
+    .from("trainer_shifts")
+    .update({
+      start_time: data.startTime,
+      end_time: data.endTime,
+    })
+    .eq("id", data.shiftId);
+
+  if (updateError) {
+    console.error("Admin edit shift error:", updateError);
+    return { error: "שגיאה בעדכון משמרת" };
+  }
+
+  revalidatePath("/admin/shifts");
+  return { success: true };
+}
+
 // ---------------------------------------------------------------------------
 // Failed shift sync management (admin only)
 // ---------------------------------------------------------------------------

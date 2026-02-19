@@ -25,12 +25,18 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Plus,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   markShiftReviewedAction,
   deleteShiftAction,
 } from "@/lib/actions/trainer-shifts";
+import {
+  ShiftFormDialog,
+  type ShiftFormTrainer,
+} from "@/components/admin/shifts/ShiftFormDialog";
 import type { TrainerShift } from "@/types/database";
 
 interface TrainerShiftsViewProps {
@@ -38,6 +44,7 @@ interface TrainerShiftsViewProps {
   month: number;
   year: number;
   isAdmin: boolean;
+  trainers?: ShiftFormTrainer[];
 }
 
 interface TrainerSummary {
@@ -125,11 +132,14 @@ export function TrainerShiftsView({
   month,
   year,
   isAdmin,
+  trainers = [],
 }: TrainerShiftsViewProps) {
   const router = useRouter();
   const [expandedTrainer, setExpandedTrainer] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingShift, setEditingShift] = useState<TrainerShift | null>(null);
 
   const allSummaries = aggregateByTrainer(shifts);
 
@@ -184,9 +194,20 @@ export function TrainerShiftsView({
         <Button variant="outline" size="icon" onClick={() => navigateMonth(-1)}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <h2 className="text-xl font-semibold">
-          {HEBREW_MONTHS[month - 1]} {year}
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold">
+            {HEBREW_MONTHS[month - 1]} {year}
+          </h2>
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => setShowCreateDialog(true)}
+            >
+              <Plus className="h-4 w-4 me-1" />
+              הוסף משמרת
+            </Button>
+          )}
+        </div>
         <Button variant="outline" size="icon" onClick={() => navigateMonth(1)}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -344,6 +365,15 @@ export function TrainerShiftsView({
                                   סמן כנבדק
                                 </Button>
                               )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7"
+                                onClick={() => setEditingShift(shift)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                                ערוך
+                              </Button>
                               <DeleteConfirmDialog
                                 title="מחיקת משמרת"
                                 description="האם אתה בטוח שברצונך למחוק משמרת זו? פעולה זו אינה הפיכה."
@@ -481,6 +511,16 @@ export function TrainerShiftsView({
                                       )}
                                     </Button>
                                   )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingShift(shift);
+                                    }}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
                                   <DeleteConfirmDialog
                                     title="מחיקת משמרת"
                                     description="האם אתה בטוח שברצונך למחוק משמרת זו? פעולה זו אינה הפיכה."
@@ -511,6 +551,25 @@ export function TrainerShiftsView({
             </div>
           </CardContent>
         </Card>
+      )}
+      {/* Shift form dialogs (admin only) */}
+      {isAdmin && (
+        <>
+          <ShiftFormDialog
+            open={showCreateDialog}
+            onOpenChange={setShowCreateDialog}
+            trainers={trainers}
+          />
+          <ShiftFormDialog
+            key={editingShift?.id ?? "edit"}
+            open={!!editingShift}
+            onOpenChange={(open) => {
+              if (!open) setEditingShift(null);
+            }}
+            trainers={trainers}
+            editShift={editingShift ?? undefined}
+          />
+        </>
       )}
     </div>
   );

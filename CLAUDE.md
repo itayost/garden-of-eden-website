@@ -89,6 +89,7 @@ src/
 ### Server Actions
 - All server actions use `"use server"` directive
 - Admin-only actions call `verifyAdmin()` from `src/lib/actions/shared/`
+- Server actions must validate all inputs server-side (timestamps, ordering, duration) — never trust client-side validation alone
 - Trainer-accessible actions call `verifyAdminOrTrainer()` from the same module — returns discriminated union `{ error, user, profile }`; after early-return on `error`, use `user!` for TS narrowing
 - Feature actions accessing user data call `verifyUserAccess(userId)` from `src/lib/actions/shared/`
 - Actions live in `src/lib/actions/` or inside `src/features/<name>/lib/actions/`
@@ -169,6 +170,9 @@ CRON_SECRET                    # Protects /api/cron/* endpoints
 - **`"use client"` boundary**: Radix UI components require client-side rendering. If a page only needs a small interactive part, extract it into a client component and keep the page as a server component.
 - **Testing**: No mock-based tests — the project has real data in Supabase. Existing tests cover pure utility functions only (validations, ranking-utils, webhook-security).
 - **Nutrition meal plans**: `trainee_meal_plans` table supports PDF upload (`pdf_url`, `pdf_path` columns). The old JSONB `meal_plan` column is nullable and unused for new entries.
+- **RLS INSERT policies for admin-on-behalf-of actions**: Existing INSERT policies typically require `auth.uid() = owner_id`. When adding admin actions that insert rows for *other* users (e.g., admin creates shift for trainer), a separate admin INSERT policy is needed — otherwise the insert is silently rejected by RLS.
+- **Supabase `.update().eq()` on nonexistent rows**: Returns no error and updates zero rows. Always pre-check existence with `.maybeSingle()` if the action needs to report "not found".
+- **Dialog edit state with `useState`**: `useState(prop)` only evaluates on mount. For edit dialogs receiving different data via props, use a `key={item.id}` prop to force remount — otherwise stale data persists.
 
 ## Claude Code Automations
 
