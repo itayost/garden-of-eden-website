@@ -89,6 +89,19 @@ function formDataToDbFormat(data: AssessmentFormData, userId: string, assessedBy
   };
 }
 
+// Maps each wizard step index to the DB columns it owns.
+// Partial updates use this to avoid sending nulls for unvisited steps.
+const STEP_DB_FIELDS: Record<number, string[]> = {
+  0: ["assessment_date"],
+  1: ["sprint_5m", "sprint_10m", "sprint_20m"],
+  2: ["jump_2leg_distance", "jump_right_leg", "jump_left_leg", "jump_2leg_height"],
+  3: ["blaze_spot_time", "flexibility_ankle", "flexibility_knee", "flexibility_hip"],
+  4: ["coordination", "leg_power_technique", "body_structure"],
+  5: ["kick_power_kaiser"],
+  6: ["concentration_notes", "decision_making_notes", "work_ethic_notes",
+      "recovery_notes", "nutrition_notes", "notes"],
+};
+
 export function AssessmentForm({
   userId,
   playerName,
@@ -97,7 +110,7 @@ export function AssessmentForm({
 }: AssessmentFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [assessmentId, setAssessmentId] = useState<string | null>(
-    existingAssessment?.id || null
+    existingAssessment?.id ?? null
   );
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -124,9 +137,20 @@ export function AssessmentForm({
       const assessmentData = formDataToDbFormat(data, userId, user.id);
 
       if (assessmentId) {
-        // Update existing assessment
+        // Partial update: only send this step's fields so unvisited steps
+        // never overwrite existing DB values with nulls.
+        const stepFields = STEP_DB_FIELDS[currentStep];
+        if (!stepFields) {
+          throw new Error(`שלב ${currentStep} אינו ממופה — לא ניתן לשמור`);
+        }
+        type DbData = ReturnType<typeof formDataToDbFormat>;
+        const partialData: Record<string, unknown> = { assessed_by: user.id };
+        for (const field of stepFields) {
+          partialData[field] = assessmentData[field as keyof DbData];
+        }
+
         const { error } = await typedFrom(supabase, "player_assessments")
-          .update(assessmentData)
+          .update(partialData)
           .eq("id", assessmentId);
 
         if (error) throw error;

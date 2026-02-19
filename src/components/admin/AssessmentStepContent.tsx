@@ -133,7 +133,8 @@ function NumberInput({ name, step: inputStep = "0.01", form, previousAssessment 
               value={field.value ?? ""}
               onChange={(e) => {
                 const val = e.target.value;
-                field.onChange(val === "" ? null : parseFloat(val) || null);
+                const parsed = parseFloat(val);
+                field.onChange(val === "" ? null : (isNaN(parsed) ? null : parsed));
               }}
             />
             {ASSESSMENT_UNITS[name] && (
