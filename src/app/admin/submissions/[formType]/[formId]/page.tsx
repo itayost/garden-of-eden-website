@@ -193,7 +193,7 @@ function PreWorkoutFields({ form }: { form: PreWorkoutForm }) {
 }
 
 // Post-workout form fields renderer
-type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
+type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
 
 function PostWorkoutFields({ form }: { form: PostWorkoutWithTrainer }) {
   return (
@@ -211,7 +211,7 @@ function PostWorkoutFields({ form }: { form: PostWorkoutWithTrainer }) {
           <Separator />
           <FieldRow label="תאריך אימון" value={form.training_date ? new Date(form.training_date).toLocaleDateString("he-IL") : null} />
           <Separator />
-          <FieldRow label="מאמן" value={form.trainers?.name} />
+          <FieldRow label="מאמן" value={form.trainer?.full_name} />
           <Separator />
           <FieldRow label="פרטי קשר" value={form.contact_info} />
         </CardContent>
@@ -465,7 +465,7 @@ export default async function FormDetailPage({ params }: FormDetailPageProps) {
   if (validFormType === "post-workout") {
     const { data } = await supabase
       .from(config.table)
-      .select("*, trainers(name)")
+      .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)")
       .eq("id", formId)
       .single();
     formData = data as PostWorkoutWithTrainer | null;

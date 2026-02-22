@@ -32,8 +32,12 @@ export const profileCompletionSchema = z.object({
 
 export type ProfileCompletionData = z.infer<typeof profileCompletionSchema>;
 
-// Onboarding schema (name already set by admin, only need birthdate + position)
+// Onboarding schema (includes name for self-registering users; pre-filled for admin-created)
 export const onboardingSchema = z.object({
+  full_name: z
+    .string()
+    .min(2, "שם חייב להכיל לפחות 2 תווים")
+    .max(100, "שם ארוך מדי"),
   birthdate: z
     .string()
     .min(1, "נא להזין תאריך לידה")

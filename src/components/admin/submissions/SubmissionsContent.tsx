@@ -26,7 +26,7 @@ import {
 } from "@/lib/actions/admin-submissions-list";
 import type { SubmissionQueryParams } from "@/lib/actions/admin-submissions-list";
 
-type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
+type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
 
 // Hebrew translations for form values
 const nutritionStatusTranslations: Record<string, string> = {
@@ -331,8 +331,8 @@ export function PostWorkoutContent({
                     <span className="text-xs text-muted-foreground">{formatDateTime(form.submitted_at)}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs">
-                    {form.trainers?.name && (
-                      <span className="text-muted-foreground">{form.trainers.name}</span>
+                    {form.trainer?.full_name && (
+                      <span className="text-muted-foreground">{form.trainer.full_name}</span>
                     )}
                     <DifficultyBadge level={form.difficulty_level} />
                     <SatisfactionBadge level={form.satisfaction_level} />
@@ -361,7 +361,7 @@ export function PostWorkoutContent({
                   {items.map((form) => (
                     <ClickableTableRow key={form.id} href={`/admin/submissions/post-workout/${form.id}`}>
                       <TableCell className="font-medium">{form.full_name}</TableCell>
-                      <TableCell>{form.trainers?.name || "-"}</TableCell>
+                      <TableCell>{form.trainer?.full_name || "-"}</TableCell>
                       <TableCell><DifficultyBadge level={form.difficulty_level} /></TableCell>
                       <TableCell><SatisfactionBadge level={form.satisfaction_level} /></TableCell>
                       <TableCell className="max-w-[200px] truncate">{form.comments || "-"}</TableCell>

@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Trainer } from "@/types/database";
+interface TrainerOption { id: string; full_name: string | null; }
 import { useFormDraft } from "@/features/form-drafts";
 import { useFormSubmission, fetchUserProfile } from "@/hooks/useFormSubmission";
 import { FormBackButton, FormSubmitButton } from "@/components/forms";
@@ -40,7 +40,7 @@ const getDefaultValues = (): PostWorkoutFormInput => ({
 });
 
 export default function PostWorkoutFormPage() {
-  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [trainers, setTrainers] = useState<TrainerOption[]>([]);
 
   const defaultValues = getDefaultValues();
 
@@ -64,7 +64,7 @@ export default function PostWorkoutFormPage() {
         user_id: userId,
         full_name: profile?.full_name || "לא צוין",
         ...data,
-        trainer_id: data.trainer_id || null,
+        trainer_id: data.trainer_id && data.trainer_id !== "none" ? data.trainer_id : null,
       };
     },
   });
@@ -73,10 +73,12 @@ export default function PostWorkoutFormPage() {
     const fetchTrainers = async () => {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("trainers")
-        .select("*")
-        .eq("active", true)
-        .order("name") as unknown as { data: Trainer[] | null; error: unknown };
+        .from("profiles")
+        .select("id, full_name")
+        .eq("role", "trainer")
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .order("full_name") as unknown as { data: TrainerOption[] | null; error: unknown };
 
       if (error) {
         toast.error("שגיאה בטעינת רשימת המאמנים");
@@ -135,10 +137,10 @@ export default function PostWorkoutFormPage() {
                       <SelectContent>
                         {trainers.map((trainer) => (
                           <SelectItem key={trainer.id} value={trainer.id}>
-                            {trainer.name}
+                            {trainer.full_name}
                           </SelectItem>
                         ))}
-                        <SelectItem value="unknown">לא זוכר</SelectItem>
+                        <SelectItem value="none">לא זוכר</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

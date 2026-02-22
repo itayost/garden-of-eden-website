@@ -51,6 +51,7 @@ export function ProfileCompletionForm({
   const form = useForm<OnboardingData>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
+      full_name: fullName || "",
       birthdate: initialData?.birthdate || "",
       position:
         (initialData?.position as OnboardingData["position"]) || undefined,
@@ -74,6 +75,7 @@ export function ProfileCompletionForm({
 
       const { error: updateError } = await typedFrom(supabase, "profiles")
         .update({
+          full_name: data.full_name,
           birthdate: data.birthdate,
           position: data.position || null,
           profile_completed: true,
@@ -116,6 +118,24 @@ export function ProfileCompletionForm({
       <CardContent className="pt-4">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="full_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>שם מלא</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="הכנס את שמך המלא"
+                      disabled={loading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="birthdate"

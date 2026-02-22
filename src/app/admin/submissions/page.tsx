@@ -10,7 +10,7 @@ import {
 } from "@/components/admin/submissions/SubmissionsContent";
 import { ShiftReportContent } from "@/components/admin/submissions/ShiftReportContent";
 
-type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
+type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
 
 const PAGE_SIZE = 20;
 
@@ -36,7 +36,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
       .range(0, PAGE_SIZE - 1) as unknown as { data: PreWorkoutForm[] | null; count: number | null },
     supabase
       .from("post_workout_forms")
-      .select("*, trainers(name)", { count: "exact" })
+      .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)", { count: "exact" })
       .order("submitted_at", { ascending: false })
       .range(0, PAGE_SIZE - 1) as unknown as { data: PostWorkoutWithTrainer[] | null; count: number | null },
     supabase

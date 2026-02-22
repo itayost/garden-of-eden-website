@@ -11,7 +11,7 @@ import type {
 } from "@/types/database";
 
 type PostWorkoutWithTrainer = PostWorkoutForm & {
-  trainers: { name: string } | null;
+  trainer: { full_name: string } | null;
 };
 
 export interface PaginatedResult<T> {
@@ -73,7 +73,7 @@ export async function getPostWorkoutPaginated(
 
   let query = supabase
     .from("post_workout_forms")
-    .select("*, trainers(name)", { count: "exact" })
+    .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)", { count: "exact" })
     .order("submitted_at", { ascending: false });
 
   if (params.search) {

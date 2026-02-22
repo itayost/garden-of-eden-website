@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
 
 /** Post workout form with trainer relation included */
-type PostWorkoutWithTrainer = PostWorkoutForm & { trainers: { name: string } | null };
+type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
 
 /** Base type that all submissions share */
 type AnySubmission = { submitted_at: string; [key: string]: unknown };
@@ -87,7 +87,7 @@ function transformToCSV(
     case "post_workout":
       return (submissions as PostWorkoutWithTrainer[]).map((s) => ({
         "שם מלא": s.full_name,
-        "מאמן": s.trainers?.name ?? "",
+        "מאמן": s.trainer?.full_name ?? "",
         "קושי (1-10)": s.difficulty_level,
         "שביעות רצון (1-10)": s.satisfaction_level,
         "הערות": s.comments ?? "",
