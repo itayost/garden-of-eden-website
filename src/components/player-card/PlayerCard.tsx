@@ -288,7 +288,7 @@ export function PlayerCard({
 
   if (linkToStats) {
     return (
-      <Link href="/dashboard/stats" className="block">
+      <Link href="/dashboard/assessments" className="block">
         {cardContent}
       </Link>
     );
