@@ -104,7 +104,7 @@ export function AssessmentComparison({ olderAssessment, newerAssessment }: Asses
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Summary Card */}
       <Card>
         <CardHeader>

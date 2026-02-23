@@ -112,7 +112,7 @@ export function AssessmentProgressCharts({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Date Range Filter */}
       <div className="flex justify-end">
         <DateRangeFilter selected={preset} onChange={setPreset} />
@@ -121,8 +121,8 @@ export function AssessmentProgressCharts({
       {/* Top Percentiles (if available) */}
       {topPercentiles.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold mb-3">הדירוגים הטובים שלך</h3>
-          <div className="grid sm:grid-cols-3 gap-4">
+          <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">הדירוגים הטובים שלך</h3>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {topPercentiles.map((ranking) => (
               <PercentileCard key={ranking.metric} ranking={ranking} />
             ))}
@@ -132,13 +132,13 @@ export function AssessmentProgressCharts({
 
       {/* Rating Trend Chart */}
       <div>
-        <h3 className="text-lg font-semibold mb-3">מגמת דירוג הכרטיס</h3>
+        <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">מגמת דירוג הכרטיס</h3>
         <RatingTrendChart data={ratingChartData} />
       </div>
 
       {/* Physical Metrics by Category */}
       <div>
-        <h3 className="text-lg font-semibold mb-3">מבדקים פיזיים</h3>
+        <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">מבדקים פיזיים</h3>
         <Tabs
           value={selectedCategory}
           onValueChange={(v) => setSelectedCategory(v as MetricCategory)}
@@ -154,7 +154,7 @@ export function AssessmentProgressCharts({
 
           {Object.keys(METRIC_CATEGORIES).map((categoryKey) => (
             <TabsContent key={categoryKey} value={categoryKey}>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
                 {categoryKey === selectedCategory &&
                   physicalChartDataList.map((chartData) => (
                     <PhysicalMetricChart key={chartData.metric} data={chartData} />

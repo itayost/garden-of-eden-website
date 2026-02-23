@@ -17,19 +17,19 @@ export function PercentileCard({ ranking, ageGroupLabel }: PercentileCardProps) 
   const bgColor = getPercentileBgColor(ranking.percentile);
 
   return (
-    <Card>
-      <CardContent className="pt-4 pb-4">
-        <div className="flex items-start justify-between mb-2">
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">
+    <Card className="py-3 gap-2 sm:py-6 sm:gap-6">
+      <CardContent className="pt-2 pb-2 px-3 sm:pt-4 sm:pb-4 sm:px-6">
+        <div className="flex items-start justify-between mb-1 sm:mb-2">
+          <div className="space-y-0.5 sm:space-y-1 min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
               {ranking.metricLabelHe}
             </p>
-            <p className="text-xl font-bold">
-              {ranking.value} <span className="text-xs font-normal">{ranking.unit}</span>
+            <p className="text-base sm:text-xl font-bold">
+              {ranking.value} <span className="text-[10px] sm:text-xs font-normal">{ranking.unit}</span>
             </p>
           </div>
-          <div className={cn("p-1.5 rounded-full", bgColor)}>
-            <Trophy className={cn("h-4 w-4", color)} />
+          <div className={cn("p-1 sm:p-1.5 rounded-full shrink-0", bgColor)}>
+            <Trophy className={cn("h-3 w-3 sm:h-4 sm:w-4", color)} />
           </div>
         </div>
         <div className="flex items-center gap-2">

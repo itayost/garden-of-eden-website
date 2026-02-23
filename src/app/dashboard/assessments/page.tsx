@@ -100,7 +100,7 @@ export default async function DashboardAssessmentsPage() {
         </div>
 
         <Card>
-          <CardContent className="py-12">
+          <CardContent className="py-8 sm:py-12">
             <div className="text-center space-y-4">
               <Target className="h-16 w-16 mx-auto text-muted-foreground" />
               <div>
@@ -174,7 +174,7 @@ export default async function DashboardAssessmentsPage() {
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="progress" dir="rtl">
-        <TabsList className="mb-6 w-full">
+        <TabsList className="mb-4 sm:mb-6 w-full">
           <TabsTrigger value="progress" className="flex-1 flex items-center justify-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">גרפי התקדמות</span>
@@ -345,7 +345,7 @@ export default async function DashboardAssessmentsPage() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+                      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                         {/* Sprint Tests */}
                         <div>
                           <h4 className="font-medium mb-2 text-sm text-muted-foreground">

@@ -90,21 +90,21 @@ export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) 
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="py-3 gap-2 sm:py-6 sm:gap-6">
+      <CardHeader className="pb-2 px-3 sm:px-6">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">מגמת דירוגים</CardTitle>
+            <CardTitle className="text-base sm:text-lg">מגמת דירוגים</CardTitle>
             {data.length > 1 && (
               <CardDescription className="text-xs">
                 שינוי בדירוג הכללי: {ratingChange > 0 ? "+" : ""}{ratingChange} נקודות
               </CardDescription>
             )}
           </div>
-          <div className="text-2xl font-bold">{latestRating}</div>
+          <div className="text-xl sm:text-2xl font-bold">{latestRating}</div>
         </div>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="pt-2 px-3 sm:px-6">
         {/* Stat toggles */}
         <div className="mb-4 flex flex-wrap gap-1.5" dir="rtl">
           {ALL_STATS.map((stat) => {
@@ -115,7 +115,7 @@ export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) 
                 variant={isActive ? "default" : "outline"}
                 size="sm"
                 className={cn(
-                  "text-xs h-7 px-2 sm:h-8 sm:px-3",
+                  "text-xs h-7 px-1.5 sm:h-8 sm:px-3",
                   isActive && "border-2"
                 )}
                 style={{

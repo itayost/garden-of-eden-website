@@ -60,25 +60,25 @@ export function PhysicalMetricChart({ data, height = 200 }: PhysicalMetricChartP
       : Minus;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="py-3 gap-2 sm:py-6 sm:gap-6">
+      <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6">
         <div className="flex items-center justify-between gap-2 min-w-0">
-          <CardTitle className="text-sm min-w-0 truncate">{data.labelHe}</CardTitle>
-          <div className="flex items-center gap-1.5">
-            <TrendIcon className={`h-4 w-4 ${trendColor}`} />
-            <span className="text-sm font-medium">
+          <CardTitle className="text-xs sm:text-sm min-w-0 truncate">{data.labelHe}</CardTitle>
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <TrendIcon className={`h-3 w-3 sm:h-4 sm:w-4 ${trendColor}`} />
+            <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
               {latestValue} {data.unit}
             </span>
           </div>
         </div>
         {data.data.length > 1 && (
-          <CardDescription className="text-xs">
+          <CardDescription className="text-xs hidden sm:block">
             {trend.percentChange > 0 ? "+" : ""}
             {trend.percentChange.toFixed(1)}% מהמבדק הראשון
           </CardDescription>
         )}
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-3 sm:px-6">
         <div style={{ width: "100%", height }} dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.data}>
@@ -94,7 +94,7 @@ export function PhysicalMetricChart({ data, height = 200 }: PhysicalMetricChartP
                 tick={{ fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={30}
                 className="fill-muted-foreground"
                 domain={["auto", "auto"]}
               />
