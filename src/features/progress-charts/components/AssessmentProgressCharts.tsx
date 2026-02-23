@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PlayerAssessment } from "@/types/assessment";
@@ -152,16 +152,11 @@ export function AssessmentProgressCharts({
             ))}
           </TabsList>
 
-          {Object.keys(METRIC_CATEGORIES).map((categoryKey) => (
-            <TabsContent key={categoryKey} value={categoryKey}>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                {categoryKey === selectedCategory &&
-                  physicalChartDataList.map((chartData) => (
-                    <PhysicalMetricChart key={chartData.metric} data={chartData} />
-                  ))}
-              </div>
-            </TabsContent>
-          ))}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+            {physicalChartDataList.map((chartData) => (
+              <PhysicalMetricChart key={chartData.metric} data={chartData} />
+            ))}
+          </div>
         </Tabs>
       </div>
     </div>
