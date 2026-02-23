@@ -76,15 +76,15 @@ export function RankingsView({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-yellow-500" />
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
             דירוג שחקנים
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 hidden sm:block">
             השוואת ביצועים בין שחקנים לפי קטגוריות
           </p>
         </div>
@@ -95,7 +95,7 @@ export function RankingsView({
           {isTrainee ? (
             // Trainees see only their age group (no filter control)
             <Badge variant="secondary" className="text-sm">
-              <Users className="h-3 w-3 ml-1" />
+              <Users className="h-3 w-3 me-1" />
               {userAgeGroupLabel || "קבוצת הגיל שלי"}
             </Badge>
           ) : (
@@ -112,7 +112,7 @@ export function RankingsView({
       {/* Summary Badge */}
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="text-sm">
-          <Users className="h-3 w-3 ml-1" />
+          <Users className="h-3 w-3 me-1" />
           {data.totalPlayers} שחקנים
         </Badge>
         {data.currentUserRank && (
@@ -125,9 +125,9 @@ export function RankingsView({
       {/* No Data State */}
       {data.totalPlayers === 0 ? (
         <Card>
-          <CardContent className="py-12">
+          <CardContent className="py-8 sm:py-12">
             <div className="text-center space-y-4">
-              <Trophy className="h-16 w-16 mx-auto text-muted-foreground" />
+              <Trophy className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground" />
               <div>
                 <h3 className="text-lg font-medium">אין נתונים עדיין</h3>
                 <p className="text-muted-foreground">
@@ -147,7 +147,7 @@ export function RankingsView({
           />
 
           {/* Main Content Grid */}
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
             {/* Leaderboard - Takes 2 columns */}
             <div className="lg:col-span-2">
               <LeaderboardTable
@@ -157,8 +157,8 @@ export function RankingsView({
               />
             </div>
 
-            {/* Statistics - Takes 1 column */}
-            <div className="space-y-6">
+            {/* Statistics - Takes 1 column (shown first on mobile) */}
+            <div className="order-first lg:order-none space-y-4 sm:space-y-6">
               <GroupStatisticsCard
                 statistics={data.statistics}
                 category={data.selectedCategory}

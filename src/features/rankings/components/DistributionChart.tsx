@@ -50,13 +50,13 @@ export function DistributionChart({
   if (distribution.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
             התפלגות תוצאות - {config.labelHe}
           </CardTitle>
         </CardHeader>
-        <CardContent className="py-8 text-center text-muted-foreground">
+        <CardContent className="px-2 sm:px-6 py-8 text-center text-muted-foreground">
           אין נתונים להצגה
         </CardContent>
       </Card>
@@ -65,16 +65,16 @@ export function DistributionChart({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <BarChart3 className="h-5 w-5" />
           התפלגות תוצאות - {config.labelHe}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
           כמה שחקנים בכל טווח תוצאות
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-2 sm:px-6">
         <div style={{ width: "100%", height }} dir="ltr">
           <ResponsiveContainer>
             <BarChart data={distribution}>
@@ -85,7 +85,7 @@ export function DistributionChart({
                 tickLine={false}
                 axisLine={false}
                 className="fill-muted-foreground"
-                interval={0}
+                interval="preserveStartEnd"
                 angle={-45}
                 textAnchor="end"
                 height={60}

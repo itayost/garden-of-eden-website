@@ -40,13 +40,13 @@ export function GroupStatisticsCard({ statistics, category }: GroupStatisticsCar
   if (!statistics) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
             סטטיסטיקות קבוצה - {config.labelHe}
           </CardTitle>
         </CardHeader>
-        <CardContent className="py-8 text-center text-muted-foreground">
+        <CardContent className="px-4 sm:px-6 py-6 sm:py-8 text-center text-muted-foreground">
           אין נתונים להצגה
         </CardContent>
       </Card>
@@ -55,13 +55,13 @@ export function GroupStatisticsCard({ statistics, category }: GroupStatisticsCar
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <BarChart3 className="h-5 w-5" />
           סטטיסטיקות קבוצה - {config.labelHe}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1">
+      <CardContent className="px-4 sm:px-6 space-y-1">
         <StatItem
           label="מספר משתתפים"
           value={statistics.count.toString()}
@@ -69,7 +69,7 @@ export function GroupStatisticsCard({ statistics, category }: GroupStatisticsCar
         <StatItem
           label="ממוצע"
           value={`${statistics.average.toFixed(2)} ${unit}`}
-          icon={<Minus className="h-4 w-4" />}
+          icon={<Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
         />
         <StatItem
           label="חציון"
@@ -78,12 +78,12 @@ export function GroupStatisticsCard({ statistics, category }: GroupStatisticsCar
         <StatItem
           label={config.lowerIsBetter ? "הכי מהיר" : "הכי טוב"}
           value={`${statistics.min.toFixed(2)} ${unit}`}
-          icon={<TrendingUp className="h-4 w-4 text-green-500" />}
+          icon={<TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />}
         />
         <StatItem
           label={config.lowerIsBetter ? "הכי איטי" : "הכי נמוך"}
           value={`${statistics.max.toFixed(2)} ${unit}`}
-          icon={<TrendingDown className="h-4 w-4 text-red-500" />}
+          icon={<TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />}
         />
       </CardContent>
     </Card>

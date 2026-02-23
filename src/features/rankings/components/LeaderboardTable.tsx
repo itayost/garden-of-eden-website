@@ -50,13 +50,13 @@ export function LeaderboardTable({
   if (leaderboard.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <Trophy className="h-5 w-5" />
             טבלת דירוג - {config.labelHe}
           </CardTitle>
         </CardHeader>
-        <CardContent className="py-8 text-center text-muted-foreground">
+        <CardContent className="px-3 sm:px-6 py-8 text-center text-muted-foreground">
           אין נתונים להצגה
         </CardContent>
       </Card>
@@ -72,13 +72,13 @@ export function LeaderboardTable({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
           <Trophy className="h-5 w-5" />
           טבלת דירוג - {config.labelHe}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         {/* Mobile: Card list */}
         <div className="space-y-2 sm:hidden">
           {leaderboard.map((entry) => {

@@ -35,7 +35,7 @@ export function CategoryLeaderCards({
   onCategorySelect,
 }: CategoryLeaderCardsProps) {
   return (
-    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-5">
+    <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:gap-4 md:grid-cols-5">
       {leaders.map((leader) => {
         const Icon = CATEGORY_ICONS[leader.category];
         const config = RANKING_CATEGORIES[leader.category];
@@ -45,14 +45,14 @@ export function CategoryLeaderCards({
           <Card
             key={leader.category}
             className={cn(
-              "cursor-pointer transition-all hover:shadow-md",
+              "cursor-pointer transition-all hover:shadow-md min-w-[130px] sm:min-w-0",
               isSelected && "ring-2 ring-primary"
             )}
             onClick={() => onCategorySelect(leader.category)}
           >
-            <CardHeader className={cn("pb-2 bg-gradient-to-br rounded-t-lg", CATEGORY_COLORS[leader.category])}>
+            <CardHeader className={cn("p-3 sm:p-6 pb-2 bg-gradient-to-br rounded-t-lg", CATEGORY_COLORS[leader.category])}>
               <div className="flex items-center justify-between">
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 {isSelected && (
                   <Badge variant="secondary" className="text-xs">
                     נבחר
@@ -61,7 +61,7 @@ export function CategoryLeaderCards({
               </div>
               <CardTitle className="text-sm">{config.labelHe}</CardTitle>
             </CardHeader>
-            <CardContent className="pt-3">
+            <CardContent className="px-3 pt-2 sm:px-6 sm:pt-3">
               {leader.leader ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">

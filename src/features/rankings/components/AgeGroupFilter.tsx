@@ -25,7 +25,7 @@ export function AgeGroupFilter({
     <div className="flex items-center gap-2">
       <Users className="h-4 w-4 text-muted-foreground" />
       <Select value={selectedAgeGroup} onValueChange={onAgeGroupChange}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="בחר קבוצת גיל" />
         </SelectTrigger>
         <SelectContent>
