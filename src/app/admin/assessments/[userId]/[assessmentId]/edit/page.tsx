@@ -22,8 +22,8 @@ export default async function EditAssessmentPage({ params }: PageProps) {
 
   const supabase = await createClient();
 
-  // Fetch player profile and the assessment to edit
-  const [{ data: profile }, { data: assessment }] = await Promise.all([
+  // Fetch profile, current assessment, and all user assessments in parallel
+  const [{ data: profile }, { data: assessment }, { data: allAssessments }] = await Promise.all([
     supabase
       .from("profiles")
       .select("*")
@@ -36,23 +36,22 @@ export default async function EditAssessmentPage({ params }: PageProps) {
       .eq("user_id", userId)
       .is("deleted_at", null)
       .single() as unknown as { data: PlayerAssessment | null },
+    supabase
+      .from("player_assessments")
+      .select("*")
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .order("assessment_date", { ascending: false }) as unknown as { data: PlayerAssessment[] | null },
   ]);
 
   if (!profile || !assessment) {
     notFound();
   }
 
-  // Fetch the previous assessment (the one before this one) for comparison
-  const { data: previousAssessments } = await supabase
-    .from("player_assessments")
-    .select("*")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .lt("assessment_date", assessment.assessment_date)
-    .order("assessment_date", { ascending: false })
-    .limit(1);
-
-  const previousAssessment = previousAssessments?.[0] as PlayerAssessment | undefined;
+  // Find the previous assessment from the pre-fetched list
+  const previousAssessment = allAssessments?.find(
+    (a) => new Date(a.assessment_date) < new Date(assessment.assessment_date)
+  );
 
   return (
     <div className="space-y-6">

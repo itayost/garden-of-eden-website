@@ -41,27 +41,27 @@ export async function softDeleteUserAction(userId: string): Promise<ActionResult
       .eq("id", userId)
       .single();
 
-    // 5. Soft delete by setting deleted_at
-    const { error: deleteError } = await adminClient
-      .from("profiles")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", userId);
+    // 5. Soft delete and log activity in parallel
+    const [{ error: deleteError }] = await Promise.all([
+      adminClient
+        .from("profiles")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", userId),
+      adminClient.from("activity_logs").insert({
+        user_id: userId,
+        action: "user_deleted",
+        actor_id: user!.id,
+        actor_name: adminProfile?.full_name || "מנהל",
+        metadata: {
+          deleted_user_name: targetProfile?.full_name,
+        },
+      }),
+    ]);
 
     if (deleteError) {
       console.error("Soft delete error:", deleteError);
       return { error: deleteError.message || "שגיאה במחיקת משתמש" };
     }
-
-    // 6. Log activity
-    await adminClient.from("activity_logs").insert({
-      user_id: userId,
-      action: "user_deleted",
-      actor_id: user!.id,
-      actor_name: adminProfile?.full_name || "מנהל",
-      metadata: {
-        deleted_user_name: targetProfile?.full_name,
-      },
-    });
 
     // 7. Revalidate users list
     revalidatePath("/admin/users");

@@ -40,19 +40,23 @@ export default async function DashboardAssessmentsPage() {
     redirect("/auth/login?redirect=/dashboard/assessments");
   }
 
-  // Fetch profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single() as unknown as { data: Profile | null };
-
-  // Fetch assessments (chronological for charts)
-  const { data: assessments } = await supabase
-    .from("player_assessments")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null };
+  // Fetch profile, assessments, and trainee profiles in parallel
+  const [{ data: profile }, { data: assessments }, { data: traineeProfiles }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single() as unknown as { data: Profile | null },
+    supabase
+      .from("player_assessments")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
+    supabase
+      .from("profiles")
+      .select("id, birthdate")
+      .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null },
+  ]);
 
   // Get age group
   const ageGroup = getAgeGroup(profile?.birthdate || null);
@@ -62,7 +66,8 @@ export default async function DashboardAssessmentsPage() {
     user.id,
     assessments || [],
     profile?.birthdate || null,
-    supabase
+    supabase,
+    traineeProfiles,
   );
   const calculatedRatings = userRatings?.ratings ?? null;
   const groupAssessments = userRatings?.groupAssessments ?? [];

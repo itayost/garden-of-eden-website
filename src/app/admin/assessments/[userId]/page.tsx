@@ -43,19 +43,18 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
 
   const supabase = await createClient();
 
-  // Fetch player profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single() as unknown as { data: Profile | null };
-
-  if (!profile) {
-    notFound();
-  }
-
-  // Fetch all assessments and goals for this player
-  const [{ data: assessments }, { data: goalsData }] = await Promise.all([
+  // Fetch profile, assessments, goals, and age-group profiles in parallel
+  const [
+    { data: profile },
+    { data: assessments },
+    { data: goalsData },
+    { data: ageGroupProfiles },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single() as unknown as { data: Profile | null },
     supabase
       .from("player_assessments")
       .select("*")
@@ -67,12 +66,20 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
+    supabase
+      .from("profiles")
+      .select("id, birthdate")
+      .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null },
   ]);
+
+  if (!profile) {
+    notFound();
+  }
 
   // Get age group
   const ageGroup = getAgeGroup(profile.birthdate);
 
-  // For relative ratings, fetch all assessments in the same age group
+  // For relative ratings, fetch group assessments for same age group
   let groupStats = null;
   let calculatedRatings = null;
 
@@ -80,12 +87,6 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
     const latestAssessment = assessments[0] as PlayerAssessment;
 
     if (ageGroup) {
-      // Fetch all players with same age group for comparison
-      const { data: ageGroupProfiles } = await supabase
-        .from("profiles")
-        .select("id, birthdate")
-        .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null };
-
       const sameAgeGroupIds = ageGroupProfiles
         ?.filter((p) => {
           const pAgeGroup = getAgeGroup(p.birthdate);

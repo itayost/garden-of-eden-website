@@ -39,30 +39,30 @@ export async function softDeleteAssessmentAction(assessmentId: string): Promise<
       return { error: "מבדק לא נמצא" };
     }
 
-    // 4. Soft delete by setting deleted_at and deleted_by
-    const { error: deleteError } = await adminClient
-      .from("player_assessments")
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: user!.id,
-      })
-      .eq("id", assessmentId);
+    // 4. Soft delete and log activity in parallel
+    const [{ error: deleteError }] = await Promise.all([
+      adminClient
+        .from("player_assessments")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user!.id,
+        })
+        .eq("id", assessmentId),
+      adminClient.from("activity_logs").insert({
+        user_id: assessment.user_id,
+        action: "assessment_deleted",
+        actor_id: user!.id,
+        actor_name: adminProfile?.full_name || "מנהל",
+        metadata: {
+          assessment_id: assessmentId,
+        },
+      }),
+    ]);
 
     if (deleteError) {
       console.error("Soft delete assessment error:", deleteError);
       return { error: "שגיאה במחיקת המבדק" };
     }
-
-    // 5. Log activity
-    await adminClient.from("activity_logs").insert({
-      user_id: assessment.user_id,
-      action: "assessment_deleted",
-      actor_id: user!.id,
-      actor_name: adminProfile?.full_name || "מנהל",
-      metadata: {
-        assessment_id: assessmentId,
-      },
-    });
 
     // 6. Revalidate assessments list
     revalidatePath("/admin/assessments");

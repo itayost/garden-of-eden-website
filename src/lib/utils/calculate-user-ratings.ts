@@ -14,9 +14,14 @@ export interface UserRatings {
   groupAssessments: PlayerAssessment[];
 }
 
+export type TraineeProfile = { id: string; birthdate: string | null };
+
 /**
  * Calculate FIFA-style card ratings for a user based on their assessments
  * and age-group percentile comparison.
+ *
+ * Pass `prefetchedTraineeProfiles` to avoid a redundant DB call when the
+ * caller already has trainee profiles (e.g. fetched in a parallel Promise.all).
  *
  * Returns null if the user has no assessments.
  */
@@ -24,7 +29,8 @@ export async function calculateUserRatings(
   userId: string,
   assessments: PlayerAssessment[],
   birthdate: string | null,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  prefetchedTraineeProfiles?: TraineeProfile[] | null,
 ): Promise<UserRatings | null> {
   if (!assessments || assessments.length === 0) {
     return null;
@@ -36,13 +42,15 @@ export async function calculateUserRatings(
   let calculatedRatings: CalculatedRatings | null = null;
 
   if (ageGroup) {
-    // Fetch all trainee profiles to find those in the same age group
-    const { data: ageGroupProfiles } = (await supabase
-      .from("profiles")
-      .select("id, birthdate")
-      .eq("role", "trainee")) as unknown as {
-      data: { id: string; birthdate: string | null }[] | null;
-    };
+    // Use pre-fetched profiles if available, otherwise fetch
+    const ageGroupProfiles = prefetchedTraineeProfiles ?? (
+      (await supabase
+        .from("profiles")
+        .select("id, birthdate")
+        .eq("role", "trainee")) as unknown as {
+        data: TraineeProfile[] | null;
+      }
+    ).data;
 
     const sameAgeGroupIds =
       ageGroupProfiles

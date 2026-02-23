@@ -128,23 +128,29 @@ export function calculateRankings(
 // ===========================================
 
 /**
- * Calculate median of an array of numbers
+ * Calculate median from a pre-sorted array of numbers
  */
-export function calculateMedian(values: number[]): number {
-  if (values.length === 0) return 0;
-
-  const sorted = [...values].sort((a, b) => a - b);
+function medianFromSorted(sorted: number[]): number {
+  if (sorted.length === 0) return 0;
   const mid = Math.floor(sorted.length / 2);
-
   if (sorted.length % 2 === 0) {
     return (sorted[mid - 1] + sorted[mid]) / 2;
   }
-
   return sorted[mid];
 }
 
 /**
- * Calculate group statistics for a set of values
+ * Calculate median of an array of numbers
+ */
+export function calculateMedian(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return medianFromSorted(sorted);
+}
+
+/**
+ * Calculate group statistics for a set of values.
+ * Sorts once and derives min, max, and median from the same sorted array.
  */
 export function calculateGroupStatistics(values: number[]): GroupStatistics | null {
   if (values.length === 0) return null;
@@ -158,7 +164,7 @@ export function calculateGroupStatistics(values: number[]): GroupStatistics | nu
     min: sorted[0],
     max: sorted[sorted.length - 1],
     average: Math.round(average * 100) / 100,
-    median: calculateMedian(values),
+    median: medianFromSorted(sorted),
   };
 }
 

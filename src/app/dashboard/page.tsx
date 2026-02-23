@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     redirect("/auth/login?redirect=/dashboard");
   }
 
-  // Get user's data
+  // Get user's data — include trainee profiles to avoid waterfall in calculateUserRatings
   const [
     { data: profile },
     { data: nutritionForm },
@@ -51,7 +51,8 @@ export default async function DashboardPage() {
     { count: videosWatched },
     { data: streakData },
     { data: goalsData },
-    { data: achievementsData }
+    { data: achievementsData },
+    { data: traineeProfiles },
   ] = await Promise.all([
     supabase.from("profiles").select("full_name, birthdate, position, created_at, processed_avatar_url, avatar_url").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
     supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").limit(1).maybeSingle() as unknown as { data: { id: string } | null },
@@ -61,7 +62,8 @@ export default async function DashboardPage() {
     supabase.from("video_progress").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "").eq("watched", true) as unknown as { count: number | null },
     supabase.from("user_streaks").select("user_id, current_streak, longest_streak, last_activity_date, total_activities").eq("user_id", user?.id || "").single() as unknown as { data: UserStreakRow | null },
     supabase.from("player_goals").select("*").eq("user_id", user?.id || "").order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
-    supabase.from("user_achievements").select("id, achievement_id, badge_type, unlocked_at, celebrated").eq("user_id", user?.id || "").order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null }
+    supabase.from("user_achievements").select("id, achievement_id, badge_type, unlocked_at, celebrated").eq("user_id", user?.id || "").order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null },
+    supabase.from("profiles").select("id, birthdate").eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null },
   ]);
 
   // Calculate goal progress for display
@@ -78,7 +80,8 @@ export default async function DashboardPage() {
     user.id,
     assessments || [],
     profile?.birthdate || null,
-    supabase
+    supabase,
+    traineeProfiles,
   );
   const calculatedRatings = userRatings?.ratings ?? null;
   const groupAssessments = userRatings?.groupAssessments ?? [];
