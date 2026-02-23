@@ -35,6 +35,7 @@ export default async function FormsPage() {
       href: "/dashboard/forms/pre-workout",
       color: "bg-blue-500",
       badge: "למילוי לפני כל אימון",
+      mobileBadge: "לפני אימון",
       badgeColor: "bg-blue-100 text-blue-700",
     },
     {
@@ -44,6 +45,7 @@ export default async function FormsPage() {
       href: "/dashboard/forms/post-workout",
       color: "bg-green-500",
       badge: "למילוי אחרי כל אימון",
+      mobileBadge: "אחרי אימון",
       badgeColor: "bg-green-100 text-green-700",
     },
     {
@@ -53,6 +55,7 @@ export default async function FormsPage() {
       href: "/dashboard/forms/nutrition",
       color: "bg-orange-500",
       badge: hasCompletedNutrition ? "הושלם" : "חובה באימון ראשון",
+      mobileBadge: hasCompletedNutrition ? "הושלם" : "חובה",
       badgeColor: hasCompletedNutrition
         ? "bg-green-100 text-green-700"
         : "bg-orange-100 text-orange-700",
@@ -70,21 +73,22 @@ export default async function FormsPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
-        {forms.map((form) => (
-          <Link key={form.href} href={form.href}>
+        {forms.map((form, index) => (
+          <Link key={form.href} href={form.href} className={forms.length % 2 !== 0 && index === forms.length - 1 ? "col-span-2 md:col-span-1" : ""}>
             <Card className="h-full hover:shadow-lg transition-all cursor-pointer group border-2 hover:border-primary/50">
               <CardHeader>
                 <div className="flex items-start justify-between mb-2 sm:mb-4">
                   <div className={`${form.color} rounded-xl p-3 sm:p-4 group-hover:scale-110 transition-transform`}>
                     <form.icon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                   </div>
-                  <Badge className={form.badgeColor}>
+                  <Badge className={`${form.badgeColor} text-[10px] sm:text-xs`}>
                     {form.completed && <CheckCircle2 className="h-3 w-3 ml-1" />}
-                    {form.badge}
+                    <span className="sm:hidden">{form.mobileBadge}</span>
+                    <span className="hidden sm:inline">{form.badge}</span>
                   </Badge>
                 </div>
                 <CardTitle className="text-xl">{form.title}</CardTitle>
-                <CardDescription className="text-base">
+                <CardDescription className="text-base hidden sm:block">
                   {form.description}
                 </CardDescription>
               </CardHeader>
