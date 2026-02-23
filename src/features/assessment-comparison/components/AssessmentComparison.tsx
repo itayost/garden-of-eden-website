@@ -16,7 +16,7 @@ interface AssessmentComparisonProps {
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("he-IL", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   });
 }
@@ -42,7 +42,7 @@ function DeltaIndicator({ isImprovement, formatted }: DeltaIndicatorProps) {
     return (
       <span className="flex items-center gap-1 text-sm text-muted-foreground">
         <Minus className="h-3 w-3" />
-        {formatted || "-"}
+        <span className="hidden sm:inline">{formatted || "-"}</span>
       </span>
     );
   }
@@ -60,7 +60,7 @@ function DeltaIndicator({ isImprovement, formatted }: DeltaIndicatorProps) {
   return (
     <span className={cn("flex items-center gap-1 text-sm font-medium", colorClass)}>
       <Icon className="h-3 w-3" />
-      {formatted}
+      <span className="hidden sm:inline">{formatted}</span>
     </span>
   );
 }
@@ -77,7 +77,7 @@ function ComparisonRow({ fieldName, oldValue, newValue, delta }: ComparisonRowPr
 
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-4 py-3 border-b border-border/50 last:border-0">
-      <div className="font-medium text-sm">{label}</div>
+      <div className="font-medium text-sm min-w-0 truncate">{label}</div>
       <div className="text-center text-sm text-muted-foreground">
         {formatValue(oldValue, fieldName)}
       </div>
@@ -153,7 +153,7 @@ export function AssessmentComparison({ olderAssessment, newerAssessment }: Asses
           <CardContent>
             {/* Header row */}
             <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-4 pb-2 border-b-2 border-border">
-              <div className="font-medium text-sm text-muted-foreground">מדד</div>
+              <div className="font-medium text-sm text-muted-foreground min-w-0">מדד</div>
               <div className="text-center font-medium text-sm text-muted-foreground">
                 קודם
               </div>

@@ -334,7 +334,7 @@ export default async function DashboardAssessmentsPage() {
                           <CardTitle className="text-base">
                             {new Date(a.assessment_date).toLocaleDateString("he-IL", {
                               year: "numeric",
-                              month: "long",
+                              month: "short",
                               day: "numeric",
                             })}
                           </CardTitle>
@@ -345,7 +345,7 @@ export default async function DashboardAssessmentsPage() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                         {/* Sprint Tests */}
                         <div>
                           <h4 className="font-medium mb-2 text-sm text-muted-foreground">

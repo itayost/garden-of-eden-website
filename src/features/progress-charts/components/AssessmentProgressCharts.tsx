@@ -144,9 +144,9 @@ export function AssessmentProgressCharts({
           onValueChange={(v) => setSelectedCategory(v as MetricCategory)}
           dir="rtl"
         >
-          <TabsList className="mb-4">
+          <TabsList className="mb-4 w-full flex-wrap h-auto gap-1">
             {Object.entries(METRIC_CATEGORIES).map(([key, category]) => (
-              <TabsTrigger key={key} value={key}>
+              <TabsTrigger key={key} value={key} className="flex-1 min-w-0">
                 {category.labelHe}
               </TabsTrigger>
             ))}

@@ -62,8 +62,8 @@ export function PhysicalMetricChart({ data, height = 200 }: PhysicalMetricChartP
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">{data.labelHe}</CardTitle>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <CardTitle className="text-sm min-w-0 truncate">{data.labelHe}</CardTitle>
           <div className="flex items-center gap-1.5">
             <TrendIcon className={`h-4 w-4 ${trendColor}`} />
             <span className="text-sm font-medium">
