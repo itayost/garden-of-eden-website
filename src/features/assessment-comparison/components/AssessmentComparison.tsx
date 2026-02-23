@@ -76,7 +76,7 @@ function ComparisonRow({ fieldName, oldValue, newValue, delta }: ComparisonRowPr
   const label = ASSESSMENT_LABELS_HE[fieldName] || fieldName;
 
   return (
-    <div className="grid grid-cols-4 gap-4 py-3 border-b border-border/50 last:border-0">
+    <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-4 py-3 border-b border-border/50 last:border-0">
       <div className="font-medium text-sm">{label}</div>
       <div className="text-center text-sm text-muted-foreground">
         {formatValue(oldValue, fieldName)}
@@ -114,7 +114,7 @@ export function AssessmentComparison({ olderAssessment, newerAssessment }: Asses
         </CardHeader>
         <CardContent>
           {/* Date comparison */}
-          <div className="flex items-center justify-center gap-6 mb-6">
+          <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6">
             <div className="text-center">
               <p className="text-sm text-muted-foreground">מבדק קודם</p>
               <p className="font-medium">{formatDate(olderAssessment.assessment_date)}</p>
@@ -127,7 +127,7 @@ export function AssessmentComparison({ olderAssessment, newerAssessment }: Asses
           </div>
 
           {/* Summary badges */}
-          <div className="flex justify-center gap-4 mb-4">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-4">
             <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
               <TrendingUp className="h-3 w-3 ml-1" />
               {comparison.summary.improvements} שיפורים
@@ -152,7 +152,7 @@ export function AssessmentComparison({ olderAssessment, newerAssessment }: Asses
           </CardHeader>
           <CardContent>
             {/* Header row */}
-            <div className="grid grid-cols-4 gap-4 pb-2 border-b-2 border-border">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-4 pb-2 border-b-2 border-border">
               <div className="font-medium text-sm text-muted-foreground">מדד</div>
               <div className="text-center font-medium text-sm text-muted-foreground">
                 קודם

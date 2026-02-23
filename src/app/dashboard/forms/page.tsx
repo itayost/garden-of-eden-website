@@ -61,22 +61,22 @@ export default async function FormsPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">שאלונים</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">שאלונים</h1>
         <p className="text-muted-foreground">
           מילוי השאלונים עוזר לנו להתאים את האימונים בצורה הטובה ביותר עבורך
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
         {forms.map((form) => (
           <Link key={form.href} href={form.href}>
             <Card className="h-full hover:shadow-lg transition-all cursor-pointer group border-2 hover:border-primary/50">
               <CardHeader>
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`${form.color} rounded-xl p-4 group-hover:scale-110 transition-transform`}>
-                    <form.icon className="h-8 w-8 text-white" />
+                <div className="flex items-start justify-between mb-2 sm:mb-4">
+                  <div className={`${form.color} rounded-xl p-3 sm:p-4 group-hover:scale-110 transition-transform`}>
+                    <form.icon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                   </div>
                   <Badge className={form.badgeColor}>
                     {form.completed && <CheckCircle2 className="h-3 w-3 ml-1" />}

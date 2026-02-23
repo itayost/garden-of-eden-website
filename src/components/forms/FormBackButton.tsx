@@ -20,7 +20,7 @@ export function FormBackButton({
     <div className="mb-6">
       <Link
         href={href}
-        className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+        className="text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 p-1 -m-1"
       >
         <ArrowRight className="h-4 w-4" />
         {label}

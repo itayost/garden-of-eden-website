@@ -116,10 +116,10 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       {/* Welcome Section */}
       <div>
-        <h1 className="text-3xl font-bold mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">
           שלום, {profile?.full_name || "מתאמן"}! 👋
         </h1>
         <p className="text-muted-foreground">
@@ -130,8 +130,8 @@ export default async function DashboardPage() {
       {/* Player Card Section */}
       {calculatedRatings ? (
         <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
               <PlayerCard
                 playerName={profile?.full_name || "שחקן"}
                 position={(profile?.position as PlayerPosition) || "CM"}
@@ -218,12 +218,12 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <div>
         <h2 className="text-xl font-semibold mb-4">פעולות מהירות</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {quickActions.map((action) => (
             <Link key={action.href} href={action.href}>
               <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between mb-4">
+                <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
+                  <div className="flex items-start justify-between mb-2 sm:mb-4">
                     <div className={`${action.color} rounded-xl p-3 group-hover:scale-110 transition-transform`}>
                       <action.icon className="h-6 w-6 text-white" />
                     </div>
@@ -246,10 +246,10 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div>
         <h2 className="text-xl font-semibold mb-4">הסטטיסטיקות שלי</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {/* Mini Rating Chart */}
           {assessments && assessments.length > 0 && (
-            <Link href="/dashboard/assessments" className="lg:col-span-1">
+            <Link href="/dashboard/assessments" className="col-span-2 sm:col-span-1">
               <div className="h-full hover:shadow-md transition-shadow cursor-pointer">
                 <MiniRatingChartWrapper
                   assessments={assessments}

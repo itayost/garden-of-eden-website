@@ -59,9 +59,9 @@ export default async function VideosPage() {
   const watchedVideos = progress?.filter((p) => p.watched).length || 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">סרטוני תרגילים לבית</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">סרטוני תרגילים לבית</h1>
         <p className="text-muted-foreground">
           5 ימי אימון שונים - כל יום נושא אחר, 30-40 דקות אימון
         </p>

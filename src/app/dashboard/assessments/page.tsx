@@ -174,18 +174,21 @@ export default async function DashboardAssessmentsPage() {
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="progress" dir="rtl">
-        <TabsList className="mb-6">
-          <TabsTrigger value="progress" className="flex items-center gap-2">
+        <TabsList className="mb-6 w-full">
+          <TabsTrigger value="progress" className="flex-1 flex items-center justify-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            גרפי התקדמות
+            <span className="hidden sm:inline">גרפי התקדמות</span>
+            <span className="sm:hidden">התקדמות</span>
           </TabsTrigger>
-          <TabsTrigger value="compare" className="flex items-center gap-2">
+          <TabsTrigger value="compare" className="flex-1 flex items-center justify-center gap-2">
             <GitCompare className="h-4 w-4" />
-            השוואת מבדקים
+            <span className="hidden sm:inline">השוואת מבדקים</span>
+            <span className="sm:hidden">השוואה</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
+          <TabsTrigger value="history" className="flex-1 flex items-center justify-center gap-2">
             <Calendar className="h-4 w-4" />
-            היסטוריית מבדקים
+            <span className="hidden sm:inline">היסטוריית מבדקים</span>
+            <span className="sm:hidden">היסטוריה</span>
           </TabsTrigger>
         </TabsList>
 
