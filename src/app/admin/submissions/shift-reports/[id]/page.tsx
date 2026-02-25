@@ -40,7 +40,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   return (
     <div className="flex justify-between items-start py-2">
       <span className="text-muted-foreground text-sm">{label}</span>
-      <div className="text-sm font-medium text-left">{children}</div>
+      <div className="text-sm font-medium text-start">{children}</div>
     </div>
   );
 }
@@ -92,6 +92,90 @@ function ReportSection({
             <span className="text-muted-foreground text-sm block mb-1">פרטים</span>
             <p className="text-sm whitespace-pre-wrap">{details}</p>
           </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/** Renders achievements with per-trainee breakdown (new format) or legacy fallback */
+function AchievementsSection({
+  report,
+  traineeMap,
+}: {
+  report: TrainerShiftReport;
+  traineeMap: Map<string, string>;
+}) {
+  const perTrainee = report.achievements_per_trainee as Record<
+    string,
+    { details?: string; categories: string[] }
+  > | null;
+
+  const hasPerTraineeData =
+    perTrainee && Object.keys(perTrainee).length > 0;
+
+  return (
+    <>
+      <FieldRow label="הישגים יוצאי דופן">
+        <YesNoBadge value={report.has_achievements} />
+      </FieldRow>
+      {report.has_achievements && hasPerTraineeData && (
+        <>
+          {Object.entries(perTrainee).map(([traineeId, entry]) => (
+            <div key={traineeId}>
+              <Separator />
+              <div className="py-2 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {traineeMap.get(traineeId) || traineeId.slice(0, 8)}
+                  </Badge>
+                </div>
+                {entry.categories && entry.categories.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {entry.categories.map((cat) => (
+                      <Badge key={cat} variant="secondary" className="text-xs">
+                        {cat}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {entry.details && (
+                  <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                    {entry.details}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+      {report.has_achievements && !hasPerTraineeData && (
+        <>
+          {report.achievements_trainee_ids &&
+            report.achievements_trainee_ids.length > 0 && (
+              <>
+                <Separator />
+                <FieldRow label="מתאמנים">
+                  <TraineeNames
+                    ids={report.achievements_trainee_ids}
+                    traineeMap={traineeMap}
+                  />
+                </FieldRow>
+              </>
+            )}
+          {report.achievements_details && (
+            <>
+              <Separator />
+              <div className="py-2">
+                <span className="text-muted-foreground text-sm block mb-1">
+                  פרטים
+                </span>
+                <p className="text-sm whitespace-pre-wrap">
+                  {report.achievements_details}
+                </p>
+              </div>
+            </>
+          )}
         </>
       )}
     </>
@@ -154,6 +238,13 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
       for (const tid of ids) {
         allTraineeIds.add(tid);
       }
+    }
+  }
+  // Also collect trainee IDs from per-trainee achievements JSONB
+  const perTraineeAchievements = report.achievements_per_trainee as Record<string, unknown> | null;
+  if (perTraineeAchievements) {
+    for (const tid of Object.keys(perTraineeAchievements)) {
+      allTraineeIds.add(tid);
     }
   }
 
@@ -310,13 +401,7 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <ReportSection
-              label="הישגים יוצאי דופן"
-              isYes={report.has_achievements}
-              traineeIds={report.achievements_trainee_ids}
-              details={report.achievements_details}
-              traineeMap={traineeMap}
-            />
+            <AchievementsSection report={report} traineeMap={traineeMap} />
             <Separator />
             <ReportSection
               label="מצב נפשי ירוד"

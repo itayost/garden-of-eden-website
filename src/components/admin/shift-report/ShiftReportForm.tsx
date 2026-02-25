@@ -49,6 +49,7 @@ function reportToFormData(report: TrainerShiftReport): ShiftReportFormData {
     has_achievements: report.has_achievements,
     achievements_trainee_ids: report.achievements_trainee_ids || [],
     achievements_details: report.achievements_details || "",
+    achievements_per_trainee: (report.achievements_per_trainee as ShiftReportFormData["achievements_per_trainee"]) || {},
     has_poor_mental_state: report.has_poor_mental_state,
     mental_state_trainee_ids: report.mental_state_trainee_ids || [],
     mental_state_details: report.mental_state_details || "",
@@ -122,12 +123,17 @@ export function ShiftReportForm({
         trainer_id: trainerId,
         trainer_name: trainerName,
         ...data,
+        // Sync achievements_trainee_ids from per-trainee keys
+        achievements_trainee_ids: Object.keys(data.achievements_per_trainee || {}),
+        // Per-trainee achievement data
+        achievements_per_trainee: data.achievements_per_trainee || {},
+        // Legacy field — null for new reports using per-trainee data
+        achievements_details: null,
         // Convert empty strings to null for text fields
         new_trainees_details: data.new_trainees_details || null,
         discipline_details: data.discipline_details || null,
         injuries_details: data.injuries_details || null,
         limitations_details: data.limitations_details || null,
-        achievements_details: data.achievements_details || null,
         mental_state_details: data.mental_state_details || null,
         complaints_details: data.complaints_details || null,
         insufficient_attention_details: data.insufficient_attention_details || null,

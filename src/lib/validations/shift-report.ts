@@ -3,6 +3,29 @@ import { z } from "zod";
 const MAX_TEXT = 2000;
 const optionalText = z.string().max(MAX_TEXT).optional();
 
+/** Achievement categories a trainee can excel in */
+export const ACHIEVEMENT_CATEGORIES = [
+  "כוח מתפרץ",
+  "חשיבה מהירה",
+  "קואורדינציה",
+  "זריזות",
+  "מהירות",
+  "כוח רגליים",
+  "כוח פלג גוף עליון",
+  "יציאה מהמקום",
+  "טכניקת ריצה",
+  "יציבות",
+  "גמישות",
+] as const;
+
+export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
+
+/** Per-trainee achievement entry */
+const achievementPerTraineeEntry = z.object({
+  details: z.string().max(MAX_TEXT).optional(),
+  categories: z.array(z.enum(ACHIEVEMENT_CATEGORIES)),
+});
+
 export const shiftReportSchema = z.object({
   report_date: z.string().min(1, "נא לבחור תאריך").refine(
     (date) => new Date(date) <= new Date(),
@@ -31,6 +54,7 @@ export const shiftReportSchema = z.object({
   has_achievements: z.boolean(),
   achievements_trainee_ids: z.array(z.string()),
   achievements_details: optionalText,
+  achievements_per_trainee: z.record(z.string(), achievementPerTraineeEntry).optional(),
 
   has_poor_mental_state: z.boolean(),
   mental_state_trainee_ids: z.array(z.string()),
@@ -85,6 +109,7 @@ export const DEFAULT_SHIFT_REPORT: ShiftReportFormData = {
   has_achievements: false,
   achievements_trainee_ids: [],
   achievements_details: "",
+  achievements_per_trainee: {},
   has_poor_mental_state: false,
   mental_state_trainee_ids: [],
   mental_state_details: "",

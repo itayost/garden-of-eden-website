@@ -894,6 +894,7 @@ export interface Database {
           has_achievements: boolean;
           achievements_trainee_ids: string[];
           achievements_details: string | null;
+          achievements_per_trainee: Record<string, { details?: string; categories: string[] }> | null;
           has_poor_mental_state: boolean;
           mental_state_trainee_ids: string[];
           mental_state_details: string | null;
@@ -939,6 +940,7 @@ export interface Database {
           has_achievements?: boolean;
           achievements_trainee_ids?: string[];
           achievements_details?: string | null;
+          achievements_per_trainee?: Record<string, { details?: string; categories: string[] }> | null;
           has_poor_mental_state?: boolean;
           mental_state_trainee_ids?: string[];
           mental_state_details?: string | null;
@@ -984,6 +986,7 @@ export interface Database {
           has_achievements?: boolean;
           achievements_trainee_ids?: string[];
           achievements_details?: string | null;
+          achievements_per_trainee?: Record<string, { details?: string; categories: string[] }> | null;
           has_poor_mental_state?: boolean;
           mental_state_trainee_ids?: string[];
           mental_state_details?: string | null;
