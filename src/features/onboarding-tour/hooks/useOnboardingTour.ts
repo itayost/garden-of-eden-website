@@ -36,7 +36,7 @@ export function useOnboardingTour({ autoStart, onComplete }: UseOnboardingTourOp
       allowClose: true,
       animate: true,
       smoothScroll: true,
-      overlayColor: "rgba(0, 0, 0, 0.7)",
+      overlayColor: "rgba(0, 0, 0, 0.5)",
       stagePadding: 12,
       stageRadius: 12,
       popoverOffset: 16,

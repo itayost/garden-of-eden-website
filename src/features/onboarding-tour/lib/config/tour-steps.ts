@@ -17,51 +17,20 @@ export const TOUR_STEPS: DriveStep[] = [
   {
     element: "[data-tour='quick-actions']",
     popover: {
-      title: "הכלים שלכם",
+      title: "השאלונים שלכם",
       description:
-        "מכאן תוכלו לגשת במהירות לכל השאלונים והכלים החשובים.<br/><strong>תלחצו על כל כרטיס כדי להתחיל.</strong>",
+        "&#127939; <strong>לפני אימון</strong> — מלאו לפני כל אימון<br/>" +
+        "&#9989; <strong>אחרי אימון</strong> — מלאו אחרי כל אימון<br/>" +
+        "&#129383; <strong>תזונה</strong> — חובה למלא פעם אחת לפני פגישת תזונאי",
       side: "bottom",
       align: "center",
       popoverClass: "tour-step-actions",
     },
   },
   {
-    element: "[data-tour='pre-workout']",
-    popover: {
-      title: "שאלון לפני אימון",
-      description:
-        "מלאו את השאלון הזה <strong>לפני כל אימון</strong>.<br/>ככה המאמן יודע להתאים את האימון למצב שלכם.",
-      side: "bottom",
-      align: "start",
-      popoverClass: "tour-step-pre",
-    },
-  },
-  {
-    element: "[data-tour='post-workout']",
-    popover: {
-      title: "שאלון אחרי אימון",
-      description:
-        "אחרי כל אימון, מלאו את השאלון הזה.<br/>זה עוזר לנו <strong>לעקוב אחרי ההתקדמות</strong> שלכם.",
-      side: "bottom",
-      align: "start",
-      popoverClass: "tour-step-post",
-    },
-  },
-  {
-    element: "[data-tour='nutrition-form']",
-    popover: {
-      title: "שאלון תזונה",
-      description:
-        "שאלון חד-פעמי על הרגלי התזונה שלכם.<br/><strong>חובה למלא לפני הפגישה עם התזונאי!</strong>",
-      side: "bottom",
-      align: "start",
-      popoverClass: "tour-step-nutrition",
-    },
-  },
-  {
     element: "[data-tour='streak-card']",
     popover: {
-      title: "רצף אימונים",
+      title: "&#128293; רצף אימונים",
       description:
         "כאן תראו את רצף האימונים שלכם.<br/>נסו לשמור על רצף ו<strong>לשבור את השיא האישי!</strong>",
       side: "top",
@@ -72,9 +41,9 @@ export const TOUR_STEPS: DriveStep[] = [
   {
     element: "[data-tour='welcome']",
     popover: {
-      title: "!אתם מוכנים",
+      title: "!אתם מוכנים &#9917;",
       description:
-        "זהו! עכשיו אתם מכירים את כל הכלים.<br/><strong>בהצלחה באימונים!</strong> &#9917;",
+        "זהו! עכשיו אתם מכירים את כל הכלים.<br/><strong>בהצלחה באימונים!</strong>",
       showButtons: ["close"],
       doneBtnText: "יאללה! &larr;",
       side: "bottom",

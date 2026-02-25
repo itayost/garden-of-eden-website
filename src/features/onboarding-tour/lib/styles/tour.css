@@ -3,9 +3,9 @@
    Sports-academy vibrant design, RTL, mobile-first
    ============================================= */
 
-/* --- Overlay --- */
+/* --- Overlay (semi-transparent so page stays visible) --- */
 .driver-overlay {
-  background-color: rgba(0, 0, 0, 0.7) !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* --- Popover container --- */
@@ -56,7 +56,7 @@
 .driver-popover-description {
   color: hsl(var(--muted-foreground)) !important;
   font-size: 0.9rem !important;
-  line-height: 1.65 !important;
+  line-height: 1.75 !important;
   text-align: start !important;
 }
 
@@ -165,12 +165,7 @@
 
 /* --- Per-step accent colors --- */
 
-/* Welcome step — primary green */
-.tour-step-welcome .driver-popover-title {
-  color: hsl(var(--primary)) !important;
-}
-
-/* Done step — celebration accent */
+.tour-step-welcome .driver-popover-title,
 .tour-step-done .driver-popover-title {
   color: hsl(var(--primary)) !important;
 }
@@ -178,26 +173,6 @@
 .tour-step-done .driver-popover-done-btn {
   font-size: 1rem !important;
   padding: 0.75rem 2rem !important;
-}
-
-/* Pre-workout — blue accent */
-.tour-step-pre .driver-popover-title::before {
-  content: "\1F3C3\FE0F ";
-}
-
-/* Post-workout — green accent */
-.tour-step-post .driver-popover-title::before {
-  content: "\2705 ";
-}
-
-/* Nutrition — orange accent */
-.tour-step-nutrition .driver-popover-title::before {
-  content: "\1F957 ";
-}
-
-/* Streak — fire accent */
-.tour-step-streak .driver-popover-title::before {
-  content: "\1F525 ";
 }
 
 /* =============================================

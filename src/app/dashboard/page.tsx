@@ -226,12 +226,6 @@ export default async function DashboardPage() {
             <Link
               key={action.href}
               href={action.href}
-              data-tour={
-                action.href === "/dashboard/forms/pre-workout" ? "pre-workout" :
-                action.href === "/dashboard/forms/post-workout" ? "post-workout" :
-                action.href === "/dashboard/forms/nutrition" ? "nutrition-form" :
-                undefined
-              }
             >
               <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
                 <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
