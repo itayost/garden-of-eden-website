@@ -29,16 +29,17 @@ export function useOnboardingTour({ autoStart, onComplete }: UseOnboardingTourOp
 
     const driverObj = driver({
       showProgress: true,
-      progressText: "{{current}} / {{total}}",
-      nextBtnText: "הבא",
+      progressText: "{{current}} מתוך {{total}}",
+      nextBtnText: "הבא &larr;",
       prevBtnText: "הקודם",
       doneBtnText: "סיום",
       allowClose: true,
       animate: true,
       smoothScroll: true,
-      stagePadding: 8,
-      stageRadius: 8,
-      popoverOffset: 12,
+      overlayColor: "rgba(0, 0, 0, 0.7)",
+      stagePadding: 12,
+      stageRadius: 12,
+      popoverOffset: 16,
       steps: TOUR_STEPS,
       onDestroyStarted: () => {
         if (!completedRef.current) {
