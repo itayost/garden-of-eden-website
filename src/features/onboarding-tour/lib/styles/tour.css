@@ -1,14 +1,12 @@
 /* driver.js custom theme for Garden of Eden */
 
-/* Overlay — must be above all page content */
+/* Overlay */
 .driver-overlay {
   background-color: rgba(0, 0, 0, 0.65) !important;
-  z-index: 100000 !important;
 }
 
-/* Popover container — must be above overlay */
+/* Popover container */
 .driver-popover {
-  z-index: 100001 !important;
   background-color: hsl(var(--card)) !important;
   color: hsl(var(--card-foreground)) !important;
   border: 1px solid hsl(var(--border)) !important;
