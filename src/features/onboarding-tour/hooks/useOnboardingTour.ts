@@ -46,6 +46,8 @@ export function useOnboardingTour({ autoStart, onComplete }: UseOnboardingTourOp
           completedRef.current = true;
           onCompleteRef.current();
         }
+        // Must explicitly destroy — defining onDestroyStarted prevents default
+        driverObj.destroy();
       },
       onDestroyed: () => {
         setIsActive(false);
