@@ -15,18 +15,17 @@ export function useOnboardingTour({ autoStart, onComplete }: UseOnboardingTourOp
   const driverRef = useRef<Driver | null>(null);
   const [isActive, setIsActive] = useState(false);
   const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
-  const handleComplete = useCallback(() => {
-    if (completedRef.current) return;
-    completedRef.current = true;
-    setIsActive(false);
-    onComplete();
-  }, [onComplete]);
-
-  const initDriver = useCallback(() => {
+  const startTour = useCallback(() => {
+    // Destroy any existing instance
     if (driverRef.current) {
       driverRef.current.destroy();
+      driverRef.current = null;
     }
+
+    completedRef.current = false;
 
     const driverObj = driver({
       showProgress: true,
@@ -42,40 +41,40 @@ export function useOnboardingTour({ autoStart, onComplete }: UseOnboardingTourOp
       popoverOffset: 12,
       steps: TOUR_STEPS,
       onDestroyStarted: () => {
-        handleComplete();
+        if (!completedRef.current) {
+          completedRef.current = true;
+          onCompleteRef.current();
+        }
       },
       onDestroyed: () => {
         setIsActive(false);
+        driverRef.current = null;
       },
     });
 
     driverRef.current = driverObj;
-    return driverObj;
-  }, [handleComplete]);
-
-  const startTour = useCallback(() => {
-    completedRef.current = false;
-    const driverObj = initDriver();
     setIsActive(true);
     driverObj.drive();
-  }, [initDriver]);
+  }, []);
 
   // Auto-start on mount if needed
   useEffect(() => {
     if (!autoStart) return;
 
-    // Wait for DOM to settle after hydration
+    // Wait for DOM to fully settle after hydration + Suspense
     const timer = setTimeout(() => {
       startTour();
-    }, 800);
+    }, 1500);
 
     return () => {
       clearTimeout(timer);
       if (driverRef.current) {
         driverRef.current.destroy();
+        driverRef.current = null;
       }
     };
-  }, [autoStart, startTour]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart]);
 
   // Cleanup on unmount
   useEffect(() => {
