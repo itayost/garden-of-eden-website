@@ -44,7 +44,7 @@ export const TOUR_STEPS: DriveStep[] = [
       title: "אתם מוכנים!",
       description:
         "עכשיו אתם מכירים את כל הכלים.<br/><strong>בהצלחה באימונים!</strong>",
-      showButtons: ["close"],
+      showButtons: ["next", "close"],
       doneBtnText: "יאללה!",
       side: "bottom",
       align: "center",
