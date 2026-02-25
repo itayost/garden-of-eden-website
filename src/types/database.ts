@@ -7,6 +7,7 @@ export type Json =
   | Json[];
 
 export type UserRole = "trainee" | "trainer" | "admin";
+export type NutritionAppointmentStatus = 'not_scheduled' | 'scheduled' | 'completed';
 
 export interface Database {
   // Required for proper Supabase client type inference
@@ -26,6 +27,8 @@ export interface Database {
           avatar_url: string | null;
           processed_avatar_url: string | null;
           profile_completed: boolean;
+          tour_completed: boolean;
+          nutrition_appointment_status: 'not_scheduled' | 'scheduled' | 'completed';
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -41,6 +44,8 @@ export interface Database {
           avatar_url?: string | null;
           processed_avatar_url?: string | null;
           profile_completed?: boolean;
+          tour_completed?: boolean;
+          nutrition_appointment_status?: 'not_scheduled' | 'scheduled' | 'completed';
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -56,6 +61,8 @@ export interface Database {
           avatar_url?: string | null;
           processed_avatar_url?: string | null;
           profile_completed?: boolean;
+          tour_completed?: boolean;
+          nutrition_appointment_status?: 'not_scheduled' | 'scheduled' | 'completed';
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;

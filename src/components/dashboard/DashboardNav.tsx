@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
+import { TourTriggerButton } from "@/features/onboarding-tour";
 
 const navItems = [
   { href: "/dashboard", label: "ראשי", icon: Home },
@@ -114,6 +115,10 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem className="text-muted-foreground">
                     {user.phone}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <TourTriggerButton asMenuItem />
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">

@@ -1,0 +1,125 @@
+/* driver.js custom theme for Garden of Eden */
+
+/* Overlay */
+.driver-overlay {
+  background-color: rgba(0, 0, 0, 0.65) !important;
+}
+
+/* Popover container */
+.driver-popover {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  max-width: calc(100vw - 2rem) !important;
+  direction: rtl !important;
+  font-family: inherit !important;
+}
+
+/* Title */
+.driver-popover-title {
+  font-size: 1.125rem !important;
+  font-weight: 700 !important;
+  color: hsl(var(--foreground)) !important;
+  text-align: start !important;
+}
+
+/* Description */
+.driver-popover-description {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  text-align: start !important;
+}
+
+/* Close button */
+.driver-popover-close-btn {
+  color: hsl(var(--muted-foreground)) !important;
+  inset-inline-start: 8px !important;
+  inset-inline-end: auto !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Footer */
+.driver-popover-footer {
+  direction: rtl !important;
+}
+
+/* Navigation buttons */
+.driver-popover-navigation-btns {
+  display: flex !important;
+  gap: 0.5rem !important;
+  flex-direction: row-reverse !important;
+}
+
+/* Next / Done button (primary) */
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  min-height: 40px !important;
+  cursor: pointer !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-next-btn:hover,
+.driver-popover-done-btn:hover {
+  opacity: 0.9 !important;
+}
+
+/* Previous button (secondary) */
+.driver-popover-prev-btn {
+  background-color: hsl(var(--secondary)) !important;
+  color: hsl(var(--secondary-foreground)) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  min-height: 40px !important;
+  cursor: pointer !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-prev-btn:hover {
+  opacity: 0.8 !important;
+}
+
+/* Progress text */
+.driver-popover-progress-text {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 0.75rem !important;
+}
+
+/* Arrow */
+.driver-popover-arrow {
+  border-color: hsl(var(--card)) !important;
+}
+
+/* Mobile touch targets */
+@media (max-width: 640px) {
+  .driver-popover {
+    margin: 0.5rem !important;
+  }
+
+  .driver-popover-next-btn,
+  .driver-popover-done-btn,
+  .driver-popover-prev-btn {
+    min-height: 44px !important;
+    padding: 0.625rem 1.25rem !important;
+  }
+}
+
+/* Active element highlight */
+.driver-active-element {
+  border-radius: 8px !important;
+}

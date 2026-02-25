@@ -219,11 +219,20 @@ export default async function DashboardPage() {
       <NutritionMeetingBanner userCreatedAt={profile?.created_at || ""} />
 
       {/* Quick Actions */}
-      <div>
+      <div data-tour="quick-actions">
         <h2 className="text-xl font-semibold mb-4">פעולות מהירות</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {quickActions.map((action) => (
-            <Link key={action.href} href={action.href}>
+            <Link
+              key={action.href}
+              href={action.href}
+              data-tour={
+                action.href === "/dashboard/forms/pre-workout" ? "pre-workout" :
+                action.href === "/dashboard/forms/post-workout" ? "post-workout" :
+                action.href === "/dashboard/forms/nutrition" ? "nutrition-form" :
+                undefined
+              }
+            >
               <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
                 <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
                   <div className="flex items-start justify-between mb-2 sm:mb-4">
@@ -262,7 +271,9 @@ export default async function DashboardPage() {
             </Link>
           )}
           {/* Streak Card */}
-          <StreakCard streak={streakData} />
+          <div data-tour="streak-card">
+            <StreakCard streak={streakData} />
+          </div>
           {/* Achievements Card */}
           <AchievementsCard achievements={achievementsData || []} />
           <Card>

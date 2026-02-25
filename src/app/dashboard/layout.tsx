@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/dashboard/DashboardNav";
 import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
+import { OnboardingTourProvider } from "@/features/onboarding-tour";
 import type { Profile } from "@/types/database";
 
 export default async function DashboardLayout({
@@ -19,7 +21,7 @@ export default async function DashboardLayout({
   // Get user profile - only columns needed by DashboardNav + onboarding check
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, avatar_url, processed_avatar_url, profile_completed, role")
+    .select("full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed")
     .eq("id", user.id)
     .maybeSingle() as unknown as { data: Profile | null };
 
@@ -35,6 +37,11 @@ export default async function DashboardLayout({
         {children}
       </main>
       <DashboardBottomNav />
+      <Suspense fallback={null}>
+        <OnboardingTourProvider
+          tourCompleted={profile?.tour_completed ?? true}
+        />
+      </Suspense>
     </div>
   );
 }
