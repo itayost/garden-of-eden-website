@@ -62,8 +62,6 @@ export async function bulkCreateUsersAction(users: CSVUserRow[]): Promise<BulkIm
       const { data: authData, error: createError } = await adminClient.auth.admin.createUser({
         phone: formattedPhone,
         phone_confirm: true,
-        email: csvUser.email || undefined,
-        email_confirm: !!csvUser.email,
         user_metadata: { full_name: csvUser.name },
       });
 

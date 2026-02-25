@@ -13,7 +13,6 @@ const userRoles = ["trainee", "trainer", "admin"] as const;
  * - name / שם: Required, min 2 chars
  * - phone / טלפון: Required, Israeli format
  * - role / תפקיד: Optional, defaults to trainee
- * - email / אימייל: Optional
  */
 export const csvRowSchema = z.object({
   name: z
@@ -28,14 +27,6 @@ export const csvRowSchema = z.object({
   role: z
     .enum(userRoles, { message: "תפקיד לא תקין" })
     .default("trainee"),
-
-  // Transform empty string to undefined for optional email
-  email: z
-    .string()
-    .email("כתובת אימייל לא תקינה")
-    .optional()
-    .or(z.literal(""))
-    .transform((v) => (v === "" ? undefined : v)),
 });
 
 export type CSVUserRow = z.infer<typeof csvRowSchema>;
@@ -64,12 +55,10 @@ export const columnMapping: Record<string, string> = {
   "שם": "name",
   "טלפון": "phone",
   "תפקיד": "role",
-  "אימייל": "email",
   // English names map to themselves
   "name": "name",
   "phone": "phone",
   "role": "role",
-  "email": "email",
 };
 
 /**

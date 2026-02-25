@@ -12,7 +12,6 @@ describe("csvRowSchema", () => {
       name: "יוסי כהן",
       phone: "0501234567",
       role: "trainee",
-      email: "yosi@example.com",
     });
     expect(result.success).toBe(true);
   });
@@ -90,27 +89,6 @@ describe("csvRowSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("transforms empty email string to undefined", () => {
-    const result = csvRowSchema.safeParse({
-      name: "יוסי כהן",
-      phone: "0501234567",
-      email: "",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.email).toBeUndefined();
-    }
-  });
-
-  it("rejects invalid email", () => {
-    const result = csvRowSchema.safeParse({
-      name: "יוסי",
-      phone: "0501234567",
-      email: "not-an-email",
-    });
-    expect(result.success).toBe(false);
-  });
-
   it("contains Hebrew error messages", () => {
     const result = csvRowSchema.safeParse({
       name: "א",
@@ -170,9 +148,9 @@ describe("normalizeCSVRow", () => {
   it("handles empty values", () => {
     const result = normalizeCSVRow({
       name: "יוסי",
-      email: "",
+      phone: "",
     });
-    expect(result.email).toBe("");
+    expect(result.phone).toBe("");
   });
 });
 
@@ -181,14 +159,12 @@ describe("columnMapping", () => {
     expect(columnMapping["שם"]).toBe("name");
     expect(columnMapping["טלפון"]).toBe("phone");
     expect(columnMapping["תפקיד"]).toBe("role");
-    expect(columnMapping["אימייל"]).toBe("email");
   });
 
   it("contains English self-mappings", () => {
     expect(columnMapping["name"]).toBe("name");
     expect(columnMapping["phone"]).toBe("phone");
     expect(columnMapping["role"]).toBe("role");
-    expect(columnMapping["email"]).toBe("email");
   });
 });
 

@@ -128,7 +128,7 @@ export function UserImportDialog({ trigger }: UserImportDialogProps) {
         <DialogHeader>
           <DialogTitle>יבוא משתמשים מ-CSV</DialogTitle>
           <DialogDescription>
-            העלה קובץ CSV עם עמודות: שם, טלפון, תפקיד (אופציונלי), אימייל (אופציונלי)
+            העלה קובץ CSV עם עמודות: שם, טלפון, תפקיד (אופציונלי)
           </DialogDescription>
         </DialogHeader>
 
@@ -184,7 +184,6 @@ export function UserImportDialog({ trigger }: UserImportDialogProps) {
                         <th className="px-3 py-2 text-right font-medium">שם</th>
                         <th className="px-3 py-2 text-right font-medium">טלפון</th>
                         <th className="px-3 py-2 text-right font-medium">תפקיד</th>
-                        <th className="px-3 py-2 text-right font-medium">אימייל</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -195,9 +194,6 @@ export function UserImportDialog({ trigger }: UserImportDialogProps) {
                           <td className="px-3 py-2">
                             {row.role === "admin" ? "מנהל" :
                              row.role === "trainer" ? "מאמן" : "מתאמן"}
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground">
-                            {row.email || "-"}
                           </td>
                         </tr>
                       ))}

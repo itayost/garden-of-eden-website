@@ -32,7 +32,7 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
     };
   }
 
-  const { full_name, phone, email } = validated.data;
+  const { full_name, phone } = validated.data;
   // Trainers can only create trainees
   const role = callerProfile?.role === "admin" ? validated.data.role : "trainee";
 
@@ -46,8 +46,6 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
     const { data: authData, error: createError } = await adminClient.auth.admin.createUser({
       phone: formattedPhone,
       phone_confirm: true, // Auto-confirm since admin is creating
-      email: email || undefined,
-      email_confirm: !!email,
       user_metadata: { full_name },
     });
 

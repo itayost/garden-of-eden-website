@@ -44,7 +44,6 @@ export function UserCreateForm({ isAdmin = true }: UserCreateFormProps) {
       full_name: "",
       phone: "",
       role: "trainee",
-      email: "",
     },
   });
 
@@ -154,31 +153,6 @@ export function UserCreateForm({ isAdmin = true }: UserCreateFormProps) {
             )}
           />
         )}
-
-        {/* Email (Optional) */}
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>אימייל (אופציונלי)</FormLabel>
-              <FormControl>
-                <Input
-                  type="email"
-                  placeholder="example@email.com"
-                  dir="ltr"
-                  className="text-right"
-                  {...field}
-                  disabled={loading}
-                />
-              </FormControl>
-              <FormDescription>
-                כתובת אימייל לשליחת התראות (לא חובה)
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         {/* Submit */}
         <Button type="submit" className="w-full" disabled={loading}>

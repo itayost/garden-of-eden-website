@@ -11,41 +11,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-const PHONE_OTP_LENGTH = 6;
-const EMAIL_OTP_LENGTH = 8;
+const OTP_LENGTH = 6;
 
 export default function VerifyPage() {
-  const [verifyType, setVerifyType] = useState<"email" | "phone">("email");
-  const otpLength = verifyType === "phone" ? PHONE_OTP_LENGTH : EMAIL_OTP_LENGTH;
-  const [otp, setOtp] = useState<string[]>([]);
+  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [isReady, setIsReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [identifier, setIdentifier] = useState("");
+  const [phone, setPhone] = useState("");
   const [countdown, setCountdown] = useState(60);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    const storedType = sessionStorage.getItem("verifyType") as "email" | "phone" | null;
     const storedPhone = sessionStorage.getItem("verifyPhone");
-    const storedEmail = sessionStorage.getItem("verifyEmail");
 
-    if (storedType === "phone" && storedPhone) {
-      setVerifyType("phone");
-      setIdentifier(storedPhone);
-      setOtp(Array(PHONE_OTP_LENGTH).fill(""));
-    } else if (storedType === "email" && storedEmail) {
-      setVerifyType("email");
-      setIdentifier(storedEmail);
-      setOtp(Array(EMAIL_OTP_LENGTH).fill(""));
-    } else {
+    if (!storedPhone) {
       router.push("/auth/login");
       return;
     }
 
+    setPhone(storedPhone);
     setIsReady(true);
-    // Focus first input after next render
     setTimeout(() => inputRefs.current[0]?.focus(), 0);
   }, [router]);
 
@@ -59,27 +46,25 @@ export default function VerifyPage() {
   const handleChange = (index: number, value: string) => {
     if (value.length > 1) {
       // Handle paste
-      const digits = value.replace(/\D/g, "").slice(0, otpLength);
-      const newOtp = Array(otpLength).fill("");
-      for (let i = 0; i < otpLength; i++) newOtp[i] = otp[i] || "";
+      const digits = value.replace(/\D/g, "").slice(0, OTP_LENGTH);
+      const newOtp = [...otp];
       digits.split("").forEach((digit, i) => {
-        if (index + i < otpLength) {
+        if (index + i < OTP_LENGTH) {
           newOtp[index + i] = digit;
         }
       });
       setOtp(newOtp);
-      const nextIndex = Math.min(index + digits.length, otpLength - 1);
+      const nextIndex = Math.min(index + digits.length, OTP_LENGTH - 1);
       inputRefs.current[nextIndex]?.focus();
       return;
     }
 
-    const newOtp = Array(otpLength).fill("");
-    for (let i = 0; i < otpLength; i++) newOtp[i] = otp[i] || "";
+    const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
     // Move to next input
-    if (value && index < otpLength - 1) {
+    if (value && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -93,9 +78,9 @@ export default function VerifyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const code = otp.slice(0, otpLength).join("");
-    if (code.length !== otpLength) {
-      toast.error(`נא להזין קוד בן ${otpLength} ספרות`);
+    const code = otp.join("");
+    if (code.length !== OTP_LENGTH) {
+      toast.error(`נא להזין קוד בן ${OTP_LENGTH} ספרות`);
       return;
     }
 
@@ -104,11 +89,11 @@ export default function VerifyPage() {
     try {
       const supabase = createClient();
 
-      const verifyOptions = verifyType === "phone"
-        ? { phone: identifier, token: code, type: "sms" as const }
-        : { email: identifier, token: code, type: "email" as const };
-
-      const { error } = await supabase.auth.verifyOtp(verifyOptions);
+      const { error } = await supabase.auth.verifyOtp({
+        phone,
+        token: code,
+        type: "sms",
+      });
 
       if (error) {
         throw error;
@@ -116,8 +101,6 @@ export default function VerifyPage() {
 
       const redirect = getSafeRedirectUrl(sessionStorage.getItem("redirectAfterAuth"));
       sessionStorage.removeItem("verifyPhone");
-      sessionStorage.removeItem("verifyEmail");
-      sessionStorage.removeItem("verifyType");
       sessionStorage.removeItem("redirectAfterAuth");
 
       toast.success("התחברת בהצלחה!");
@@ -127,7 +110,7 @@ export default function VerifyPage() {
       console.error("Verify error:", error);
       const errorMessage = error instanceof Error ? error.message : "קוד האימות שגוי";
       toast.error(errorMessage);
-      setOtp(Array(otpLength).fill(""));
+      setOtp(Array(OTP_LENGTH).fill(""));
       inputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
@@ -142,19 +125,12 @@ export default function VerifyPage() {
     try {
       const supabase = createClient();
 
-      if (verifyType === "phone") {
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: identifier,
-          options: { shouldCreateUser: false },
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signInWithOtp({
-          email: identifier,
-          options: { shouldCreateUser: false },
-        });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+        options: { shouldCreateUser: false },
+      });
+
+      if (error) throw error;
 
       setCountdown(60);
       toast.success("קוד חדש נשלח");
@@ -167,11 +143,11 @@ export default function VerifyPage() {
     }
   };
 
-  const formatIdentifier = () => {
-    if (verifyType === "phone" && identifier.startsWith("+972")) {
-      return "0" + identifier.slice(4);
+  const formatPhone = () => {
+    if (phone.startsWith("+972")) {
+      return "0" + phone.slice(4);
     }
-    return identifier;
+    return phone;
   };
 
   return (
@@ -183,9 +159,7 @@ export default function VerifyPage() {
           </Link>
           <CardTitle className="text-2xl">אימות קוד</CardTitle>
           <CardDescription>
-            {verifyType === "phone"
-              ? `הזינו את הקוד שנשלח ב-WhatsApp למספר ${formatIdentifier()}`
-              : `הזינו את הקוד שנשלח לאימייל ${formatIdentifier()}`}
+            {`הזינו את הקוד שנשלח ב-WhatsApp למספר ${formatPhone()}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -197,13 +171,13 @@ export default function VerifyPage() {
             <>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="flex justify-center gap-1 sm:gap-2" dir="ltr">
-                  {Array.from({ length: otpLength }, (_, index) => (
+                  {Array.from({ length: OTP_LENGTH }, (_, index) => (
                     <Input
-                      key={`${verifyType}-${index}`}
+                      key={index}
                       ref={(el) => { inputRefs.current[index] = el; }}
                       type="text"
                       inputMode="numeric"
-                      maxLength={otpLength}
+                      maxLength={OTP_LENGTH}
                       value={otp[index] || ""}
                       onChange={(e) => handleChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
@@ -248,7 +222,7 @@ export default function VerifyPage() {
                     href="/auth/login"
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {verifyType === "phone" ? "שינוי מספר טלפון" : "שינוי כתובת אימייל"}
+                    שינוי מספר טלפון
                   </Link>
                 </div>
               </div>
