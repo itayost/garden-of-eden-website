@@ -159,9 +159,10 @@
   border-color: #ffffff !important;
 }
 
-/* --- Active element highlight ring --- */
+/* --- Active element highlight — full opacity with white backing --- */
 .driver-active-element {
   border-radius: 12px !important;
+  background-color: #ffffff !important;
 }
 
 /* --- Per-step accent colors --- */
