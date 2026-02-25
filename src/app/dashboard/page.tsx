@@ -121,7 +121,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Welcome Section */}
-      <div>
+      <div data-tour="welcome">
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">
           שלום, {profile?.full_name || "מתאמן"}! 👋
         </h1>

@@ -2,6 +2,7 @@ import type { DriveStep } from "driver.js";
 
 export const TOUR_STEPS: DriveStep[] = [
   {
+    element: "[data-tour='welcome']",
     popover: {
       title: "ברוכים הבאים!",
       description: "בואו נכיר את האזור האישי שלכם. הסיור הקצר הזה יראה לכם את כל מה שצריך לדעת.",
@@ -9,6 +10,8 @@ export const TOUR_STEPS: DriveStep[] = [
       nextBtnText: "בואו נתחיל",
       doneBtnText: "סיום",
       prevBtnText: "הקודם",
+      side: "bottom",
+      align: "center",
     },
   },
   {
@@ -57,11 +60,14 @@ export const TOUR_STEPS: DriveStep[] = [
     },
   },
   {
+    element: "[data-tour='welcome']",
     popover: {
       title: "אתם מוכנים!",
       description: "זהו! עכשיו אתם מכירים את כל הכלים. בהצלחה באימונים!",
       showButtons: ["close"],
       doneBtnText: "יאללה!",
+      side: "bottom",
+      align: "center",
     },
   },
 ];
