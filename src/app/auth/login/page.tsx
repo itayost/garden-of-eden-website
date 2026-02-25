@@ -80,7 +80,7 @@ function LoginForm() {
             placeholder="050-123-4567"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="pe-10 text-lg"
+            className="pe-10 text-lg text-start"
             dir="ltr"
             disabled={loading}
           />

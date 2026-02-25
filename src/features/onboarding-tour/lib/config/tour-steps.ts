@@ -21,7 +21,7 @@ export const TOUR_STEPS: DriveStep[] = [
       description:
         "<strong>לפני אימון</strong> — מלאו לפני כל אימון<br/>" +
         "<strong>אחרי אימון</strong> — מלאו אחרי כל אימון<br/>" +
-        "<strong>תזונה</strong> — חובה למלא פעם אחת לפני פגישת תזונאי",
+        "<strong>תזונה</strong> — חובה למלא פעם אחת לפני שמתחילים להתאמן בסטודיו",
       side: "bottom",
       align: "center",
       popoverClass: "tour-step-actions",

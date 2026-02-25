@@ -126,6 +126,7 @@ export function ProfileCompletionForm({
                       type="date"
                       disabled={loading}
                       max={new Date().toISOString().split("T")[0]}
+                      className="w-full max-w-full"
                       {...field}
                     />
                   </FormControl>

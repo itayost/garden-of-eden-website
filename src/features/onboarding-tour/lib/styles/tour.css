@@ -63,6 +63,7 @@
   font-size: 0.9rem !important;
   line-height: 1.7 !important;
   text-align: start !important;
+  padding-bottom: 0.25rem !important;
 }
 
 .driver-popover-description strong {
@@ -89,12 +90,20 @@
   background-color: #f1f5f9 !important;
 }
 
-/* --- Footer --- */
+/* --- Footer — stacked: progress text on top, buttons below --- */
 .driver-popover-footer {
   direction: rtl !important;
-  margin-top: 1.25rem !important;
+  margin-top: 1.5rem !important;
   padding-top: 1rem !important;
   border-top: 1px solid #f1f5f9 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+}
+
+/* --- Progress text (above buttons) --- */
+.driver-popover-progress-text {
+  order: -1 !important;
 }
 
 /* --- Navigation buttons --- */
@@ -102,6 +111,7 @@
   display: flex !important;
   gap: 0.625rem !important;
   flex-direction: row-reverse !important;
+  width: 100% !important;
 }
 
 /* --- Next / Done button (primary) --- */
