@@ -3,12 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createClient } from "@/lib/supabase/client";
-import { typedFrom } from "@/lib/supabase/helpers";
-import {
-  onboardingSchema,
-  type OnboardingData,
-} from "@/lib/validations/profile";
+import { onboardingSchema, type OnboardingData } from "@/lib/validations/profile";
+import { completeOnboardingAction } from "@/lib/actions/complete-onboarding";
 import { POSITIONS, POSITION_LABELS_HE } from "@/types/player-stats";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,38 +58,21 @@ export function ProfileCompletionForm({
     setLoading(true);
 
     try {
-      const supabase = createClient();
+      const result = await completeOnboardingAction({
+        full_name: data.full_name,
+        birthdate: data.birthdate,
+        position: data.position || null,
+      });
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user || user.id !== userId) {
-        toast.error("אין הרשאה לעדכן פרופיל זה");
-        setLoading(false);
-        return;
-      }
-
-      const { error: updateError } = await typedFrom(supabase, "profiles")
-        .update({
-          full_name: data.full_name,
-          birthdate: data.birthdate,
-          position: data.position || null,
-          profile_completed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", userId);
-
-      if (updateError) {
-        console.error("Profile update error:", updateError);
-        toast.error("שגיאה בשמירת הפרופיל. נסה שוב.");
+      if (result.error) {
+        toast.error(result.error);
         setLoading(false);
         return;
       }
 
       toast.success("!בואו נתחיל");
       window.location.assign("/dashboard");
-    } catch (err) {
-      console.error("Profile completion error:", err);
+    } catch {
       toast.error("שגיאה בשמירת הפרופיל. נסה שוב.");
       setLoading(false);
     }
