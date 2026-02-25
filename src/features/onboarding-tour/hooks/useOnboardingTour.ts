@@ -30,7 +30,7 @@ export function useOnboardingTour({ autoStart, onComplete }: UseOnboardingTourOp
     const driverObj = driver({
       showProgress: true,
       progressText: "{{current}} מתוך {{total}}",
-      nextBtnText: "הבא &larr;",
+      nextBtnText: "הבא",
       prevBtnText: "הקודם",
       doneBtnText: "סיום",
       allowClose: true,
