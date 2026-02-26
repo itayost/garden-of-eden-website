@@ -340,7 +340,7 @@ export function calculateCardRatingsAbsolute(assessment: PlayerAssessment): Calc
     flexibility_ankle: { best: 15, worst: 5 },
     flexibility_knee: { best: 20, worst: 8 },
     flexibility_hip: { best: 25, worst: 10 },
-    kick_power_kaiser: { best: 100, worst: 30 },
+    kick_power_kaiser: { best: 500, worst: 50 },
   };
 
   return calculateCardRatings(assessment, defaultStats);

@@ -122,7 +122,7 @@ export function formatDelta(
     ? rounded.toString()
     : rounded.toFixed(2).replace(/\.?0+$/, "");
 
-  return `${sign}${formattedNumber}${unit ? ` ${unit}` : ""}`.replace(` %`, "%");
+  return `${sign}${formattedNumber}${unit ? ` ${unit}` : ""}`;
 }
 
 /**

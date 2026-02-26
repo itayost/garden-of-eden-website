@@ -93,7 +93,7 @@ export interface PlayerAssessment {
   leg_power_technique: LegPowerTechnique | null;
   body_structure: BodyStructure | null;
 
-  // Kick power (%)
+  // Kick power (Kaiser force units)
   kick_power_kaiser: number | null;
 
   // Mental notes
@@ -166,7 +166,7 @@ export const ASSESSMENT_UNITS: Record<string, string> = {
   flexibility_ankle: 'ס"מ',
   flexibility_knee: 'ס"מ',
   flexibility_hip: 'ס"מ',
-  kick_power_kaiser: "%",
+  kick_power_kaiser: 'יח׳ כוח',
 };
 
 // ===========================================

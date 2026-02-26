@@ -229,10 +229,10 @@ describe("formatMetricValue", () => {
     ).toBe('180 ס"מ');
   });
 
-  it("formats kick power with % unit", () => {
+  it("formats kick power with force unit", () => {
     expect(
       formatMetricValue(85, "kick_power_kaiser" as PhysicalMetricKey)
-    ).toBe("85 %");
+    ).toBe("85 יח׳ כוח");
   });
 
   it("returns --- for null value", () => {

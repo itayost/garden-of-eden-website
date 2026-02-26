@@ -69,7 +69,7 @@ export const METRIC_UNITS: Record<PhysicalMetricKey, string> = {
   flexibility_ankle: 'ס"מ',
   flexibility_knee: 'ס"מ',
   flexibility_hip: 'ס"מ',
-  kick_power_kaiser: "%",
+  kick_power_kaiser: 'יח׳ כוח',
 };
 
 /** Check if a metric is lower-is-better */

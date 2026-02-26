@@ -33,8 +33,8 @@ export const assessmentSchema = z.object({
   leg_power_technique: z.enum(["normal", "deficient"]).optional().nullable(),
   body_structure: z.enum(["thin_weak", "good_build", "strong_athletic"]).optional().nullable(),
 
-  // Kick power (percentage 0-100)
-  kick_power_kaiser: z.number().min(0).max(100).optional().nullable(),
+  // Kick power - Kaiser force units (0-999)
+  kick_power_kaiser: z.number().min(0).max(999).optional().nullable(),
 
   // Mental notes (free text) with max length
   concentration_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),

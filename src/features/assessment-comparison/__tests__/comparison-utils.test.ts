@@ -138,7 +138,7 @@ describe('formatDelta', () => {
   });
 
   it('should include correct units for each field', () => {
-    expect(formatDelta(10, 'kick_power_kaiser')).toBe('+10%');
+    expect(formatDelta(10, 'kick_power_kaiser')).toBe('+10 יח׳ כוח');
     expect(formatDelta(-2, 'blaze_spot_time')).toBe('-2 פגיעות');
     expect(formatDelta(3, 'flexibility_knee')).toBe('+3 ס"מ');
   });

@@ -340,11 +340,11 @@ export function AssessmentStepContent({
               כוח בעיטה
             </CardTitle>
             <CardDescription>
-              תוצאת מבדק קייזר באחוזים (0-100%)
+              תוצאת מבדק קייזר ביחידות כוח (0-999)
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <NumberInput name="kick_power_kaiser" step="0.1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="kick_power_kaiser" step="1" form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );
