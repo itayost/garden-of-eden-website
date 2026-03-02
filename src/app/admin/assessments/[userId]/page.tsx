@@ -141,19 +141,19 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
   // Extract current metrics from latest assessment for goal management
   const currentMetrics: Partial<Record<PhysicalMetricKey, number | null>> = latestAssessment
     ? {
-        sprint_5m: latestAssessment.sprint_5m,
-        sprint_10m: latestAssessment.sprint_10m,
-        sprint_20m: latestAssessment.sprint_20m,
-        jump_2leg_distance: latestAssessment.jump_2leg_distance,
-        jump_2leg_height: latestAssessment.jump_2leg_height,
-        jump_right_leg: latestAssessment.jump_right_leg,
-        jump_left_leg: latestAssessment.jump_left_leg,
-        blaze_spot_time: latestAssessment.blaze_spot_time,
-        flexibility_ankle: latestAssessment.flexibility_ankle,
-        flexibility_knee: latestAssessment.flexibility_knee,
-        flexibility_hip: latestAssessment.flexibility_hip,
-        kick_power_kaiser: latestAssessment.kick_power_kaiser,
-      }
+      sprint_5m: latestAssessment.sprint_5m,
+      sprint_10m: latestAssessment.sprint_10m,
+      sprint_20m: latestAssessment.sprint_20m,
+      jump_2leg_distance: latestAssessment.jump_2leg_distance,
+      jump_2leg_height: latestAssessment.jump_2leg_height,
+      jump_right_leg: latestAssessment.jump_right_leg,
+      jump_left_leg: latestAssessment.jump_left_leg,
+      blaze_spot_time: latestAssessment.blaze_spot_time,
+      flexibility_ankle: latestAssessment.flexibility_ankle,
+      flexibility_knee: latestAssessment.flexibility_knee,
+      flexibility_hip: latestAssessment.flexibility_hip,
+      kick_power_kaiser: latestAssessment.kick_power_kaiser,
+    }
     : {};
 
   return (
@@ -344,6 +344,18 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
                             <span>{ASSESSMENT_LABELS_HE.jump_2leg_distance}</span>
                             <span className="font-medium">
                               {formatValue("jump_2leg_distance", a.jump_2leg_distance)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>{ASSESSMENT_LABELS_HE.jump_right_leg}</span>
+                            <span className="font-medium">
+                              {formatValue("jump_right_leg", a.jump_right_leg)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>{ASSESSMENT_LABELS_HE.jump_left_leg}</span>
+                            <span className="font-medium">
+                              {formatValue("jump_left_leg", a.jump_left_leg)}
                             </span>
                           </div>
                           <div className="flex justify-between">
