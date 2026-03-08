@@ -16,6 +16,7 @@ import { UserEditForm } from "@/components/admin/UserEditForm";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
+import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
 import type { Profile, UserRole } from "@/types/database";
 
 interface UserEditPageProps {
@@ -121,6 +122,11 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               <UserEditForm user={userToEdit} currentUserRole={currentProfile?.role as UserRole} />
             </CardContent>
           </Card>
+
+          {/* Trainer Notes (trainees only) */}
+          {userToEdit.role === "trainee" && (
+            <TraineeNotesCard traineeId={userId} />
+          )}
 
           {/* User Actions (admin only) */}
           {isAdmin && (
