@@ -40,7 +40,11 @@ async function fetchArboxUsersPage(page: number): Promise<ArboxUser[]> {
   }
 
   const json: ArboxUsersResponse = await response.json();
-  return json.data ?? [];
+  // Arbox doesn't return full_name — construct it from first_name + last_name
+  return (json.data ?? []).map((u) => ({
+    ...u,
+    full_name: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim(),
+  }));
 }
 
 /**
