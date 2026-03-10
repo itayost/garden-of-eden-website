@@ -62,8 +62,8 @@ export function markMilestoneCelebrated(userId: string, milestone: number): void
     const celebratedMilestones = parseCelebratedMilestones(celebrated);
 
     if (!celebratedMilestones.includes(milestone)) {
-      celebratedMilestones.push(milestone);
-      localStorage.setItem(key, JSON.stringify(celebratedMilestones));
+      const updated = [...celebratedMilestones, milestone];
+      localStorage.setItem(key, JSON.stringify(updated));
     }
   } catch {
     // Silently fail - localStorage might be unavailable

@@ -232,6 +232,7 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
     report.complaints_trainee_ids,
     report.insufficient_attention_trainee_ids,
     report.pro_candidates_trainee_ids,
+    report.social_skills_trainee_ids,
   ];
   for (const ids of traineeFields) {
     if (ids) {
@@ -432,6 +433,14 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
               isYes={report.has_pro_candidates}
               traineeIds={report.pro_candidates_trainee_ids}
               details={report.pro_candidates_details}
+              traineeMap={traineeMap}
+            />
+            <Separator />
+            <ReportSection
+              label="כישורים חברתיים"
+              isYes={report.has_social_skills}
+              traineeIds={report.social_skills_trainee_ids}
+              details={report.social_skills_details}
               traineeMap={traineeMap}
             />
           </CardContent>

@@ -4,4 +4,5 @@ export { DateRangeFilter } from "./DateRangeFilter";
 export { MiniRatingChart } from "./MiniRatingChart";
 export { PercentileCard } from "./PercentileCard";
 export { PhysicalMetricChart } from "./PhysicalMetricChart";
+export { RadarStatsChart } from "./RadarStatsChart";
 export { RatingTrendChart } from "./RatingTrendChart";

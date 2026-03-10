@@ -67,7 +67,7 @@ export function calculateRatingHigherBetter(
  * Filter assessments to only the latest one per user
  * Used for calculating group stats based on current ability, not historical best
  */
-export function getLatestAssessmentsPerUser(assessments: PlayerAssessment[]): PlayerAssessment[] {
+export function getLatestAssessmentsPerUser(assessments: readonly PlayerAssessment[]): PlayerAssessment[] {
   const latestByUser = new Map<string, PlayerAssessment>();
 
   for (const assessment of assessments) {

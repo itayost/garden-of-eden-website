@@ -25,6 +25,9 @@ function makeReport(
     insufficient_attention_details: null,
     pro_candidates_trainee_ids: [],
     pro_candidates_details: null,
+    has_social_skills: false,
+    social_skills_trainee_ids: [],
+    social_skills_details: null,
     ...overrides,
   };
 }
@@ -209,6 +212,24 @@ describe("extractTraineeNotes", () => {
     expect(result).toHaveLength(1);
     expect(result[0].notes[0].type).toBe("new_trainee");
     expect(result[0].notes[0].details).toBe("מתאמן חדש, צריך ליווי");
+  });
+
+  it("extracts social_skills note when trainee is tagged", () => {
+    const reports = [
+      makeReport({
+        id: "r1",
+        report_date: "2026-03-01",
+        trainer_name: "מאמן א",
+        has_social_skills: true,
+        social_skills_trainee_ids: [TRAINEE_A],
+        social_skills_details: "שחקן קבוצתי מעולה",
+      }),
+    ];
+    const result = extractTraineeNotes(reports, TRAINEE_A);
+    expect(result).toHaveLength(1);
+    expect(result[0].notes).toHaveLength(1);
+    expect(result[0].notes[0].type).toBe("social_skills");
+    expect(result[0].notes[0].details).toBe("שחקן קבוצתי מעולה");
   });
 
   it("does not mutate the input reports array", () => {

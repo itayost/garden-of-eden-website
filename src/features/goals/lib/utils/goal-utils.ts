@@ -128,7 +128,7 @@ export function markGoalCelebrated(userId: string, goalId: string): void {
   try {
     const key = `${GOAL_CELEBRATION_STORAGE_KEY}_${userId}`;
     const data = localStorage.getItem(key);
-    let celebrated: string[] = data ? JSON.parse(data) : [];
+    const celebrated: string[] = data ? JSON.parse(data) : [];
 
     if (!Array.isArray(celebrated)) {
       localStorage.setItem(key, JSON.stringify([goalId]));
@@ -136,12 +136,12 @@ export function markGoalCelebrated(userId: string, goalId: string): void {
     }
 
     if (!celebrated.includes(goalId)) {
-      celebrated.push(goalId);
+      const appended = [...celebrated, goalId];
       // Keep only the most recent entries to prevent unbounded growth
-      if (celebrated.length > MAX_CELEBRATED_GOALS) {
-        celebrated = celebrated.slice(-MAX_CELEBRATED_GOALS);
-      }
-      localStorage.setItem(key, JSON.stringify(celebrated));
+      const trimmed = appended.length > MAX_CELEBRATED_GOALS
+        ? appended.slice(-MAX_CELEBRATED_GOALS)
+        : appended;
+      localStorage.setItem(key, JSON.stringify(trimmed));
     }
   } catch {
     // Silently fail

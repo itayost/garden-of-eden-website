@@ -489,6 +489,16 @@ function TraineePositivesStep({ form, trainees }: Omit<StepProps, "trainerName">
           detailsPlaceholder="פרט מדוע המתאמן מתאים לשדרוג"
           trainees={trainees}
         />
+
+        <YesNoWithTrainees
+          form={form}
+          label="האם יש שחקנים שהפגינו כישורים חברתיים בולטים?"
+          boolField="has_social_skills"
+          traineeIdsField="social_skills_trainee_ids"
+          detailsField="social_skills_details"
+          detailsPlaceholder="פרט את הכישורים החברתיים שזיהית"
+          trainees={trainees}
+        />
       </CardContent>
     </Card>
   );

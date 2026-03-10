@@ -28,7 +28,7 @@ import {
  * Transform assessments to chart data for a specific physical metric
  */
 export function transformToPhysicalChartData(
-  assessments: PlayerAssessment[],
+  assessments: readonly PlayerAssessment[],
   metric: PhysicalMetricKey
 ): PhysicalMetricChartData {
   const definition = METRIC_DEFINITIONS[metric];
@@ -60,7 +60,7 @@ export function transformToPhysicalChartData(
  * Transform assessments to chart data for all physical metrics in a category
  */
 export function transformCategoryToChartData(
-  assessments: PlayerAssessment[],
+  assessments: readonly PlayerAssessment[],
   metrics: PhysicalMetricKey[]
 ): PhysicalMetricChartData[] {
   return metrics.map((metric) => transformToPhysicalChartData(assessments, metric));
@@ -74,7 +74,7 @@ export function transformCategoryToChartData(
  * Transform assessments to rating chart data
  */
 export function transformToRatingChartData(
-  assessments: PlayerAssessment[],
+  assessments: readonly PlayerAssessment[],
   groupStats: GroupStats | null
 ): RatingDataPoint[] {
   // Sort by date ascending
@@ -112,7 +112,7 @@ export function transformToRatingChartData(
  */
 export function calculatePercentileRankings(
   latestAssessment: PlayerAssessment,
-  allAgeGroupAssessments: PlayerAssessment[]
+  allAgeGroupAssessments: readonly PlayerAssessment[]
 ): PercentileRanking[] {
   // Key metrics to show percentiles for
   const metricsToShow: PhysicalMetricKey[] = [

@@ -4,6 +4,8 @@ import {
   isValidPhoneIL,
   formatPhoneToInternational,
   formatPhoneToLocal,
+  isValidDateString,
+  isValidDateRange,
 } from "../common";
 
 describe("isValidUUID", () => {
@@ -119,5 +121,61 @@ describe("formatPhoneToLocal", () => {
 
   it("returns empty string for undefined", () => {
     expect(formatPhoneToLocal(undefined)).toBe("");
+  });
+});
+
+describe("isValidDateString", () => {
+  it("returns true for valid YYYY-MM-DD", () => {
+    expect(isValidDateString("2024-01-15")).toBe(true);
+  });
+
+  it("returns true for leap day", () => {
+    expect(isValidDateString("2024-02-29")).toBe(true);
+  });
+
+  it("returns false for empty string", () => {
+    expect(isValidDateString("")).toBe(false);
+  });
+
+  it("returns false for malformed date", () => {
+    expect(isValidDateString("2024-1-5")).toBe(false);
+  });
+
+  it("returns false for string with extra query params", () => {
+    expect(isValidDateString("2024-01-01&extra=bad")).toBe(false);
+  });
+
+  it("returns false for invalid month", () => {
+    expect(isValidDateString("2024-13-01")).toBe(false);
+  });
+
+  it("returns false for invalid day", () => {
+    expect(isValidDateString("2024-01-32")).toBe(false);
+  });
+
+  it("returns false for non-leap-year Feb 29", () => {
+    expect(isValidDateString("2023-02-29")).toBe(false);
+  });
+});
+
+describe("isValidDateRange", () => {
+  it("returns true when from <= to", () => {
+    expect(isValidDateRange("2024-01-01", "2024-06-30")).toBe(true);
+  });
+
+  it("returns true when from equals to", () => {
+    expect(isValidDateRange("2024-01-01", "2024-01-01")).toBe(true);
+  });
+
+  it("returns false when from > to", () => {
+    expect(isValidDateRange("2024-06-30", "2024-01-01")).toBe(false);
+  });
+
+  it("returns false when from is invalid", () => {
+    expect(isValidDateRange("bad-date", "2024-01-01")).toBe(false);
+  });
+
+  it("returns false when to is invalid", () => {
+    expect(isValidDateRange("2024-01-01", "bad-date")).toBe(false);
   });
 });

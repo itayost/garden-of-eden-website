@@ -33,6 +33,8 @@ export const userEditSchema = z.object({
     .or(z.literal(""))
     .optional(),
 
+  club: z.string().max(100).optional().or(z.literal("")),
+
   role: z.enum(["trainee", "trainer", "admin"]),
 
   is_active: z.boolean(),
@@ -46,6 +48,7 @@ export function getUserEditDefaults(profile: Profile): UserEditFormData {
     full_name: profile.full_name || "",
     phone: profile.phone || "",
     birthdate: profile.birthdate || "",
+    club: profile.club || "",
     role: profile.role,
     is_active: profile.is_active, // No fallback - DB enforces NOT NULL DEFAULT TRUE
   };
@@ -85,6 +88,16 @@ export function getFieldChanges(
       field: "birthdate",
       old_value: original.birthdate,
       new_value: updated.birthdate || null,
+    });
+  }
+
+  const originalClub = original.club || null;
+  const updatedClub = updated.club || null;
+  if (originalClub !== updatedClub) {
+    changes.push({
+      field: "club",
+      old_value: original.club,
+      new_value: updated.club || null,
     });
   }
 

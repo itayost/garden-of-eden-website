@@ -65,10 +65,7 @@ export function UserEditForm({ user, currentUserRole }: UserEditFormProps) {
       }
       router.refresh();
     } catch (error) {
-      console.error("Update error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "שגיאה בעדכון המשתמש";
-      toast.error(errorMessage);
+      toast.error("שגיאה בעדכון המשתמש");
     } finally {
       setLoading(false);
     }
@@ -128,6 +125,26 @@ export function UserEditForm({ user, currentUserRole }: UserEditFormProps) {
                 <Input
                   type="date"
                   max={new Date().toISOString().split("T")[0]}
+                  {...field}
+                  value={field.value || ""}
+                  disabled={loading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Club */}
+        <FormField
+          control={form.control}
+          name="club"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>מועדון / קבוצה</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="לדוגמה: מכבי חיפה"
                   {...field}
                   value={field.value || ""}
                   disabled={loading}

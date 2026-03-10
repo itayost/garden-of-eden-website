@@ -50,6 +50,8 @@ export function ShiftReportExportButton({
       "פרטי תשומת לב": s.insufficient_attention_details ?? "",
       "מועמד PRO": yesNo(s.has_pro_candidates),
       "פרטי PRO": s.pro_candidates_details ?? "",
+      "כישורים חברתיים": yesNo(s.has_social_skills),
+      "פרטי כישורים חברתיים": s.social_skills_details ?? "",
       "הורה חיפש צוות": yesNo(s.has_parent_seeking_staff),
       "פרטי הורה": s.parent_seeking_details ?? "",
       "מבקרים חיצוניים": yesNo(s.has_external_visitors),

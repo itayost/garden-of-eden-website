@@ -11,12 +11,13 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badges";
-import { ArrowRight, User, History } from "lucide-react";
+import { ArrowRight, User, History, FileText } from "lucide-react";
 import { UserEditForm } from "@/components/admin/UserEditForm";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
+import { RadarStatsChartWrapper } from "./RadarStatsChartWrapper";
 import type { Profile, UserRole } from "@/types/database";
 
 interface UserEditPageProps {
@@ -70,6 +71,15 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     redirect("/admin/users");
   }
 
+  // Fetch player stats for radar chart (trainees only)
+  const { data: stats } = userToEdit.role === "trainee"
+    ? await supabase
+        .from("player_stats")
+        .select("pace, shooting, passing, dribbling, defending, physical")
+        .eq("user_id", userToEdit.id)
+        .single()
+    : { data: null };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("he-IL", {
       day: "numeric",
@@ -97,12 +107,22 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
             {userToEdit.full_name || "משתמש ללא שם"}
           </h1>
         </div>
-        <Button variant="outline" asChild className="self-start sm:self-auto">
-          <Link href="/admin/users">
-            <ArrowRight className="ml-2 h-4 w-4" />
-            חזרה לרשימה
-          </Link>
-        </Button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          {userToEdit.role === "trainee" && (
+            <Button variant="outline" asChild data-testid="generate-report-link">
+              <Link href={`/admin/reports/generate/${userToEdit.id}`}>
+                <FileText className="h-4 w-4 ml-2" />
+                הפקת סיכום שחקן
+              </Link>
+            </Button>
+          )}
+          <Button variant="outline" asChild>
+            <Link href="/admin/users">
+              <ArrowRight className="ml-2 h-4 w-4" />
+              חזרה לרשימה
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -174,6 +194,18 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Player Radar Chart (trainees only) */}
+          {userToEdit.role === "trainee" && stats && (
+            <Card>
+              <CardHeader>
+                <CardTitle>דירוג שחקן</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadarStatsChartWrapper stats={stats} />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Activity Log */}
           <Card>

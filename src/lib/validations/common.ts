@@ -53,6 +53,29 @@ export function formatPhoneToInternational(phone: string): string {
 }
 
 /**
+ * ISO date string regex (YYYY-MM-DD)
+ */
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Validate ISO date string format and actual date validity
+ */
+export function isValidDateString(date: string): boolean {
+  if (!DATE_REGEX.test(date)) return false;
+  const parsed = new Date(date + "T00:00:00Z");
+  if (isNaN(parsed.getTime())) return false;
+  return parsed.toISOString().startsWith(date);
+}
+
+/**
+ * Validate a date range (both dates valid and from <= to)
+ */
+export function isValidDateRange(from: string, to: string): boolean {
+  if (!isValidDateString(from) || !isValidDateString(to)) return false;
+  return from <= to;
+}
+
+/**
  * Format phone to local display format (0XX)
  * @param phone - Phone number in any format
  * @returns Phone in 0XX format for display

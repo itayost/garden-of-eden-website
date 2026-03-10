@@ -25,6 +25,9 @@ export type ShiftReportForNotes = Pick<
   | "insufficient_attention_details"
   | "pro_candidates_trainee_ids"
   | "pro_candidates_details"
+  | "has_social_skills"
+  | "social_skills_trainee_ids"
+  | "social_skills_details"
 >;
 
 /** Note category types that link trainees via UUID arrays */
@@ -37,7 +40,8 @@ export type NoteCategoryType =
   | "mental_state"
   | "complaints"
   | "insufficient_attention"
-  | "pro_candidates";
+  | "pro_candidates"
+  | "social_skills";
 
 /** Hebrew labels for each category */
 export const NOTE_CATEGORY_LABELS: Record<NoteCategoryType, string> = {
@@ -50,6 +54,7 @@ export const NOTE_CATEGORY_LABELS: Record<NoteCategoryType, string> = {
   complaints: "תלונות",
   insufficient_attention: "חוסר תשומת לב",
   pro_candidates: "מועמד למקצוענות",
+  social_skills: "כישורים חברתיים",
 };
 
 /** Visual variant for each category */
@@ -63,6 +68,7 @@ export const NOTE_CATEGORY_VARIANT: Record<NoteCategoryType, "destructive" | "wa
   complaints: "warning",
   insufficient_attention: "warning",
   pro_candidates: "success",
+  social_skills: "info",
 };
 
 /** A single note extracted for a trainee from a shift report */
@@ -97,6 +103,7 @@ const CATEGORY_COLUMNS: ReadonlyArray<{
   { type: "complaints", traineeIdsKey: "complaints_trainee_ids", detailsKey: "complaints_details" },
   { type: "insufficient_attention", traineeIdsKey: "insufficient_attention_trainee_ids", detailsKey: "insufficient_attention_details" },
   { type: "pro_candidates", traineeIdsKey: "pro_candidates_trainee_ids", detailsKey: "pro_candidates_details" },
+  { type: "social_skills", traineeIdsKey: "social_skills_trainee_ids", detailsKey: "social_skills_details" },
 ];
 
 /**

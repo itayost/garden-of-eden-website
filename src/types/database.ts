@@ -34,6 +34,7 @@ export interface Database {
           updated_at: string;
           deleted_at: string | null;
           arbox_user_id: number | null;
+          club: string | null;
         };
         Insert: {
           id: string;
@@ -52,6 +53,7 @@ export interface Database {
           updated_at?: string;
           deleted_at?: string | null;
           arbox_user_id?: number | null;
+          club?: string | null;
         };
         Update: {
           id?: string;
@@ -70,6 +72,7 @@ export interface Database {
           updated_at?: string;
           deleted_at?: string | null;
           arbox_user_id?: number | null;
+          club?: string | null;
         };
         Relationships: [];
       };
@@ -927,6 +930,9 @@ export interface Database {
           facility_not_clean_reason: string | null;
           facility_cleaned_scheduled: boolean;
           facility_not_cleaned_reason: string | null;
+          has_social_skills: boolean;
+          social_skills_trainee_ids: string[];
+          social_skills_details: string | null;
           submitted_at: string;
           updated_at: string;
         };
@@ -963,6 +969,9 @@ export interface Database {
           has_pro_candidates?: boolean;
           pro_candidates_trainee_ids?: string[];
           pro_candidates_details?: string | null;
+          has_social_skills?: boolean;
+          social_skills_trainee_ids?: string[];
+          social_skills_details?: string | null;
           has_parent_seeking_staff?: boolean;
           parent_seeking_details?: string | null;
           has_external_visitors?: boolean;
@@ -1009,6 +1018,9 @@ export interface Database {
           has_pro_candidates?: boolean;
           pro_candidates_trainee_ids?: string[];
           pro_candidates_details?: string | null;
+          has_social_skills?: boolean;
+          social_skills_trainee_ids?: string[];
+          social_skills_details?: string | null;
           has_parent_seeking_staff?: boolean;
           parent_seeking_details?: string | null;
           has_external_visitors?: boolean;
@@ -1055,6 +1067,33 @@ export interface Database {
           end_time?: string | null;
           auto_ended?: boolean;
           flagged_for_review?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      trainee_summaries: {
+        Row: {
+          id: string;
+          user_id: string;
+          author_id: string;
+          summary: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          author_id: string;
+          summary: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          author_id?: string;
+          summary?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -1131,6 +1170,7 @@ export type PaymentInsert = Database["public"]["Tables"]["payments"]["Insert"];
 export type PaymentUpdate = Database["public"]["Tables"]["payments"]["Update"];
 export type TrainerShiftReport = Database["public"]["Tables"]["trainer_shift_reports"]["Row"];
 export type TrainerShift = Database["public"]["Tables"]["trainer_shifts"]["Row"];
+export type TraineeSummary = Database["public"]["Tables"]["trainee_summaries"]["Row"];
 
 /** Achievement badge types */
 export type AchievementBadgeType =

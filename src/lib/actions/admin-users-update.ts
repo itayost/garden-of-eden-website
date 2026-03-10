@@ -40,7 +40,7 @@ export async function updateUserAction(
     };
   }
 
-  const { full_name, phone, birthdate, role, is_active } = validated.data;
+  const { full_name, phone, birthdate, club, role, is_active } = validated.data;
   const adminClient = createAdminClient();
 
   try {
@@ -94,7 +94,7 @@ export async function updateUserAction(
           return { error: "מספר הטלפון כבר רשום במערכת" };
         }
         console.error("Auth update error:", authUpdateError);
-        return { error: authUpdateError.message || "שגיאה בעדכון פרטי ההזדהות" };
+        return { error: "שגיאה בעדכון פרטי ההזדהות" };
       }
     }
 
@@ -105,6 +105,7 @@ export async function updateUserAction(
         full_name,
         phone: formattedPhone,
         birthdate: birthdate || null,
+        club: club || null,
         role,
         is_active,
         updated_at: new Date().toISOString(),
@@ -113,7 +114,7 @@ export async function updateUserAction(
 
     if (profileError) {
       console.error("Profile update error:", profileError);
-      return { error: profileError.message || "שגיאה בעדכון הפרופיל" };
+      return { error: "שגיאה בעדכון הפרופיל" };
     }
 
     // 10. Log activity
@@ -134,7 +135,7 @@ export async function updateUserAction(
   } catch (error) {
     console.error("Update user error:", error);
     return {
-      error: error instanceof Error ? error.message : "שגיאה בעדכון המשתמש",
+      error: "שגיאה בעדכון המשתמש",
     };
   }
 }

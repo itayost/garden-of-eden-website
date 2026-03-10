@@ -72,6 +72,10 @@ export const shiftReportSchema = z.object({
   pro_candidates_trainee_ids: z.array(z.string()),
   pro_candidates_details: optionalText,
 
+  has_social_skills: z.boolean(),
+  social_skills_trainee_ids: z.array(z.string()),
+  social_skills_details: optionalText,
+
   // Step 4: Parents & Visitors
   has_parent_seeking_staff: z.boolean(),
   parent_seeking_details: optionalText,
@@ -122,6 +126,9 @@ export const DEFAULT_SHIFT_REPORT: ShiftReportFormData = {
   has_pro_candidates: false,
   pro_candidates_trainee_ids: [],
   pro_candidates_details: "",
+  has_social_skills: false,
+  social_skills_trainee_ids: [],
+  social_skills_details: "",
   has_parent_seeking_staff: false,
   parent_seeking_details: "",
   has_external_visitors: false,

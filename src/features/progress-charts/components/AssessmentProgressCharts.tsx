@@ -47,8 +47,8 @@ import { METRIC_CATEGORIES } from "../lib/config/metric-definitions";
 import type { MetricCategory } from "../types";
 
 interface AssessmentProgressChartsProps {
-  assessments: PlayerAssessment[];
-  allAssessmentsInGroup?: PlayerAssessment[]; // For percentile calculations
+  assessments: readonly PlayerAssessment[];
+  allAssessmentsInGroup?: readonly PlayerAssessment[]; // For percentile calculations
 }
 
 export function AssessmentProgressCharts({
