@@ -1,0 +1,26 @@
+Documentation Update Report
+===========================
+Date: 2026-03-10
+
+Created:
+  docs/CONTRIBUTING.md    - Dev setup, commands, code style, PR checklist
+  docs/ENV.md             - All env vars (4 required + 16 optional) with descriptions
+  docs/RUNBOOK.md         - Deploy, crons, health check, common issues, rollback
+
+Updated:
+  .env.local.example      - Added 6 missing vars (WhatsApp + Leads) found in src/lib/env.ts
+
+Skipped:
+  docs/CODEMAPS/*         - Already generated this session
+  docs/arbox-api/*        - Manual API documentation, no auto-generation source
+  docs/plans/*            - Design documents, not auto-generated
+
+Staleness warnings:
+  docs/implementation-guide.md  - Last modified 2025-12-22 (79 days ago, approaching 90-day threshold)
+  docs/PLATFORM_DESIGN.md       - Last modified 2026-01-19 (50 days ago)
+
+Finding:
+  .env.local.example was missing 6 variables that src/lib/env.ts validates:
+    WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_FLOW_ID,
+    WHATSAPP_FLOW_PRIVATE_KEY, WHATSAPP_WEBHOOK_VERIFY_TOKEN, LEADS_WEBHOOK_API_KEY
+  These have been added to .env.local.example.

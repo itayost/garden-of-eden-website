@@ -1,0 +1,30 @@
+Codemap Generation Report
+=========================
+Date: 2026-03-10
+Status: INITIAL GENERATION (no previous codemaps existed)
+
+Files scanned: 404 (.ts/.tsx)
+Project type: Single Next.js 16 app (App Router)
+
+Generated codemaps:
+  docs/CODEMAPS/architecture.md   (~700 tokens) - System overview, auth flow, role access
+  docs/CODEMAPS/backend.md        (~900 tokens) - API routes, server actions, integrations
+  docs/CODEMAPS/frontend.md       (~850 tokens) - Page tree, component hierarchy, features
+  docs/CODEMAPS/data.md           (~750 tokens) - DB tables, migrations, validation schemas
+  docs/CODEMAPS/dependencies.md   (~600 tokens) - External services, runtime/dev deps
+
+Key findings:
+  - 47 pages/routes (32 pages + 15 API routes)
+  - 9 feature modules (achievements, assessment-comparison, form-drafts, goals, nutrition, onboarding-tour, progress-charts, rankings, streak-tracking)
+  - 24 server action files in src/lib/actions/
+  - 28 UI primitives in src/components/ui/
+  - 20 database migrations (legacy 001-013 + timestamp format)
+  - 13 Zod validation schemas
+  - 7 shared hooks
+  - 6 external service integrations (Supabase, Vercel, Upstash, Meshulam, Arbox, WhatsApp)
+
+Architecture notes:
+  - No global state library; relies on Server Components + server actions + URL state (nuqs)
+  - Feature modules are self-contained with own components, hooks, lib, types
+  - Admin actions split into focused files with barrel re-exports
+  - Three Supabase client variants (browser, server, admin/service-role)
