@@ -8,7 +8,7 @@ export function normalizePhone(raw: string | null | undefined): string | null {
   // Strip all non-digit chars except a leading +
   const cleaned = raw.replace(/(?!^\+)\D/g, "");
 
-  if (cleaned.startsWith("+972")) {
+  if (cleaned.startsWith("+972") && cleaned.length === 13) {
     return cleaned; // Already E.164
   }
   if (cleaned.startsWith("972") && cleaned.length === 12) {

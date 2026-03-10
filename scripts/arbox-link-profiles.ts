@@ -1,4 +1,9 @@
-import "dotenv/config";
+/**
+ * One-time script to link existing profiles to Arbox users by name match.
+ *
+ * Run:   npx tsx --env-file=.env.local scripts/arbox-link-profiles.ts
+ * Apply: npx tsx --env-file=.env.local scripts/arbox-link-profiles.ts --apply
+ */
 import { createClient } from "@supabase/supabase-js";
 import { fetchAllArboxUsers } from "../src/lib/arbox/client";
 

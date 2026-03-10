@@ -31,8 +31,8 @@ async function callWhatsAppAPI(
   body: Record<string, unknown>
 ): Promise<WhatsAppResult> {
   const url = `${GRAPH_API_URL}/${phoneNumberId}/messages`;
-  console.log("[WhatsApp] Sending to:", url);
-  console.log("[WhatsApp] Request body:", JSON.stringify(body, null, 2));
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
   const response = await fetch(url, {
     method: "POST",
@@ -41,11 +41,11 @@ async function callWhatsAppAPI(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    signal: controller.signal,
   });
 
   const responseText = await response.text();
-  console.log("[WhatsApp] Response status:", response.status);
-  console.log("[WhatsApp] Response body:", responseText);
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     let errorMessage = `WhatsApp API error (${response.status})`;
@@ -66,7 +66,6 @@ async function callWhatsAppAPI(
 
   const data = JSON.parse(responseText);
   const messageId = data.messages?.[0]?.id;
-  console.log("[WhatsApp] Success! Message ID:", messageId);
   return { success: true, messageId };
 }
 

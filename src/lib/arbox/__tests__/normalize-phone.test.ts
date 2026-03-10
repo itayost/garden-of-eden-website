@@ -33,4 +33,12 @@ describe("normalizePhone", () => {
   it("returns null for non-Israeli number", () => {
     expect(normalizePhone("12025551234")).toBeNull();
   });
+
+  it("returns null for truncated +972 number", () => {
+    expect(normalizePhone("+972123")).toBeNull();
+  });
+
+  it("returns null for over-length +972 number", () => {
+    expect(normalizePhone("+9725212345678")).toBeNull();
+  });
 });
