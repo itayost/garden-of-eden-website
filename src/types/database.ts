@@ -33,6 +33,7 @@ export interface Database {
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
+          arbox_user_id: number | null;
         };
         Insert: {
           id: string;
@@ -50,6 +51,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
+          arbox_user_id?: number | null;
         };
         Update: {
           id?: string;
@@ -67,6 +69,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
+          arbox_user_id?: number | null;
         };
         Relationships: [];
       };

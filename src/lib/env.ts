@@ -28,6 +28,7 @@ const optionalServerVars = [
   "WHATSAPP_FLOW_PRIVATE_KEY",
   "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
   "LEADS_WEBHOOK_API_KEY",
+  "ARBOX_API_KEY",
 ] as const;
 
 /**

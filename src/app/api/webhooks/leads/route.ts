@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { leadWebhookSchema } from "@/lib/validations/leads";
+import { sendFlowTemplate } from "@/lib/whatsapp/client";
 
 /**
  * Leads Webhook Handler
@@ -71,6 +72,26 @@ export async function POST(request: NextRequest) {
         { error: "Failed to create lead" },
         { status: 500 }
       );
+    }
+
+    // Send WhatsApp Flow and log the result
+    try {
+      const flowResult = await sendFlowTemplate(phone, name);
+      if (flowResult.success) {
+        const { error: logError } = await typedFrom(supabase, "lead_sent_messages").insert({
+          lead_id: newLead.id,
+          message_id: flowResult.messageId ?? null,
+          message_type: "flow",
+          campaign: "webhook_creation",
+        });
+        if (logError) {
+          console.error("[Leads Webhook] Failed to log sent message:", logError);
+        }
+      } else {
+        console.error("[Leads Webhook] Flow send failed:", flowResult.error);
+      }
+    } catch (flowErr) {
+      console.error("[Leads Webhook] Flow send error:", flowErr);
     }
 
     return NextResponse.json(
