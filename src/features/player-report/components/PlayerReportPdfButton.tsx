@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileDown, Loader2 } from "lucide-react";
-import { pdf } from "@react-pdf/renderer";
 import { toast } from "sonner";
-import { PlayerReportPdfDocument } from "@/lib/exports/pdf-player-report-template";
-import { captureChartAsImage } from "../lib/utils/chart-snapshot";
 import type { ReportData } from "../types";
 import type { BulletItem } from "./ReportBulletList";
 
@@ -35,6 +32,14 @@ export function PlayerReportPdfButton({
     setGenerating(true);
 
     try {
+      // Dynamic imports to avoid SSR issues with @react-pdf/renderer
+      const [{ pdf }, { PlayerReportPdfDocument }, { captureChartAsImage }] =
+        await Promise.all([
+          import("@react-pdf/renderer"),
+          import("@/lib/exports/pdf-player-report-template"),
+          import("../lib/utils/chart-snapshot"),
+        ]);
+
       const radarImage = await captureChartAsImage(radarRef.current);
       const trendsImage = await captureChartAsImage(trendsRef.current);
 
@@ -72,7 +77,8 @@ export function PlayerReportPdfButton({
       link.click();
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 200);
-    } catch {
+    } catch (err) {
+      console.error("[PlayerReportPdfButton] PDF generation failed:", err);
       toast.error("שגיאה ביצירת ה-PDF, נסה שוב");
     } finally {
       setGenerating(false);

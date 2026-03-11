@@ -22,7 +22,7 @@ async function processArboxUser(
 
   const { data: existing, error: lookupError } = await supabase
     .from("profiles")
-    .select("id, full_name, birthdate, arbox_user_id")
+    .select("id, full_name, arbox_user_id")
     .or(orClause)
     .maybeSingle();
 
@@ -38,8 +38,7 @@ async function processArboxUser(
     // Fill null fields only — our DB wins on populated data
     const updates: Record<string, unknown> = {};
     if (!existing.arbox_user_id) updates.arbox_user_id = arboxUser.user_id;
-    if (!existing.full_name && arboxUser.full_name) updates.full_name = arboxUser.full_name;
-    if (!existing.birthdate && arboxUser.birthday) updates.birthdate = arboxUser.birthday;
+    if (!existing.full_name && arboxUser.name) updates.full_name = arboxUser.name;
 
     if (Object.keys(updates).length === 0) return "skipped";
 
@@ -58,7 +57,7 @@ async function processArboxUser(
   // No match found — need a phone to create a phone-auth account
   if (!phone) {
     console.warn(
-      `[Arbox Sync] Skipping arbox user ${arboxUser.user_id} (${arboxUser.full_name}) — no phone`
+      `[Arbox Sync] Skipping arbox user ${arboxUser.user_id} (${arboxUser.name}) — no phone`
     );
     return "skipped";
   }
@@ -67,12 +66,12 @@ async function processArboxUser(
   const { data: authData, error: createError } = await supabase.auth.admin.createUser({
     phone,
     phone_confirm: true,
-    user_metadata: { full_name: arboxUser.full_name },
+    user_metadata: { full_name: arboxUser.name },
   });
 
   if (createError || !authData.user) {
     console.error(
-      `[Arbox Sync] Failed to create auth user for phone ${phone} (arbox_id=${arboxUser.user_id}):`,
+      `[Arbox Sync] Failed to create auth user for arbox_id=${arboxUser.user_id}:`,
       createError
     );
     return "error";
@@ -83,8 +82,7 @@ async function processArboxUser(
     .from("profiles")
     .update({
       arbox_user_id: arboxUser.user_id,
-      full_name: arboxUser.full_name ?? null,
-      birthdate: arboxUser.birthday ?? null,
+      full_name: arboxUser.name ?? null,
     })
     .eq("id", authData.user.id);
 
