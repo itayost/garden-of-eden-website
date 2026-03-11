@@ -47,12 +47,7 @@ const defaultValues: NutritionFormInput = {
 };
 
 // Numeric fields that need conversion from string to number
-const NUMERIC_FIELDS = [
-  "weight", "height", "bloating_frequency", "stomach_pain",
-  "bowel_frequency", "illness_interruptions", "max_days_missed",
-  "fatigue_level", "concentration", "energy_level",
-  "muscle_soreness", "physical_exhaustion", "preparedness", "overall_energy"
-];
+const NUMERIC_FIELDS = ["weight", "height"];
 
 export default function NutritionFormPage() {
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);

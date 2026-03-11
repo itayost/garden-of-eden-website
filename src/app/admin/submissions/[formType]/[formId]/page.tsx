@@ -251,8 +251,22 @@ function PostWorkoutFields({ form }: { form: PostWorkoutWithTrainer }) {
   );
 }
 
+type NutritionFormWithProfile = NutritionForm & {
+  profile: { full_name: string; birthdate: string | null } | null;
+};
+
+function calcAge(birthdate: string | null): string | null {
+  if (!birthdate) return null;
+  const today = new Date();
+  const birth = new Date(birthdate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return `${age} שנים`;
+}
+
 // Nutrition form fields renderer
-function NutritionFields({ form }: { form: NutritionForm }) {
+function NutritionFields({ form }: { form: NutritionFormWithProfile }) {
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {/* מידע אישי */}
@@ -261,9 +275,9 @@ function NutritionFields({ form }: { form: NutritionForm }) {
           <CardTitle className="text-base">מידע אישי</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
-          <FieldRow label="שם מלא" value={form.full_name} />
+          <FieldRow label="שם מלא" value={form.profile?.full_name} />
           <Separator />
-          <FieldRow label="גיל" value={form.age != null ? `${form.age} שנים` : null} />
+          <FieldRow label="גיל" value={calcAge(form.profile?.birthdate ?? null)} />
           <Separator />
           <FieldRow label="שנים בספורט תחרותי" value={translateValue(form.years_competitive, translations.yearsCompetitive)} />
         </CardContent>
@@ -322,66 +336,6 @@ function NutritionFields({ form }: { form: NutritionForm }) {
               <FieldRow label="רשימת תרופות" value={form.medications_list} />
             </>
           )}
-        </CardContent>
-      </Card>
-
-      {/* בריאות עיכול */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">בריאות עיכול</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <FieldRow label="תדירות נפיחות" value={form.bloating_frequency !== null ? `${form.bloating_frequency}/10` : null} />
-          <Separator />
-          <FieldRow label="כאבי בטן" value={form.stomach_pain !== null ? `${form.stomach_pain}/10` : null} />
-          <Separator />
-          <FieldRow label="תדירות יציאות" value={form.bowel_frequency} />
-          <Separator />
-          <FieldRow label="עקביות צואה" value={form.stool_consistency} />
-        </CardContent>
-      </Card>
-
-      {/* פציעות ומחלות */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">פציעות ומחלות</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <FieldRow label="פציעות שימוש יתר" value={form.overuse_injuries} />
-          <Separator />
-          <FieldRow label="הפרעות מחלה" value={form.illness_interruptions} />
-          <Separator />
-          <FieldRow label="מקסימום ימי היעדרות" value={form.max_days_missed !== null ? `${form.max_days_missed} ימים` : null} />
-        </CardContent>
-      </Card>
-
-      {/* מצב נפשי */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">מצב נפשי</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <FieldRow label="רמת עייפות" value={form.fatigue_level !== null ? `${form.fatigue_level}/10` : null} />
-          <Separator />
-          <FieldRow label="ריכוז" value={form.concentration !== null ? `${form.concentration}/10` : null} />
-          <Separator />
-          <FieldRow label="רמת אנרגיה" value={form.energy_level !== null ? `${form.energy_level}/10` : null} />
-        </CardContent>
-      </Card>
-
-      {/* מצב פיזי */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">מצב פיזי</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <FieldRow label="כאבי שרירים" value={form.muscle_soreness !== null ? `${form.muscle_soreness}/10` : null} />
-          <Separator />
-          <FieldRow label="תשישות פיזית" value={form.physical_exhaustion !== null ? `${form.physical_exhaustion}/10` : null} />
-          <Separator />
-          <FieldRow label="מוכנות" value={form.preparedness !== null ? `${form.preparedness}/10` : null} />
-          <Separator />
-          <FieldRow label="אנרגיה כללית" value={form.overall_energy !== null ? `${form.overall_energy}/10` : null} />
         </CardContent>
       </Card>
 
@@ -460,7 +414,7 @@ export default async function FormDetailPage({ params }: FormDetailPageProps) {
   }
 
   // Fetch form data based on type
-  let formData: PreWorkoutForm | PostWorkoutWithTrainer | NutritionForm | null = null;
+  let formData: PreWorkoutForm | PostWorkoutWithTrainer | NutritionFormWithProfile | null = null;
 
   if (validFormType === "post-workout") {
     const { data } = await supabase
@@ -469,13 +423,20 @@ export default async function FormDetailPage({ params }: FormDetailPageProps) {
       .eq("id", formId)
       .single();
     formData = data as PostWorkoutWithTrainer | null;
+  } else if (validFormType === "nutrition") {
+    const { data } = await supabase
+      .from(config.table)
+      .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate)")
+      .eq("id", formId)
+      .single();
+    formData = data as NutritionFormWithProfile | null;
   } else {
     const { data } = await supabase
       .from(config.table)
       .select("*")
       .eq("id", formId)
       .single();
-    formData = data as PreWorkoutForm | NutritionForm | null;
+    formData = data as PreWorkoutForm | null;
   }
 
   if (!formData) {
@@ -539,7 +500,7 @@ export default async function FormDetailPage({ params }: FormDetailPageProps) {
         <PostWorkoutFields form={formData as PostWorkoutWithTrainer} />
       )}
       {validFormType === "nutrition" && (
-        <NutritionFields form={formData as NutritionForm} />
+        <NutritionFields form={formData as NutritionFormWithProfile} />
       )}
     </div>
   );

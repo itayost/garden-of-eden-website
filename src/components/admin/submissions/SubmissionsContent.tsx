@@ -17,12 +17,13 @@ import { TableToolbar, ToolbarDateRange } from "@/components/admin/TableToolbar"
 import { HasBadge, DifficultyBadge, SatisfactionBadge } from "@/components/ui/badges";
 import { Activity, FileText, Salad, RefreshCw, type LucideIcon } from "lucide-react";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
-import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
+import type { PreWorkoutForm, PostWorkoutForm } from "@/types/database";
 import { formatDateTime } from "@/lib/utils/date";
 import {
   getPreWorkoutPaginated,
   getPostWorkoutPaginated,
   getNutritionPaginated,
+  type NutritionFormWithProfile,
 } from "@/lib/actions/admin-submissions-list";
 import type { SubmissionQueryParams } from "@/lib/actions/admin-submissions-list";
 
@@ -395,12 +396,11 @@ export function NutritionContent({
   initialItems,
   initialTotal,
 }: {
-  initialItems: NutritionForm[];
+  initialItems: NutritionFormWithProfile[];
   initialTotal: number;
 }) {
   const [items, setItems] = useState(initialItems);
   const [total, setTotal] = useState(initialTotal);
-  const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(0);
@@ -408,13 +408,12 @@ export function NutritionContent({
   const requestIdRef = useRef(0);
 
   const fetchData = useCallback(
-    (newPage: number, newSearch: string, newStartDate: string, newEndDate: string) => {
+    (newPage: number, newStartDate: string, newEndDate: string) => {
       const currentRequestId = ++requestIdRef.current;
       startTransition(async () => {
         const params: SubmissionQueryParams = {
           page: newPage,
           pageSize: PAGE_SIZE,
-          search: newSearch || undefined,
           startDate: newStartDate || undefined,
           endDate: newEndDate || undefined,
         };
@@ -428,27 +427,22 @@ export function NutritionContent({
     []
   );
 
-  const handleSearchChange = (v: string) => {
-    setSearch(v);
-    setPage(0);
-    fetchData(0, v, startDate, endDate);
-  };
   const handleStartDateChange = (v: string) => {
     setStartDate(v);
     setPage(0);
-    fetchData(0, search, v, endDate);
+    fetchData(0, v, endDate);
   };
   const handleEndDateChange = (v: string) => {
     setEndDate(v);
     setPage(0);
-    fetchData(0, search, startDate, v);
+    fetchData(0, startDate, v);
   };
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    fetchData(newPage, search, startDate, endDate);
+    fetchData(newPage, startDate, endDate);
   };
 
-  const hasFilters = !!(search || startDate || endDate);
+  const hasFilters = !!(startDate || endDate);
 
   return (
     <Card>
@@ -472,9 +466,9 @@ export function NutritionContent({
             />
           </div>
           <TableToolbar
-            searchValue={search}
-            onSearchChange={handleSearchChange}
-            searchPlaceholder="חיפוש לפי שם..."
+            searchValue=""
+            onSearchChange={() => {}}
+            searchPlaceholder=""
             filters={
               <ToolbarDateRange
                 startDate={startDate}
@@ -498,11 +492,10 @@ export function NutritionContent({
                   className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{form.full_name}</span>
+                    <span className="font-medium text-sm">{form.profile?.full_name}</span>
                     <span className="text-xs text-muted-foreground">{formatDateTime(form.submitted_at)}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    {form.age && <span>גיל: {form.age}</span>}
                     {form.weight && <span>{form.weight} ק&quot;ג</span>}
                     {form.height && <span>{form.height} מ&apos;</span>}
                     <HasBadge value={form.allergies} />
@@ -517,7 +510,6 @@ export function NutritionContent({
                 <TableHeader>
                   <TableRow>
                     <TableHead>שם</TableHead>
-                    <TableHead>גיל</TableHead>
                     <TableHead>משקל</TableHead>
                     <TableHead>גובה</TableHead>
                     <TableHead>אלרגיות</TableHead>
@@ -527,8 +519,7 @@ export function NutritionContent({
                 <TableBody>
                   {items.map((form) => (
                     <ClickableTableRow key={form.id} href={`/admin/submissions/nutrition/${form.id}`}>
-                      <TableCell className="font-medium">{form.full_name}</TableCell>
-                      <TableCell>{form.age}</TableCell>
+                      <TableCell className="font-medium">{form.profile?.full_name}</TableCell>
                       <TableCell>{form.weight ? `${form.weight} ק"ג` : "-"}</TableCell>
                       <TableCell>{form.height ? `${form.height} מ'` : "-"}</TableCell>
                       <TableCell><HasBadge value={form.allergies} /></TableCell>

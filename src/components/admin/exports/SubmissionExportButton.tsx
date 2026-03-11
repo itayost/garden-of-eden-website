@@ -4,7 +4,8 @@ import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
-import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
+import type { PreWorkoutForm, PostWorkoutForm } from "@/types/database";
+import type { NutritionFormWithProfile } from "@/lib/actions/admin-submissions-list";
 
 /** Post workout form with trainer relation included */
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
@@ -96,9 +97,8 @@ function transformToCSV(
       }));
 
     case "nutrition":
-      return (submissions as NutritionForm[]).map((s) => ({
-        "שם מלא": s.full_name,
-        "גיל": s.age,
+      return (submissions as NutritionFormWithProfile[]).map((s) => ({
+        "שם מלא": s.profile?.full_name ?? "",
         "משקל": s.weight ?? "",
         "גובה": s.height ?? "",
         "אלרגיות": s.allergies ? "יש" : "אין",

@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, FileText, Salad, ClipboardCheck } from "lucide-react";
-import type { PreWorkoutForm, PostWorkoutForm, NutritionForm, TrainerShiftReport } from "@/types/database";
+import type { PreWorkoutForm, PostWorkoutForm, TrainerShiftReport } from "@/types/database";
+import type { NutritionFormWithProfile } from "@/lib/actions/admin-submissions-list";
 import {
   PreWorkoutContent,
   PostWorkoutContent,
@@ -41,9 +42,9 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
       .range(0, PAGE_SIZE - 1) as unknown as { data: PostWorkoutWithTrainer[] | null; count: number | null },
     supabase
       .from("nutrition_forms")
-      .select("*", { count: "exact" })
+      .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate)", { count: "exact" })
       .order("submitted_at", { ascending: false })
-      .range(0, PAGE_SIZE - 1) as unknown as { data: NutritionForm[] | null; count: number | null },
+      .range(0, PAGE_SIZE - 1) as unknown as { data: NutritionFormWithProfile[] | null; count: number | null },
     typedFrom(supabase, "trainer_shift_reports")
       .select("*", { count: "exact" })
       .order("report_date", { ascending: false })

@@ -14,6 +14,10 @@ type PostWorkoutWithTrainer = PostWorkoutForm & {
   trainer: { full_name: string } | null;
 };
 
+export type NutritionFormWithProfile = NutritionForm & {
+  profile: { full_name: string; birthdate: string | null } | null;
+};
+
 export interface PaginatedResult<T> {
   items: T[];
   total: number;
@@ -99,7 +103,7 @@ export async function getPostWorkoutPaginated(
 
 export async function getNutritionPaginated(
   params: SubmissionQueryParams
-): Promise<PaginatedResult<NutritionForm>> {
+): Promise<PaginatedResult<NutritionFormWithProfile>> {
   const { error } = await verifyAdminOrTrainer();
   if (error) return { items: [], total: 0 };
 
@@ -108,12 +112,9 @@ export async function getNutritionPaginated(
 
   let query = supabase
     .from("nutrition_forms")
-    .select("*", { count: "exact" })
+    .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate)", { count: "exact" })
     .order("submitted_at", { ascending: false });
 
-  if (params.search) {
-    query = query.ilike("full_name", `%${params.search}%`);
-  }
   if (params.startDate) {
     query = query.gte("submitted_at", params.startDate);
   }
@@ -125,7 +126,7 @@ export async function getNutritionPaginated(
     from,
     from + params.pageSize - 1
   )) as unknown as {
-    data: NutritionForm[] | null;
+    data: NutritionFormWithProfile[] | null;
     count: number | null;
   };
 
