@@ -185,7 +185,7 @@ function BulletList({ items }: { items: string[] }) {
     <View>
       {items.map((item, i) => (
         <View key={i} style={styles.bulletItem}>
-          <Text style={styles.bulletDot}>&#x25CF;</Text>
+          <Text style={styles.bulletDot}>{"•"}</Text>
           <Text style={styles.bulletText}>{item}</Text>
         </View>
       ))}
