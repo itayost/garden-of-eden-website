@@ -345,7 +345,7 @@ th{font-size:10px;color:#6b7280;padding:4px 8px;text-align:right;border-bottom:1
 <body>
 <!-- PAGE 1 -->
 <div class="page">
-<div style="border-top:3px solid #22c55e;padding-top:16px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+<div style="border-bottom:3px solid #22c55e;padding-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
 <div>
 <div style="font-size:40px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#f9fafb;">${eName}</div>
 <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">
@@ -389,7 +389,7 @@ ${assessments.length > 0 ? `<div style="margin-top:16px;"><div style="font-size:
 
 <!-- PAGE 2 -->
 <div class="page page-2">
-<div style="border-top:3px solid #22c55e;padding-top:16px;margin-bottom:16px;">
+<div style="border-bottom:3px solid #22c55e;padding-bottom:16px;margin-bottom:16px;">
 <div style="font-size:18px;font-weight:700;">${eName} — ניתוח מפורט</div>
 </div>
 
