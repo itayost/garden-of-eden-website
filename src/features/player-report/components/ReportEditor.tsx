@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +12,8 @@ import { ReportChartsSection } from "./ReportChartsSection";
 import { ReportBulletList, type BulletItem } from "./ReportBulletList";
 import { ReportSummarySection } from "./ReportSummarySection";
 import { PlayerReportPdfButton } from "./PlayerReportPdfButton";
-import { PlayerCard } from "@/components/player-card/PlayerCard";
 import { getReportData } from "../lib/actions";
 import type { ReportData } from "../types";
-import type { CardType, PlayerPosition } from "@/types/player-stats";
 
 interface ReportEditorProps {
   initialData: ReportData;
@@ -48,10 +46,6 @@ export function ReportEditor({
     initialData.latestSummary?.summary ?? "",
   );
 
-  const radarRef = useRef<HTMLDivElement>(null);
-  const trendsRef = useRef<HTMLDivElement>(null);
-  const fifaCardRef = useRef<HTMLDivElement>(null);
-
   const handleDateRangeChange = () => {
     startTransition(async () => {
       const { data: newData, error } = await getReportData(userId, fromDate, toDate);
@@ -71,7 +65,6 @@ export function ReportEditor({
 
   return (
     <div className="space-y-6" data-testid="report-editor">
-      {/* Header with date range */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-bold" data-testid="report-title">
           סיכום פעילות שחקן - {data.profile.full_name}
@@ -107,7 +100,6 @@ export function ReportEditor({
         </div>
       </div>
 
-      {/* Generate PDF button */}
       <div className="flex justify-end">
         <PlayerReportPdfButton
           data={data}
@@ -115,32 +107,13 @@ export function ReportEditor({
           weaknesses={weaknesses}
           socialSkills={socialSkills}
           summary={summary}
-          radarRef={radarRef}
-          trendsRef={trendsRef}
-          fifaCardRef={fifaCardRef}
         />
       </div>
 
-      {/* Details */}
-      <ReportDetailsSection
-        profile={data.profile}
-        attendance={data.attendance}
-      />
+      <ReportDetailsSection profile={data.profile} attendance={data.attendance} />
+      <ReportAssessmentsTable assessments={data.assessments} />
+      <ReportChartsSection stats={data.stats} assessments={data.assessments} />
 
-      {/* Assessments */}
-      <ReportAssessmentsTable
-        assessments={data.assessments}
-      />
-
-      {/* Charts */}
-      <ReportChartsSection
-        stats={data.stats}
-        assessments={data.assessments}
-        radarRef={radarRef}
-        trendsRef={trendsRef}
-      />
-
-      {/* Strengths */}
       <ReportBulletList
         title="נקודות חוזקה / פרמטרים ששופרו"
         items={strengths}
@@ -148,8 +121,6 @@ export function ReportEditor({
         headerClassName="text-green-600"
         testIdPrefix="strengths"
       />
-
-      {/* Weaknesses */}
       <ReportBulletList
         title="מיקוד לשיפור בהמשך התהליך"
         items={weaknesses}
@@ -157,8 +128,6 @@ export function ReportEditor({
         headerClassName="text-amber-600"
         testIdPrefix="weaknesses"
       />
-
-      {/* Social Skills */}
       <ReportBulletList
         title="כישורים חברתיים"
         items={socialSkills}
@@ -167,45 +136,13 @@ export function ReportEditor({
         testIdPrefix="social-skills"
       />
 
-      {/* Summary -- key forces remount when data refreshes (CLAUDE.md gotcha: useState(prop)) */}
+      {/* key forces remount when data refreshes (CLAUDE.md gotcha: useState(prop)) */}
       <ReportSummarySection
         key={data.latestSummary?.id ?? "no-summary"}
         userId={userId}
         initialSummary={data.latestSummary?.summary ?? ""}
         onSummaryChange={setSummary}
       />
-
-      {/* Hidden FIFA card for PDF capture via html-to-image */}
-      {data.stats && (
-        <div
-          ref={fifaCardRef}
-          style={{
-            position: "absolute",
-            top: -9999,
-            left: -9999,
-            visibility: "hidden",
-            pointerEvents: "none",
-          }}
-        >
-          <PlayerCard
-            playerName={data.profile.full_name ?? ""}
-            position={(data.profile.position as PlayerPosition) ?? "ST"}
-            cardType={(data.stats.card_type as CardType) ?? "standard"}
-            overallRating={data.stats.overall_rating}
-            stats={{
-              pace: data.stats.pace,
-              shooting: data.stats.shooting,
-              passing: data.stats.passing,
-              dribbling: data.stats.dribbling,
-              defending: data.stats.defending,
-              physical: data.stats.physical,
-            }}
-            avatarUrl={data.profile.processed_avatar_url ?? data.profile.avatar_url ?? undefined}
-            linkToStats={false}
-            size="md"
-          />
-        </div>
-      )}
     </div>
   );
 }
