@@ -234,4 +234,31 @@ describe("buildPlayerReportHtml", () => {
     expect(html).toContain("base64,AAAA"); // heeboRegularB64
     expect(html).toContain("base64,BBBB"); // heeboBoldB64
   });
+
+  it("escapes HTML special chars in full_name to prevent XSS", () => {
+    const html = buildPlayerReportHtml(
+      makeProps({ profile: { ...mockProfile, full_name: '<script>alert(1)</script>' } }),
+      mockAssets,
+    );
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("escapes HTML special chars in summary to prevent XSS", () => {
+    const html = buildPlayerReportHtml(
+      makeProps({ summary: '<img src=x onerror=alert(1)>' }),
+      mockAssets,
+    );
+    expect(html).not.toContain("<img src=x");
+    expect(html).toContain("&lt;img");
+  });
+
+  it("escapes HTML special chars in strengths to prevent XSS", () => {
+    const html = buildPlayerReportHtml(
+      makeProps({ strengths: ['<script>evil()</script>'] }),
+      mockAssets,
+    );
+    expect(html).not.toContain("<script>evil");
+    expect(html).toContain("&lt;script&gt;");
+  });
 });

@@ -31,12 +31,12 @@ const playerAssessmentSchema = z.object({
 
 export const playerReportPdfBodySchema = z.object({
   profile: z.object({
-    full_name: z.string().nullable(),
+    full_name: z.string().max(100).nullable(),
     birthdate: z.string().nullable(),
-    position: z.string().nullable(),
-    club: z.string().nullable(),
+    position: z.string().max(50).nullable(),
+    club: z.string().max(100).nullable(),
     created_at: z.string(),
-    processed_avatar_url: z.string().nullable(),
+    processed_avatar_url: z.string().url().nullable(),
   }),
   assessments: z.array(playerAssessmentSchema),
   stats: z.object({
@@ -53,10 +53,10 @@ export const playerReportPdfBodySchema = z.object({
     totalSessions: z.number(),
     weeklyAverage: z.number(),
   }).nullable(),
-  summary: z.string(),
-  strengths: z.array(z.string()),
-  weaknesses: z.array(z.string()),
-  socialSkills: z.array(z.string()),
+  summary: z.string().max(2000),
+  strengths: z.array(z.string().max(200)).max(20),
+  weaknesses: z.array(z.string().max(200)).max(20),
+  socialSkills: z.array(z.string().max(200)).max(20),
 });
 
 export type PlayerReportPdfBody = z.infer<typeof playerReportPdfBodySchema>;

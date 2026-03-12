@@ -9,6 +9,16 @@ import {
 } from "@/types/assessment";
 import { compareMetric } from "@/features/player-report/lib/utils/metric-comparison";
 
+function escapeHtml(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export interface StaticAssets {
   heeboRegularB64: string;
   heeboBoldB64: string;
@@ -187,6 +197,12 @@ export function buildPlayerReportHtml(
   const { profile, assessments, stats, attendance, summary, strengths, weaknesses, socialSkills, avatarDataUri } = props;
   const { heeboRegularB64, heeboBoldB64, cardTemplateB64 } = assets;
 
+  // Escape all user-supplied strings before HTML interpolation
+  const eName = escapeHtml(profile.full_name) || "שחקן";
+  const ePos = escapeHtml(profile.position);
+  const eClub = escapeHtml(profile.club);
+  const eSummary = escapeHtml(summary);
+
   const today = new Date().toISOString().split("T")[0];
   const age = computeAge(profile.birthdate);
   const joinDate = formatISODate(profile.created_at);
@@ -201,15 +217,15 @@ export function buildPlayerReportHtml(
 <img src="data:image/webp;base64,${cardTemplateB64}" style="position:absolute;top:0;left:0;width:${W}px;height:${H}px;object-fit:contain;" alt=""/>
 <div style="position:absolute;top:${Math.round(H * 0.1)}px;left:${Math.round(W * 0.12)}px;display:flex;flex-direction:column;align-items:center;">
 <span style="font-size:32px;font-weight:900;color:#3d2a0f;line-height:1;letter-spacing:-0.02em;">${stats.overall_rating}</span>
-<span style="font-size:12px;font-weight:700;color:#3d2a0f;margin-top:2px;">${profile.position ?? ""}</span>
+<span style="font-size:12px;font-weight:700;color:#3d2a0f;margin-top:2px;">${ePos}</span>
 </div>
 <div style="position:absolute;top:${Math.round(H * 0.22)}px;left:${Math.round(W * 0.2)}px;right:${Math.round(W * 0.2)}px;height:${Math.round(H * 0.42)}px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
 ${avatarDataUri
   ? `<img src="${avatarDataUri}" style="width:100%;height:100%;object-fit:contain;" alt=""/>`
-  : `<div style="width:65px;height:65px;border-radius:50%;background:rgba(61,42,15,0.12);border:2px solid rgba(61,42,15,0.25);display:flex;align-items:center;justify-content:center;"><span style="font-size:29px;font-weight:700;color:#3d2a0f;">${(profile.full_name ?? "?").charAt(0)}</span></div>`
+  : `<div style="width:65px;height:65px;border-radius:50%;background:rgba(61,42,15,0.12);border:2px solid rgba(61,42,15,0.25);display:flex;align-items:center;justify-content:center;"><span style="font-size:29px;font-weight:700;color:#3d2a0f;">${escapeHtml(eName.charAt(0)) || "?"}</span></div>`
 }
 </div>
-<div style="position:absolute;bottom:${Math.round(H * 0.28)}px;left:${Math.round(W * 0.08)}px;right:${Math.round(W * 0.08)}px;text-align:center;font-size:11px;font-weight:700;color:#3d2a0f;letter-spacing:0.05em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${profile.full_name ?? ""}</div>
+<div style="position:absolute;bottom:${Math.round(H * 0.28)}px;left:${Math.round(W * 0.08)}px;right:${Math.round(W * 0.08)}px;text-align:center;font-size:11px;font-weight:700;color:#3d2a0f;letter-spacing:0.05em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${eName}</div>
 <div style="position:absolute;bottom:${Math.round(H * 0.17)}px;left:${Math.round(W * 0.06)}px;right:${Math.round(W * 0.06)}px;display:flex;justify-content:space-around;align-items:center;" dir="ltr">
 ${(["PAC","SHO","PAS","DRI","DEF","PHY"] as const).map((label, i) => {
   const vals = [stats.pace, stats.shooting, stats.passing, stats.dribbling, stats.defending, stats.physical];
@@ -320,11 +336,11 @@ th{font-size:10px;color:#6b7280;padding:4px 8px;text-align:right;border-bottom:1
 <div class="page">
 <div style="border-top:3px solid #22c55e;padding-top:16px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
 <div>
-<div style="font-size:40px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#f9fafb;">${profile.full_name ?? "שחקן"}</div>
+<div style="font-size:40px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#f9fafb;">${eName}</div>
 <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">
 ${chip("Garden of Eden Football Academy", true)}
-${profile.position ? chip(profile.position) : ""}
-${profile.club ? chip(profile.club) : ""}
+${ePos ? chip(ePos) : ""}
+${eClub ? chip(eClub) : ""}
 ${age !== null ? chip(`גיל ${age}`) : ""}
 ${chip(`הצטרפות ${joinDate}`)}
 ${attendance ? chip(`נוכחות ${attendance.weeklyAverage.toFixed(1)}/שבוע`) : chip("לא זמין")}
@@ -344,11 +360,11 @@ ${attendance ? `<div style="margin-top:8px;"><div style="font-size:9px;color:#6b
 
 <!-- Content column -->
 <div style="flex:1;">
-${summary ? `<div style="margin-bottom:12px;"><div style="font-size:14px;font-weight:700;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #1f2937;">סיכום</div><div style="font-size:11.5px;color:#d1d5db;line-height:1.6;white-space:pre-wrap;">${summary}</div></div>` : ""}
+${eSummary ? `<div style="margin-bottom:12px;"><div style="font-size:14px;font-weight:700;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #1f2937;">סיכום</div><div style="font-size:11.5px;color:#d1d5db;line-height:1.6;white-space:pre-wrap;">${eSummary}</div></div>` : ""}
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px;">
-<div><div style="font-size:10px;font-weight:700;color:#22c55e;margin-bottom:4px;">נקודות חוזקה</div>${strengths.length?strengths.map(s=>`<div style="font-size:10px;color:#d1d5db;margin-bottom:2px;">• ${s}</div>`).join(""):`<div style="font-size:10px;color:#4b5563;">—</div>`}</div>
-<div><div style="font-size:10px;font-weight:700;color:#d97706;margin-bottom:4px;">מיקוד לשיפור</div>${weaknesses.length?weaknesses.map(w=>`<div style="font-size:10px;color:#d1d5db;margin-bottom:2px;">• ${w}</div>`).join(""):``}</div>
-<div><div style="font-size:10px;font-weight:700;color:#818cf8;margin-bottom:4px;">כישורים חברתיים</div>${socialSkills.length?socialSkills.map(s=>`<div style="font-size:10px;color:#d1d5db;margin-bottom:2px;">• ${s}</div>`).join(""):``}</div>
+<div><div style="font-size:10px;font-weight:700;color:#22c55e;margin-bottom:4px;">נקודות חוזקה</div>${strengths.length?strengths.map(s=>`<div style="font-size:10px;color:#d1d5db;margin-bottom:2px;">• ${escapeHtml(s)}</div>`).join(""):`<div style="font-size:10px;color:#4b5563;">—</div>`}</div>
+<div><div style="font-size:10px;font-weight:700;color:#d97706;margin-bottom:4px;">מיקוד לשיפור</div>${weaknesses.length?weaknesses.map(w=>`<div style="font-size:10px;color:#d1d5db;margin-bottom:2px;">• ${escapeHtml(w)}</div>`).join(""):``}</div>
+<div><div style="font-size:10px;font-weight:700;color:#818cf8;margin-bottom:4px;">כישורים חברתיים</div>${socialSkills.length?socialSkills.map(s=>`<div style="font-size:10px;color:#d1d5db;margin-bottom:2px;">• ${escapeHtml(s)}</div>`).join(""):``}</div>
 </div>
 </div>
 </div>
@@ -363,7 +379,7 @@ ${assessments.length > 0 ? `<div style="margin-top:16px;"><div style="font-size:
 <!-- PAGE 2 -->
 <div class="page page-2">
 <div style="border-top:3px solid #22c55e;padding-top:16px;margin-bottom:16px;">
-<div style="font-size:18px;font-weight:700;">${profile.full_name ?? ""} — ניתוח מפורט</div>
+<div style="font-size:18px;font-weight:700;">${eName} — ניתוח מפורט</div>
 </div>
 
 <div style="display:flex;gap:24px;margin-bottom:20px;">

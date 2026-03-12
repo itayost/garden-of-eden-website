@@ -5,9 +5,12 @@ import {
   loadStaticAssets,
 } from "@/lib/exports/player-report-html";
 import { playerReportPdfBodySchema } from "./schema";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 async function fetchAvatarAsBase64(url: string | null): Promise<string | null> {
   if (!url) return null;
@@ -18,7 +21,8 @@ async function fetchAvatarAsBase64(url: string | null): Promise<string | null> {
     if (!res.ok) return null;
     const buffer = await res.arrayBuffer();
     const b64 = Buffer.from(buffer).toString("base64");
-    const ct = res.headers.get("content-type") ?? "image/jpeg";
+    const rawCt = res.headers.get("content-type")?.split(";")[0].trim() ?? "";
+    const ct = ALLOWED_AVATAR_TYPES.includes(rawCt) ? rawCt : "image/jpeg";
     return `data:${ct};base64,${b64}`;
   } catch {
     return null;
@@ -26,9 +30,16 @@ async function fetchAvatarAsBase64(url: string | null): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const { error } = await verifyAdminOrTrainer();
-  if (error) {
+  const authResult = await verifyAdminOrTrainer();
+  if (authResult.error || !authResult.user) {
     return NextResponse.json({ error: "נדרשת הרשאת מנהל או מאמן" }, { status: 401 });
+  }
+
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  const identifier = getRateLimitIdentifier(authResult.user.id, ip);
+  const rateLimitResult = await checkRateLimit(identifier, "general");
+  if (rateLimitResult.rateLimited) {
+    return NextResponse.json({ error: "יותר מדי בקשות, נסה שוב מאוחר יותר" }, { status: 429 });
   }
 
   let bodyRaw: unknown;
@@ -84,7 +95,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle2" });
+    await page.setContent(html, { waitUntil: "networkidle2", timeout: 15000 });
     // Buffer.from() normalises Uint8Array (puppeteer-core v21+) and Buffer equally
     pdf = Buffer.from(await page.pdf({ format: "A4", printBackground: true }));
   } catch (err) {
