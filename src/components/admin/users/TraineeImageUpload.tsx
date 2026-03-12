@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Upload, Check, X, AlertCircle, RotateCcw } from "lucide-react";
+import imageCompression from "browser-image-compression";
 import { useBackgroundRemoval } from "@/hooks/useBackgroundRemoval";
 
 interface TraineeImageUploadProps {
@@ -17,6 +18,12 @@ type UploadStep = "select" | "preview" | "processing" | "uploading" | "result";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png"];
+
+const COMPRESSION_OPTIONS = {
+  maxSizeMB: 3,
+  maxWidthOrHeight: 1200,
+  useWebWorker: true,
+} as const;
 
 export function TraineeImageUpload({
   traineeUserId,
@@ -89,8 +96,17 @@ export function TraineeImageUpload({
     setError(null);
 
     try {
-      // Process background removal client-side
-      const processed = await removeBackground(selectedFile);
+      // Compress and resize before background removal.
+      // Keeps canvas dimensions small → output PNG stays under Vercel's 4.5MB limit.
+      let compressedFile: File;
+      try {
+        compressedFile = await imageCompression(selectedFile, COMPRESSION_OPTIONS);
+      } catch {
+        throw new Error("שגיאה בדחיסת התמונה. נסה שוב.");
+      }
+
+      // Process background removal (unchanged logic, smaller input)
+      const processed = await removeBackground(compressedFile);
 
       if (!processed) {
         throw new Error(bgError || "שגיאה בעיבוד התמונה");
@@ -100,11 +116,11 @@ export function TraineeImageUpload({
       const processedUrl = URL.createObjectURL(processed);
       setProcessedPreviewUrl(processedUrl);
 
-      // Now upload both images
+      // Upload both images — use compressedFile as original (not selectedFile)
       setStep("uploading");
 
       const formData = new FormData();
-      formData.append("original", selectedFile);
+      formData.append("original", compressedFile);
       formData.append("processed", processed, "processed.png");
       formData.append("traineeUserId", traineeUserId);
 
