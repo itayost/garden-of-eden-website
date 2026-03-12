@@ -173,9 +173,17 @@ Consistent with the project's `{ error: string }` envelope pattern. The client r
 
 A pure function returning a complete self-contained HTML string. Takes the same shape as the validated request body plus a pre-fetched `avatarDataUri: string | null`.
 
-### Font
+### Static Assets (fonts + card image)
 
-Read `Heebo-Regular.ttf` and `Heebo-Bold.ttf` from `public/fonts/` via `fs.readFileSync(path.join(process.cwd(), 'public/fonts/...'))`. Convert each to base64. Embed as `@font-face` data URIs in the `<style>` block. This makes the HTML self-contained — Puppeteer needs no external font requests.
+The following public assets are read from the filesystem and embedded as base64 data URIs so the HTML is fully self-contained:
+
+| Asset | Path | Embed as |
+| ----- | ---- | -------- |
+| Heebo Regular | `public/fonts/Heebo-Regular.ttf` | `@font-face` data URI in `<style>` |
+| Heebo Bold | `public/fonts/Heebo-Bold.ttf` | `@font-face` data URI in `<style>` |
+| Card template | `public/card-template-gold.webp` | `data:image/webp;base64,...` in FIFA card `<img>` |
+
+All three are read with `fs.readFileSync(path.join(process.cwd(), 'public/...'))` and `.toString('base64')`.
 
 ### Metric Keys
 
@@ -210,13 +218,17 @@ Direct port of the approved mockup (`pdf-mockup-v3.html`):
 - **Assessment table:** `ALL_METRIC_KEYS` rows. Columns: metric Hebrew label | latest value | previous value (if 2+ assessments). Green (`#22c55e`) for improved, amber (`#d97706`) for declined (using `compareMetric`). Categorical rows: no colour change. Display categorical values using their Hebrew label strings — use `COORDINATION_OPTIONS`, `BODY_STRUCTURE_OPTIONS`, and `LEG_POWER_OPTIONS` label arrays from `src/types/assessment.ts` to map raw DB enum values (e.g. `"thin_weak"`) to their Hebrew display strings (e.g. `"רזה חלש"`). Fall back to the raw value if no match found.
 - **Footer:** "Garden of Eden Football Academy" | "דף 1 מתוך 2" | date
 
-**FIFA card** (pure HTML/CSS, rendered only if `stats` is non-null):
+**FIFA card** (rendered only if `stats` is non-null):
 
-- Gold gradient background (`linear-gradient(145deg, #c8a84b, #f5d580, #c8a84b, #a07828)`)
-- Top row: `overall_rating` (26px), `position`
-- Avatar: `<img src="{avatarDataUri}">` if available, else player initials in a circle
-- Player abbreviated name
-- 6 stat badges: PAC (`pace`), SHO (`shooting`), PAS (`passing`), DRI (`dribbling`), DEF (`defending`), PHY (`physical`)
+Uses the actual card template image from the website — **not** a CSS gradient approximation. Read `public/card-template-gold.webp` with `fs.readFileSync` and embed as a base64 `data:image/webp;base64,...` data URI in an `<img>` tag that fills the card container. This ensures the PDF card looks identical to the website card.
+
+Layout (mirrors `PlayerCard.tsx` proportions for `size="sm"`, 110×154px):
+
+- Background: `<img>` with `card-template-gold.webp` base64, `object-fit: contain`, fills the card
+- Top-left: `overall_rating` (32px, `#3d2a0f`) + `position` (12px) — absolute positioned
+- Center: avatar `<img src="{avatarDataUri}">` if available, else player initials in a circle (`background: rgba(61,42,15,0.12)`)
+- Name banner: player name uppercase, `#3d2a0f`, absolute positioned
+- Bottom stats row: PAC/SHO/PAS/DRI/DEF/PHY values in `#3d2a0f`, labels in `#5c4317`
 
 ### Page 2
 
