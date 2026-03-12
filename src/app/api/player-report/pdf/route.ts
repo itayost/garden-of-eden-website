@@ -84,6 +84,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       import("puppeteer-core"),
     ]);
 
+    // Required for serverless environments (no GPU / display server)
+    chromium.setGraphicsMode = false;
+
     const executablePath =
       process.env.LOCAL_CHROME_PATH ?? (await chromium.executablePath());
 
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       args: chromium.args,
       defaultViewport: { width: 794, height: 1123 },
       executablePath,
-      headless: true,
+      headless: "shell",
     });
 
     const page = await browser.newPage();
