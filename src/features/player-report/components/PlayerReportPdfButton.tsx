@@ -13,9 +13,6 @@ interface PlayerReportPdfButtonProps {
   weaknesses: readonly BulletItem[];
   socialSkills: readonly BulletItem[];
   summary: string;
-  radarRef: React.RefObject<HTMLDivElement | null>;
-  trendsRef: React.RefObject<HTMLDivElement | null>;
-  fifaCardRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function PlayerReportPdfButton({
@@ -24,66 +21,51 @@ export function PlayerReportPdfButton({
   weaknesses,
   socialSkills,
   summary,
-  radarRef,
-  trendsRef,
-  fifaCardRef,
 }: PlayerReportPdfButtonProps) {
   const [generating, setGenerating] = useState(false);
 
   const handleGenerate = async () => {
     setGenerating(true);
-
     try {
-      // Dynamic imports to avoid SSR issues with @react-pdf/renderer
-      const [{ pdf }, { PlayerReportPdfDocument }, { captureChartAsImage }] =
-        await Promise.all([
-          import("@react-pdf/renderer"),
-          import("@/lib/exports/pdf-player-report-template"),
-          import("../lib/utils/chart-snapshot"),
-        ]);
+      const body = {
+        profile: {
+          full_name: data.profile.full_name,
+          birthdate: data.profile.birthdate,
+          position: data.profile.position,
+          club: data.profile.club,
+          created_at: data.profile.created_at,
+          processed_avatar_url: data.profile.processed_avatar_url,
+        },
+        assessments: data.assessments,
+        stats: data.stats,
+        attendance: data.attendance
+          ? { totalSessions: data.attendance.totalSessions, weeklyAverage: data.attendance.weeklyAverage }
+          : null,
+        summary,
+        strengths: strengths.map((s) => s.text),
+        weaknesses: weaknesses.map((w) => w.text),
+        socialSkills: socialSkills.map((s) => s.text),
+      };
 
-      const [radarImage, trendsImage, fifaCardImage] = await Promise.all([
-        captureChartAsImage(radarRef.current),
-        captureChartAsImage(trendsRef.current),
-        captureChartAsImage(fifaCardRef.current, undefined),
-      ]);
+      const response = await fetch("/api/player-report/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-      const now = new Date().toLocaleDateString("he-IL");
+      if (!response.ok) {
+        const { error } = (await response.json()) as { error: string };
+        toast.error(error ?? "שגיאה ביצירת ה-PDF");
+        return;
+      }
 
-      const ageStr = data.profile.birthdate
-        ? String(Math.floor((Date.now() - new Date(data.profile.birthdate).getTime()) / (365.25 * 24 * 3600 * 1000)))
-        : null;
-
-      const doc = (
-        <PlayerReportPdfDocument
-          playerName={data.profile.full_name ?? "שחקן"}
-          details={{
-            age: ageStr,
-            position: data.profile.position,
-            club: data.profile.club,
-            registrationDate: data.profile.created_at,
-            weeklyAttendance: data.attendance
-              ? `${data.attendance.weeklyAverage.toFixed(1)} בשבוע`
-              : "לא זמין",
-          }}
-          stats={data.stats}
-          assessments={data.assessments}
-          radarChartImage={radarImage}
-          trendsChartImage={trendsImage}
-          fifaCardImage={fifaCardImage}
-          strengths={strengths.map((s) => s.text)}
-          weaknesses={weaknesses.map((w) => w.text)}
-          socialSkills={socialSkills.map((s) => s.text)}
-          summary={summary}
-          generatedAt={now}
-        />
-      );
-
-      const blob = await pdf(doc).toBlob();
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `סיכום-שחקן-${data.profile.full_name ?? "report"}-${now}.pdf`;
+      const name = data.profile.full_name ?? "report";
+      const date = new Date().toISOString().split("T")[0];
+      link.download = `סיכום-שחקן-${name}-${date}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
