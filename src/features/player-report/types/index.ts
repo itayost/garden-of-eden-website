@@ -19,6 +19,7 @@ export interface ReportData {
     readonly position: string | null;
     readonly club: string | null;
     readonly avatar_url: string | null;
+    readonly processed_avatar_url: string | null;
     readonly created_at: string;
   };
   readonly assessments: readonly PlayerAssessment[];
@@ -30,6 +31,7 @@ export interface ReportData {
     readonly dribbling: number;
     readonly defending: number;
     readonly physical: number;
+    readonly card_type: string | null;
   } | null;
   readonly attendance: TraineeAttendance | null;
   readonly strengths: readonly ReportBulletItem[];

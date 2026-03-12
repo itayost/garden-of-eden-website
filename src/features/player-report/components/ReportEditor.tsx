@@ -12,8 +12,10 @@ import { ReportChartsSection } from "./ReportChartsSection";
 import { ReportBulletList, type BulletItem } from "./ReportBulletList";
 import { ReportSummarySection } from "./ReportSummarySection";
 import { PlayerReportPdfButton } from "./PlayerReportPdfButton";
+import { PlayerCard } from "@/components/player-card/PlayerCard";
 import { getReportData } from "../lib/actions";
 import type { ReportData } from "../types";
+import type { CardType, PlayerPosition } from "@/types/player-stats";
 
 interface ReportEditorProps {
   initialData: ReportData;
@@ -48,6 +50,7 @@ export function ReportEditor({
 
   const radarRef = useRef<HTMLDivElement>(null);
   const trendsRef = useRef<HTMLDivElement>(null);
+  const fifaCardRef = useRef<HTMLDivElement>(null);
 
   const handleDateRangeChange = () => {
     startTransition(async () => {
@@ -114,6 +117,7 @@ export function ReportEditor({
           summary={summary}
           radarRef={radarRef}
           trendsRef={trendsRef}
+          fifaCardRef={fifaCardRef}
         />
       </div>
 
@@ -170,6 +174,38 @@ export function ReportEditor({
         initialSummary={data.latestSummary?.summary ?? ""}
         onSummaryChange={setSummary}
       />
+
+      {/* Hidden FIFA card for PDF capture via html-to-image */}
+      {data.stats && (
+        <div
+          ref={fifaCardRef}
+          style={{
+            position: "absolute",
+            top: -9999,
+            left: -9999,
+            visibility: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <PlayerCard
+            playerName={data.profile.full_name ?? ""}
+            position={(data.profile.position as PlayerPosition) ?? "ST"}
+            cardType={(data.stats.card_type as CardType) ?? "standard"}
+            overallRating={data.stats.overall_rating}
+            stats={{
+              pace: data.stats.pace,
+              shooting: data.stats.shooting,
+              passing: data.stats.passing,
+              dribbling: data.stats.dribbling,
+              defending: data.stats.defending,
+              physical: data.stats.physical,
+            }}
+            avatarUrl={data.profile.processed_avatar_url ?? data.profile.avatar_url ?? undefined}
+            linkToStats={false}
+            size="md"
+          />
+        </div>
+      )}
     </div>
   );
 }

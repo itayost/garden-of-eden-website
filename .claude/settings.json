@@ -1,9 +1,4 @@
 {
-  "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": false,
-    "firebase@claude-plugins-official": false,
-    "seo-content-creation@claude-code-workflows": false
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -36,5 +31,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": false,
+    "firebase@claude-plugins-official": false
   }
 }

@@ -15,6 +15,7 @@ interface PlayerReportPdfButtonProps {
   summary: string;
   radarRef: React.RefObject<HTMLDivElement | null>;
   trendsRef: React.RefObject<HTMLDivElement | null>;
+  fifaCardRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function PlayerReportPdfButton({
@@ -25,6 +26,7 @@ export function PlayerReportPdfButton({
   summary,
   radarRef,
   trendsRef,
+  fifaCardRef,
 }: PlayerReportPdfButtonProps) {
   const [generating, setGenerating] = useState(false);
 
@@ -40,16 +42,23 @@ export function PlayerReportPdfButton({
           import("../lib/utils/chart-snapshot"),
         ]);
 
-      const radarImage = await captureChartAsImage(radarRef.current);
-      const trendsImage = await captureChartAsImage(trendsRef.current);
+      const [radarImage, trendsImage, fifaCardImage] = await Promise.all([
+        captureChartAsImage(radarRef.current),
+        captureChartAsImage(trendsRef.current),
+        captureChartAsImage(fifaCardRef.current, undefined),
+      ]);
 
       const now = new Date().toLocaleDateString("he-IL");
+
+      const ageStr = data.profile.birthdate
+        ? String(Math.floor((Date.now() - new Date(data.profile.birthdate).getTime()) / (365.25 * 24 * 3600 * 1000)))
+        : null;
 
       const doc = (
         <PlayerReportPdfDocument
           playerName={data.profile.full_name ?? "שחקן"}
           details={{
-            birthdate: data.profile.birthdate,
+            age: ageStr,
             position: data.profile.position,
             club: data.profile.club,
             registrationDate: data.profile.created_at,
@@ -57,9 +66,11 @@ export function PlayerReportPdfButton({
               ? `${data.attendance.weeklyAverage.toFixed(1)} בשבוע`
               : "לא זמין",
           }}
+          stats={data.stats}
           assessments={data.assessments}
           radarChartImage={radarImage}
           trendsChartImage={trendsImage}
+          fifaCardImage={fifaCardImage}
           strengths={strengths.map((s) => s.text)}
           weaknesses={weaknesses.map((w) => w.text)}
           socialSkills={socialSkills.map((s) => s.text)}

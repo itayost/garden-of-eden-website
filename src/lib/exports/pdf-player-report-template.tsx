@@ -9,8 +9,10 @@ import {
 } from "@react-pdf/renderer";
 import type { PlayerAssessment } from "@/types/assessment";
 import { ASSESSMENT_LABELS_HE } from "@/types/assessment";
+import { compareMetric } from "@/features/player-report/lib/utils/metric-comparison";
+import type { ReportData } from "@/features/player-report/types";
 
-// Register Hebrew font - same as assessment template
+// Register Hebrew font
 Font.register({
   family: "Heebo",
   fonts: [
@@ -19,137 +21,250 @@ Font.register({
   ],
 });
 
+const C = {
+  pageBg: "#111827",
+  cardBg: "#1F2937",
+  accent: "#22c55e",
+  accentAmber: "#f59e0b",
+  accentIndigo: "#6366f1",
+  white: "#F9FAFB",
+  muted: "#9CA3AF",
+  border: "#374151",
+};
+
 const styles = StyleSheet.create({
   page: {
     flexDirection: "column",
-    backgroundColor: "#FFFFFF",
-    padding: 30,
+    backgroundColor: C.pageBg,
+    padding: 28,
     fontFamily: "Heebo",
   },
+  // Header
   header: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-    borderBottom: 2,
-    borderBottomColor: "#22c55e",
-    paddingBottom: 15,
+    alignItems: "flex-start",
+    marginBottom: 14,
+    paddingBottom: 12,
+    borderBottom: 1,
+    borderBottomColor: C.border,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#22c55e",
-    textAlign: "right",
-  },
-  subtitle: {
-    fontSize: 12,
-    color: "#6b7280",
-    textAlign: "right",
-    marginTop: 4,
-  },
-  dateText: {
-    fontSize: 9,
-    textAlign: "right",
-    color: "#6b7280",
-    marginBottom: 10,
-  },
-  detailRow: {
-    flexDirection: "row-reverse",
-    marginBottom: 4,
-  },
-  detailLabel: {
-    fontSize: 10,
-    fontWeight: 700,
-    textAlign: "right",
-    width: 140,
-  },
-  detailValue: {
-    fontSize: 10,
-    textAlign: "right",
+  headerLeft: {
     flex: 1,
   },
-  sectionTitle: {
-    fontSize: 13,
+  playerName: {
+    fontSize: 24,
     fontWeight: 700,
+    color: C.white,
     textAlign: "right",
-    marginTop: 16,
-    marginBottom: 6,
-    color: "#22c55e",
   },
-  sectionTitleAmber: {
-    fontSize: 13,
-    fontWeight: 700,
-    textAlign: "right",
-    marginTop: 16,
-    marginBottom: 6,
-    color: "#d97706",
+  metaRow: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 8,
   },
-  sectionTitleIndigo: {
-    fontSize: 13,
+  chip: {
+    backgroundColor: C.cardBg,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    fontSize: 7,
+    color: C.muted,
+  },
+  chipAccent: {
+    backgroundColor: C.accent,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    fontSize: 7,
+    fontWeight: 700,
+    color: "#052e16",
+  },
+  fifaCardImage: {
+    width: 110,
+    height: 154,
+    marginLeft: 12,
+  },
+  // Body
+  body: {
+    flexDirection: "row-reverse",
+    gap: 10,
+    marginBottom: 12,
+  },
+  leftColumn: {
+    width: 118,
+    backgroundColor: C.cardBg,
+    borderRadius: 6,
+    padding: 10,
+    alignItems: "center",
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  statBlock: {
+    alignItems: "center",
+    marginBottom: 8,
+    width: "100%",
+  },
+  statNumber: {
+    fontSize: 30,
+    fontWeight: 700,
+    color: C.accent,
+    textAlign: "center",
+    lineHeight: 1,
+  },
+  statSmallNumber: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: C.white,
+    textAlign: "center",
+    lineHeight: 1,
+  },
+  statLabel: {
+    fontSize: 6,
+    color: C.muted,
+    textAlign: "center",
+    marginTop: 2,
+  },
+  statDivider: {
+    height: 1,
+    backgroundColor: C.border,
+    width: "100%",
+    marginVertical: 5,
+  },
+  // Right column narrative
+  summaryText: {
+    fontSize: 9,
+    color: C.white,
+    textAlign: "right",
+    lineHeight: 1.55,
+    marginBottom: 8,
+  },
+  bulletSection: {
+    marginTop: 5,
+  },
+  bulletSectionTitle: {
+    fontSize: 9,
     fontWeight: 700,
     textAlign: "right",
-    marginTop: 16,
-    marginBottom: 6,
-    color: "#4f46e5",
+    marginBottom: 3,
+  },
+  bulletItem: {
+    flexDirection: "row-reverse",
+    marginBottom: 2,
+  },
+  bulletDot: {
+    fontSize: 7,
+    marginLeft: 4,
+    marginTop: 1,
+  },
+  bulletText: {
+    fontSize: 8,
+    textAlign: "right",
+    flex: 1,
+    color: C.white,
+  },
+  // Assessment table
+  tableTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: C.accent,
+    textAlign: "right",
+    marginBottom: 5,
+    marginTop: 10,
   },
   tableHeader: {
     flexDirection: "row-reverse",
-    backgroundColor: "#f3f4f6",
-    paddingVertical: 6,
+    backgroundColor: C.cardBg,
+    paddingVertical: 5,
     paddingHorizontal: 5,
-    borderBottom: 1,
-    borderBottomColor: "#e5e7eb",
+    borderRadius: 3,
+    marginBottom: 1,
   },
   tableRow: {
     flexDirection: "row-reverse",
-    borderBottom: 1,
-    borderBottomColor: "#e5e7eb",
     paddingVertical: 4,
     paddingHorizontal: 5,
+    borderBottom: 1,
+    borderBottomColor: C.border,
+  },
+  tableRowAlt: {
+    backgroundColor: "#161D2B",
   },
   tableCell: {
     flex: 1,
     textAlign: "right",
-    fontSize: 8,
+    fontSize: 7,
+    color: C.white,
   },
   tableCellHeader: {
     flex: 1,
     textAlign: "right",
-    fontSize: 8,
+    fontSize: 7,
+    fontWeight: 700,
+    color: C.muted,
+  },
+  tableCellImproved: {
+    flex: 1,
+    textAlign: "right",
+    fontSize: 7,
+    color: C.accent,
     fontWeight: 700,
   },
-  bulletItem: {
-    flexDirection: "row-reverse",
-    marginBottom: 3,
-    paddingRight: 10,
-  },
-  bulletDot: {
-    fontSize: 8,
-    marginLeft: 5,
-    color: "#6b7280",
-  },
-  bulletText: {
-    fontSize: 9,
-    textAlign: "right",
+  tableCellDeclined: {
     flex: 1,
+    textAlign: "right",
+    fontSize: 7,
+    color: C.accentAmber,
+    fontWeight: 700,
+  },
+  // Page 2
+  page2Header: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottom: 1,
+    borderBottomColor: C.border,
+  },
+  page2Title: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: C.white,
+    textAlign: "right",
+  },
+  page2Date: {
+    fontSize: 8,
+    color: C.muted,
+    textAlign: "left",
   },
   chartImage: {
     width: "100%",
-    marginVertical: 8,
+    marginVertical: 6,
   },
-  summaryText: {
-    fontSize: 10,
-    textAlign: "right",
-    lineHeight: 1.6,
-  },
+  // Footer
   footer: {
     position: "absolute",
-    bottom: 20,
-    left: 30,
-    right: 30,
-    textAlign: "center",
-    fontSize: 8,
-    color: "#9ca3af",
+    bottom: 14,
+    left: 28,
+    right: 28,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTop: 1,
+    borderTopColor: C.border,
+    paddingTop: 5,
+  },
+  footerText: {
+    fontSize: 6,
+    color: C.muted,
+  },
+  footerAccent: {
+    fontSize: 6,
+    color: C.accent,
+    fontWeight: 700,
   },
 });
 
@@ -161,31 +276,22 @@ const METRIC_KEYS: (keyof PlayerAssessment)[] = [
   "coordination", "body_structure", "leg_power_technique",
 ];
 
-export interface PlayerReportPdfDocumentProps {
-  playerName: string;
-  details: {
-    birthdate: string | null;
-    position: string | null;
-    club: string | null;
-    registrationDate: string;
-    weeklyAttendance: string;
-  };
-  assessments: readonly PlayerAssessment[];
-  radarChartImage: string | null;
-  trendsChartImage: string | null;
-  strengths: string[];
-  weaknesses: string[];
-  socialSkills: string[];
-  summary: string;
-  generatedAt: string;
-}
-
-function BulletList({ items }: { items: string[] }) {
+function BulletSection({
+  title,
+  items,
+  color,
+}: {
+  title: string;
+  items: string[];
+  color: string;
+}) {
+  if (items.length === 0) return null;
   return (
-    <View>
-      {items.map((item, i) => (
+    <View style={styles.bulletSection}>
+      <Text style={[styles.bulletSectionTitle, { color }]}>{title}</Text>
+      {items.slice(0, 4).map((item, i) => (
         <View key={i} style={styles.bulletItem}>
-          <Text style={styles.bulletDot}>{"•"}</Text>
+          <Text style={[styles.bulletDot, { color }]}>{"•"}</Text>
           <Text style={styles.bulletText}>{item}</Text>
         </View>
       ))}
@@ -193,21 +299,53 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function PageFooter({
+  playerName,
+  generatedAt,
+  pageNum,
+}: {
+  playerName: string;
+  generatedAt: string;
+  pageNum: number;
+}) {
   return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}:</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+    <View style={styles.footer} fixed>
+      <Text style={styles.footerAccent}>Garden of Eden</Text>
+      <Text style={styles.footerText}>עמוד {pageNum}</Text>
+      <Text style={styles.footerText}>{playerName} | {generatedAt}</Text>
     </View>
   );
+}
+
+export interface PlayerReportPdfDocumentProps {
+  playerName: string;
+  details: {
+    age: string | null;
+    position: string | null;
+    club: string | null;
+    registrationDate: string;
+    weeklyAttendance: string;
+  };
+  stats: ReportData["stats"];
+  assessments: readonly PlayerAssessment[];
+  radarChartImage: string | null;
+  trendsChartImage: string | null;
+  fifaCardImage: string | null;
+  strengths: string[];
+  weaknesses: string[];
+  socialSkills: string[];
+  summary: string;
+  generatedAt: string;
 }
 
 export function PlayerReportPdfDocument({
   playerName,
   details,
+  stats,
   assessments,
   radarChartImage,
   trendsChartImage,
+  fifaCardImage,
   strengths,
   weaknesses,
   socialSkills,
@@ -215,116 +353,165 @@ export function PlayerReportPdfDocument({
   generatedAt,
 }: PlayerReportPdfDocumentProps) {
   const formatDate = (d: string) => new Date(d).toLocaleDateString("he-IL");
+
+  const ageStr = details.age;
+
   const recent = assessments.slice(0, 2);
+  const latestAssessment = assessments[0] ?? null;
 
   return (
     <Document>
-      {/* Page 1: Details + Assessments */}
+      {/* ===== PAGE 1: Profile + Summary + Assessments ===== */}
       <Page size="A4" style={styles.page}>
+        {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>סיכום פעילות שחקן</Text>
-            <Text style={styles.subtitle}>Garden of Eden</Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.playerName}>{playerName.toUpperCase()}</Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.chipAccent}>Garden of Eden</Text>
+              {details.position && <Text style={styles.chip}>{details.position}</Text>}
+              {details.club && <Text style={styles.chip}>{details.club}</Text>}
+              {ageStr && <Text style={styles.chip}>{"גיל " + ageStr}</Text>}
+              <Text style={styles.chip}>{"הצטרפות: " + formatDate(details.registrationDate)}</Text>
+              <Text style={styles.chip}>{"נוכחות: " + details.weeklyAttendance}</Text>
+            </View>
+          </View>
+          {fifaCardImage && (
+            // eslint-disable-next-line jsx-a11y/alt-text
+            <Image src={fifaCardImage} style={styles.fifaCardImage} />
+          )}
+        </View>
+
+        {/* Body: two columns */}
+        <View style={styles.body}>
+          {/* Left column: key stats */}
+          {stats && (
+            <View style={styles.leftColumn}>
+              <View style={styles.statBlock}>
+                <Text style={styles.statNumber}>{stats.overall_rating}</Text>
+                <Text style={styles.statLabel}>{"דירוג כללי"}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              {(latestAssessment?.sprint_10m ?? latestAssessment?.sprint_5m) != null && (
+                <View style={styles.statBlock}>
+                  <Text style={styles.statSmallNumber}>
+                    {String(latestAssessment?.sprint_10m ?? latestAssessment?.sprint_5m)}
+                  </Text>
+                  <Text style={styles.statLabel}>{"ספרינט (שנ')"}</Text>
+                </View>
+              )}
+              {latestAssessment?.jump_2leg_height != null && (
+                <View style={styles.statBlock}>
+                  <Text style={styles.statSmallNumber}>{String(latestAssessment.jump_2leg_height)}</Text>
+                  <Text style={styles.statLabel}>{"קפיצה (ס\"מ)"}</Text>
+                </View>
+              )}
+              {latestAssessment?.kick_power_kaiser != null && (
+                <View style={styles.statBlock}>
+                  <Text style={styles.statSmallNumber}>{String(latestAssessment.kick_power_kaiser)}</Text>
+                  <Text style={styles.statLabel}>{"כוח בעיטה (W)"}</Text>
+                </View>
+              )}
+              <View style={styles.statDivider} />
+              <View style={styles.statBlock}>
+                <Text style={styles.statSmallNumber}>{details.weeklyAttendance.split(" ")[0]}</Text>
+                <Text style={styles.statLabel}>{"נוכחות/שבוע"}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Right column: summary + bullets */}
+          <View style={styles.rightColumn}>
+            {summary ? (
+              <Text style={styles.summaryText}>{summary}</Text>
+            ) : null}
+            <BulletSection
+              title={"נקודות חוזקה"}
+              items={strengths}
+              color={C.accent}
+            />
+            <BulletSection
+              title={"מיקוד לשיפור"}
+              items={weaknesses}
+              color={C.accentAmber}
+            />
+            <BulletSection
+              title={"כישורים חברתיים"}
+              items={socialSkills}
+              color={C.accentIndigo}
+            />
           </View>
         </View>
 
-        <Text style={styles.dateText}>
-          תאריך הסיכום: {generatedAt}
-        </Text>
-
-        <DetailRow label="שם השחקן" value={playerName} />
-        {details.birthdate && (
-          <DetailRow label="תאריך לידה" value={formatDate(details.birthdate)} />
-        )}
-        {details.position && (
-          <DetailRow label="עמדה" value={details.position} />
-        )}
-        {details.club && (
-          <DetailRow label="מועדון / קבוצה" value={details.club} />
-        )}
-        <DetailRow label="תאריך הצטרפות" value={formatDate(details.registrationDate)} />
-        <DetailRow label="תדירות הגעה בממוצע" value={details.weeklyAttendance} />
-
+        {/* Assessment table */}
         {recent.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>מבדקים גופניים</Text>
-            {/* Table header */}
+          <View>
+            <Text style={styles.tableTitle}>{"מבדקים גופניים"}</Text>
             <View style={styles.tableHeader}>
-              <Text style={styles.tableCellHeader}>מדד</Text>
+              <Text style={styles.tableCellHeader}>{"מדד"}</Text>
               {recent.map((a) => (
                 <Text key={a.id} style={styles.tableCellHeader}>
                   {formatDate(a.assessment_date)}
                 </Text>
               ))}
             </View>
-            {/* Table rows */}
-            {METRIC_KEYS.map((key) => (
-              <View key={key} style={styles.tableRow}>
-                <Text style={styles.tableCell}>
-                  {ASSESSMENT_LABELS_HE[key] ?? key}
-                </Text>
-                {recent.map((a) => (
-                  <Text key={a.id} style={styles.tableCell}>
-                    {String((a[key] as string | number | null) ?? "---")}
+            {METRIC_KEYS.map((key, rowIdx) => {
+              const latest = recent[0]?.[key] as string | number | null ?? null;
+              const previous = recent[1]?.[key] as string | number | null ?? null;
+              const result = compareMetric(String(key), latest, previous);
+              const isImproved = result === "improved";
+              const isDeclined = result === "declined";
+              return (
+                <View
+                  key={key}
+                  style={[styles.tableRow, rowIdx % 2 === 1 ? styles.tableRowAlt : {}]}
+                >
+                  <Text style={styles.tableCellHeader}>
+                    {ASSESSMENT_LABELS_HE[key] ?? String(key)}
                   </Text>
-                ))}
-              </View>
-            ))}
-          </>
+                  <Text
+                    style={
+                      isImproved
+                        ? styles.tableCellImproved
+                        : isDeclined
+                          ? styles.tableCellDeclined
+                          : styles.tableCell
+                    }
+                  >
+                    {String(latest ?? "---")}
+                  </Text>
+                  {recent.length > 1 && (
+                    <Text style={styles.tableCell}>{String(previous ?? "---")}</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
         )}
 
-        <Text style={styles.footer}>Garden of Eden | {generatedAt}</Text>
+        <PageFooter playerName={playerName} generatedAt={generatedAt} pageNum={1} />
       </Page>
 
-      {/* Page 2: Charts + Strengths + Weaknesses */}
+      {/* ===== PAGE 2: Progress Analysis ===== */}
       <Page size="A4" style={styles.page}>
-        {/* @react-pdf/renderer Image doesn't support alt prop */}
-        {/* eslint-disable jsx-a11y/alt-text */}
+        <View style={styles.page2Header}>
+          <View>
+            <Text style={styles.page2Title}>{playerName + " — ניתוח התקדמות"}</Text>
+          </View>
+          <Text style={styles.page2Date}>{generatedAt}</Text>
+        </View>
+
         {radarChartImage && (
+          // eslint-disable-next-line jsx-a11y/alt-text
           <Image src={radarChartImage} style={styles.chartImage} />
         )}
         {trendsChartImage && (
+          // eslint-disable-next-line jsx-a11y/alt-text
           <Image src={trendsChartImage} style={styles.chartImage} />
         )}
-        {/* eslint-enable jsx-a11y/alt-text */}
 
-        {strengths.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>נקודות חוזקה / פרמטרים ששופרו</Text>
-            <BulletList items={strengths} />
-          </>
-        )}
-
-        {weaknesses.length > 0 && (
-          <>
-            <Text style={styles.sectionTitleAmber}>מיקוד לשיפור בהמשך התהליך</Text>
-            <BulletList items={weaknesses} />
-          </>
-        )}
-
-        <Text style={styles.footer}>Garden of Eden | {generatedAt}</Text>
+        <PageFooter playerName={playerName} generatedAt={generatedAt} pageNum={2} />
       </Page>
-
-      {/* Page 3: Social Skills + Summary (conditional) */}
-      {(socialSkills.length > 0 || summary) && (
-        <Page size="A4" style={styles.page}>
-          {socialSkills.length > 0 && (
-            <>
-              <Text style={styles.sectionTitleIndigo}>כישורים חברתיים</Text>
-              <BulletList items={socialSkills} />
-            </>
-          )}
-
-          {summary && (
-            <>
-              <Text style={styles.sectionTitle}>סיכום / הערות נוספות</Text>
-              <Text style={styles.summaryText}>{summary}</Text>
-            </>
-          )}
-
-          <Text style={styles.footer}>Garden of Eden | {generatedAt}</Text>
-        </Page>
-      )}
     </Document>
   );
 }

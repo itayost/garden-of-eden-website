@@ -32,7 +32,7 @@ export async function getReportData(
   // Fetch profile
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, full_name, birthdate, position, club, avatar_url, created_at, arbox_user_id, role")
+    .select("id, full_name, birthdate, position, club, avatar_url, processed_avatar_url, created_at, arbox_user_id, role")
     .eq("id", userId)
     .single();
 
@@ -56,7 +56,7 @@ export async function getReportData(
   // Fetch latest stats
   const { data: stats } = await supabase
     .from("player_stats")
-    .select("overall_rating, pace, shooting, passing, dribbling, defending, physical")
+    .select("overall_rating, pace, shooting, passing, dribbling, defending, physical, card_type")
     .eq("user_id", userId)
     .single();
 
@@ -116,10 +116,22 @@ export async function getReportData(
         position: profile.position,
         club: profile.club,
         avatar_url: profile.avatar_url,
+        processed_avatar_url: profile.processed_avatar_url ?? null,
         created_at: profile.created_at,
       },
       assessments: assessments ?? [],
-      stats: stats ?? null,
+      stats: stats
+        ? {
+            overall_rating: stats.overall_rating,
+            pace: stats.pace,
+            shooting: stats.shooting,
+            passing: stats.passing,
+            dribbling: stats.dribbling,
+            defending: stats.defending,
+            physical: stats.physical,
+            card_type: stats.card_type ?? null,
+          }
+        : null,
       attendance,
       strengths,
       weaknesses,
