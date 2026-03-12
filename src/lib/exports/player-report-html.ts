@@ -271,8 +271,7 @@ ${previous ? `<td style="padding:4px 8px;text-align:center;font-size:10px;color:
 
   // Page 2: Mini metric charts
   const miniChartsHtml = NUMERIC_METRIC_KEYS.map((key) => {
-    const reversedAssessments = [...assessments].reverse();
-    const nonNull = reversedAssessments.filter((a) => a[key] !== null && a[key] !== undefined);
+    const nonNull = assessments.filter((a) => a[key] !== null && a[key] !== undefined);
     if (nonNull.length < 2) return "";
 
     const comparison = compareMetric(String(key), assessments[0]?.[key] ?? null, assessments[1]?.[key] ?? null);
@@ -305,7 +304,8 @@ ${svg}
 <head><meta charset="UTF-8"/>
 <style>
 @font-face{font-family:"Heebo";src:url("data:font/truetype;base64,${heeboRegularB64}") format("truetype");font-weight:400;}
-@font-face{font-family:"Heebo";src:url("data:font/truetype;base64,${heeboBoldB64}") format("truetype");font-weight:700 900;}
+@font-face{font-family:"Heebo";src:url("data:font/truetype;base64,${heeboBoldB64}") format("truetype");font-weight:700;}
+@font-face{font-family:"Heebo";src:url("data:font/truetype;base64,${heeboBoldB64}") format("truetype");font-weight:900;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:"Heebo",system-ui,sans-serif;background:#0f172a;color:#f9fafb;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .page{width:794px;min-height:1123px;padding:28px 32px;background:#111827;display:flex;flex-direction:column;position:relative;}
@@ -327,7 +327,7 @@ ${profile.position ? chip(profile.position) : ""}
 ${profile.club ? chip(profile.club) : ""}
 ${age !== null ? chip(`גיל ${age}`) : ""}
 ${chip(`הצטרפות ${joinDate}`)}
-${attendance ? chip(`נוכחות ${attendance.weeklyAverage.toFixed(1)}/שבוע`) : chip("נוכחות לא זמין")}
+${attendance ? chip(`נוכחות ${attendance.weeklyAverage.toFixed(1)}/שבוע`) : chip("לא זמין")}
 </div>
 </div>
 ${fifaCardHtml}

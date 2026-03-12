@@ -102,6 +102,7 @@ describe("buildPlayerReportHtml", () => {
   it("shows לא זמין for attendance when null", () => {
     const html = buildPlayerReportHtml(makeProps({ attendance: null }), mockAssets);
     expect(html).toContain("לא זמין");
+    expect(html).not.toContain("נוכחות לא זמין");
   });
 
   it("shows attendance stats when provided", () => {
