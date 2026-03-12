@@ -53,6 +53,17 @@ export interface PlayerReportHtmlProps {
   avatarDataUri: string | null;
 }
 
+// Single numeric metric value card (for players with only 1 assessment)
+function buildSingleValueCard(
+  key: keyof PlayerAssessment,
+  assessment: PlayerAssessment,
+): string {
+  const val = assessment[key];
+  if (val === null || val === undefined) return "";
+  const label = ASSESSMENT_LABELS_HE[String(key)] ?? String(key);
+  return `<div style="background:#1f2937;border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;"><div style="font-size:9px;color:#9ca3af;">${label}</div><div style="font-size:22px;font-weight:700;color:#f9fafb;line-height:1;">${val}</div></div>`;
+}
+
 // Spec-defined metric key lists
 const NUMERIC_METRIC_KEYS: (keyof PlayerAssessment)[] = [
   "sprint_5m", "sprint_10m", "sprint_20m",
@@ -391,9 +402,11 @@ ${assessments.length >= 2 ? `<div><div style="font-size:11px;color:#9ca3af;margi
 </div>
 </div>
 
-<div style="font-size:14px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #1f2937;">מגמות התפתחות</div>
-${assessments.length < 2
-  ? `<div style="color:#6b7280;font-size:12px;padding:16px 0;">אין מספיק מבדקים להצגת מגמות</div>`
+<div style="font-size:14px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #1f2937;">${assessments.length >= 2 ? "מגמות התפתחות" : "ערכים נוכחיים"}</div>
+${assessments.length === 0
+  ? `<div style="color:#6b7280;font-size:12px;padding:16px 0;">אין מבדקים</div>`
+  : assessments.length === 1
+  ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">${NUMERIC_METRIC_KEYS.map((key) => buildSingleValueCard(key, assessments[0]!)).filter(Boolean).join("")}</div>`
   : `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">${miniChartsHtml}</div>`}
 
 <div class="footer">
