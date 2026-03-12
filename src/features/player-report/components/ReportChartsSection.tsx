@@ -25,43 +25,35 @@ const AssessmentProgressCharts = dynamic(
 interface ReportChartsSectionProps {
   stats: ReportData["stats"];
   assessments: readonly PlayerAssessment[];
-  radarRef: React.RefObject<HTMLDivElement | null>;
-  trendsRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function ReportChartsSection({
   stats,
   assessments,
-  radarRef,
-  trendsRef,
 }: ReportChartsSectionProps) {
   return (
     <div className="space-y-4">
-      {/* Radar Chart */}
       {stats && (
         <Card>
           <CardHeader>
             <CardTitle>דירוג שחקן</CardTitle>
           </CardHeader>
           <CardContent>
-            <div ref={radarRef}>
+            <div>
               <RadarStatsChart stats={stats} height={350} />
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Trend Charts */}
       {assessments.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>מגמות התפתחות</CardTitle>
           </CardHeader>
           <CardContent>
-            <div ref={trendsRef}>
-              <AssessmentProgressCharts
-                assessments={assessments}
-              />
+            <div>
+              <AssessmentProgressCharts assessments={assessments} />
             </div>
           </CardContent>
         </Card>
