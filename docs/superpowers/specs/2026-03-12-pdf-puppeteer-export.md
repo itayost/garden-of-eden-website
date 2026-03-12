@@ -47,7 +47,8 @@ No `html-to-image` captures. No `@react-pdf/renderer`. No re-fetch from Supabase
 | File | Change |
 | ---- | ------ |
 | `src/features/player-report/components/PlayerReportPdfButton.tsx` | Remove html-to-image captures and @react-pdf imports; replace with `fetch` to new route; remove `radarRef`, `trendsRef`, `fifaCardRef` from props interface |
-| `src/features/player-report/components/ReportEditor.tsx` | Remove `fifaCardRef`, `radarRef`, `trendsRef` refs and hidden `PlayerCard` div; remove `PlayerCard`/`CardType`/`PlayerPosition` imports (now unused); update `PlayerReportPdfButton` call site to match new props interface (atomic change with button) |
+| `src/features/player-report/components/ReportEditor.tsx` | Remove `fifaCardRef`, `radarRef`, `trendsRef` refs and hidden `PlayerCard` div; remove `PlayerCard`/`CardType`/`PlayerPosition` imports (now unused); update `PlayerReportPdfButton` and `ReportChartsSection` call sites to remove those props (atomic with both component changes) |
+| `src/features/player-report/components/ReportChartsSection.tsx` | Remove `radarRef` and `trendsRef` from props interface and from the div wrappers — these were only used for `html-to-image` capture, which is no longer needed |
 | `next.config.ts` | **Merge** `serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core']` into existing `experimental` block — do not replace it |
 
 ### New Dependencies
@@ -102,7 +103,7 @@ No `html-to-image` captures. No `@react-pdf/renderer`. No re-fetch from Supabase
 
 ### Auth
 
-Call `verifyAdminOrTrainer()` from `src/lib/actions/shared/`. It is a plain async function and can be imported and called directly from a Route Handler — the `"use server"` file-level directive only restricts client-component calls. Return 401 if the check fails.
+Call `verifyAdminOrTrainer()` from `src/lib/actions/shared/`. It can be imported and called directly from a Route Handler. The `"use server"` file-level directive only restricts calls from client components — it does not prevent server-to-server imports. Next.js Route Handlers have full access to the `cookies()` store from `next/headers`, so the underlying `createClient()` call inside `verifyAdminOrTrainer` works correctly. Return 401 if the check fails.
 
 ### Avatar Image — SSRF Guard
 
@@ -130,7 +131,7 @@ const browser = await puppeteer.launch({
 
 try {
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  await page.setContent(html, { waitUntil: 'networkidle2' }); // networkidle2 (≤2 connections) is more resilient than networkidle0 on cold starts; the HTML is self-contained so there are no meaningful external requests
   const pdf = await page.pdf({ format: 'A4', printBackground: true });
   return pdf;
 } finally {
@@ -147,7 +148,7 @@ Content-Type: application/pdf
 Content-Disposition: attachment; filename*=UTF-8''%D7%A1%D7%99%D7%9B%D7%95%D7%9D-%D7%A9%D7%97%D7%A7%D7%9F-{encoded_name}-{YYYY-MM-DD}.pdf
 ```
 
-Use `encodeURIComponent` on the player name before embedding in the `filename*=UTF-8''` parameter. This handles Hebrew characters correctly across all browsers per RFC 6266 / RFC 5987.
+Use `encodeURIComponent` on the player name before embedding in the `filename*=UTF-8''` parameter. This handles Hebrew characters correctly across all browsers per RFC 6266 / RFC 5987. Use ISO date format (`new Date().toISOString().split('T')[0]` → `YYYY-MM-DD`) for the filename date — not a locale string.
 
 Error (any non-200):
 
@@ -222,7 +223,7 @@ Direct port of the approved mockup (`pdf-mockup-v3.html`):
 **Top section — radar + highlights side by side:**
 
 - **Radar SVG (left, ~200px wide):** Hexagonal, 6 axes — pace (top), shooting (top-right), physical (bottom-right), defending (bottom), dribbling (bottom-left), passing (top-left). Values 0–100 mapped to distance from center via polar-to-Cartesian. Background grid rings at 25/50/75/100%. Filled polygon in `rgba(34,197,94,0.2)` with `#22c55e` stroke. Hebrew axis labels. Rendered only if `stats` is non-null.
-- **Highlights box (right, flex:1):** Shows `overall_rating` as a large number, number of assessments, and the top 2 most improved metrics (determined by `compareMetric` on `assessments[0]` vs `assessments[1]`). This replaces the "overall rating trend over time" chart from the mockup — we do not have historical per-assessment overall ratings in the data model, so a trend line cannot be drawn accurately.
+- **Highlights box (right, flex:1):** Shows `overall_rating` as a large number and the number of assessments. If 2+ assessments exist, also shows the top 2 metrics where `compareMetric` returns `"improved"` (comparing `assessments[0]` vs `assessments[1]`). If fewer than 2 metrics are improved, show however many are available. If none are improved, show "אין שיפורים מדידים" instead. If fewer than 2 assessments exist, omit the improvements section entirely. This section replaces the "overall rating trend over time" chart from the mockup — we do not have historical per-assessment overall ratings in the data model, so a trend line cannot be drawn accurately.
 
 **Bottom section — mini metric charts (3-column grid):**
 
@@ -230,7 +231,7 @@ One card per metric in `NUMERIC_METRIC_KEYS` that has at least 2 non-null values
 
 - Metric Hebrew label (from `ASSESSMENT_LABELS_HE`)
 - Change label: "↑/↓ Δvalue (שיפור/ירידה)" or "→ ללא שינוי"
-- 60px-tall polyline SVG: assessments plotted oldest→newest on X axis, raw metric value on Y axis (scaled to fit the 60px height using local min/max from the data). Dots at each point, last dot slightly larger.
+- 60px-tall polyline SVG: assessments plotted oldest→newest on X axis (reverse the incoming newest-first array before mapping to chart points), raw metric value on Y axis (scaled to fit the 60px height using local min/max from the data). Dots at each point, last dot slightly larger.
 - Colour: green if `compareMetric` returns `"improved"`, amber if `"declined"`, grey if unchanged or insufficient data.
 
 Categorical metrics (`CATEGORICAL_METRIC_KEYS`) do not appear in the mini chart grid. They appear only in the page 1 assessment table.
