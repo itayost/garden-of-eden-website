@@ -176,11 +176,13 @@ Label mapping:
 
 ### Kaiser/Height Column
 
-Column contains mixed data like `"188 7%"`, `"204 7%"`, `"83 3%"`. Parse both values:
+Column contains mixed data like `"188 7%"`, `"204 7%"`, `"83 3%"`, `"230%"`. Parse both values with `%` taking precedence:
 
-- Large number (> 20) -> `jump_2leg_height` (cm)
-- Number before `%` marker -> `kick_power_kaiser` (e.g., `7%` -> `7`)
-- Same splitting logic applies to the `ניתור.*לגובה` column in the reordered columnar format
+1. First, extract `%`-marked numbers as `kick_power_kaiser` (e.g., `7%` -> `7`, `230%` -> `230`). The `%` marker overrides any magnitude threshold.
+2. Then, extract remaining unmarked numbers > 20 as `jump_2leg_height` (cm).
+3. Same splitting logic applies to the `ניתור.*לגובה` column in the reordered columnar format.
+
+Note: the existing `parseKaiserKickPower` utility filters `<= 20` -- this must be updated to allow any magnitude when a `%` marker is present.
 
 ### Blaze Spot
 - Integer count of hits
