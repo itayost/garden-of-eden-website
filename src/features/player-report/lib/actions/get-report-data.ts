@@ -7,6 +7,12 @@ import { fetchEntranceReport, calculateWeeklyAverage } from "@/lib/arbox/reports
 import { extractTraineeNotes } from "@/lib/utils/trainee-notes";
 import { categorizeNotes } from "../utils/aggregate-notes";
 import { getAgeGroup } from "@/types/assessment";
+import {
+  calculateCardRatings,
+  calculateGroupStats,
+  calculateNeutralRatings,
+  getLatestAssessmentsPerUser,
+} from "@/lib/assessment-to-rating";
 import type { ReportData, TraineeAttendance } from "../../types";
 import type { ShiftReportForNotes } from "@/lib/utils/trainee-notes";
 import type { PlayerAssessment } from "@/types/assessment";
@@ -84,12 +90,40 @@ export async function getReportData(
     }
   }
 
-  // Fetch latest stats
-  const { data: stats } = await supabase
+  // Fetch pre-computed stats (may be null for most users)
+  const { data: preComputedStats } = await supabase
     .from("player_stats")
     .select("overall_rating, pace, shooting, passing, dribbling, defending, physical, card_type")
     .eq("user_id", userId)
     .single();
+
+  // Compute ratings dynamically when player_stats is empty but assessments exist
+  const typedAssessments = (assessments ?? []) as PlayerAssessment[];
+  const computedStats = (() => {
+    if (preComputedStats) {
+      return {
+        overall_rating: preComputedStats.overall_rating,
+        pace: preComputedStats.pace,
+        shooting: preComputedStats.shooting,
+        passing: preComputedStats.passing,
+        dribbling: preComputedStats.dribbling,
+        defending: preComputedStats.defending,
+        physical: preComputedStats.physical,
+        card_type: preComputedStats.card_type ?? null,
+      };
+    }
+    if (typedAssessments.length === 0) return null;
+
+    const latestAssessment = typedAssessments[0]!;
+    if (groupAssessments.length > 1) {
+      const latestPerUser = getLatestAssessmentsPerUser(groupAssessments);
+      const groupStats = calculateGroupStats(latestPerUser);
+      const ratings = calculateCardRatings(latestAssessment, groupStats);
+      return { ...ratings, card_type: null };
+    }
+    const ratings = calculateNeutralRatings();
+    return { ...ratings, card_type: null };
+  })();
 
   // Fetch shift reports mentioning this trainee in date range
   const { data: shiftReports } = await supabase
@@ -150,20 +184,9 @@ export async function getReportData(
         processed_avatar_url: profile.processed_avatar_url ?? null,
         created_at: profile.created_at,
       },
-      assessments: assessments ?? [],
+      assessments: typedAssessments,
       groupAssessments,
-      stats: stats
-        ? {
-            overall_rating: stats.overall_rating,
-            pace: stats.pace,
-            shooting: stats.shooting,
-            passing: stats.passing,
-            dribbling: stats.dribbling,
-            defending: stats.defending,
-            physical: stats.physical,
-            card_type: stats.card_type ?? null,
-          }
-        : null,
+      stats: computedStats,
       attendance,
       strengths,
       weaknesses,
