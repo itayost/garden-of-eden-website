@@ -174,10 +174,24 @@ describe("findProfileMatch", () => {
     const result = findProfileMatch("איתי בן דוד ", profiles);
     expect(result.profile?.id).toBe("1");
   });
-  it("finds token match with typo", () => {
+  it("rejects match when only first name overlaps", () => {
     const result = findProfileMatch("נועם קופליביץ", profiles);
+    expect(result.confidence).toBe("none");
+    expect(result.profile).toBeNull();
+  });
+  it("matches single name when exactly one profile has it", () => {
+    const result = findProfileMatch("רועי", profiles);
     expect(result.confidence).toBe("token");
-    expect(result.profile?.id).toBe("2");
+    expect(result.profile?.id).toBe("3");
+  });
+  it("rejects single name when multiple profiles match", () => {
+    const multiProfiles = [
+      ...profiles,
+      { id: "4", full_name: "רועי ארנון" },
+    ];
+    const result = findProfileMatch("רועי", multiProfiles);
+    expect(result.confidence).toBe("none");
+    expect(result.profile).toBeNull();
   });
   it("returns none for unmatched name", () => {
     const result = findProfileMatch("זוזו", profiles);

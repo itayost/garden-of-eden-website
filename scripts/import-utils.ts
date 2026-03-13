@@ -312,29 +312,46 @@ export function findProfileMatch(
   );
   if (exact) return { profile: exact, confidence: "exact" };
 
-  // Partial match
-  const partial = profiles.find((p) => {
-    if (!p.full_name) return false;
-    const pNorm = normalizeName(p.full_name);
-    return pNorm.includes(normalized) || normalized.includes(pNorm);
-  });
-  if (partial) return { profile: partial, confidence: "partial" };
+  // Partial match (skip single-word names — they use the single-name token rule below)
+  const csvWords = normalized.split(" ").filter((t) => t.length > 0);
+  if (csvWords.length > 1) {
+    const partial = profiles.find((p) => {
+      if (!p.full_name) return false;
+      const pNorm = normalizeName(p.full_name);
+      return pNorm.includes(normalized) || normalized.includes(pNorm);
+    });
+    if (partial) return { profile: partial, confidence: "partial" };
+  }
 
   // Token overlap
   const csvTokens = normalized.split(" ").filter((t) => t.length > 1);
-  let bestMatch: ProfileMatch | null = null;
-  let bestScore = 0;
-  for (const p of profiles) {
-    if (!p.full_name) continue;
-    const pTokens = normalizeName(p.full_name).split(" ").filter((t) => t.length > 1);
-    const overlap = csvTokens.filter((t) => pTokens.includes(t)).length;
-    const score = overlap / Math.max(csvTokens.length, pTokens.length);
-    if (score > bestScore && score >= 0.5) {
-      bestScore = score;
-      bestMatch = p;
+
+  if (csvTokens.length === 1) {
+    // Single name: match only if exactly one profile contains this token
+    const singleToken = csvTokens[0];
+    const candidates = profiles.filter((p) => {
+      if (!p.full_name) return false;
+      const pTokens = normalizeName(p.full_name).split(" ").filter((t) => t.length > 1);
+      return pTokens.includes(singleToken);
+    });
+    if (candidates.length === 1) {
+      return { profile: candidates[0], confidence: "token" };
     }
+  } else {
+    // Multi-name: require ALL csv tokens to match (not just one)
+    let bestMatch: ProfileMatch | null = null;
+    let bestOverlap = 0;
+    for (const p of profiles) {
+      if (!p.full_name) continue;
+      const pTokens = normalizeName(p.full_name).split(" ").filter((t) => t.length > 1);
+      const overlap = csvTokens.filter((t) => pTokens.includes(t)).length;
+      if (overlap === csvTokens.length && overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestMatch = p;
+      }
+    }
+    if (bestMatch) return { profile: bestMatch, confidence: "token" };
   }
-  if (bestMatch) return { profile: bestMatch, confidence: "token" };
 
   return { profile: null, confidence: "none" };
 }
