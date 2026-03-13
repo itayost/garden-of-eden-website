@@ -369,3 +369,321 @@ export function isHeaderOrMetadata(name: string): boolean {
   if (trimmed.startsWith("עמודה") || trimmed.startsWith("תשאירו")) return true;
   return false;
 }
+
+// ---------------------------------------------------------------------------
+// Parser 1: Standard columnar (fixed column positions)
+// ---------------------------------------------------------------------------
+export function parseStandardColumnar(
+  content: string,
+  sourceFile: string,
+  assessmentDate: string
+): NormalizedAssessmentRow[] {
+  const lines = content.split("\n");
+  const dataLines = lines.slice(1); // skip header
+  const results: NormalizedAssessmentRow[] = [];
+
+  for (const line of dataLines) {
+    const fields = parseCSVLine(line);
+    const name = (fields[0] || "").trim();
+    if (isHeaderOrMetadata(name)) continue;
+
+    const warnings: string[] = [];
+
+    // Sprints
+    let sprint5m = extractNumber(fields[4] || "");
+    if (sprint5m !== null) {
+      const s = normalizeSprint(sprint5m);
+      sprint5m = s.result;
+      if (s.warning) warnings.push(s.warning);
+    }
+
+    let sprint10m = extractNumber(fields[5] || "");
+    if (sprint10m !== null) {
+      const s = normalizeSprint(sprint10m);
+      sprint10m = s.result;
+      if (s.warning) warnings.push(s.warning);
+    }
+
+    // 2-leg jump distance
+    const rawDistance = extractNumber(fields[2] || "");
+    const jump2legDistance = rawDistance !== null ? normalizeToCm(rawDistance) : null;
+
+    // Single-leg jumps
+    const legJumps = parseSingleLegJump(fields[3] || "");
+
+    // Kaiser/Height
+    const kaiser = parseKaiserHeight(fields[1] || "");
+
+    // Blaze spot
+    const blazeSpot = parseBlazeSpot(fields[10] || "");
+
+    // Coordination
+    const coordination = mapCoordination(fields[8] || "");
+
+    results.push({
+      source_file: sourceFile,
+      csv_name: name,
+      assessment_date: assessmentDate,
+      sprint_5m: sprint5m,
+      sprint_10m: sprint10m,
+      sprint_20m: null,
+      jump_2leg_distance: jump2legDistance,
+      jump_right_leg: legJumps.right,
+      jump_left_leg: legJumps.left,
+      jump_2leg_height: kaiser.jumpHeight,
+      kick_power_kaiser: kaiser.kickPower,
+      blaze_spot_time: blazeSpot,
+      coordination,
+      warnings,
+    });
+  }
+
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// Parser 2: Reordered columnar (columns mapped by header keywords)
+// ---------------------------------------------------------------------------
+export function parseReorderedColumnar(
+  content: string,
+  sourceFile: string,
+  assessmentDate: string
+): NormalizedAssessmentRow[] {
+  const lines = content.split("\n");
+  if (lines.length === 0) return [];
+
+  const headerFields = parseCSVLine(lines[0]);
+
+  // Map column indices by header keywords
+  const colMap: Record<string, number> = {};
+  for (let i = 0; i < headerFields.length; i++) {
+    const h = headerFields[i].trim();
+    if (/ניתור רגל ימין|קפיצה למרחק רגל ימין/.test(h)) colMap.jumpRight = i;
+    else if (/ניתור רגל.*ש[מא]|קפיצה למרחק רגל שמאל/.test(h)) colMap.jumpLeft = i;
+    else if (/בלייז ספוט|זריזות.*פודים/.test(h)) colMap.blazeSpot = i;
+    else if (/ניתור 2 רגליים|קפיצה למרחק 2 רגליים/.test(h)) colMap.jump2leg = i;
+    else if ((/מהירות.*5/.test(h) && !/זריזות/.test(h) && !/אלכסונים/.test(h)) || /ספרינט 5/.test(h)) colMap.sprint5 = i;
+    else if ((/מהירות.*10/.test(h) && !/זריזות/.test(h) && !/אלכסונים/.test(h)) || /ספרינט 10/.test(h)) colMap.sprint10 = i;
+    else if (/ניתור.*לגובה 5/.test(h)) colMap.height5 = i;
+    else if (/ניתור.*לגובה 3/.test(h)) colMap.height35 = i;
+    else if (/ניתור.*לגובה/.test(h) && colMap.height5 === undefined) colMap.heightGeneric = i;
+  }
+
+  const results: NormalizedAssessmentRow[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const fields = parseCSVLine(lines[i]);
+    const name = (fields[0] || "").trim();
+    if (isHeaderOrMetadata(name)) continue;
+
+    const warnings: string[] = [];
+
+    // Sprints
+    let sprint5m = colMap.sprint5 !== undefined ? extractNumber(fields[colMap.sprint5] || "") : null;
+    if (sprint5m !== null) {
+      const s = normalizeSprint(sprint5m);
+      sprint5m = s.result;
+      if (s.warning) warnings.push(s.warning);
+    }
+
+    let sprint10m = colMap.sprint10 !== undefined ? extractNumber(fields[colMap.sprint10] || "") : null;
+    if (sprint10m !== null) {
+      const s = normalizeSprint(sprint10m);
+      sprint10m = s.result;
+      if (s.warning) warnings.push(s.warning);
+    }
+
+    // Jump distance
+    const rawDist = colMap.jump2leg !== undefined ? extractNumber(fields[colMap.jump2leg] || "") : null;
+    const jump2legDist = rawDist !== null ? normalizeToCm(rawDist) : null;
+
+    // Single-leg jumps (separate columns)
+    const rawRight = colMap.jumpRight !== undefined ? extractNumber(fields[colMap.jumpRight] || "") : null;
+    const rawLeft = colMap.jumpLeft !== undefined ? extractNumber(fields[colMap.jumpLeft] || "") : null;
+    const jumpRight = rawRight !== null ? normalizeToCm(rawRight) : null;
+    const jumpLeft = rawLeft !== null ? normalizeToCm(rawLeft) : null;
+
+    // Height: prefer "5" column, fall back to generic
+    const heightCol = colMap.height5 ?? colMap.heightGeneric;
+    let jumpHeight: number | null = null;
+    let kickPower: number | null = null;
+    if (heightCol !== undefined) {
+      const kaiser = parseKaiserHeight(fields[heightCol] || "");
+      jumpHeight = kaiser.jumpHeight;
+      kickPower = kaiser.kickPower;
+    }
+
+    // Blaze spot
+    const blazeSpot = colMap.blazeSpot !== undefined ? parseBlazeSpot(fields[colMap.blazeSpot] || "") : null;
+
+    results.push({
+      source_file: sourceFile,
+      csv_name: name,
+      assessment_date: assessmentDate,
+      sprint_5m: sprint5m,
+      sprint_10m: sprint10m,
+      sprint_20m: null,
+      jump_2leg_distance: jump2legDist,
+      jump_right_leg: jumpRight,
+      jump_left_leg: jumpLeft,
+      jump_2leg_height: jumpHeight,
+      kick_power_kaiser: kickPower,
+      blaze_spot_time: blazeSpot,
+      coordination: null,
+      warnings,
+    });
+  }
+
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// Parser 3: Vertical card ("label - N, N" pairs with best-of-two selection)
+// ---------------------------------------------------------------------------
+export function parseVerticalCard(
+  content: string,
+  sourceFile: string,
+  assessmentDate: string
+): NormalizedAssessmentRow[] {
+  const lines = content.split("\n");
+  const results: NormalizedAssessmentRow[] = [];
+
+  let currentName: string | null = null;
+  let currentData: Partial<NormalizedAssessmentRow> = {};
+  let currentWarnings: string[] = [];
+
+  function flushPlayer() {
+    if (currentName && !isHeaderOrMetadata(currentName)) {
+      results.push({
+        source_file: sourceFile,
+        csv_name: currentName,
+        assessment_date: assessmentDate,
+        sprint_5m: currentData.sprint_5m ?? null,
+        sprint_10m: currentData.sprint_10m ?? null,
+        sprint_20m: null,
+        jump_2leg_distance: currentData.jump_2leg_distance ?? null,
+        jump_right_leg: currentData.jump_right_leg ?? null,
+        jump_left_leg: currentData.jump_left_leg ?? null,
+        jump_2leg_height: null,
+        kick_power_kaiser: null,
+        blaze_spot_time: null,
+        coordination: null,
+        warnings: currentWarnings,
+      });
+    }
+    currentName = null;
+    currentData = {};
+    currentWarnings = [];
+  }
+
+  // Measurement line pattern: "label - N, N" or "label - N"
+  const measurementPattern = /^"?(.+?)\s*-\s*([\d.]+)(?:\s*,\s*([\d.]+))?"?$/;
+
+  for (const rawLine of lines) {
+    const fields = parseCSVLine(rawLine);
+    const cell = (fields[0] || "").trim();
+    if (!cell) {
+      continue;
+    }
+
+    const match = cell.match(measurementPattern);
+    if (match) {
+      const label = match[1].trim();
+      const val1 = parseFloat(match[2]);
+      const val2 = match[3] ? parseFloat(match[3]) : null;
+
+      if (/^5 מ/.test(label)) {
+        currentData.sprint_5m = val2 !== null ? Math.min(val1, val2) : val1;
+      } else if (/^10 מ/.test(label)) {
+        currentData.sprint_10m = val2 !== null ? Math.min(val1, val2) : val1;
+      } else if (/קפיצה שתי רגליים|שתי רגליים/.test(label)) {
+        const best = val2 !== null ? Math.max(val1, val2) : val1;
+        currentData.jump_2leg_distance = normalizeToCm(best);
+      } else if (/שמאל/.test(label)) {
+        const best = val2 !== null ? Math.max(val1, val2) : val1;
+        currentData.jump_left_leg = normalizeToCm(best);
+      } else if (/ימין/.test(label)) {
+        const best = val2 !== null ? Math.max(val1, val2) : val1;
+        currentData.jump_right_leg = normalizeToCm(best);
+      }
+    } else {
+      const isNote = /[,.]/.test(cell) && !/^\d/.test(cell) && cell.length > 20;
+      if (isNote && currentName) {
+        currentWarnings.push(`note: ${cell}`);
+      } else {
+        if (currentName) flushPlayer();
+        currentName = cell.replace(/:$/, "").replace(/-$/, "").trim();
+      }
+    }
+  }
+
+  // Flush last player at EOF
+  flushPlayer();
+
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// Parser 4: Vertical labeled ("label: value" blocks in column 10)
+// ---------------------------------------------------------------------------
+export function parseVerticalLabeled(
+  content: string,
+  sourceFile: string,
+  assessmentDate: string
+): NormalizedAssessmentRow[] {
+  const lines = content.split("\n");
+  const results: NormalizedAssessmentRow[] = [];
+
+  let currentName: string | null = null;
+  let currentData: Partial<NormalizedAssessmentRow> = {};
+
+  function flushPlayer() {
+    if (currentName) {
+      results.push({
+        source_file: sourceFile,
+        csv_name: currentName,
+        assessment_date: assessmentDate,
+        sprint_5m: currentData.sprint_5m ?? null,
+        sprint_10m: currentData.sprint_10m ?? null,
+        sprint_20m: null,
+        jump_2leg_distance: currentData.jump_2leg_distance ?? null,
+        jump_right_leg: currentData.jump_right_leg ?? null,
+        jump_left_leg: currentData.jump_left_leg ?? null,
+        jump_2leg_height: null,
+        kick_power_kaiser: null,
+        blaze_spot_time: null,
+        coordination: null,
+        warnings: [],
+      });
+    }
+    currentName = null;
+    currentData = {};
+  }
+
+  for (const rawLine of lines) {
+    const fields = parseCSVLine(rawLine);
+    const cell = (fields[10] || "").trim(); // data in column 10
+    if (!cell) continue;
+
+    const labelMatch = cell.match(/^(.+?):\s*([\d.]+)$/);
+    if (labelMatch) {
+      const label = labelMatch[1].trim();
+      const value = parseFloat(labelMatch[2]);
+      if (isNaN(value)) continue;
+
+      if (/^5 מטר$/.test(label)) currentData.sprint_5m = value;
+      else if (/^10 מטר$/.test(label)) currentData.sprint_10m = value;
+      else if (/קפיצה שתי רגליים/.test(label)) currentData.jump_2leg_distance = normalizeToCm(value);
+      else if (/רגל ימין/.test(label)) currentData.jump_right_leg = normalizeToCm(value);
+      else if (/רגל שמאל/.test(label)) currentData.jump_left_leg = normalizeToCm(value);
+      // "זריזות" is dropped per spec
+    } else {
+      if (currentName) flushPlayer();
+      currentName = cell;
+    }
+  }
+
+  // Flush last player
+  flushPlayer();
+
+  return results;
+}
