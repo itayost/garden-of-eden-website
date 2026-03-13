@@ -25,11 +25,13 @@ const AssessmentProgressCharts = dynamic(
 interface ReportChartsSectionProps {
   stats: ReportData["stats"];
   assessments: readonly PlayerAssessment[];
+  groupAssessments?: readonly PlayerAssessment[];
 }
 
 export function ReportChartsSection({
   stats,
   assessments,
+  groupAssessments = [],
 }: ReportChartsSectionProps) {
   return (
     <div className="space-y-4">
@@ -53,7 +55,7 @@ export function ReportChartsSection({
           </CardHeader>
           <CardContent>
             <div>
-              <AssessmentProgressCharts assessments={assessments} />
+              <AssessmentProgressCharts assessments={assessments} allAssessmentsInGroup={groupAssessments} />
             </div>
           </CardContent>
         </Card>

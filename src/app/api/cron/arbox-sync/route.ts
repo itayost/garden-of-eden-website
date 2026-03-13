@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { syncArboxUsers } from "@/lib/arbox/sync";
+import { syncArboxUsers, syncArboxBirthdays } from "@/lib/arbox/sync";
 
 /**
  * Vercel Cron Job: Sync Arbox members to Supabase trainee accounts.
  *
  * Runs nightly at 2am UTC. Fetches all Arbox users, creates new auth accounts
  * for unmatched members (with phones), and fills null profile fields for existing ones.
+ * Also syncs birthdays from the Arbox birthday report into profiles.birthdate.
  */
 export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
@@ -24,8 +25,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await syncArboxUsers();
-    return NextResponse.json({ success: true, ...result });
+    const usersResult = await syncArboxUsers();
+    const birthdayResult = await syncArboxBirthdays();
+
+    return NextResponse.json({
+      success: true,
+      users: usersResult,
+      birthdays: birthdayResult,
+    });
   } catch (error) {
     console.error("[Arbox Sync] Fatal error:", error);
     return NextResponse.json({ error: "Sync failed" }, { status: 500 });

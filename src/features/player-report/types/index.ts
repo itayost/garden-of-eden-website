@@ -33,6 +33,7 @@ export interface ReportData {
     readonly physical: number;
     readonly card_type: string | null;
   } | null;
+  readonly groupAssessments: readonly PlayerAssessment[];
   readonly attendance: TraineeAttendance | null;
   readonly strengths: readonly ReportBulletItem[];
   readonly weaknesses: readonly ReportBulletItem[];

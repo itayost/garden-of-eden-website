@@ -6,8 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchEntranceReport, calculateWeeklyAverage } from "@/lib/arbox/reports";
 import { extractTraineeNotes } from "@/lib/utils/trainee-notes";
 import { categorizeNotes } from "../utils/aggregate-notes";
+import { getAgeGroup } from "@/types/assessment";
 import type { ReportData, TraineeAttendance } from "../../types";
 import type { ShiftReportForNotes } from "@/lib/utils/trainee-notes";
+import type { PlayerAssessment } from "@/types/assessment";
 
 export async function getReportData(
   userId: string,
@@ -52,6 +54,35 @@ export async function getReportData(
     .eq("user_id", userId)
     .is("deleted_at", null)
     .order("assessment_date", { ascending: false });
+
+  // Fetch age group assessments for percentile-based ratings
+  let groupAssessments: PlayerAssessment[] = [];
+  const ageGroup = getAgeGroup(profile.birthdate);
+
+  if (ageGroup) {
+    // Find all trainees in the same age group
+    const { data: traineeProfiles } = await supabase
+      .from("profiles")
+      .select("id, birthdate")
+      .eq("role", "trainee");
+
+    const sameAgeGroupIds = (traineeProfiles ?? [])
+      .filter((p) => {
+        const pGroup = getAgeGroup(p.birthdate);
+        return pGroup?.id === ageGroup.id;
+      })
+      .map((p) => p.id);
+
+    if (sameAgeGroupIds.length > 1) {
+      const { data: fetchedGroupAssessments } = await supabase
+        .from("player_assessments")
+        .select("*")
+        .in("user_id", sameAgeGroupIds)
+        .is("deleted_at", null);
+
+      groupAssessments = (fetchedGroupAssessments ?? []) as PlayerAssessment[];
+    }
+  }
 
   // Fetch latest stats
   const { data: stats } = await supabase
@@ -120,6 +151,7 @@ export async function getReportData(
         created_at: profile.created_at,
       },
       assessments: assessments ?? [],
+      groupAssessments,
       stats: stats
         ? {
             overall_rating: stats.overall_rating,

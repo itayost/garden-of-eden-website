@@ -1,9 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fetchAllArboxUsers, type ArboxUser } from "./client";
+import { fetchAllArboxUsers, fetchArboxBirthdays, type ArboxUser } from "./client";
 import { normalizePhone } from "./normalize-phone";
 
 export type SyncResult = {
   created: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+};
+
+export type BirthdaySyncResult = {
   updated: number;
   skipped: number;
   errors: number;
@@ -112,5 +118,66 @@ export async function syncArboxUsers(): Promise<SyncResult> {
   }
 
   console.log("[Arbox Sync] Complete:", result);
+  return result;
+}
+
+/**
+ * Sync birthdays from Arbox into profiles.birthdate.
+ * Only fills null birthdates — manually entered ones are preserved.
+ */
+export async function syncArboxBirthdays(): Promise<BirthdaySyncResult> {
+  const result: BirthdaySyncResult = { updated: 0, skipped: 0, errors: 0 };
+  const supabase = createAdminClient();
+
+  console.log("[Arbox Birthday Sync] Fetching birthdays from Arbox...");
+  const birthdays = await fetchArboxBirthdays();
+  console.log(`[Arbox Birthday Sync] Found ${birthdays.size} birthdays`);
+
+  if (birthdays.size === 0) return result;
+
+  // Fetch profiles linked to Arbox that are missing a birthdate
+  const { data: profiles, error: fetchError } = await supabase
+    .from("profiles")
+    .select("id, arbox_user_id")
+    .not("arbox_user_id", "is", null)
+    .is("birthdate", null);
+
+  if (fetchError) {
+    console.error("[Arbox Birthday Sync] Failed to fetch profiles:", fetchError);
+    return { ...result, errors: 1 };
+  }
+
+  if (!profiles || profiles.length === 0) {
+    console.log("[Arbox Birthday Sync] No profiles need birthday updates");
+    return result;
+  }
+
+  console.log(`[Arbox Birthday Sync] ${profiles.length} profiles missing birthdate`);
+
+  for (const profile of profiles) {
+    const birthday = birthdays.get(profile.arbox_user_id as number);
+
+    if (!birthday) {
+      result.skipped++;
+      continue;
+    }
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ birthdate: birthday })
+      .eq("id", profile.id);
+
+    if (updateError) {
+      console.error(
+        `[Arbox Birthday Sync] Failed to update profile ${profile.id}:`,
+        updateError
+      );
+      result.errors++;
+    } else {
+      result.updated++;
+    }
+  }
+
+  console.log("[Arbox Birthday Sync] Complete:", result);
   return result;
 }
