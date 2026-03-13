@@ -357,7 +357,8 @@ async function main() {
           .from("player_assessments")
           .select("id")
           .eq("user_id", match.id)
-          .eq("assessment_date", ASSESSMENT_DATE);
+          .eq("assessment_date", ASSESSMENT_DATE)
+          .is("deleted_at", null);
 
         if (existing && existing.length > 0) {
           result.warnings.push("Assessment already exists for this date - skipped");
