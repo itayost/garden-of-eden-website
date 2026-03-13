@@ -2,7 +2,7 @@
 
 ## Context
 
-Seven historical CSV files in `assesments-to-import/` contain player assessment data from July 2024 through January 2025. These need a one-time import into the existing `player_assessments` table. Future assessments will be entered through the system UI.
+Seven historical CSV files (nine logical sections -- one file contains three formats) in `assesments-to-import/` contain player assessment data from March 2024 through January 2025. These need a one-time import into the existing `player_assessments` table. Future assessments will be entered through the system UI.
 
 The challenge: files use at least 4 different formats (standard columnar, reordered columnar, vertical card with pairs, vertical labeled blocks), with inconsistent column ordering, mixed units (meters vs cm), typos in names, and one file (November) containing 3 different formats within itself.
 
@@ -21,7 +21,7 @@ This gives full visibility into every value before it hits the database and prov
 | 1 | יולי (July) | Standard columnar, "שם" header, extra blank/sub-header rows | 2024-07-01 | ~5 |
 | 2 | אוגוסט (August) | Standard columnar, "שם השחקן" header | 2024-08-01 | ~4 |
 | 3 | אוקטובר (October) | Standard columnar, "שם השחקן" header, trailing commas | 2024-10-01 | ~4 |
-| 4 | מרץ-אפריל (March-April) | Standard columnar, "שם השחקן" header | 2025-03-01 | ~11 |
+| 4 | מרץ-אפריל (March-April) | Standard columnar, "שם השחקן" header | 2024-03-01 | ~11 |
 | 5 | נובמבר lines 1-95 | Reordered columnar: separate R/L leg cols, blaze spot moved | 2024-11-01 | ~66 |
 | 6 | נובמבר lines 271-275 | Sub-table: height jump 3.5/5, agility pods | 2024-11-01 | ~4 |
 | 7 | נובמבר lines 281-520 | Vertical card: `"5 מ - 5.32, 5.40"` pairs | 2024-11-01 | ~20 |
@@ -48,7 +48,7 @@ Usage:
 npx tsx scripts/extract-assessments.ts [--output assesments-to-import/mapping.csv]
 ```
 
-Processes all 7 CSV files using format-specific parsers, fuzzy-matches names to Supabase profiles, writes `mapping.csv`.
+Processes all 7 CSV files (9 logical sections) using format-specific parsers, fuzzy-matches names to Supabase profiles, writes `mapping.csv`.
 
 ### Phase 2: Import (`scripts/import-from-mapping.ts`)
 
@@ -58,7 +58,7 @@ npx tsx scripts/import-from-mapping.ts assesments-to-import/mapping.csv --dry-ru
 npx tsx scripts/import-from-mapping.ts assesments-to-import/mapping.csv
 ```
 
-Reads reviewed `mapping.csv`, skips rows with empty `profile_id`, inserts into `player_assessments`. Idempotent: checks for existing assessment on same user+date.
+Reads reviewed `mapping.csv`, skips rows with empty `profile_id`, inserts into `player_assessments` using the Supabase service role key (bypasses RLS). Idempotent: checks for existing assessment on same user+date, filtering `deleted_at IS NULL` to align with the partial unique index.
 
 ### Shared Utilities (`scripts/import-utils.ts`)
 
@@ -94,15 +94,18 @@ Filters out rows where name is empty, header-like ("שם השחקן", "שם שח
 **Used by:** November lines 1-95, November sub-table lines 271-275
 
 Maps columns by header keywords rather than position:
-- "ניתור רגל ימין" -> jump_right_leg
-- "ניתור רגל שמאל" / "שאמאל" -> jump_left_leg
-- "בלייז ספוט" / "זריזות.*פודים" -> blaze_spot_time
-- "ניתור 2 רגליים למרחק" -> jump_2leg_distance
-- "מהירות.*5" -> sprint_5m
-- "מהירות.*10" -> sprint_10m
-- "ניתור.*לגובה" -> jump_2leg_height
 
-Dropped columns: diagonal agility (10m, 5m).
+- "ניתור רגל ימין" / "קפיצה למרחק רגל ימין" -> jump_right_leg
+- "ניתור רגל שמאל" / "שאמאל" / "קפיצה למרחק רגל שמאל" -> jump_left_leg
+- "בלייז ספוט" / "זריזות.*פודים" -> blaze_spot_time
+- "ניתור 2 רגליים למרחק" / "קפיצה למרחק 2 רגליים" -> jump_2leg_distance
+- "מהירות.*5" / "ספרינט 5" -> sprint_5m
+- "מהירות.*10" / "ספרינט 10" -> sprint_10m
+- "ניתור.*לגובה" -> jump_2leg_height (apply kaiser/height splitting logic: large number = height, % marker = kaiser)
+
+Sub-table special case (lines 271-275): has two height columns (`ניתור לגובה 3.5` and `ניתור לגובה 5`). Use `ניתור לגובה 5` for `jump_2leg_height`. Drop `ניתור לגובה 3.5`.
+
+Dropped columns: diagonal agility (10m, 5m), agility pods.
 
 ### 3. `parseVerticalCard`
 
@@ -125,6 +128,8 @@ Each line has two attempts. Take the **better** value (lower for sprints, higher
 Detection: lines that start with a Hebrew name followed by measurement lines matching `"X מ - N, N"` pattern.
 
 Text notes (e.g., "קרסוליים קשיחות, לא הכי יציב") are stored in `notes` if present.
+
+Parser must flush the last player record at EOF, not only on blank-line delimiter.
 
 ### 4. `parseVerticalLabeled`
 
@@ -159,8 +164,10 @@ Label mapping:
 - `"?"`, `"??"`, `"0"`, empty -> `null`
 
 ### Sprints (seconds)
+
 - Values > 30: divide by 100 (e.g., `240` -> `2.40`)
 - Expected range: 0.8 - 3.0s. Flag outliers as warnings.
+- Sprint values are never passed through `normalizeToCm()` -- only jump distances use that conversion.
 
 ### Jumps (cm)
 - Values < 10: multiply by 100 (meters to cm)
@@ -168,9 +175,12 @@ Label mapping:
 - `"רגל ימין ושמאל 138"` -> both = 138
 
 ### Kaiser/Height Column
-- Numbers > 20 -> `jump_2leg_height` (cm)
-- Numbers <= 20 -> `kick_power_kaiser`
-- Percentage markers (`7%`, `5%`, `3%`) informational only, not stored
+
+Column contains mixed data like `"188 7%"`, `"204 7%"`, `"83 3%"`. Parse both values:
+
+- Large number (> 20) -> `jump_2leg_height` (cm)
+- Number before `%` marker -> `kick_power_kaiser` (e.g., `7%` -> `7`)
+- Same splitting logic applies to the `ניתור.*לגובה` column in the reordered columnar format
 
 ### Blaze Spot
 - Integer count of hits
@@ -183,9 +193,12 @@ Label mapping:
 - `1` -> `deficient`, `2-3` -> `basic`, `4-5` -> `advanced`
 
 ### Dropped Fields
+
+- `sprint_20m` -- no historical CSV file contains 20m sprint data (always null)
 - Diagonal agility sprints (5m/10m columns)
 - Flexibility, stability, running technique (all zeros in every file)
 - Agility pods from sub-table
+- `ניתור לגובה 3.5` from sub-table (only `ניתור לגובה 5` used)
 - "זריזות" from Kawkab file
 
 ## Name Matching
