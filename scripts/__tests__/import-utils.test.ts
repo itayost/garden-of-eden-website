@@ -174,8 +174,13 @@ describe("findProfileMatch", () => {
     const result = findProfileMatch("איתי בן דוד ", profiles);
     expect(result.profile?.id).toBe("1");
   });
-  it("rejects match when only first name overlaps", () => {
+  it("fuzzy-matches names with typos", () => {
     const result = findProfileMatch("נועם קופליביץ", profiles);
+    expect(result.confidence).toBe("token");
+    expect(result.profile?.id).toBe("2");
+  });
+  it("rejects match when only first name overlaps", () => {
+    const result = findProfileMatch("נועם אחמד", profiles);
     expect(result.confidence).toBe("none");
     expect(result.profile).toBeNull();
   });

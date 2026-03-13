@@ -299,6 +299,16 @@ export interface MatchResult {
   confidence: MatchConfidence;
 }
 
+/** Two tokens match if they're identical or share a common prefix >= 50% of the shorter token (min 2 chars). */
+function fuzzyTokenMatch(a: string, b: string): boolean {
+  if (a === b) return true;
+  const minLen = Math.min(a.length, b.length);
+  if (minLen < 2) return false;
+  let common = 0;
+  while (common < minLen && a[common] === b[common]) common++;
+  return common >= Math.ceil(minLen * 0.5) && common >= 2;
+}
+
 export function findProfileMatch(
   csvName: string,
   profiles: ProfileMatch[]
@@ -332,19 +342,21 @@ export function findProfileMatch(
     const candidates = profiles.filter((p) => {
       if (!p.full_name) return false;
       const pTokens = normalizeName(p.full_name).split(" ").filter((t) => t.length > 1);
-      return pTokens.includes(singleToken);
+      return pTokens.some((pt) => fuzzyTokenMatch(singleToken, pt));
     });
     if (candidates.length === 1) {
       return { profile: candidates[0], confidence: "token" };
     }
   } else {
-    // Multi-name: require ALL csv tokens to match (not just one)
+    // Multi-name: require ALL csv tokens to fuzzy-match a profile token
     let bestMatch: ProfileMatch | null = null;
     let bestOverlap = 0;
     for (const p of profiles) {
       if (!p.full_name) continue;
       const pTokens = normalizeName(p.full_name).split(" ").filter((t) => t.length > 1);
-      const overlap = csvTokens.filter((t) => pTokens.includes(t)).length;
+      const overlap = csvTokens.filter((ct) =>
+        pTokens.some((pt) => fuzzyTokenMatch(ct, pt))
+      ).length;
       if (overlap === csvTokens.length && overlap > bestOverlap) {
         bestOverlap = overlap;
         bestMatch = p;
