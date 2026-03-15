@@ -4,6 +4,7 @@ import type { TrainerShiftReport } from "@/types/database";
 export type ShiftReportForNotes = Pick<
   TrainerShiftReport,
   | "id"
+  | "trainer_id"
   | "report_date"
   | "trainer_name"
   | "new_trainees_ids"
@@ -85,11 +86,12 @@ export interface TraineeReportNotes {
   readonly reportId: string;
   readonly reportDate: string;
   readonly trainerName: string;
+  readonly trainerId: string;
   readonly notes: readonly TraineeNote[];
 }
 
 /** Mapping from category type to the trainee IDs array column and details column */
-const CATEGORY_COLUMNS: ReadonlyArray<{
+export const CATEGORY_COLUMNS: ReadonlyArray<{
   type: NoteCategoryType;
   traineeIdsKey: keyof ShiftReportForNotes;
   detailsKey: keyof ShiftReportForNotes;
@@ -147,6 +149,7 @@ export function extractTraineeNotes(
         reportId: report.id,
         reportDate: report.report_date,
         trainerName: report.trainer_name,
+        trainerId: report.trainer_id,
         notes,
       });
     }

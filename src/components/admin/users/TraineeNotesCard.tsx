@@ -8,6 +8,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   StickyNote,
   AlertCircle,
@@ -15,8 +17,18 @@ import {
   UserCircle,
   ChevronDown,
   ChevronUp,
+  Trash2,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
-import { getTraineeNotes } from "@/lib/actions/admin-user-notes";
+import { toast } from "sonner";
+import {
+  getTraineeNotes,
+  deleteTraineeNote,
+  editTraineeNote,
+} from "@/lib/actions/admin-user-notes";
+import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import {
   NOTE_CATEGORY_LABELS,
   type TraineeReportNotes,
@@ -25,6 +37,8 @@ import {
 
 interface TraineeNotesCardProps {
   traineeId: string;
+  currentUserId: string;
+  isAdmin: boolean;
 }
 
 const CATEGORY_COLORS: Record<NoteCategoryType, string> = {
@@ -42,11 +56,21 @@ const CATEGORY_COLORS: Record<NoteCategoryType, string> = {
 
 const INITIAL_VISIBLE_COUNT = 5;
 
-export function TraineeNotesCard({ traineeId }: TraineeNotesCardProps) {
+export function TraineeNotesCard({
+  traineeId,
+  currentUserId,
+  isAdmin,
+}: TraineeNotesCardProps) {
   const [notes, setNotes] = useState<readonly TraineeReportNotes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [editingNote, setEditingNote] = useState<{
+    reportId: string;
+    type: NoteCategoryType;
+  } | null>(null);
+  const [editText, setEditText] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function fetchNotes() {
@@ -71,6 +95,70 @@ export function TraineeNotesCard({ traineeId }: TraineeNotesCardProps) {
       month: "short",
       year: "numeric",
     });
+  };
+
+  const canEditReport = (trainerId: string) =>
+    isAdmin || trainerId === currentUserId;
+
+  const handleDeleteSuccess = (reportId: string, noteType: NoteCategoryType) => {
+    setNotes((prev) => {
+      const updated = prev.map((report) => {
+        if (report.reportId !== reportId) return report;
+        return {
+          ...report,
+          notes: report.notes.filter((n) => n.type !== noteType),
+        };
+      });
+      // Remove reports with no remaining notes
+      return updated.filter((report) => report.notes.length > 0);
+    });
+  };
+
+  const handleStartEdit = (reportId: string, noteType: NoteCategoryType, currentDetails: string | null) => {
+    setEditingNote({ reportId, type: noteType });
+    setEditText(currentDetails ?? "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNote(null);
+    setEditText("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingNote) return;
+    setSaving(true);
+    try {
+      const result = await editTraineeNote(
+        editingNote.reportId,
+        traineeId,
+        editText,
+      );
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      // Update local state
+      setNotes((prev) =>
+        prev.map((report) => {
+          if (report.reportId !== editingNote.reportId) return report;
+          return {
+            ...report,
+            notes: report.notes.map((n) =>
+              n.type === editingNote.type
+                ? { ...n, details: editText.trim() || null }
+                : n,
+            ),
+          };
+        }),
+      );
+      toast.success("ההערה עודכנה בהצלחה");
+      setEditingNote(null);
+      setEditText("");
+    } catch {
+      toast.error("שגיאה בעריכת ההערה");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -129,31 +217,117 @@ export function TraineeNotesCard({ traineeId }: TraineeNotesCardProps) {
                 </div>
 
                 <div className="space-y-2">
-                  {report.notes.map((note, idx) => (
-                    <div key={`${note.type}-${idx}`} className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_COLORS[note.type]}`}
-                        >
-                          {NOTE_CATEGORY_LABELS[note.type]}
-                        </span>
-                        {note.achievementCategories?.map((cat) => (
-                          <Badge
-                            key={cat}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            {cat}
-                          </Badge>
-                        ))}
+                  {report.notes.map((note, idx) => {
+                    const isEditing =
+                      editingNote?.reportId === report.reportId &&
+                      editingNote?.type === note.type;
+                    const showActions = canEditReport(report.trainerId);
+
+                    return (
+                      <div key={`${note.type}-${idx}`} className="space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_COLORS[note.type]}`}
+                            >
+                              {NOTE_CATEGORY_LABELS[note.type]}
+                            </span>
+                            {note.achievementCategories?.map((cat) => (
+                              <Badge
+                                key={cat}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {cat}
+                              </Badge>
+                            ))}
+                          </div>
+
+                          {showActions && !isEditing && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              {note.type === "achievements" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() =>
+                                    handleStartEdit(
+                                      report.reportId,
+                                      note.type,
+                                      note.details,
+                                    )
+                                  }
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              <DeleteConfirmDialog
+                                title="מחיקת הערה"
+                                description="האם למחוק הערה זו? לא ניתן לשחזר פעולה זו."
+                                successMessage="ההערה נמחקה בהצלחה"
+                                errorMessage="שגיאה במחיקת ההערה"
+                                onDelete={() =>
+                                  deleteTraineeNote(
+                                    report.reportId,
+                                    traineeId,
+                                    note.type,
+                                  )
+                                }
+                                onSuccess={() =>
+                                  handleDeleteSuccess(report.reportId, note.type)
+                                }
+                                trigger={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                }
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="text-sm min-h-[60px]"
+                              dir="rtl"
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                onClick={handleSaveEdit}
+                                disabled={saving}
+                              >
+                                <Check className="h-3.5 w-3.5 ml-1" />
+                                {saving ? "שומר..." : "שמור"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancelEdit}
+                                disabled={saving}
+                              >
+                                <X className="h-3.5 w-3.5 ml-1" />
+                                ביטול
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          note.details && (
+                            <p className="text-sm text-foreground/80 pr-1">
+                              {note.details}
+                            </p>
+                          )
+                        )}
                       </div>
-                      {note.details && (
-                        <p className="text-sm text-foreground/80 pr-1">
-                          {note.details}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}

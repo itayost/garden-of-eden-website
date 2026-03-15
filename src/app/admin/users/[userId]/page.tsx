@@ -18,6 +18,8 @@ import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
 import { RadarStatsChartWrapper } from "./RadarStatsChartWrapper";
+import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
+import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile, UserRole } from "@/types/database";
 
 interface UserEditPageProps {
@@ -71,14 +73,29 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     redirect("/admin/users");
   }
 
-  // Fetch player stats for radar chart (trainees only)
-  const { data: stats } = userToEdit.role === "trainee"
-    ? await supabase
-        .from("player_stats")
-        .select("pace, shooting, passing, dribbling, defending, physical")
-        .eq("user_id", userToEdit.id)
-        .single()
-    : { data: null };
+  // Compute player ratings for radar chart (trainees only)
+  let stats: { pace: number; shooting: number; passing: number; dribbling: number; defending: number; physical: number } | null = null;
+  if (userToEdit.role === "trainee") {
+    const { data: userAssessments } = await supabase
+      .from("player_assessments")
+      .select("*")
+      .eq("user_id", userToEdit.id)
+      .is("deleted_at", null)
+      .order("assessment_date", { ascending: false });
+
+    const typedAssessments = (userAssessments ?? []) as PlayerAssessment[];
+    if (typedAssessments.length > 0) {
+      const ratings = await getPlayerRatings(supabase, typedAssessments, userToEdit.birthdate);
+      stats = {
+        pace: ratings.pace,
+        shooting: ratings.shooting,
+        passing: ratings.passing,
+        dribbling: ratings.dribbling,
+        defending: ratings.defending,
+        physical: ratings.physical,
+      };
+    }
+  }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("he-IL", {
@@ -145,7 +162,11 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
           {/* Trainer Notes (trainees only) */}
           {userToEdit.role === "trainee" && (
-            <TraineeNotesCard traineeId={userId} />
+            <TraineeNotesCard
+              traineeId={userId}
+              currentUserId={currentUser.id}
+              isAdmin={isAdmin}
+            />
           )}
 
           {/* User Actions (admin only) */}

@@ -6,6 +6,7 @@ function makeReport(
   overrides: Partial<ShiftReportForNotes> & Pick<ShiftReportForNotes, "id" | "report_date" | "trainer_name">,
 ): ShiftReportForNotes {
   return {
+    trainer_id: "trainer-default-id",
     new_trainees_ids: [],
     new_trainees_details: null,
     discipline_trainee_ids: [],

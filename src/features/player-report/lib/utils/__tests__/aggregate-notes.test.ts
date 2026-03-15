@@ -7,6 +7,7 @@ const mockNotes: readonly TraineeReportNotes[] = [
     reportId: "r1",
     reportDate: "2026-01-15",
     trainerName: "Coach A",
+    trainerId: "trainer-a-id",
     notes: [
       { type: "achievements", label: "הישגים", details: "Great speed improvement", achievementCategories: ["מהירות"] },
       { type: "limitations", label: "מגבלות", details: "Needs flexibility work" },
@@ -16,6 +17,7 @@ const mockNotes: readonly TraineeReportNotes[] = [
     reportId: "r2",
     reportDate: "2026-01-20",
     trainerName: "Coach B",
+    trainerId: "trainer-b-id",
     notes: [
       { type: "social_skills", label: "כישורים חברתיים", details: "Great team player" },
       { type: "pro_candidates", label: "מועמד למקצוענות", details: "Ready for advanced program" },
@@ -51,6 +53,7 @@ describe("categorizeNotes", () => {
         reportId: "r3",
         reportDate: "2026-02-01",
         trainerName: "Coach C",
+        trainerId: "trainer-c-id",
         notes: [
           { type: "achievements", label: "הישגים", details: null },
           { type: "injuries", label: "פציעות", details: "Ankle sprain" },
