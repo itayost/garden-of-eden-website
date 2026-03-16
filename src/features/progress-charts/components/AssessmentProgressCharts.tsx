@@ -6,9 +6,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PlayerAssessment } from "@/types/assessment";
-import { calculateGroupStats, getLatestAssessmentsPerUser } from "@/lib/assessment-to-rating";
+import type { GroupStats } from "@/lib/assessment-to-rating";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { PercentileCard } from "./PercentileCard";
 
 const RatingTrendChart = dynamic(
   () => import("./RatingTrendChart").then((m) => m.RatingTrendChart),
@@ -41,31 +40,21 @@ import { useDateRangeFilter } from "../hooks/useDateRangeFilter";
 import {
   transformToPhysicalChartData,
   transformToRatingChartData,
-  calculatePercentileRankings,
 } from "../lib/transforms";
 import { METRIC_CATEGORIES } from "../lib/config/metric-definitions";
 import type { MetricCategory } from "../types";
 
 interface AssessmentProgressChartsProps {
   assessments: readonly PlayerAssessment[];
-  allAssessmentsInGroup?: readonly PlayerAssessment[]; // For percentile calculations
+  groupStats?: GroupStats | null;
 }
 
 export function AssessmentProgressCharts({
   assessments,
-  allAssessmentsInGroup = [],
+  groupStats = null,
 }: AssessmentProgressChartsProps) {
   const { preset, setPreset, filter } = useDateRangeFilter("6m");
   const [selectedCategory, setSelectedCategory] = useState<MetricCategory>("sprint");
-
-  // Calculate group stats for relative ratings (using only latest assessment per user)
-  const groupStats = useMemo(() => {
-    if (allAssessmentsInGroup.length > 1) {
-      const latestAssessments = getLatestAssessmentsPerUser(allAssessmentsInGroup);
-      return calculateGroupStats(latestAssessments);
-    }
-    return null;
-  }, [allAssessmentsInGroup]);
 
   // Filter assessments by date range
   const filteredAssessments = useMemo(() => {
@@ -85,23 +74,6 @@ export function AssessmentProgressCharts({
     );
   }, [filteredAssessments, selectedCategory]);
 
-  // Calculate percentiles if group data is available
-  const percentileRankings = useMemo(() => {
-    if (allAssessmentsInGroup.length === 0 || filteredAssessments.length === 0) {
-      return [];
-    }
-    const latestAssessment = filteredAssessments[filteredAssessments.length - 1];
-    return calculatePercentileRankings(latestAssessment, allAssessmentsInGroup);
-  }, [filteredAssessments, allAssessmentsInGroup]);
-
-  // Top percentile rankings (best 3, highest percentile first)
-  // Note: percentileRankings already filters out null values in calculatePercentileRankings
-  const topPercentiles = useMemo(() => {
-    return [...percentileRankings]
-      .sort((a, b) => b.percentile - a.percentile)
-      .slice(0, 3);
-  }, [percentileRankings]);
-
   if (assessments.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -117,18 +89,6 @@ export function AssessmentProgressCharts({
       <div className="flex justify-end">
         <DateRangeFilter selected={preset} onChange={setPreset} />
       </div>
-
-      {/* Top Percentiles (if available) */}
-      {topPercentiles.length > 0 && (
-        <div>
-          <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">הדירוגים הטובים שלך</h3>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            {topPercentiles.map((ranking) => (
-              <PercentileCard key={ranking.metric} ranking={ranking} />
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Rating Trend Chart */}
       <div>

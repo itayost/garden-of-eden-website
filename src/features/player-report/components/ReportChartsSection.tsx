@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ReportData } from "../types";
+import type { GroupStats } from "@/lib/assessment-to-rating";
 import type { PlayerAssessment } from "@/types/assessment";
 
 const RadarStatsChart = dynamic(
@@ -25,13 +26,13 @@ const AssessmentProgressCharts = dynamic(
 interface ReportChartsSectionProps {
   stats: ReportData["stats"];
   assessments: readonly PlayerAssessment[];
-  groupAssessments?: readonly PlayerAssessment[];
+  groupStats?: GroupStats | null;
 }
 
 export function ReportChartsSection({
   stats,
   assessments,
-  groupAssessments = [],
+  groupStats = null,
 }: ReportChartsSectionProps) {
   return (
     <div className="space-y-4">
@@ -55,7 +56,7 @@ export function ReportChartsSection({
           </CardHeader>
           <CardContent>
             <div>
-              <AssessmentProgressCharts assessments={assessments} allAssessmentsInGroup={groupAssessments} />
+              <AssessmentProgressCharts assessments={assessments} groupStats={groupStats} />
             </div>
           </CardContent>
         </Card>

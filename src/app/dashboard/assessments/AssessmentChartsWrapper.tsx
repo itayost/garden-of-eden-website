@@ -1,21 +1,22 @@
 "use client";
 
 import type { PlayerAssessment } from "@/types/assessment";
+import type { GroupStats } from "@/lib/assessment-to-rating";
 import { AssessmentProgressCharts } from "@/features/progress-charts";
 
 interface AssessmentChartsWrapperProps {
   assessments: PlayerAssessment[];
-  allAssessmentsInGroup?: PlayerAssessment[];
+  groupStats: GroupStats | null;
 }
 
 export function AssessmentChartsWrapper({
   assessments,
-  allAssessmentsInGroup = [],
+  groupStats,
 }: AssessmentChartsWrapperProps) {
   return (
     <AssessmentProgressCharts
       assessments={assessments}
-      allAssessmentsInGroup={allAssessmentsInGroup}
+      groupStats={groupStats}
     />
   );
 }

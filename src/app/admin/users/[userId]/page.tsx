@@ -85,7 +85,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
     const typedAssessments = (userAssessments ?? []) as PlayerAssessment[];
     if (typedAssessments.length > 0) {
-      const ratings = await getPlayerRatings(supabase, typedAssessments, userToEdit.birthdate);
+      const { ratings } = await getPlayerRatings(supabase, typedAssessments, userToEdit.birthdate);
       stats = {
         pace: ratings.pace,
         shooting: ratings.shooting,

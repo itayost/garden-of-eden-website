@@ -6,7 +6,6 @@ export {
   AssessmentProgressCharts,
   DateRangeFilter,
   MiniRatingChart,
-  PercentileCard,
   PhysicalMetricChart,
   RatingTrendChart,
 } from "./components";
@@ -43,7 +42,6 @@ export {
 export {
   transformToPhysicalChartData,
   transformToRatingChartData,
-  calculatePercentileRankings,
 } from "./lib/transforms";
 
 // Config

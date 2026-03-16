@@ -19,7 +19,7 @@ import {
   getAgeGroup,
   getAssessmentCompleteness,
 } from "@/types/assessment";
-import { calculateUserRatings } from "@/lib/utils/calculate-user-ratings";
+import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 import dynamic from "next/dynamic";
@@ -40,8 +40,8 @@ export default async function DashboardAssessmentsPage() {
     redirect("/auth/login?redirect=/dashboard/assessments");
   }
 
-  // Fetch profile, assessments, and trainee profiles in parallel
-  const [{ data: profile }, { data: assessments }, { data: traineeProfiles }] = await Promise.all([
+  // Fetch profile and assessments in parallel
+  const [{ data: profile }, { data: assessments }] = await Promise.all([
     supabase
       .from("profiles")
       .select("*")
@@ -52,25 +52,17 @@ export default async function DashboardAssessmentsPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
-    supabase
-      .from("profiles")
-      .select("id, birthdate")
-      .eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null },
   ]);
 
   // Get age group
   const ageGroup = getAgeGroup(profile?.birthdate || null);
 
-  // Calculate FIFA-style ratings from assessments with age-group comparison
-  const userRatings = await calculateUserRatings(
-    user.id,
-    assessments || [],
-    profile?.birthdate || null,
-    supabase,
-    traineeProfiles,
-  );
-  const calculatedRatings = userRatings?.ratings ?? null;
-  const groupAssessments = userRatings?.groupAssessments ?? [];
+  // Calculate FIFA-style ratings using pre-computed benchmarks
+  const ratingsResult = assessments && assessments.length > 0
+    ? await getPlayerRatings(supabase, assessments, profile?.birthdate || null)
+    : null;
+  const calculatedRatings = ratingsResult?.ratings ?? null;
+  const groupStats = ratingsResult?.groupStats ?? null;
 
   // Helper functions
   const formatValue = (key: string, value: number | null) => {
@@ -257,7 +249,7 @@ export default async function DashboardAssessmentsPage() {
             <div>
               <AssessmentChartsWrapper
                 assessments={assessments}
-                allAssessmentsInGroup={groupAssessments}
+                groupStats={groupStats}
               />
             </div>
           </div>

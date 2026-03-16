@@ -20,7 +20,7 @@ import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getAgeGroup } from "@/types/assessment";
-import { calculateUserRatings } from "@/lib/utils/calculate-user-ratings";
+import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
 import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } from "@/features/achievements";
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
     redirect("/auth/login?redirect=/dashboard");
   }
 
-  // Get user's data — include trainee profiles to avoid waterfall in calculateUserRatings
+  // Get user's data
   const [
     { data: profile },
     { data: nutritionForm },
@@ -52,7 +52,6 @@ export default async function DashboardPage() {
     { data: streakData },
     { data: goalsData },
     { data: achievementsData },
-    { data: traineeProfiles },
   ] = await Promise.all([
     supabase.from("profiles").select("full_name, birthdate, position, created_at, processed_avatar_url, avatar_url").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
     supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").limit(1).maybeSingle() as unknown as { data: { id: string } | null },
@@ -63,7 +62,6 @@ export default async function DashboardPage() {
     supabase.from("user_streaks").select("user_id, current_streak, longest_streak, last_activity_date, total_activities").eq("user_id", user?.id || "").single() as unknown as { data: UserStreakRow | null },
     supabase.from("player_goals").select("*").eq("user_id", user?.id || "").order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
     supabase.from("user_achievements").select("id, achievement_id, badge_type, unlocked_at, celebrated").eq("user_id", user?.id || "").order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null },
-    supabase.from("profiles").select("id, birthdate").eq("role", "trainee") as unknown as { data: { id: string; birthdate: string | null }[] | null },
   ]);
 
   // Calculate goal progress for display
@@ -74,17 +72,13 @@ export default async function DashboardPage() {
 
   const hasCompletedNutrition = !!nutritionForm;
 
-  // Calculate age group and FIFA-style ratings from assessments
+  // Calculate age group and FIFA-style ratings using pre-computed benchmarks
   const ageGroup = getAgeGroup(profile?.birthdate || null);
-  const userRatings = await calculateUserRatings(
-    user.id,
-    assessments || [],
-    profile?.birthdate || null,
-    supabase,
-    traineeProfiles,
-  );
-  const calculatedRatings = userRatings?.ratings ?? null;
-  const groupAssessments = userRatings?.groupAssessments ?? [];
+  const ratingsResult = assessments && assessments.length > 0
+    ? await getPlayerRatings(supabase, assessments, profile?.birthdate || null)
+    : null;
+  const calculatedRatings = ratingsResult?.ratings ?? null;
+  const groupStats = ratingsResult?.groupStats ?? null;
 
   const quickActions = [
     {
@@ -259,7 +253,7 @@ export default async function DashboardPage() {
               <div className="h-full hover:shadow-md transition-shadow cursor-pointer">
                 <MiniRatingChartWrapper
                   assessments={assessments}
-                  allAssessmentsInGroup={groupAssessments}
+                  groupStats={groupStats}
                 />
               </div>
             </Link>
