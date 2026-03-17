@@ -173,6 +173,15 @@ export const ASSESSMENT_UNITS: Record<string, string> = {
 // ASSESSMENT SECTIONS FOR FORM
 // ===========================================
 
+export type AssessmentMonthStatus = 'full' | 'partial' | 'none';
+
+export interface SectionCompleteness {
+  key: 'sprints' | 'jumps' | 'agility' | 'categorical' | 'power' | 'mental';
+  title: string;
+  completed: number;
+  total: number;
+}
+
 export interface AssessmentSection {
   key: string;
   title: string;
@@ -226,6 +235,35 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
 // Check if a test value indicates "lower is better"
 export function isLowerBetter(fieldName: string): boolean {
   return ["sprint_5m", "sprint_10m", "sprint_20m"].includes(fieldName);
+}
+
+/**
+ * Returns section-level completeness for all 6 ASSESSMENT_SECTIONS.
+ * Returns [] when assessment is null (trainee has no record for the month).
+ * Mental (textarea) fields are completed if non-null AND non-empty string.
+ * Quantitative fields are completed if non-null.
+ */
+export function computeSectionCompleteness(
+  assessment: Partial<PlayerAssessment> | null
+): SectionCompleteness[] {
+  if (!assessment) return [];
+
+  return ASSESSMENT_SECTIONS.map((section) => {
+    const completed = section.fields.filter((field) => {
+      const value = assessment[field as keyof PlayerAssessment];
+      if (section.type === 'textarea') {
+        return value !== null && value !== undefined && value !== '';
+      }
+      return value !== null && value !== undefined;
+    }).length;
+
+    return {
+      key: section.key as SectionCompleteness['key'],
+      title: section.title,
+      completed,
+      total: section.fields.length,
+    };
+  });
 }
 
 // Get completion percentage for an assessment

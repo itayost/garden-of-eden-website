@@ -3,6 +3,7 @@ import {
   getAgeGroup,
   isLowerBetter,
   getAssessmentCompleteness,
+  computeSectionCompleteness,
 } from "../assessment";
 import type { PlayerAssessment } from "../assessment";
 
@@ -181,5 +182,86 @@ describe("getAssessmentCompleteness", () => {
       coordination: "advanced",
     });
     expect(getAssessmentCompleteness(assessment)).toBe(Math.round((2 / 15) * 100)); // 13
+  });
+});
+
+describe("computeSectionCompleteness", () => {
+  it("returns empty array for null assessment", () => {
+    expect(computeSectionCompleteness(null)).toEqual([]);
+  });
+
+  it("returns 6 sections for an all-null assessment", () => {
+    const result = computeSectionCompleteness(createMockAssessment());
+    expect(result).toHaveLength(6);
+    expect(result.map((s) => s.key)).toEqual([
+      "sprints", "jumps", "agility", "categorical", "power", "mental",
+    ]);
+  });
+
+  it("returns completed=0 total=3 for sprints when all null", () => {
+    const result = computeSectionCompleteness(createMockAssessment());
+    const sprints = result.find((s) => s.key === "sprints")!;
+    expect(sprints.completed).toBe(0);
+    expect(sprints.total).toBe(3);
+  });
+
+  it("counts only filled sprint fields", () => {
+    const result = computeSectionCompleteness(
+      createMockAssessment({ sprint_5m: 1.23, sprint_10m: 2.45 })
+    );
+    const sprints = result.find((s) => s.key === "sprints")!;
+    expect(sprints.completed).toBe(2);
+    expect(sprints.total).toBe(3);
+  });
+
+  it("marks sprints complete when all 3 filled", () => {
+    const result = computeSectionCompleteness(
+      createMockAssessment({ sprint_5m: 1.1, sprint_10m: 2.2, sprint_20m: 3.3 })
+    );
+    const sprints = result.find((s) => s.key === "sprints")!;
+    expect(sprints.completed).toBe(3);
+  });
+
+  it("counts mental notes as completed only when non-empty string", () => {
+    const result = computeSectionCompleteness(
+      createMockAssessment({
+        concentration_notes: "good",
+        decision_making_notes: "",   // empty string = not completed
+        work_ethic_notes: null,      // null = not completed
+      })
+    );
+    const mental = result.find((s) => s.key === "mental")!;
+    expect(mental.completed).toBe(1);
+    expect(mental.total).toBe(5);
+  });
+
+  it("full assessment (all 15 fields) gives completed === total for all quantitative sections", () => {
+    const full = createMockAssessment({
+      sprint_5m: 1.1, sprint_10m: 2.2, sprint_20m: 3.3,
+      jump_2leg_distance: 200, jump_right_leg: 180, jump_left_leg: 175, jump_2leg_height: 60,
+      blaze_spot_time: 30, flexibility_ankle: 10, flexibility_knee: 15, flexibility_hip: 20,
+      coordination: "advanced", leg_power_technique: "normal", body_structure: "good_build",
+      kick_power_kaiser: 500,
+    });
+    const result = computeSectionCompleteness(full);
+    const quantitative = result.filter((s) => s.key !== "mental");
+    quantitative.forEach((s) => {
+      expect(s.completed).toBe(s.total);
+    });
+  });
+});
+
+// Spec exception: a DB row where all 15 fields are null has completeness = 0 and must be
+// classified as 'partial' (not 'none') because a record exists for that trainee.
+describe("0% completeness edge case (spec exception)", () => {
+  it("getAssessmentCompleteness returns 0 for all-null assessment", () => {
+    // Verifies the server action logic: 0 !== 100, so the row is classified 'partial', not 'none'
+    expect(getAssessmentCompleteness(createMockAssessment())).toBe(0);
+  });
+
+  it("computeSectionCompleteness returns 6 sections all with completed=0 for all-null assessment", () => {
+    const result = computeSectionCompleteness(createMockAssessment());
+    expect(result).toHaveLength(6);
+    result.forEach((s) => expect(s.completed).toBe(0));
   });
 });
