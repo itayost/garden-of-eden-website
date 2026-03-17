@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useCallback } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { parseAsString, useQueryState } from "nuqs";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -96,17 +96,6 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
   >([]);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const isFirstRender = useRef(true);
-
-  // Reset page when filters change (skip initial mount)
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    setPage(0);
-  }, [astatus, search, ageGroup]);
-
   const fetchData = useCallback(
     (currentPage: number) => {
       startTransition(async () => {
@@ -133,8 +122,7 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
   // Fetch on mount and when month/year/filters/page change
   useEffect(() => {
     fetchData(page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, year, search, ageGroup, astatus, page]);
+  }, [fetchData, page]);
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -143,6 +131,22 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
   const handleStatusCardClick = (status: AssessmentMonthStatus) => {
     const current = astatus || "all";
     void setAstatus(current === status ? null : status);
+    setPage(0);
+  };
+
+  const handleSearchChange = (v: string | null) => {
+    void setSearch(v || null);
+    setPage(0);
+  };
+
+  const handleAgeGroupChange = (v: string) => {
+    void setAgeGroup(v === "all" ? null : v);
+    setPage(0);
+  };
+
+  const handleStatusPillClick = (value: string) => {
+    void setAstatus(value === "all" ? null : value);
+    setPage(0);
   };
 
   const handleOpenDialog = (
@@ -240,16 +244,12 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
           {/* Toolbar */}
           <TableToolbar
             searchValue={search}
-            onSearchChange={(v) => {
-              void setSearch(v || null);
-            }}
+            onSearchChange={handleSearchChange}
             searchPlaceholder="חיפוש לפי שם..."
             filters={
               <ToolbarSelect
                 value={ageGroup || "all"}
-                onValueChange={(v) => {
-                  void setAgeGroup(v === "all" ? null : v);
-                }}
+                onValueChange={handleAgeGroupChange}
                 options={ageGroupOptions}
                 placeholder="קבוצת גיל"
               />
@@ -261,9 +261,7 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
             {STATUS_FILTER_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => {
-                  void setAstatus(opt.value === "all" ? null : opt.value);
-                }}
+                onClick={() => handleStatusPillClick(opt.value)}
                 className={`px-3 py-1 rounded-full text-sm border transition-colors ${
                   activeStatus === opt.value
                     ? "border-primary bg-primary/10 text-primary font-medium"
