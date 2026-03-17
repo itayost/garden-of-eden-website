@@ -26,13 +26,13 @@ const MONTHS = [
   { value: "12", label: "דצמבר" },
 ];
 
-function getYearOptions(): { value: string; label: string }[] {
+const YEAR_OPTIONS: { value: string; label: string }[] = (() => {
   const current = new Date().getFullYear();
   return [current + 1, current, current - 1, current - 2].map((y) => ({
     value: String(y),
     label: String(y),
   }));
-}
+})();
 
 export function MonthPicker() {
   const [{ month, year }, setMonthYear] = useQueryStates({
@@ -41,13 +41,11 @@ export function MonthPicker() {
   });
   const [, setAstatus] = useQueryState("astatus", parseAsString);
 
-  const yearOptions = getYearOptions();
-  const isActive = month !== null;
+  const isActive = month !== null || year !== null;
 
   const handleMonthChange = (value: string) => {
     const newMonth = parseInt(value, 10);
-    const effectiveYear = year ?? new Date().getFullYear();
-    void setMonthYear({ month: newMonth, year: effectiveYear });
+    void setMonthYear({ month: newMonth, year: year ?? new Date().getFullYear() });
   };
 
   const handleYearChange = (value: string) => {
@@ -60,21 +58,13 @@ export function MonthPicker() {
   };
 
   return (
-    <div
-      className={`flex items-center gap-2 rounded-lg border p-2 ${
-        isActive ? "border-primary bg-primary/5" : "border-dashed"
-      }`}
-    >
-      <span className="text-sm text-muted-foreground whitespace-nowrap">
-        סינון לפי חודש:
-      </span>
-
+    <div className="flex items-center gap-2">
       <Select
-        value={month !== null ? String(month) : undefined}
+        value={month !== null ? String(month) : ""}
         onValueChange={handleMonthChange}
       >
         <SelectTrigger className="w-32">
-          <SelectValue placeholder="בחר חודש" />
+          <SelectValue placeholder="חודש" />
         </SelectTrigger>
         <SelectContent>
           {MONTHS.map((m) => (
@@ -86,15 +76,14 @@ export function MonthPicker() {
       </Select>
 
       <Select
-        value={year !== null ? String(year) : undefined}
+        value={year !== null ? String(year) : ""}
         onValueChange={handleYearChange}
-        disabled={month === null}
       >
         <SelectTrigger className="w-24">
           <SelectValue placeholder="שנה" />
         </SelectTrigger>
         <SelectContent>
-          {yearOptions.map((y) => (
+          {YEAR_OPTIONS.map((y) => (
             <SelectItem key={y.value} value={y.value}>
               {y.label}
             </SelectItem>
@@ -107,10 +96,10 @@ export function MonthPicker() {
           variant="ghost"
           size="sm"
           onClick={handleClear}
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+          className="h-9 px-2 text-muted-foreground hover:text-foreground"
         >
           <X className="h-4 w-4" />
-          <span className="sr-only">נקה סינון</span>
+          <span className="sr-only">נקה</span>
         </Button>
       )}
     </div>

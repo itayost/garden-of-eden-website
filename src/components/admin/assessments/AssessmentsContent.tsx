@@ -4,7 +4,6 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { ClipboardList, Users, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AssessmentsTable } from "./AssessmentsTable";
-import { MonthPicker } from "./MonthPicker";
 import { AssessmentsMonthView } from "./AssessmentsMonthView";
 import type { AssessmentsPaginatedResult } from "@/lib/actions/admin-assessments-list";
 
@@ -28,9 +27,6 @@ export function AssessmentsContent({ initialData }: AssessmentsContentProps) {
 
   return (
     <div className="space-y-6">
-      {/* Month picker — always visible */}
-      <MonthPicker />
-
       {isMonthView ? (
         <AssessmentsMonthView month={month} year={effectiveYear} />
       ) : (
