@@ -16,7 +16,7 @@ export interface AssessmentMonthParams {
   search?: string;
   ageGroupId?: string;
   statusFilter?: AssessmentMonthStatus | 'all';
-  page: number;
+  page: number;       // 0-based: page 0 = first page
   pageSize: number;
 }
 
