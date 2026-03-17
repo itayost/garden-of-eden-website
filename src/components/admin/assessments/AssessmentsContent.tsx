@@ -25,7 +25,6 @@ export function AssessmentsContent({ initialData }: AssessmentsContentProps) {
   const totalAssessments = initialData?.totalAssessments ?? 0;
   const initialProfiles = initialData?.profiles ?? [];
   const initialAssessmentsByUser = initialData?.assessmentsByUser ?? {};
-  const initialTotal = initialData?.total ?? 0;
 
   return (
     <div className="space-y-6">
@@ -84,7 +83,7 @@ export function AssessmentsContent({ initialData }: AssessmentsContentProps) {
               <AssessmentsTable
                 initialProfiles={initialProfiles}
                 initialAssessmentsByUser={initialAssessmentsByUser}
-                initialTotal={initialTotal}
+                initialTotal={total}
               />
             </CardContent>
           </Card>
