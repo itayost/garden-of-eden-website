@@ -17,7 +17,7 @@ export function AssessmentsContent({ initialData }: AssessmentsContentProps) {
   const [year] = useQueryState("year", parseAsInteger);
 
   const effectiveYear = year ?? new Date().getFullYear();
-  const isMonthView = month !== null;
+  const isMonthView = month !== null && month >= 1 && month <= 12;
 
   // Fallback values when initialData is null (month was set on first load)
   const total = initialData?.total ?? 0;
