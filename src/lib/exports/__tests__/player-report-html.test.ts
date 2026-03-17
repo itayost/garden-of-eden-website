@@ -142,12 +142,13 @@ describe("buildPlayerReportHtml", () => {
     expect(html).toContain("<polyline");
   });
 
-  it("shows אין מספיק מבדקים when fewer than 2 assessments", () => {
+  it("shows ערכים נוכחיים section (not chart) when exactly 1 assessment", () => {
     const html = buildPlayerReportHtml(
       makeProps({ assessments: [makeAssessment()] }),
       mockAssets,
     );
-    expect(html).toContain("אין מספיק מבדקים");
+    expect(html).toContain("ערכים נוכחיים");
+    expect(html).not.toContain("<polyline");
   });
 
   it("uses green (#22c55e) for improved metrics (lower sprint time)", () => {
