@@ -13,6 +13,7 @@ import { CheckCircle, XCircle } from "lucide-react";
 import type { SectionCompleteness } from "@/types/assessment";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
+import { isSectionDone } from "./assessment-section-utils";
 
 interface AssessmentDetailDialogProps {
   open: boolean;
@@ -21,11 +22,6 @@ interface AssessmentDetailDialogProps {
   // Non-nullable: this dialog is only opened for partial rows (assessment always exists)
   assessment: PlayerAssessment;
   sections: SectionCompleteness[];
-}
-
-function isSectionDone(section: SectionCompleteness): boolean {
-  if (section.key === "mental") return section.completed > 0;
-  return section.completed === section.total;
 }
 
 export function AssessmentDetailDialog({

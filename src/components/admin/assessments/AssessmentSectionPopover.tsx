@@ -7,15 +7,11 @@ import {
 } from "@/components/ui/popover";
 import { CheckCircle, XCircle } from "lucide-react";
 import type { SectionCompleteness } from "@/types/assessment";
+import { isSectionDone } from "./assessment-section-utils";
 
 interface AssessmentSectionPopoverProps {
   sections: SectionCompleteness[];
   children: React.ReactNode;
-}
-
-function isSectionDone(section: SectionCompleteness): boolean {
-  if (section.key === "mental") return section.completed > 0;
-  return section.completed === section.total;
 }
 
 export function AssessmentSectionPopover({

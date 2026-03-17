@@ -1,6 +1,6 @@
 "use client";
 
-import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsString, useQueryState, useQueryStates } from "nuqs";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,8 +35,10 @@ function getYearOptions(): { value: string; label: string }[] {
 }
 
 export function MonthPicker() {
-  const [month, setMonth] = useQueryState("month", parseAsInteger);
-  const [year, setYear] = useQueryState("year", parseAsInteger);
+  const [{ month, year }, setMonthYear] = useQueryStates({
+    month: parseAsInteger,
+    year: parseAsInteger,
+  });
   const [, setAstatus] = useQueryState("astatus", parseAsString);
 
   const yearOptions = getYearOptions();
@@ -45,17 +47,15 @@ export function MonthPicker() {
   const handleMonthChange = (value: string) => {
     const newMonth = parseInt(value, 10);
     const effectiveYear = year ?? new Date().getFullYear();
-    void setMonth(newMonth);
-    void setYear(effectiveYear);
+    void setMonthYear({ month: newMonth, year: effectiveYear });
   };
 
   const handleYearChange = (value: string) => {
-    void setYear(parseInt(value, 10));
+    void setMonthYear({ year: parseInt(value, 10) });
   };
 
   const handleClear = () => {
-    void setMonth(null);
-    void setYear(null);
+    void setMonthYear({ month: null, year: null });
     void setAstatus(null);
   };
 
