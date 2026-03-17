@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AssessmentsContent } from "@/components/admin/assessments/AssessmentsContent";
-import { MonthPicker } from "@/components/admin/assessments/MonthPicker";
 import { getAssessmentsPaginated } from "@/lib/actions/admin-assessments-list";
 
 export const metadata: Metadata = {
@@ -25,12 +24,9 @@ export default async function AdminAssessmentsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold">מבדקים</h1>
-          <p className="text-muted-foreground">ניהול מבדקי שחקנים</p>
-        </div>
-        <MonthPicker />
+      <div>
+        <h1 className="text-2xl font-bold">מבדקים</h1>
+        <p className="text-muted-foreground">ניהול מבדקי שחקנים</p>
       </div>
 
       <AssessmentsContent initialData={initialData} />

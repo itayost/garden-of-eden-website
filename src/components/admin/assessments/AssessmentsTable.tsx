@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, RefreshCw } from "lucide-react";
 import { TableToolbar, ToolbarSelect } from "@/components/admin/TableToolbar";
+import { MonthPicker } from "@/components/admin/assessments/MonthPicker";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import { AGE_GROUPS, getAgeGroup, getAssessmentCompleteness } from "@/types/assessment";
 import type { PlayerAssessment } from "@/types/assessment";
@@ -87,22 +88,25 @@ export function AssessmentsTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <TableToolbar
-          searchValue={search}
-          onSearchChange={handleSearchChange}
-          searchPlaceholder="חיפוש לפי שם..."
-          filters={
-            <ToolbarSelect
-              value={ageGroup || "all"}
-              onValueChange={handleAgeGroupChange}
-              options={ageGroupOptions}
-              placeholder="קבוצת גיל"
-            />
-          }
-        />
-        {isPending && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
-      </div>
+      <TableToolbar
+        searchValue={search}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="חיפוש לפי שם..."
+        filters={
+          <ToolbarSelect
+            value={ageGroup || "all"}
+            onValueChange={handleAgeGroupChange}
+            options={ageGroupOptions}
+            placeholder="קבוצת גיל"
+          />
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <MonthPicker />
+            {isPending && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+          </div>
+        }
+      />
 
       {profiles.length > 0 ? (
         <>

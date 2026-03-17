@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TableToolbar, ToolbarSelect } from "@/components/admin/TableToolbar";
+import { MonthPicker } from "@/components/admin/assessments/MonthPicker";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import {
   AGE_GROUPS,
@@ -254,6 +255,7 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
                 placeholder="קבוצת גיל"
               />
             }
+            actions={<MonthPicker />}
           />
 
           {/* Status filter pills */}
