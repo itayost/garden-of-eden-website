@@ -43,6 +43,11 @@ firebase-debug.log
 # vercel
 .vercel
 
+# tool artifacts
+.playwright-mcp/
+.superpowers/
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
