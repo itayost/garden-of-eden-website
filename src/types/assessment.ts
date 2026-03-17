@@ -175,15 +175,17 @@ export const ASSESSMENT_UNITS: Record<string, string> = {
 
 export type AssessmentMonthStatus = 'full' | 'partial' | 'none';
 
+export type AssessmentSectionKey = 'sprints' | 'jumps' | 'agility' | 'categorical' | 'power' | 'mental';
+
 export interface SectionCompleteness {
-  key: 'sprints' | 'jumps' | 'agility' | 'categorical' | 'power' | 'mental';
+  key: AssessmentSectionKey;
   title: string;
   completed: number;
   total: number;
 }
 
 export interface AssessmentSection {
-  key: string;
+  key: AssessmentSectionKey;
   title: string;
   fields: string[];
   type: "number" | "select" | "textarea";
@@ -258,7 +260,7 @@ export function computeSectionCompleteness(
     }).length;
 
     return {
-      key: section.key as SectionCompleteness['key'],
+      key: section.key,
       title: section.title,
       completed,
       total: section.fields.length,

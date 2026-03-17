@@ -26,6 +26,11 @@ function createMockAssessment(
     leg_power_technique: null,
     body_structure: null,
     kick_power_kaiser: null,
+    concentration_notes: null,
+    decision_making_notes: null,
+    work_ethic_notes: null,
+    recovery_notes: null,
+    nutrition_notes: null,
     ...overrides,
   };
 }
