@@ -1,5 +1,3 @@
-import { fetchEntranceReport, type EntranceReportEntry } from "./reports";
-
 const BASE_URL = "https://arboxserver.arboxapp.com/api/public/v3";
 const PAGE_LIMIT = 500;
 const MAX_PAGES = 20;
@@ -55,18 +53,26 @@ export function getCategoryForMembershipType(
 // Arbox API fetching
 // -------------------------------------------------------
 
-interface ArboxReportResponse {
+export interface BookingEntry {
+  readonly user_id: number | null;
+  readonly name: string;
+  readonly phone: string | null;
+  readonly date: string;
+  readonly check_in: string; // "Yes" | "No"
+}
+
+interface ArboxReportResponse<T> {
   readonly statusCode: number;
-  readonly data: readonly ExpiringMembershipEntry[];
+  readonly data: readonly T[];
   readonly extra: readonly unknown[];
 }
 
-async function fetchReportPage(
+async function fetchReportPage<T>(
   reportName: string,
   fromDate: string,
   toDate: string,
   page: number,
-): Promise<readonly ExpiringMembershipEntry[]> {
+): Promise<readonly T[]> {
   const apiKey = process.env.ARBOX_API_KEY;
   if (!apiKey) throw new Error("ARBOX_API_KEY is not set");
 
@@ -80,24 +86,24 @@ async function fetchReportPage(
     throw new Error(`Arbox ${reportName} failed: ${res.status}`);
   }
 
-  const json: ArboxReportResponse = await res.json();
+  const json: ArboxReportResponse<T> = await res.json();
   return json.data ?? [];
 }
 
-async function fetchAllPages(
+async function fetchAllPages<T>(
   reportName: string,
   fromDate: string,
   toDate: string,
-): Promise<readonly ExpiringMembershipEntry[]> {
+): Promise<readonly T[]> {
   if (!fromDate || !toDate || fromDate > toDate) {
     throw new Error(`Invalid date range for ${reportName}`);
   }
 
-  let all: readonly ExpiringMembershipEntry[] = [];
+  let all: readonly T[] = [];
   let page = 1;
 
   while (page <= MAX_PAGES) {
-    const entries = await fetchReportPage(reportName, fromDate, toDate, page);
+    const entries = await fetchReportPage<T>(reportName, fromDate, toDate, page);
     all = [...all, ...entries];
     if (entries.length < PAGE_LIMIT) break;
     page++;
@@ -110,14 +116,21 @@ export async function fetchExpiringMemberships(
   fromDate: string,
   toDate: string,
 ): Promise<readonly ExpiringMembershipEntry[]> {
-  return fetchAllPages("expiringMembershipsReport", fromDate, toDate);
+  return fetchAllPages<ExpiringMembershipEntry>("expiringMembershipsReport", fromDate, toDate);
 }
 
 export async function fetchExpiringSessions(
   fromDate: string,
   toDate: string,
 ): Promise<readonly ExpiringMembershipEntry[]> {
-  return fetchAllPages("expiringSessionsReport", fromDate, toDate);
+  return fetchAllPages<ExpiringMembershipEntry>("expiringSessionsReport", fromDate, toDate);
+}
+
+async function fetchBookingsReport(
+  fromDate: string,
+  toDate: string,
+): Promise<readonly BookingEntry[]> {
+  return fetchAllPages<BookingEntry>("bookingsReport", fromDate, toDate);
 }
 
 // -------------------------------------------------------
@@ -142,13 +155,16 @@ function calculateAttendance(
   memberUserId: number | null,
   memberPhone: string | null,
   memberName: string,
-  entrances: readonly EntranceReportEntry[],
+  bookings: readonly BookingEntry[],
   monthKeys: readonly string[],
 ): readonly (number | null)[] {
   const normalizedMemberPhone = normalizePhone(memberPhone);
   const normalizedMemberName = normalizeName(memberName);
 
-  const memberEntrances = entrances.filter((e) => {
+  // Filter bookings that belong to this member AND were checked in
+  const memberBookings = bookings.filter((e) => {
+    if (e.check_in !== "Yes") return false;
+
     // Priority 1: user_id match
     if (
       memberUserId != null &&
@@ -172,7 +188,7 @@ function calculateAttendance(
   });
 
   return monthKeys.map((mk) => {
-    const count = memberEntrances.filter(
+    const count = memberBookings.filter(
       (e) => getMonthKey(e.date) === mk,
     ).length;
     return count > 0 ? count : null;
@@ -239,13 +255,13 @@ export async function buildRetentionReport(
 
   const allExpiring = [...expiringMemberships, ...expiringSessions];
 
-  // Fetch entrance data for previous 3 months (one call per month, 31-day API limit)
-  const entranceChunks = await Promise.all(
+  // Fetch bookings for previous 3 months (one call per month, 31-day API limit)
+  const bookingChunks = await Promise.all(
     getAttendanceMonthRanges(reportMonth).map(({ from, to }) =>
-      fetchEntranceReport(from, to),
+      fetchBookingsReport(from, to),
     ),
   );
-  const entrances = entranceChunks.flat();
+  const bookings = bookingChunks.flat();
 
   const monthKeys = getAttendanceMonthKeys(reportMonth);
 
@@ -269,7 +285,7 @@ export async function buildRetentionReport(
       member.user_id,
       member.phone,
       member.name,
-      entrances,
+      bookings,
       monthKeys,
     );
 
