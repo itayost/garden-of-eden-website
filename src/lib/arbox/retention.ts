@@ -1,6 +1,5 @@
-const BASE_URL = "https://arboxserver.arboxapp.com/api/public/v3";
-const PAGE_LIMIT = 500;
-const MAX_PAGES = 20;
+import { normalizePhone } from "./normalize-phone";
+import { ARBOX_BASE_URL, ARBOX_PAGE_LIMIT, ARBOX_MAX_PAGES } from "./constants";
 
 // -------------------------------------------------------
 // Types
@@ -53,12 +52,12 @@ export function getCategoryForMembershipType(
 // Arbox API fetching
 // -------------------------------------------------------
 
-export interface BookingEntry {
+interface BookingEntry {
   readonly user_id: number | null;
   readonly name: string;
   readonly phone: string | null;
   readonly date: string;
-  readonly check_in: string; // "Yes" | "No"
+  readonly check_in: string;
 }
 
 interface ArboxReportResponse<T> {
@@ -76,7 +75,7 @@ async function fetchReportPage<T>(
   const apiKey = process.env.ARBOX_API_KEY;
   if (!apiKey) throw new Error("ARBOX_API_KEY is not set");
 
-  const url = `${BASE_URL}/reports/${reportName}?fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}&page=${page}&limit=${PAGE_LIMIT}`;
+  const url = `${ARBOX_BASE_URL}/reports/${reportName}?fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}&page=${page}&limit=${ARBOX_PAGE_LIMIT}`;
   const res = await fetch(url, {
     headers: { "api-key": apiKey, Accept: "application/json" },
     cache: "no-store",
@@ -99,13 +98,13 @@ async function fetchAllPages<T>(
     throw new Error(`Invalid date range for ${reportName}`);
   }
 
-  let all: readonly T[] = [];
+  const all: T[] = [];
   let page = 1;
 
-  while (page <= MAX_PAGES) {
+  while (page <= ARBOX_MAX_PAGES) {
     const entries = await fetchReportPage<T>(reportName, fromDate, toDate, page);
-    all = [...all, ...entries];
-    if (entries.length < PAGE_LIMIT) break;
+    all.push(...entries);
+    if (entries.length < ARBOX_PAGE_LIMIT) break;
     page++;
   }
 
@@ -134,64 +133,74 @@ async function fetchBookingsReport(
 }
 
 // -------------------------------------------------------
-// Processing: match attendance to expiring members
+// Processing: pre-index bookings for O(N+M) lookup
 // -------------------------------------------------------
-
-function normalizePhone(phone: string | null): string | null {
-  if (!phone) return null;
-  return phone.replace(/[\s\-()]/g, "").replace(/^0/, "972");
-}
 
 function normalizeName(name: string): string {
   return name.trim().toLowerCase();
 }
 
-function getMonthKey(dateStr: string): string {
-  // Timezone-safe: split "YYYY-MM-DD" directly
-  return dateStr.slice(0, 7);
+interface BookingIndex {
+  readonly byUserId: ReadonlyMap<number, ReadonlyMap<string, number>>;
+  readonly byPhone: ReadonlyMap<string, ReadonlyMap<string, number>>;
+  readonly byName: ReadonlyMap<string, ReadonlyMap<string, number>>;
 }
 
-function calculateAttendance(
+function buildBookingIndex(bookings: readonly BookingEntry[]): BookingIndex {
+  const byUserId = new Map<number, Map<string, number>>();
+  const byPhone = new Map<string, Map<string, number>>();
+  const byName = new Map<string, Map<string, number>>();
+
+  for (const b of bookings) {
+    if (b.check_in !== "Yes") continue;
+
+    const monthKey = b.date.slice(0, 7);
+
+    if (b.user_id != null) {
+      const monthMap = byUserId.get(b.user_id) ?? new Map<string, number>();
+      monthMap.set(monthKey, (monthMap.get(monthKey) ?? 0) + 1);
+      byUserId.set(b.user_id, monthMap);
+    }
+
+    const phone = normalizePhone(b.phone);
+    if (phone) {
+      const monthMap = byPhone.get(phone) ?? new Map<string, number>();
+      monthMap.set(monthKey, (monthMap.get(monthKey) ?? 0) + 1);
+      byPhone.set(phone, monthMap);
+    }
+
+    const name = normalizeName(b.name);
+    const monthMap = byName.get(name) ?? new Map<string, number>();
+    monthMap.set(monthKey, (monthMap.get(monthKey) ?? 0) + 1);
+    byName.set(name, monthMap);
+  }
+
+  return { byUserId, byPhone, byName };
+}
+
+function lookupAttendance(
   memberUserId: number | null,
   memberPhone: string | null,
   memberName: string,
-  bookings: readonly BookingEntry[],
+  index: BookingIndex,
   monthKeys: readonly string[],
 ): readonly (number | null)[] {
-  const normalizedMemberPhone = normalizePhone(memberPhone);
-  const normalizedMemberName = normalizeName(memberName);
+  const normalizedPhone = normalizePhone(memberPhone);
+  const normalizedName = normalizeName(memberName);
 
-  // Filter bookings that belong to this member AND were checked in
-  const memberBookings = bookings.filter((e) => {
-    if (e.check_in !== "Yes") return false;
+  // Find the best matching month map (priority: user_id > phone > name)
+  const monthMap =
+    (memberUserId != null ? index.byUserId.get(memberUserId) : undefined) ??
+    (normalizedPhone ? index.byPhone.get(normalizedPhone) : undefined) ??
+    index.byName.get(normalizedName);
 
-    // Priority 1: user_id match
-    if (
-      memberUserId != null &&
-      e.user_id != null &&
-      memberUserId === e.user_id
-    ) {
-      return true;
-    }
-    // Priority 2: phone match
-    if (
-      normalizedMemberPhone &&
-      normalizePhone(e.phone) === normalizedMemberPhone
-    ) {
-      return true;
-    }
-    // Priority 3: name match
-    if (normalizeName(e.name) === normalizedMemberName) {
-      return true;
-    }
-    return false;
-  });
+  if (!monthMap) {
+    return monthKeys.map(() => null);
+  }
 
   return monthKeys.map((mk) => {
-    const count = memberBookings.filter(
-      (e) => getMonthKey(e.date) === mk,
-    ).length;
-    return count > 0 ? count : null;
+    const count = monthMap.get(mk);
+    return count != null && count > 0 ? count : null;
   });
 }
 
@@ -213,25 +222,22 @@ export function getAttendanceMonthKeys(
   return keys;
 }
 
+function formatDateYMD(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 /**
  * Get 3 individual month ranges before reportMonth (respects Arbox 31-day limit).
- * e.g. for "2026-03-01" returns:
- *   [{ from: "2026-02-01", to: "2026-02-28" },
- *    { from: "2026-01-01", to: "2026-01-31" },
- *    { from: "2025-12-01", to: "2025-12-31" }]
  */
 function getAttendanceMonthRanges(
   reportMonth: string,
 ): readonly { from: string; to: string }[] {
   const d = new Date(reportMonth + "T00:00:00");
-  const fmt = (date: Date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
   const ranges: { from: string; to: string }[] = [];
   for (let i = 1; i <= 3; i++) {
     const firstDay = new Date(d.getFullYear(), d.getMonth() - i, 1);
     const lastDay = new Date(d.getFullYear(), d.getMonth() - i + 1, 0);
-    ranges.push({ from: fmt(firstDay), to: fmt(lastDay) });
+    ranges.push({ from: formatDateYMD(firstDay), to: formatDateYMD(lastDay) });
   }
   return ranges;
 }
@@ -262,6 +268,7 @@ export async function buildRetentionReport(
     ),
   );
   const bookings = bookingChunks.flat();
+  const bookingIndex = buildBookingIndex(bookings);
 
   const monthKeys = getAttendanceMonthKeys(reportMonth);
 
@@ -281,25 +288,22 @@ export async function buildRetentionReport(
       continue;
     }
 
-    const attendance = calculateAttendance(
+    const attendance = lookupAttendance(
       member.user_id,
       member.phone,
       member.name,
-      bookings,
+      bookingIndex,
       monthKeys,
     );
 
-    grouped[category] = [
-      ...grouped[category],
-      {
-        user_id: member.user_id,
-        name: member.name,
-        phone: member.phone,
-        end_date: member.end_date ?? "",
-        membership_type_name: member.membership_type_name,
-        attendance,
-      },
-    ];
+    grouped[category].push({
+      user_id: member.user_id,
+      name: member.name,
+      phone: member.phone,
+      end_date: member.end_date ?? "",
+      membership_type_name: member.membership_type_name,
+      attendance,
+    });
   }
 
   // Sort each category by end_date descending

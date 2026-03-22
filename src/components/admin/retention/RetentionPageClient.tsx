@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -14,21 +14,7 @@ import { getRetentionReport } from "@/lib/actions/admin-retention";
 import { getAttendanceMonthKeys } from "@/lib/arbox/retention";
 import type { RetentionReportData } from "@/lib/arbox/retention";
 import type { RetentionReportMonth } from "@/lib/actions/admin-retention";
-
-const HEBREW_MONTHS = [
-  "ינואר",
-  "פברואר",
-  "מרץ",
-  "אפריל",
-  "מאי",
-  "יוני",
-  "יולי",
-  "אוגוסט",
-  "ספטמבר",
-  "אוקטובר",
-  "נובמבר",
-  "דצמבר",
-] as const;
+import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 
 function formatReportMonth(reportMonth: string): string {
   const [year, monthStr] = reportMonth.split("-");
@@ -68,6 +54,11 @@ export function RetentionPageClient({
     });
   };
 
+  const monthKeys = useMemo(
+    () => (selectedMonth ? getAttendanceMonthKeys(selectedMonth) : []),
+    [selectedMonth],
+  );
+
   if (months.length === 0) {
     return (
       <p className="text-center text-muted-foreground py-12">
@@ -75,10 +66,6 @@ export function RetentionPageClient({
       </p>
     );
   }
-
-  const monthKeys = selectedMonth
-    ? getAttendanceMonthKeys(selectedMonth)
-    : [];
 
   return (
     <div className="space-y-6">

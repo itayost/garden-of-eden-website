@@ -1,4 +1,6 @@
-const BASE_URL = "https://arboxserver.arboxapp.com/api/public/v3";
+import { ARBOX_BASE_URL } from "./constants";
+
+const BASE_URL = ARBOX_BASE_URL;
 
 export type ArboxUser = {
   user_id: number;

@@ -1,6 +1,4 @@
-const BASE_URL = "https://arboxserver.arboxapp.com/api/public/v3";
-const PAGE_LIMIT = 500;
-const MAX_PAGES = 20;
+import { ARBOX_BASE_URL, ARBOX_PAGE_LIMIT, ARBOX_MAX_PAGES } from "./constants";
 
 export interface EntranceReportEntry {
   readonly user_id: number | null;
@@ -29,7 +27,7 @@ async function fetchEntranceReportPage(
     throw new Error("ARBOX_API_KEY is not set");
   }
 
-  const url = `${BASE_URL}/reports/entranceReport?fromDate=${encodeURIComponent(from)}&toDate=${encodeURIComponent(to)}&page=${page}&limit=${PAGE_LIMIT}`;
+  const url = `${ARBOX_BASE_URL}/reports/entranceReport?fromDate=${encodeURIComponent(from)}&toDate=${encodeURIComponent(to)}&page=${page}&limit=${ARBOX_PAGE_LIMIT}`;
   const res = await fetch(url, {
     headers: {
       "api-key": apiKey,
@@ -57,10 +55,10 @@ export async function fetchEntranceReport(
   let all: readonly EntranceReportEntry[] = [];
   let page = 1;
 
-  while (page <= MAX_PAGES) {
+  while (page <= ARBOX_MAX_PAGES) {
     const entries = await fetchEntranceReportPage(from, to, page);
     all = [...all, ...entries];
-    if (entries.length < PAGE_LIMIT) break;
+    if (entries.length < ARBOX_PAGE_LIMIT) break;
     page++;
   }
 

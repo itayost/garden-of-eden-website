@@ -11,21 +11,7 @@ import {
 } from "@/components/ui/table";
 import { TableToolbar } from "@/components/admin/TableToolbar";
 import type { RetentionEntry } from "@/lib/arbox/retention";
-
-const HEBREW_MONTHS = [
-  "ינואר",
-  "פברואר",
-  "מרץ",
-  "אפריל",
-  "מאי",
-  "יוני",
-  "יולי",
-  "אוגוסט",
-  "ספטמבר",
-  "אוקטובר",
-  "נובמבר",
-  "דצמבר",
-] as const;
+import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 
 function getMonthName(monthKey: string): string {
   const [, monthStr] = monthKey.split("-");
