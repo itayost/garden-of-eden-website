@@ -29,7 +29,7 @@ async function fetchEntranceReportPage(
     throw new Error("ARBOX_API_KEY is not set");
   }
 
-  const url = `${BASE_URL}/reports/entrance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&page=${page}&limit=${PAGE_LIMIT}`;
+  const url = `${BASE_URL}/reports/entranceReport?fromDate=${encodeURIComponent(from)}&toDate=${encodeURIComponent(to)}&page=${page}&limit=${PAGE_LIMIT}`;
   const res = await fetch(url, {
     headers: {
       "api-key": apiKey,

@@ -198,21 +198,26 @@ export function getAttendanceMonthKeys(
 }
 
 /**
- * Get the date range covering the 3 months before reportMonth.
- * e.g. for "2026-03-01" returns { from: "2025-12-01", to: "2026-02-28" }
+ * Get 3 individual month ranges before reportMonth (respects Arbox 31-day limit).
+ * e.g. for "2026-03-01" returns:
+ *   [{ from: "2026-02-01", to: "2026-02-28" },
+ *    { from: "2026-01-01", to: "2026-01-31" },
+ *    { from: "2025-12-01", to: "2025-12-31" }]
  */
-export function getAttendanceDateRange(reportMonth: string): {
-  from: string;
-  to: string;
-} {
+function getAttendanceMonthRanges(
+  reportMonth: string,
+): readonly { from: string; to: string }[] {
   const d = new Date(reportMonth + "T00:00:00");
-  const to = new Date(d.getFullYear(), d.getMonth(), 0); // last day of previous month
-  const from = new Date(d.getFullYear(), d.getMonth() - 3, 1);
-
   const fmt = (date: Date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
-  return { from: fmt(from), to: fmt(to) };
+  const ranges: { from: string; to: string }[] = [];
+  for (let i = 1; i <= 3; i++) {
+    const firstDay = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() - i + 1, 0);
+    ranges.push({ from: fmt(firstDay), to: fmt(lastDay) });
+  }
+  return ranges;
 }
 
 // -------------------------------------------------------
@@ -234,10 +239,13 @@ export async function buildRetentionReport(
 
   const allExpiring = [...expiringMemberships, ...expiringSessions];
 
-  // Fetch entrance data for previous 3 months
-  const { from: attendanceFrom, to: attendanceTo } =
-    getAttendanceDateRange(reportMonth);
-  const entrances = await fetchEntranceReport(attendanceFrom, attendanceTo);
+  // Fetch entrance data for previous 3 months (one call per month, 31-day API limit)
+  const entranceChunks = await Promise.all(
+    getAttendanceMonthRanges(reportMonth).map(({ from, to }) =>
+      fetchEntranceReport(from, to),
+    ),
+  );
+  const entrances = entranceChunks.flat();
 
   const monthKeys = getAttendanceMonthKeys(reportMonth);
 
