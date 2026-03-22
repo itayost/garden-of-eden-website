@@ -14,6 +14,7 @@ import {
   ClipboardCheck,
   Clock,
   UserPlus,
+  RefreshCw,
 } from "lucide-react";
 import { BottomNav, type BottomNavItem } from "@/components/ui/bottom-nav";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -31,6 +32,7 @@ const moreItems = [
   { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, adminOnly: false },
   { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, adminOnly: false },
   { href: "/admin/nutrition", label: "תזונה", icon: Utensils, adminOnly: false },
+  { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw, adminOnly: false },
   { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: true },
 ];
 
