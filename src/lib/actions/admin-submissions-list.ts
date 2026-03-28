@@ -167,6 +167,62 @@ export async function getShiftReportsPaginated(
   return { items: data || [], total: count || 0 };
 }
 
+/** Resolve trainee UUIDs to names for CSV export */
+export async function resolveTraineeNamesForExport(
+  reports: TrainerShiftReport[]
+): Promise<Record<string, string>> {
+  const { error } = await verifyAdminOrTrainer();
+  if (error) return {};
+
+  const allIds = new Set<string>();
+
+  for (const report of reports) {
+    const idFields = [
+      report.new_trainees_ids,
+      report.discipline_trainee_ids,
+      report.injuries_trainee_ids,
+      report.limitations_trainee_ids,
+      report.achievements_trainee_ids,
+      report.mental_state_trainee_ids,
+      report.complaints_trainee_ids,
+      report.insufficient_attention_trainee_ids,
+      report.pro_candidates_trainee_ids,
+      report.social_skills_trainee_ids,
+    ];
+    for (const ids of idFields) {
+      if (ids) {
+        for (const id of ids) {
+          allIds.add(id);
+        }
+      }
+    }
+    const perTrainee = report.achievements_per_trainee as Record<string, unknown> | null;
+    if (perTrainee) {
+      for (const id of Object.keys(perTrainee)) {
+        allIds.add(id);
+      }
+    }
+  }
+
+  if (allIds.size === 0) return {};
+
+  const supabase = await createClient();
+  const { data: trainees } = (await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", Array.from(allIds))) as unknown as {
+    data: { id: string; full_name: string | null }[] | null;
+  };
+
+  const map: Record<string, string> = {};
+  if (trainees) {
+    for (const t of trainees) {
+      map[t.id] = t.full_name || "ללא שם";
+    }
+  }
+  return map;
+}
+
 /** Get total counts for all submission types (for tab headers) */
 export async function getSubmissionCounts(): Promise<{
   preWorkout: number;
