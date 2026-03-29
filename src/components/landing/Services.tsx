@@ -84,6 +84,23 @@ const plans = [
     extraFeatures: [],
     highlighted: false,
   },
+  {
+    name: "מסלול ליווי מנטלי",
+    description: "5 מפגשים אישיים אחד על אחד",
+    price: "1,199",
+    priceNumber: 1199,
+    period: "תשלום אחד",
+    paymentType: "one_time" as const,
+    features: [
+      "התמודדות עם קהל ורעש חיצוני",
+      "התמודדות עם כישלון, הפסד ומשברים",
+      "דיבור פנימי והשפעתו על ביצועים",
+      "שליטה בכעסים וברגשות",
+      "לחץ מהמאמן והפחד לאכזב",
+    ],
+    extraFeatures: [],
+    highlighted: false,
+  },
 ];
 
 export function Services() {
@@ -112,7 +129,7 @@ export function Services() {
         </motion.div>
 
         {/* Pricing cards */}
-        <div className="grid md:grid-cols-5 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {plans.map((plan, index) => (
             <motion.div
               key={plan.name}
