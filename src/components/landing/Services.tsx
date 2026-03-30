@@ -2,17 +2,18 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { PaymentButton } from "@/components/payments/PaymentButton";
+import { ChevronDown, ExternalLink, MessageCircle } from "lucide-react";
+
+const WHATSAPP_PHONE = "972525779446";
 
 const plans = [
   {
     name: "קורס דיגיטלי",
     description: "גישה מלאה לתוכן הדיגיטלי",
     price: "350",
-    priceNumber: 350,
     period: "תשלום אחד",
-    paymentType: "one_time" as const,
+    externalUrl: "https://gardengym.co.il/football360/",
+    whatsappMessage: "",
     features: [
       "קורס דיגיטלי מלא",
       "גישה לכל התכנים המוקלטים",
@@ -25,9 +26,9 @@ const plans = [
     name: "תוכנית בסיסית",
     description: "מעטפת מלאה לשחקן",
     price: "2,190",
-    priceNumber: 2190,
     period: "תוקף 3 חודשים",
-    paymentType: "one_time" as const,
+    whatsappMessage:
+      "היי, אשמח לשמוע פרטים נוספים על התוכנית הבסיסית (10 אימונים + ליווי תזונה). תודה!",
     features: [
       "10 אימונים",
       "קורס דיגיטלי מתנה",
@@ -43,9 +44,9 @@ const plans = [
     name: "תוכנית מתקדמים",
     description: "תוכנית בסיסית + אימונים במתחם",
     price: "1,450",
-    priceNumber: 1450,
     period: "לחודש",
-    paymentType: "recurring" as const,
+    whatsappMessage:
+      "היי, אשמח לשמוע פרטים נוספים על תוכנית המתקדמים (אימונים במתחם + ליווי מלא). תודה!",
     features: [
       "כל מה שבתוכנית בסיסית",
       "2 אימונים בשבוע במתחם",
@@ -58,9 +59,9 @@ const plans = [
     name: "תוכנית PRO",
     description: "התוכנית המקיפה ביותר שלנו",
     price: "1,650",
-    priceNumber: 1650,
     period: "לחודש",
-    paymentType: "recurring" as const,
+    whatsappMessage:
+      "היי, אשמח לשמוע פרטים נוספים על תוכנית ה-PRO (ניתוח וידאו + אימון מנטלי). תודה!",
     features: [
       "כל מה שבתוכנית מתקדמים",
       "מפגש ניתוח וידאו עם אנליסט",
@@ -73,9 +74,9 @@ const plans = [
     name: "פגישת ניתוח וידיאו",
     description: "מפגש ניתוח וידאו עם אנליסט",
     price: "450",
-    priceNumber: 450,
     period: "חד פעמי",
-    paymentType: "one_time" as const,
+    whatsappMessage:
+      "היי, אשמח לקבוע פגישת ניתוח וידאו עם אנליסט. תודה!",
     features: [
       "ניתוח פעולות באמצעות וידאו מקצועי",
       "משוב לשיפור הבנה טקטית וטכנית",
@@ -88,9 +89,9 @@ const plans = [
     name: "מסלול ליווי מנטלי",
     description: "5 מפגשים אישיים אחד על אחד",
     price: "1,199",
-    priceNumber: 1199,
     period: "תשלום אחד",
-    paymentType: "one_time" as const,
+    whatsappMessage:
+      "היי, אשמח לשמוע פרטים נוספים על מסלול הליווי המנטלי (5 מפגשים אישיים). תודה!",
     features: [
       "התמודדות עם קהל ורעש חיצוני",
       "התמודדות עם כישלון, הפסד ומשברים",
@@ -102,6 +103,10 @@ const plans = [
     highlighted: false,
   },
 ];
+
+function buildWhatsAppUrl(message: string): string {
+  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
+}
 
 export function Services() {
   const [expandedPlan, setExpandedPlan] = useState<number | null>(null);
@@ -223,13 +228,35 @@ export function Services() {
 
                 {/* CTA */}
                 <div className="mt-auto pt-4">
-                  <PaymentButton
-                    planName={plan.name}
-                    amount={plan.priceNumber}
-                    description={plan.description}
-                    paymentType={plan.paymentType}
-                    variant={plan.highlighted ? "highlighted" : "default"}
-                  />
+                  {"externalUrl" in plan && plan.externalUrl ? (
+                    <a
+                      href={plan.externalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`w-full py-3 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
+                        plan.highlighted
+                          ? "bg-[#CDEA68] hover:bg-[#bdd85c] text-black"
+                          : "bg-black hover:bg-black/80 text-white"
+                      }`}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      התחילו עכשיו
+                    </a>
+                  ) : (
+                    <a
+                      href={buildWhatsAppUrl(plan.whatsappMessage)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`w-full py-3 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
+                        plan.highlighted
+                          ? "bg-[#25D366] hover:bg-[#1fb855] text-white"
+                          : "bg-[#25D366] hover:bg-[#1fb855] text-white"
+                      }`}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      שלחו הודעה בוואטסאפ
+                    </a>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
