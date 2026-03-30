@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,9 +153,10 @@ export default async function AdminDashboardPage() {
             {recentPreWorkout && recentPreWorkout.length > 0 ? (
               <div className="space-y-3">
                 {recentPreWorkout.map((form: Record<string, unknown>) => (
-                  <div
+                  <Link
                     key={form.id as string}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    href={`/admin/submissions/pre-workout/${form.id as string}`}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                   >
                     <div>
                       <p className="font-medium">{form.full_name as string}</p>
@@ -165,7 +167,7 @@ export default async function AdminDashboardPage() {
                     <span className="text-sm text-muted-foreground">
                       {formatDate(form.submitted_at as string)}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -189,9 +191,10 @@ export default async function AdminDashboardPage() {
             {recentPostWorkout && recentPostWorkout.length > 0 ? (
               <div className="space-y-3">
                 {recentPostWorkout.map((form: Record<string, unknown>) => (
-                  <div
+                  <Link
                     key={form.id as string}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    href={`/admin/submissions/post-workout/${form.id as string}`}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                   >
                     <div>
                       <p className="font-medium">{form.full_name as string}</p>
@@ -203,7 +206,7 @@ export default async function AdminDashboardPage() {
                     <span className="text-sm text-muted-foreground">
                       {formatDate(form.submitted_at as string)}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
