@@ -1,61 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { fetchBookingsReport } from "@/lib/arbox/retention";
+import {
+  fetchBookingsReport,
+  buildBookingIndex,
+  lookupAttendance,
+  formatDateYMD,
+} from "@/lib/arbox/retention";
 import type {
   RetentionReportData,
   RetentionEntry,
-  BookingEntry,
 } from "@/lib/arbox/retention";
-import { normalizePhone } from "@/lib/arbox/normalize-phone";
 
 export const maxDuration = 60;
 
-function normalizeName(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-function countAttendanceForMember(
-  memberUserId: number | null,
-  memberPhone: string | null,
-  memberName: string,
-  bookings: readonly BookingEntry[],
-): number | null {
-  const normalizedPhone = normalizePhone(memberPhone);
-  const normalizedName = normalizeName(memberName);
-
-  let count = 0;
-  for (const b of bookings) {
-    if (b.check_in !== "Yes") continue;
-
-    const match =
-      (memberUserId != null && b.user_id === memberUserId) ||
-      (normalizedPhone != null && normalizePhone(b.phone) === normalizedPhone) ||
-      normalizeName(b.name) === normalizedName;
-
-    if (match) count++;
-  }
-
-  return count > 0 ? count : null;
-}
-
-function formatDateYMD(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
 function updateAttendanceInEntries(
   entries: readonly RetentionEntry[],
-  bookings: readonly BookingEntry[],
+  currentMonthKey: string,
+  index: ReturnType<typeof buildBookingIndex>,
 ): readonly RetentionEntry[] {
   return entries.map((entry) => {
-    const currentMonthCount = countAttendanceForMember(
+    const counts = lookupAttendance(
       entry.user_id,
       entry.phone,
       entry.name,
-      bookings,
+      index,
+      [currentMonthKey],
     );
+    const currentMonthCount = counts[0];
 
-    // Build new attendance array: index 0 = current month, rest stays the same
+    // attendance[0] = current month (updated), rest stays the same
     const existingPrevious =
       entry.attendance.length > 1
         ? entry.attendance.slice(1)
@@ -91,9 +65,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Current month report
     const now = new Date();
     const reportMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
     const supabase = createAdminClient();
     const { data: reportRow } = await typedFrom(supabase, "retention_reports")
@@ -114,13 +88,14 @@ export async function GET(request: NextRequest) {
 
     const reportData = reportRow.data as unknown as RetentionReportData;
 
-    // Fetch current month bookings
+    // Fetch current month bookings and build index for O(N+M) lookup
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     const bookings = await fetchBookingsReport(
       formatDateYMD(firstDay),
       formatDateYMD(lastDay),
     );
+    const bookingIndex = buildBookingIndex(bookings);
 
     console.log(
       `[Retention Attendance] Fetched ${bookings.length} bookings for ${reportMonth}`,
@@ -128,15 +103,15 @@ export async function GET(request: NextRequest) {
 
     // Update attendance[0] for each category
     const updatedData: RetentionReportData = {
-      monthly: updateAttendanceInEntries(reportData.monthly, bookings),
-      pro: updateAttendanceInEntries(reportData.pro, bookings),
+      monthly: updateAttendanceInEntries(reportData.monthly, currentMonthKey, bookingIndex),
+      pro: updateAttendanceInEntries(reportData.pro, currentMonthKey, bookingIndex),
       training_card: updateAttendanceInEntries(
         reportData.training_card,
-        bookings,
+        currentMonthKey,
+        bookingIndex,
       ),
     };
 
-    // Save back
     const { error } = await typedFrom(supabase, "retention_reports")
       .update({
         data: updatedData as unknown as Record<string, unknown>,

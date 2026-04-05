@@ -136,17 +136,17 @@ export async function fetchBookingsReport(
 // Processing: pre-index bookings for O(N+M) lookup
 // -------------------------------------------------------
 
-function normalizeName(name: string): string {
+export function normalizeName(name: string): string {
   return name.trim().toLowerCase();
 }
 
-interface BookingIndex {
+export interface BookingIndex {
   readonly byUserId: ReadonlyMap<number, ReadonlyMap<string, number>>;
   readonly byPhone: ReadonlyMap<string, ReadonlyMap<string, number>>;
   readonly byName: ReadonlyMap<string, ReadonlyMap<string, number>>;
 }
 
-function buildBookingIndex(bookings: readonly BookingEntry[]): BookingIndex {
+export function buildBookingIndex(bookings: readonly BookingEntry[]): BookingIndex {
   const byUserId = new Map<number, Map<string, number>>();
   const byPhone = new Map<string, Map<string, number>>();
   const byName = new Map<string, Map<string, number>>();
@@ -178,7 +178,7 @@ function buildBookingIndex(bookings: readonly BookingEntry[]): BookingIndex {
   return { byUserId, byPhone, byName };
 }
 
-function lookupAttendance(
+export function lookupAttendance(
   memberUserId: number | null,
   memberPhone: string | null,
   memberName: string,
@@ -228,7 +228,7 @@ export function getAttendanceMonthKeys(
   return keys;
 }
 
-function formatDateYMD(date: Date): string {
+export function formatDateYMD(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
