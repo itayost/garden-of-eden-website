@@ -52,7 +52,7 @@ export function getCategoryForMembershipType(
 // Arbox API fetching
 // -------------------------------------------------------
 
-interface BookingEntry {
+export interface BookingEntry {
   readonly user_id: number | null;
   readonly name: string;
   readonly phone: string | null;
@@ -125,7 +125,7 @@ export async function fetchExpiringSessions(
   return fetchAllPages<ExpiringMembershipEntry>("expiringSessionsReport", fromDate, toDate);
 }
 
-async function fetchBookingsReport(
+export async function fetchBookingsReport(
   fromDate: string,
   toDate: string,
 ): Promise<readonly BookingEntry[]> {
@@ -205,14 +205,20 @@ function lookupAttendance(
 }
 
 /**
- * Get the 3 month keys (YYYY-MM) before a given report month.
- * e.g. for "2026-03-01" returns ["2026-02", "2026-01", "2025-12"]
+ * Get 4 month keys (YYYY-MM): current month + 3 previous months.
+ * Index 0 = current month (report month), 1-3 = previous months.
+ * e.g. for "2026-04-01" returns ["2026-04", "2026-03", "2026-02", "2026-01"]
  */
 export function getAttendanceMonthKeys(
   reportMonth: string,
 ): readonly string[] {
   const d = new Date(reportMonth + "T00:00:00");
   const keys: string[] = [];
+  // Index 0: current month (the report month itself)
+  keys.push(
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+  );
+  // Indexes 1-3: previous 3 months
   for (let i = 1; i <= 3; i++) {
     const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
     keys.push(
@@ -227,13 +233,19 @@ function formatDateYMD(date: Date): string {
 }
 
 /**
- * Get 3 individual month ranges before reportMonth (respects Arbox 31-day limit).
+ * Get 4 individual month ranges: current month + 3 previous months
+ * (respects Arbox 31-day API limit per request).
  */
 function getAttendanceMonthRanges(
   reportMonth: string,
 ): readonly { from: string; to: string }[] {
   const d = new Date(reportMonth + "T00:00:00");
   const ranges: { from: string; to: string }[] = [];
+  // Index 0: current month
+  const currentFirst = new Date(d.getFullYear(), d.getMonth(), 1);
+  const currentLast = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  ranges.push({ from: formatDateYMD(currentFirst), to: formatDateYMD(currentLast) });
+  // Indexes 1-3: previous 3 months
   for (let i = 1; i <= 3; i++) {
     const firstDay = new Date(d.getFullYear(), d.getMonth() - i, 1);
     const lastDay = new Date(d.getFullYear(), d.getMonth() - i + 1, 0);
@@ -261,7 +273,7 @@ export async function buildRetentionReport(
 
   const allExpiring = [...expiringMemberships, ...expiringSessions];
 
-  // Fetch bookings for previous 3 months (one call per month, 31-day API limit)
+  // Fetch bookings for current + previous 3 months (one call per month, 31-day API limit)
   const bookingChunks = await Promise.all(
     getAttendanceMonthRanges(reportMonth).map(({ from, to }) =>
       fetchBookingsReport(from, to),

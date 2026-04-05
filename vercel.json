@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/retention-report",
       "schedule": "0 4 1 * *"
+    },
+    {
+      "path": "/api/cron/retention-attendance",
+      "schedule": "0 5 * * *"
     }
   ]
 }

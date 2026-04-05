@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -10,11 +10,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RetentionTable } from "./RetentionTable";
-import { getRetentionReport } from "@/lib/actions/admin-retention";
+import {
+  getRetentionReport,
+  getRetentionNotes,
+  upsertRetentionNote,
+} from "@/lib/actions/admin-retention";
 import { getAttendanceMonthKeys } from "@/lib/arbox/retention";
 import type { RetentionReportData } from "@/lib/arbox/retention";
-import type { RetentionReportMonth } from "@/lib/actions/admin-retention";
+import type {
+  RetentionReportMonth,
+  RetentionNote,
+} from "@/lib/actions/admin-retention";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
+import { toast } from "sonner";
 
 function formatReportMonth(reportMonth: string): string {
   const [year, monthStr] = reportMonth.split("-");
@@ -26,33 +34,73 @@ interface RetentionPageClientProps {
   months: readonly RetentionReportMonth[];
   initialMonth: string | null;
   initialData: RetentionReportData | null;
+  initialNotes: ReadonlyMap<string, RetentionNote>;
 }
 
 export function RetentionPageClient({
   months,
   initialMonth,
   initialData,
+  initialNotes,
 }: RetentionPageClientProps) {
   const [selectedMonth, setSelectedMonth] = useState(initialMonth ?? "");
   const [data, setData] = useState<RetentionReportData | null>(initialData);
+  const [notes, setNotes] =
+    useState<ReadonlyMap<string, RetentionNote>>(initialNotes);
   const [isPending, startTransition] = useTransition();
 
   const handleMonthChange = (month: string) => {
     setSelectedMonth(month);
     if (month === initialMonth) {
       setData(initialData);
+      setNotes(initialNotes);
       return;
     }
     startTransition(async () => {
       try {
-        const result = await getRetentionReport(month);
+        const [result, notesResult] = await Promise.all([
+          getRetentionReport(month),
+          getRetentionNotes(month),
+        ]);
         setData(result);
+        setNotes(notesResult);
       } catch (err) {
         console.error("[Retention] Failed to load report:", err);
         setData(null);
+        setNotes(new Map());
       }
     });
   };
+
+  const handleSaveNote = useCallback(
+    async (traineePhone: string, traineeName: string, note: string) => {
+      const { error } = await upsertRetentionNote(
+        selectedMonth,
+        traineePhone,
+        traineeName,
+        note,
+      );
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      // Optimistic update
+      setNotes((prev) => {
+        const next = new Map(prev);
+        if (!note.trim()) {
+          next.delete(traineePhone);
+        } else {
+          next.set(traineePhone, {
+            note: note.trim(),
+            author_id: "",
+            updated_at: new Date().toISOString(),
+          });
+        }
+        return next;
+      });
+    },
+    [selectedMonth],
+  );
 
   const monthKeys = useMemo(
     () => (selectedMonth ? getAttendanceMonthKeys(selectedMonth) : []),
@@ -100,15 +148,30 @@ export function RetentionPageClient({
           </TabsList>
 
           <TabsContent value="monthly" className="mt-4">
-            <RetentionTable entries={data.monthly} monthKeys={monthKeys} />
+            <RetentionTable
+              entries={data.monthly}
+              monthKeys={monthKeys}
+              notes={notes}
+              onSaveNote={handleSaveNote}
+            />
           </TabsContent>
 
           <TabsContent value="pro" className="mt-4">
-            <RetentionTable entries={data.pro} monthKeys={monthKeys} />
+            <RetentionTable
+              entries={data.pro}
+              monthKeys={monthKeys}
+              notes={notes}
+              onSaveNote={handleSaveNote}
+            />
           </TabsContent>
 
           <TabsContent value="training_card" className="mt-4">
-            <RetentionTable entries={data.training_card} monthKeys={monthKeys} />
+            <RetentionTable
+              entries={data.training_card}
+              monthKeys={monthKeys}
+              notes={notes}
+              onSaveNote={handleSaveNote}
+            />
           </TabsContent>
         </Tabs>
       ) : null}
