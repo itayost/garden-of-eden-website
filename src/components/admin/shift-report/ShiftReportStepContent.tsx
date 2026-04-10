@@ -291,49 +291,84 @@ function TraineeIssuesStep({ form, trainees }: Omit<StepProps, "trainerName">) {
           detailsPlaceholder="פרט את המגבלות או הצורך בשיפור"
           trainees={trainees}
         />
+
+        <PerTraineeCategoriesSection
+          form={form}
+          trainees={trainees}
+          label="האם עבדת על נושאים ספציפיים עם מתאמנים היום?"
+          boolField="has_worked_on_focus"
+          traineeIdsField="worked_on_trainee_ids"
+          perTraineeField="worked_on_per_trainee"
+          categoriesLabel="על מה עבדת עם המתאמן"
+          detailsPlaceholder="פרט על מה עבדת עם המתאמן היום"
+        />
       </CardContent>
     </Card>
   );
 }
 
-// Step 3: Trainee Positives & Wellbeing
-function AchievementsPerTrainee({
+type PerTraineeField =
+  | "achievements_per_trainee"
+  | "worked_on_per_trainee";
+
+type TraineeIdsField =
+  | "achievements_trainee_ids"
+  | "worked_on_trainee_ids";
+
+type BoolField =
+  | "has_achievements"
+  | "has_worked_on_focus";
+
+/** Reusable per-trainee categories + details section */
+function PerTraineeCategoriesSection({
   form,
   trainees,
+  label,
+  boolField,
+  traineeIdsField,
+  perTraineeField,
+  categoriesLabel,
+  detailsPlaceholder,
 }: {
   form: UseFormReturn<ShiftReportFormData>;
   trainees: TraineeOption[];
+  label: string;
+  boolField: BoolField;
+  traineeIdsField: TraineeIdsField;
+  perTraineeField: PerTraineeField;
+  categoriesLabel: string;
+  detailsPlaceholder: string;
 }) {
-  const isYes = form.watch("has_achievements") as boolean;
-  const selectedIds = (form.watch("achievements_trainee_ids") as string[]) || [];
-  const perTrainee = form.watch("achievements_per_trainee") || {};
+  const isYes = form.watch(boolField) as boolean;
+  const selectedIds = (form.watch(traineeIdsField) as string[]) || [];
+  const perTrainee = form.watch(perTraineeField) || {};
 
   const updatePerTrainee = (
     traineeId: string,
     field: "details" | "categories",
     value: string | string[]
   ) => {
-    const current = form.getValues("achievements_per_trainee") || {};
+    const current = form.getValues(perTraineeField) || {};
     const entry = current[traineeId] || { details: "", categories: [] };
-    form.setValue("achievements_per_trainee", {
+    form.setValue(perTraineeField, {
       ...current,
       [traineeId]: { ...entry, [field]: value },
     });
   };
 
   const handleTraineeIdsChange = (newIds: string[]) => {
-    form.setValue("achievements_trainee_ids", newIds);
+    form.setValue(traineeIdsField, newIds);
     // Clean up removed trainees from per-trainee data
-    const current = form.getValues("achievements_per_trainee") || {};
+    const current = form.getValues(perTraineeField) || {};
     const cleaned: typeof current = {};
     for (const id of newIds) {
       cleaned[id] = current[id] || { details: "", categories: [] };
     }
-    form.setValue("achievements_per_trainee", cleaned);
+    form.setValue(perTraineeField, cleaned);
   };
 
   const toggleCategory = (traineeId: string, category: AchievementCategory) => {
-    const current = form.getValues("achievements_per_trainee") || {};
+    const current = form.getValues(perTraineeField) || {};
     const entry = current[traineeId] || { details: "", categories: [] };
     const cats = entry.categories || [];
     const updated = cats.includes(category)
@@ -350,10 +385,10 @@ function AchievementsPerTrainee({
     <div className="space-y-3">
       <FormField
         control={form.control}
-        name="has_achievements"
+        name={boolField}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>האם זיהית הישגים יוצאי דופן או שיפור במיומנויות?</FormLabel>
+            <FormLabel>{label}</FormLabel>
             <Select
               onValueChange={(v) => field.onChange(v === "true")}
               value={field.value ? "true" : "false"}
@@ -377,7 +412,7 @@ function AchievementsPerTrainee({
         <div className="space-y-4 pr-4 border-r-2 border-primary/20">
           <FormField
             control={form.control}
-            name="achievements_trainee_ids"
+            name={traineeIdsField}
             render={() => (
               <FormItem>
                 <FormLabel>בחר מתאמנים</FormLabel>
@@ -404,7 +439,7 @@ function AchievementsPerTrainee({
 
                 {/* Category checkboxes */}
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">קטגוריות הצטיינות</p>
+                  <p className="text-sm text-muted-foreground mb-2">{categoriesLabel}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ACHIEVEMENT_CATEGORIES.map((cat) => (
                       <label
@@ -425,7 +460,7 @@ function AchievementsPerTrainee({
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">פרטים</p>
                   <Textarea
-                    placeholder="פרט את ההישגים או השיפורים"
+                    placeholder={detailsPlaceholder}
                     value={entry.details || ""}
                     onChange={(e) =>
                       updatePerTrainee(traineeId, "details", e.target.value)
@@ -448,7 +483,16 @@ function TraineePositivesStep({ form, trainees }: Omit<StepProps, "trainerName">
         <CardTitle>הישגים ורווחה</CardTitle>
       </CardHeader>
       <CardContent className="space-y-8">
-        <AchievementsPerTrainee form={form} trainees={trainees} />
+        <PerTraineeCategoriesSection
+          form={form}
+          trainees={trainees}
+          label="האם זיהית הישגים יוצאי דופן או שיפור במיומנויות?"
+          boolField="has_achievements"
+          traineeIdsField="achievements_trainee_ids"
+          perTraineeField="achievements_per_trainee"
+          categoriesLabel="קטגוריות הצטיינות"
+          detailsPlaceholder="פרט את ההישגים או השיפורים"
+        />
 
         <YesNoWithTrainees
           form={form}

@@ -856,6 +856,10 @@ export interface Database {
           has_physical_limitations: boolean;
           limitations_trainee_ids: string[];
           limitations_details: string | null;
+          has_worked_on_focus: boolean;
+          worked_on_trainee_ids: string[];
+          worked_on_details: string | null;
+          worked_on_per_trainee: Record<string, { details?: string; categories: string[] }> | null;
           has_achievements: boolean;
           achievements_trainee_ids: string[];
           achievements_details: string | null;
@@ -905,6 +909,10 @@ export interface Database {
           has_physical_limitations?: boolean;
           limitations_trainee_ids?: string[];
           limitations_details?: string | null;
+          has_worked_on_focus?: boolean;
+          worked_on_trainee_ids?: string[];
+          worked_on_details?: string | null;
+          worked_on_per_trainee?: Record<string, { details?: string; categories: string[] }> | null;
           has_achievements?: boolean;
           achievements_trainee_ids?: string[];
           achievements_details?: string | null;
@@ -954,6 +962,10 @@ export interface Database {
           has_physical_limitations?: boolean;
           limitations_trainee_ids?: string[];
           limitations_details?: string | null;
+          has_worked_on_focus?: boolean;
+          worked_on_trainee_ids?: string[];
+          worked_on_details?: string | null;
+          worked_on_per_trainee?: Record<string, { details?: string; categories: string[] }> | null;
           has_achievements?: boolean;
           achievements_trainee_ids?: string[];
           achievements_details?: string | null;

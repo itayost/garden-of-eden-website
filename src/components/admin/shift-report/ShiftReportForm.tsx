@@ -46,6 +46,10 @@ function reportToFormData(report: TrainerShiftReport): ShiftReportFormData {
     has_physical_limitations: report.has_physical_limitations,
     limitations_trainee_ids: report.limitations_trainee_ids || [],
     limitations_details: report.limitations_details || "",
+    has_worked_on_focus: report.has_worked_on_focus ?? false,
+    worked_on_trainee_ids: report.worked_on_trainee_ids || [],
+    worked_on_details: report.worked_on_details || "",
+    worked_on_per_trainee: (report.worked_on_per_trainee as ShiftReportFormData["worked_on_per_trainee"]) || {},
     has_achievements: report.has_achievements,
     achievements_trainee_ids: report.achievements_trainee_ids || [],
     achievements_details: report.achievements_details || "",
@@ -132,6 +136,10 @@ export function ShiftReportForm({
         achievements_per_trainee: data.achievements_per_trainee || {},
         // Legacy field — null for new reports using per-trainee data
         achievements_details: null,
+        // Sync worked_on_trainee_ids from per-trainee keys
+        worked_on_trainee_ids: Object.keys(data.worked_on_per_trainee || {}),
+        worked_on_per_trainee: data.worked_on_per_trainee || {},
+        worked_on_details: data.worked_on_details || null,
         // Convert empty strings to null for text fields
         new_trainees_details: data.new_trainees_details || null,
         discipline_details: data.discipline_details || null,

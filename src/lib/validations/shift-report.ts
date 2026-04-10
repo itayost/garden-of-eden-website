@@ -16,12 +16,14 @@ export const ACHIEVEMENT_CATEGORIES = [
   "טכניקת ריצה",
   "יציבות",
   "גמישות",
+  "ניתור",
+  "כדרור",
 ] as const;
 
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
 
-/** Per-trainee achievement entry */
-const achievementPerTraineeEntry = z.object({
+/** Per-trainee entry (achievements, worked-on focus) */
+const perTraineeEntry = z.object({
   details: z.string().max(MAX_TEXT).optional(),
   categories: z.array(z.enum(ACHIEVEMENT_CATEGORIES)),
 });
@@ -50,11 +52,17 @@ export const shiftReportSchema = z.object({
   limitations_trainee_ids: z.array(z.string()),
   limitations_details: optionalText,
 
+  // Step 2b: Trainer focus per trainee (what was worked on)
+  has_worked_on_focus: z.boolean(),
+  worked_on_trainee_ids: z.array(z.string()),
+  worked_on_details: optionalText,
+  worked_on_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
+
   // Step 3: Trainee Positives & Wellbeing
   has_achievements: z.boolean(),
   achievements_trainee_ids: z.array(z.string()),
   achievements_details: optionalText,
-  achievements_per_trainee: z.record(z.string(), achievementPerTraineeEntry).optional(),
+  achievements_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   has_poor_mental_state: z.boolean(),
   mental_state_trainee_ids: z.array(z.string()),
@@ -110,6 +118,10 @@ export const DEFAULT_SHIFT_REPORT: ShiftReportFormData = {
   has_physical_limitations: false,
   limitations_trainee_ids: [],
   limitations_details: "",
+  has_worked_on_focus: false,
+  worked_on_trainee_ids: [],
+  worked_on_details: "",
+  worked_on_per_trainee: {},
   has_achievements: false,
   achievements_trainee_ids: [],
   achievements_details: "",
