@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RetentionTable } from "./RetentionTable";
+import { ChurnedCustomersTab } from "./ChurnedCustomersTab";
 import {
   getRetentionReport,
   getRetentionNotes,
@@ -21,6 +22,7 @@ import type {
   RetentionReportMonth,
   RetentionNote,
 } from "@/lib/actions/admin-retention";
+import type { ChurnedCustomer } from "@/lib/actions/admin-churned-customers";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 import { toast } from "sonner";
 
@@ -35,6 +37,7 @@ interface RetentionPageClientProps {
   initialMonth: string | null;
   initialData: RetentionReportData | null;
   initialNotes: ReadonlyMap<string, RetentionNote>;
+  initialChurned: readonly ChurnedCustomer[];
   traineePositions: Readonly<Record<string, string | null>>;
 }
 
@@ -43,6 +46,7 @@ export function RetentionPageClient({
   initialMonth,
   initialData,
   initialNotes,
+  initialChurned,
   traineePositions,
 }: RetentionPageClientProps) {
   const [selectedMonth, setSelectedMonth] = useState(initialMonth ?? "");
@@ -109,77 +113,80 @@ export function RetentionPageClient({
     [selectedMonth],
   );
 
-  if (months.length === 0) {
-    return (
-      <p className="text-center text-muted-foreground py-12">
-        אין דוחות זמינים
-      </p>
-    );
-  }
+  const hasMonths = months.length > 0;
 
   return (
     <div className="space-y-6">
-      {/* Month selector */}
-      <Select value={selectedMonth} onValueChange={handleMonthChange}>
-        <SelectTrigger className="w-full sm:w-48">
-          <SelectValue placeholder="בחר חודש" />
-        </SelectTrigger>
-        <SelectContent>
-          {months.map((m) => (
-            <SelectItem key={m.report_month} value={m.report_month}>
-              {formatReportMonth(m.report_month)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {hasMonths && (
+        <Select value={selectedMonth} onValueChange={handleMonthChange}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="בחר חודש" />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((m) => (
+              <SelectItem key={m.report_month} value={m.report_month}>
+                {formatReportMonth(m.report_month)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
-      {isPending ? (
-        <p className="text-center text-muted-foreground py-8">טוען...</p>
-      ) : data ? (
-        <Tabs defaultValue="monthly" dir="rtl">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="monthly">
-              מנוי חודשי ({data.monthly.length})
-            </TabsTrigger>
-            <TabsTrigger value="pro">
-              מנוי PRO ({data.pro.length})
-            </TabsTrigger>
-            <TabsTrigger value="training_card">
-              כרטיסת אימונים ({data.training_card.length})
-            </TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue={hasMonths ? "monthly" : "churned"} dir="rtl">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="monthly" disabled={!hasMonths}>
+            מנוי חודשי{data ? ` (${data.monthly.length})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="pro" disabled={!hasMonths}>
+            מנוי PRO{data ? ` (${data.pro.length})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="training_card" disabled={!hasMonths}>
+            כרטיסת אימונים{data ? ` (${data.training_card.length})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="churned">לקוחות שעזבו</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="monthly" className="mt-4">
-            <RetentionTable
-              entries={data.monthly}
-              monthKeys={monthKeys}
-              notes={notes}
-              onSaveNote={handleSaveNote}
-              traineePositions={traineePositions}
-            />
-          </TabsContent>
-
-          <TabsContent value="pro" className="mt-4">
-            <RetentionTable
-              entries={data.pro}
-              monthKeys={monthKeys}
-              notes={notes}
-              onSaveNote={handleSaveNote}
-              traineePositions={traineePositions}
-            />
-          </TabsContent>
-
-          <TabsContent value="training_card" className="mt-4">
-            <RetentionTable
-              entries={data.training_card}
-              monthKeys={monthKeys}
-              notes={notes}
-              onSaveNote={handleSaveNote}
-              traineePositions={traineePositions}
-            />
-          </TabsContent>
-        </Tabs>
-      ) : null}
+        {isPending ? (
+          <p className="text-center text-muted-foreground py-8">טוען...</p>
+        ) : (
+          <>
+            {hasMonths && data && (
+              <>
+                <TabsContent value="monthly" className="mt-4">
+                  <RetentionTable
+                    entries={data.monthly}
+                    monthKeys={monthKeys}
+                    notes={notes}
+                    onSaveNote={handleSaveNote}
+                    traineePositions={traineePositions}
+                  />
+                </TabsContent>
+                <TabsContent value="pro" className="mt-4">
+                  <RetentionTable
+                    entries={data.pro}
+                    monthKeys={monthKeys}
+                    notes={notes}
+                    onSaveNote={handleSaveNote}
+                    traineePositions={traineePositions}
+                  />
+                </TabsContent>
+                <TabsContent value="training_card" className="mt-4">
+                  <RetentionTable
+                    entries={data.training_card}
+                    monthKeys={monthKeys}
+                    notes={notes}
+                    onSaveNote={handleSaveNote}
+                    traineePositions={traineePositions}
+                  />
+                </TabsContent>
+              </>
+            )}
+            <TabsContent value="churned" className="mt-4">
+              <ChurnedCustomersTab initialRows={initialChurned} />
+            </TabsContent>
+          </>
+        )}
+      </Tabs>
     </div>
   );
 }

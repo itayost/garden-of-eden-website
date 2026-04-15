@@ -4,6 +4,7 @@ import {
   getRetentionReport,
   getRetentionNotes,
 } from "@/lib/actions/admin-retention";
+import { listChurnedCustomers } from "@/lib/actions/admin-churned-customers";
 import { RetentionPageClient } from "@/components/admin/retention/RetentionPageClient";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/arbox/normalize-phone";
@@ -13,7 +14,10 @@ export const metadata: Metadata = {
 };
 
 export default async function RetentionPage() {
-  const months = await getRetentionReportMonths();
+  const [months, initialChurned] = await Promise.all([
+    getRetentionReportMonths(),
+    listChurnedCustomers(),
+  ]);
   const latestMonth = months.length > 0 ? months[0].report_month : null;
 
   const adminClient = createAdminClient();
@@ -49,6 +53,7 @@ export default async function RetentionPage() {
         initialMonth={latestMonth}
         initialData={initialData}
         initialNotes={initialNotes}
+        initialChurned={initialChurned}
         traineePositions={traineePositions}
       />
     </div>
