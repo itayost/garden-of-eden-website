@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus } from "lucide-react";
@@ -52,38 +52,39 @@ export function ChurnedCustomersTab({ initialRows }: ChurnedCustomersTabProps) {
     });
   };
 
-  const handleUpdate = async (
-    id: string,
-    patch: { name?: string; endDate?: string; note?: string; noteColor?: NoteColor },
-  ) => {
-    const result = await updateChurnedCustomer(id, patch);
-    if (result.error || !result.data) {
-      toast.error(result.error ?? "שגיאה בעדכון");
-      return { error: result.error ?? "שגיאה" };
-    }
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? result.data! : r)),
-    );
-    toast.success("עודכן");
-    return { error: null };
-  };
+  const handleUpdate = useCallback(
+    async (
+      id: string,
+      patch: { name?: string; endDate?: string; note?: string; noteColor?: NoteColor },
+    ) => {
+      const result = await updateChurnedCustomer(id, patch);
+      if (result.error || !result.data) {
+        toast.error(result.error ?? "שגיאה בעדכון");
+        return { error: result.error ?? "שגיאה" };
+      }
+      setRows((prev) => prev.map((r) => (r.id === id ? result.data! : r)));
+      toast.success("עודכן");
+      return { error: null };
+    },
+    [],
+  );
 
-  const handleDelete = async (id: string) => {
-    const result = await deleteChurnedCustomer(id);
-    if ("error" in result) {
-      return { error: result.error };
-    }
-    setRows((prev) => prev.filter((r) => r.id !== id));
-    return { error: null };
-  };
+  const handleDelete = useCallback(
+    async (id: string): Promise<{ error: string } | { success: true }> => {
+      const result = await deleteChurnedCustomer(id);
+      if ("error" in result) return { error: result.error };
+      setRows((prev) => prev.filter((r) => r.id !== id));
+      return { success: true };
+    },
+    [],
+  );
 
-  const handlePasted = (inserted: readonly ChurnedCustomer[]) => {
+  const handlePasted = useCallback((inserted: readonly ChurnedCustomer[]) => {
     setRows((prev) => [...inserted, ...prev]);
-  };
+  }, []);
 
   return (
     <div className="space-y-4">
-      {/* Add form */}
       <div className="rounded border p-3 space-y-2">
         <div className="grid gap-2 md:grid-cols-[1fr_auto_1fr_auto_auto] items-center">
           <Input
@@ -117,7 +118,6 @@ export function ChurnedCustomersTab({ initialRows }: ChurnedCustomersTabProps) {
         </div>
       </div>
 
-      {/* Table */}
       {rows.length === 0 ? (
         <p className="text-center text-muted-foreground py-8">אין רשומות</p>
       ) : (

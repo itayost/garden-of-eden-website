@@ -1,25 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
 import { ChurnedColorPicker } from "./ChurnedColorPicker";
 import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
+import { formatDateShort } from "@/lib/utils/date";
 import type { ChurnedCustomer } from "@/lib/actions/admin-churned-customers";
-import type { NoteColor } from "@/lib/validations/churned-customers";
+import {
+  NOTE_COLOR_BG,
+  type NoteColor,
+} from "@/lib/validations/churned-customers";
 
-const NOTE_BG: Record<NoteColor, string> = {
-  none: "",
-  yellow: "bg-yellow-100",
-  red: "bg-red-100",
-  green: "bg-green-100",
-};
-
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-}
+type DeleteResult = { error: string } | { success: true };
 
 interface ChurnedCustomerRowProps {
   readonly row: ChurnedCustomer;
@@ -27,10 +21,10 @@ interface ChurnedCustomerRowProps {
     id: string,
     patch: { name?: string; endDate?: string; note?: string; noteColor?: NoteColor },
   ) => Promise<{ error: string | null }>;
-  readonly onDelete: (id: string) => Promise<{ error: string | null }>;
+  readonly onDelete: (id: string) => Promise<DeleteResult>;
 }
 
-export function ChurnedCustomerRow({
+function ChurnedCustomerRowInner({
   row,
   onUpdate,
   onDelete,
@@ -109,8 +103,8 @@ export function ChurnedCustomerRow({
   return (
     <tr className="border-b">
       <td className="p-2">{row.name}</td>
-      <td className="p-2 whitespace-nowrap">{formatDate(row.end_date)}</td>
-      <td className={`p-2 ${NOTE_BG[row.note_color]}`}>{row.note}</td>
+      <td className="p-2 whitespace-nowrap">{formatDateShort(row.end_date)}</td>
+      <td className={`p-2 ${NOTE_COLOR_BG[row.note_color]}`}>{row.note}</td>
       <td className="p-2">
         <div className="flex items-center gap-1">
           <Button
@@ -126,11 +120,7 @@ export function ChurnedCustomerRow({
             description={`למחוק את ${row.name}?`}
             successMessage="הרשומה נמחקה"
             errorMessage="שגיאה במחיקה"
-            onDelete={async () => {
-              const res = await onDelete(row.id);
-              if (res.error) return { error: res.error };
-              return { success: true };
-            }}
+            onDelete={() => onDelete(row.id)}
             trigger={
               <Button size="icon" variant="ghost" aria-label="מחק">
                 <Trash2 className="h-4 w-4 text-red-600" />
@@ -142,3 +132,5 @@ export function ChurnedCustomerRow({
     </tr>
   );
 }
+
+export const ChurnedCustomerRow = memo(ChurnedCustomerRowInner);

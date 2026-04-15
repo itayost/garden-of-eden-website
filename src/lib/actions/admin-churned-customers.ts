@@ -37,6 +37,9 @@ export interface ActionOk<T> {
 type ActionResult<T> = ActionOk<T> | { data: null; error: string };
 
 const REVALIDATE_PATH = "/admin/retention";
+const CHURNED_COLUMNS =
+  "id, name, end_date, note, note_color, author_id, created_at, updated_at";
+const LIST_LIMIT = 5000;
 
 export async function listChurnedCustomers(): Promise<
   readonly ChurnedCustomer[]
@@ -46,8 +49,9 @@ export async function listChurnedCustomers(): Promise<
 
   const supabase = await createClient();
   const { data } = await typedFrom(supabase, "churned_customers")
-    .select("id, name, end_date, note, note_color, author_id, created_at, updated_at")
-    .order("created_at", { ascending: false });
+    .select(CHURNED_COLUMNS)
+    .order("created_at", { ascending: false })
+    .limit(LIST_LIMIT);
 
   return (data ?? []) as unknown as ChurnedCustomer[];
 }
@@ -70,7 +74,7 @@ export async function createChurnedCustomer(
       note_color: parsed.data.noteColor,
       author_id: user!.id,
     })
-    .select("id, name, end_date, note, note_color, author_id, created_at, updated_at")
+    .select(CHURNED_COLUMNS)
     .single();
 
   if (dbError) {
@@ -123,7 +127,7 @@ export async function createChurnedCustomersBulk(
         author_id: user!.id,
       })),
     )
-    .select("id, name, end_date, note, note_color, author_id, created_at, updated_at");
+    .select(CHURNED_COLUMNS);
 
   if (dbError) {
     console.error("[ChurnedCustomers] Bulk insert error:", dbError);
@@ -178,7 +182,7 @@ export async function updateChurnedCustomer(
   const { data, error: dbError } = await typedFrom(supabase, "churned_customers")
     .update(updateRow)
     .eq("id", parsedId.data)
-    .select("id, name, end_date, note, note_color, author_id, created_at, updated_at")
+    .select(CHURNED_COLUMNS)
     .single();
 
   if (dbError) {

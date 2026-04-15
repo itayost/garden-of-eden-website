@@ -38,17 +38,18 @@ export function PasteChurnedDialog({ onInserted }: PasteChurnedDialogProps) {
     const result = await createChurnedCustomersBulk(parsed.valid);
     setSubmitting(false);
 
-    if (result.inserted.length > 0) {
-      onInserted(result.inserted);
-      toast.success(`נוספו ${result.inserted.length} רשומות`);
+    if (result.inserted.length === 0) {
+      toast.error("השמירה נכשלה");
+      return;
     }
+
+    onInserted(result.inserted);
+    toast.success(`נוספו ${result.inserted.length} רשומות`);
     if (result.errors.length > 0) {
-      toast.error(`${result.errors.length} שגיאות בשמירה`);
+      toast.warning(`${result.errors.length} שורות דולגו`);
     }
-    if (result.inserted.length > 0) {
-      setText("");
-      setOpen(false);
-    }
+    setText("");
+    setOpen(false);
   };
 
   return (

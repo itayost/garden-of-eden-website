@@ -4,6 +4,13 @@ import { isValidDateString, isValidUUID } from "./common";
 export const NOTE_COLORS = ["none", "yellow", "red", "green"] as const;
 export type NoteColor = (typeof NOTE_COLORS)[number];
 
+export const NOTE_COLOR_BG: Record<NoteColor, string> = {
+  none: "",
+  yellow: "bg-yellow-100",
+  red: "bg-red-100",
+  green: "bg-green-100",
+};
+
 const nameSchema = z
   .string()
   .transform((v) => v.trim())
