@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useQueryState, parseAsString } from "nuqs";
 import {
   Table,
   TableBody,
@@ -9,12 +9,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TableToolbar } from "@/components/admin/TableToolbar";
+import {
+  TableToolbar,
+  ToolbarSelect,
+} from "@/components/admin/TableToolbar";
 import { RetentionNoteCell } from "./RetentionNoteCell";
 import type { RetentionEntry } from "@/lib/arbox/retention";
 import type { RetentionNote } from "@/lib/actions/admin-retention";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 import { Clock } from "lucide-react";
+import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import {
+  positionFilterOptions,
+  matchesPositionFilter,
+  POSITION_FILTER_ALL,
+} from "@/lib/admin/position-filter";
 
 function getMonthName(monthKey: string): string {
   const [, monthStr] = monthKey.split("-");
@@ -42,6 +51,7 @@ interface RetentionTableProps {
     traineeName: string,
     note: string,
   ) => Promise<void>;
+  traineePositions: Readonly<Record<string, string | null>>;
 }
 
 export function RetentionTable({
@@ -49,21 +59,41 @@ export function RetentionTable({
   monthKeys,
   notes,
   onSaveNote,
+  traineePositions,
 }: RetentionTableProps) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
+  const [position, setPosition] = useQueryState(
+    "position",
+    parseAsString.withDefault(POSITION_FILTER_ALL),
+  );
 
-  const filtered = search
-    ? entries.filter((e) =>
-        e.name.toLowerCase().includes(search.toLowerCase()),
-      )
-    : entries;
+  const filtered = entries.filter((e) => {
+    if (search && !e.name.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
+    const normalizedPhone = normalizePhone(e.phone);
+    const entryPosition =
+      normalizedPhone ? (traineePositions[normalizedPhone] ?? null) : null;
+    if (!matchesPositionFilter(entryPosition, position)) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-4">
       <TableToolbar
         searchValue={search}
-        onSearchChange={setSearch}
+        onSearchChange={(value) => setSearch(value || null)}
         searchPlaceholder="חיפוש לפי שם..."
+        filters={
+          <ToolbarSelect
+            value={position || POSITION_FILTER_ALL}
+            onValueChange={(value) =>
+              setPosition(value === POSITION_FILTER_ALL ? null : value)
+            }
+            options={positionFilterOptions}
+            placeholder="עמדה"
+          />
+        }
       />
 
       {filtered.length === 0 ? (

@@ -35,6 +35,7 @@ interface RetentionPageClientProps {
   initialMonth: string | null;
   initialData: RetentionReportData | null;
   initialNotes: ReadonlyMap<string, RetentionNote>;
+  traineePositions: Readonly<Record<string, string | null>>;
 }
 
 export function RetentionPageClient({
@@ -42,6 +43,7 @@ export function RetentionPageClient({
   initialMonth,
   initialData,
   initialNotes,
+  traineePositions,
 }: RetentionPageClientProps) {
   const [selectedMonth, setSelectedMonth] = useState(initialMonth ?? "");
   const [data, setData] = useState<RetentionReportData | null>(initialData);
@@ -153,6 +155,7 @@ export function RetentionPageClient({
               monthKeys={monthKeys}
               notes={notes}
               onSaveNote={handleSaveNote}
+              traineePositions={traineePositions}
             />
           </TabsContent>
 
@@ -162,6 +165,7 @@ export function RetentionPageClient({
               monthKeys={monthKeys}
               notes={notes}
               onSaveNote={handleSaveNote}
+              traineePositions={traineePositions}
             />
           </TabsContent>
 
@@ -171,6 +175,7 @@ export function RetentionPageClient({
               monthKeys={monthKeys}
               notes={notes}
               onSaveNote={handleSaveNote}
+              traineePositions={traineePositions}
             />
           </TabsContent>
         </Tabs>
