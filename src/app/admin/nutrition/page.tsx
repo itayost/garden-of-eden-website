@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Users, Utensils, Lightbulb } from "lucide-react";
 import { NutritionTable } from "@/components/admin/nutrition/NutritionTable";
+import type { PlayerPosition } from "@/types/player-stats";
 
 export default async function AdminNutritionPage() {
   const supabase = await createClient();
@@ -15,11 +16,11 @@ export default async function AdminNutritionPage() {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("id, full_name, role")
+        .select("id, full_name, role, position")
         .eq("role", "trainee")
         .is("deleted_at", null)
         .order("full_name") as unknown as {
-        data: { id: string; full_name: string | null; role: string }[] | null;
+        data: { id: string; full_name: string | null; role: string; position: PlayerPosition | null }[] | null;
       },
       supabase
         .from("trainee_meal_plans")

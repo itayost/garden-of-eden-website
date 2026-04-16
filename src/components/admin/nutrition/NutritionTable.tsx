@@ -16,10 +16,17 @@ import { Badge } from "@/components/ui/badge";
 import { Edit } from "lucide-react";
 import { TableToolbar, ToolbarSelect } from "@/components/admin/TableToolbar";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
+import {
+  positionFilterOptions,
+  matchesPositionFilter,
+  POSITION_FILTER_ALL,
+} from "@/lib/admin/position-filter";
+import type { PlayerPosition } from "@/types/player-stats";
 
 interface Trainee {
   id: string;
   full_name: string | null;
+  position: PlayerPosition | null;
 }
 
 interface NutritionTableProps {
@@ -50,6 +57,10 @@ export function NutritionTable({
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
   const [planFilter, setPlanFilter] = useQueryState("plan", parseAsString.withDefault("all"));
   const [recFilter, setRecFilter] = useQueryState("rec", parseAsString.withDefault("all"));
+  const [position, setPosition] = useQueryState(
+    "position",
+    parseAsString.withDefault(POSITION_FILTER_ALL),
+  );
 
   const mealPlanSet = useMemo(() => new Set(mealPlanUserIds), [mealPlanUserIds]);
   const recSet = useMemo(() => new Set(recommendationUserIds), [recommendationUserIds]);
@@ -76,9 +87,12 @@ export function NutritionTable({
         if (recFilter === "no_rec" && hasRec) return false;
       }
 
+      // Position filter
+      if (!matchesPositionFilter(trainee.position, position)) return false;
+
       return true;
     });
-  }, [trainees, search, planFilter, recFilter, mealPlanSet, recSet]);
+  }, [trainees, search, planFilter, recFilter, mealPlanSet, recSet, position]);
 
   const [page, setPage] = useState(0);
 
@@ -102,6 +116,11 @@ export function NutritionTable({
     setPage(0);
   };
 
+  const handlePositionChange = (value: string) => {
+    setPosition(value === POSITION_FILTER_ALL ? null : value);
+    setPage(0);
+  };
+
   return (
     <div className="space-y-4">
       <TableToolbar
@@ -110,6 +129,12 @@ export function NutritionTable({
         searchPlaceholder="חיפוש לפי שם..."
         filters={
           <>
+            <ToolbarSelect
+              value={position || POSITION_FILTER_ALL}
+              onValueChange={handlePositionChange}
+              options={positionFilterOptions}
+              placeholder="עמדה"
+            />
             <ToolbarSelect
               value={planFilter || "all"}
               onValueChange={handlePlanFilterChange}
@@ -239,7 +264,10 @@ export function NutritionTable({
         </>
       ) : (
         <div className="text-center py-8 text-muted-foreground">
-          {search || (planFilter && planFilter !== "all") || (recFilter && recFilter !== "all")
+          {search ||
+          (planFilter && planFilter !== "all") ||
+          (recFilter && recFilter !== "all") ||
+          (position && position !== POSITION_FILTER_ALL)
             ? "לא נמצאו חניכים מתאימים"
             : "אין חניכים רשומים"}
         </div>
