@@ -87,7 +87,6 @@ export function NutritionTable({
         if (recFilter === "no_rec" && hasRec) return false;
       }
 
-      // Position filter
       if (!matchesPositionFilter(trainee.position, position)) return false;
 
       return true;

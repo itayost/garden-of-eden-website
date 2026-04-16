@@ -16,19 +16,22 @@ export default async function RetentionPage() {
   const months = await getRetentionReportMonths();
   const latestMonth = months.length > 0 ? months[0].report_month : null;
 
-  const [initialData, initialNotes] = latestMonth
-    ? await Promise.all([
-        getRetentionReport(latestMonth),
-        getRetentionNotes(latestMonth),
-      ])
-    : [null, new Map()];
-
   const adminClient = createAdminClient();
-  const { data: traineeRows } = await adminClient
+  const traineeRowsPromise = adminClient
     .from("profiles")
     .select("phone, position")
     .eq("role", "trainee")
     .not("phone", "is", null);
+
+  const [initialData, initialNotes, traineeRowsResult] = latestMonth
+    ? await Promise.all([
+        getRetentionReport(latestMonth),
+        getRetentionNotes(latestMonth),
+        traineeRowsPromise,
+      ])
+    : [null, new Map(), await traineeRowsPromise];
+
+  const traineeRows = traineeRowsResult.data;
 
   const traineePositions: Record<string, string | null> = {};
   for (const row of traineeRows ?? []) {

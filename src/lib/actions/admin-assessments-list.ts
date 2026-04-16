@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
-import { POSITION_FILTER_NONE } from "@/lib/admin/position-filter";
+import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
 
 export interface AssessmentQueryParams {
   page: number;
@@ -51,13 +51,7 @@ export async function getAssessmentsPaginated(
     profileQuery = profileQuery.ilike("full_name", `%${params.search}%`);
   }
 
-  if (params.position) {
-    if (params.position === POSITION_FILTER_NONE) {
-      profileQuery = profileQuery.is("position", null);
-    } else {
-      profileQuery = profileQuery.eq("position", params.position);
-    }
-  }
+  profileQuery = applyPositionFilter(profileQuery, "position", params.position);
 
   if (params.ageGroupId) {
     // Age group filtering is done client-side since birthdate -> age group mapping
@@ -74,13 +68,7 @@ export async function getAssessmentsPaginated(
       .order("full_name")
       .ilike("full_name", params.search ? `%${params.search}%` : "%");
 
-    if (params.position) {
-      if (params.position === POSITION_FILTER_NONE) {
-        ageGroupQuery = ageGroupQuery.is("position", null);
-      } else {
-        ageGroupQuery = ageGroupQuery.eq("position", params.position);
-      }
-    }
+    ageGroupQuery = applyPositionFilter(ageGroupQuery, "position", params.position);
 
     const { data: allProfiles } = (await ageGroupQuery) as unknown as {
       data: Profile[] | null;

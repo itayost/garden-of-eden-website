@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
-import { POSITION_FILTER_NONE } from "@/lib/admin/position-filter";
+import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
 import type {
   PreWorkoutForm,
   PostWorkoutForm,
@@ -58,13 +58,7 @@ export async function getPreWorkoutPaginated(
   if (params.endDate) {
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
   }
-  if (params.position) {
-    if (params.position === POSITION_FILTER_NONE) {
-      query = query.is("profile.position", null);
-    } else {
-      query = query.eq("profile.position", params.position);
-    }
-  }
+  query = applyPositionFilter(query, "profile.position", params.position);
 
   const { data, count } = (await query.range(
     from,
@@ -100,13 +94,7 @@ export async function getPostWorkoutPaginated(
   if (params.endDate) {
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
   }
-  if (params.position) {
-    if (params.position === POSITION_FILTER_NONE) {
-      query = query.is("profile.position", null);
-    } else {
-      query = query.eq("profile.position", params.position);
-    }
-  }
+  query = applyPositionFilter(query, "profile.position", params.position);
 
   const { data, count } = (await query.range(
     from,
@@ -139,13 +127,7 @@ export async function getNutritionPaginated(
   if (params.endDate) {
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
   }
-  if (params.position) {
-    if (params.position === POSITION_FILTER_NONE) {
-      query = query.is("profile.position", null);
-    } else {
-      query = query.eq("profile.position", params.position);
-    }
-  }
+  query = applyPositionFilter(query, "profile.position", params.position);
 
   const { data, count } = (await query.range(
     from,

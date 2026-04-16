@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import {
   Table,
@@ -67,16 +68,20 @@ export function RetentionTable({
     parseAsString.withDefault(POSITION_FILTER_ALL),
   );
 
-  const filtered = entries.filter((e) => {
-    if (search && !e.name.toLowerCase().includes(search.toLowerCase())) {
-      return false;
-    }
-    const normalizedPhone = normalizePhone(e.phone);
-    const entryPosition =
-      normalizedPhone ? (traineePositions[normalizedPhone] ?? null) : null;
-    if (!matchesPositionFilter(entryPosition, position)) return false;
-    return true;
-  });
+  const filtered = useMemo(
+    () =>
+      entries.filter((e) => {
+        if (search && !e.name.toLowerCase().includes(search.toLowerCase())) {
+          return false;
+        }
+        const normalizedPhone = normalizePhone(e.phone);
+        const entryPosition =
+          normalizedPhone ? (traineePositions[normalizedPhone] ?? null) : null;
+        if (!matchesPositionFilter(entryPosition, position)) return false;
+        return true;
+      }),
+    [entries, search, position, traineePositions],
+  );
 
   return (
     <div className="space-y-4">

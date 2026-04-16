@@ -97,7 +97,6 @@ export function UserDataTable({
         if (statusFilter === "inactive" && isActive) return false;
       }
 
-      // Position filter
       if (!matchesPositionFilter(user.position, positionFilter)) return false;
 
       return true;

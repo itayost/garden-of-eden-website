@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Search } from "lucide-react";
 import Link from "next/link";
-import { positionFilterOptions } from "@/lib/admin/position-filter";
+import { positionFilterOptions, POSITION_FILTER_ALL } from "@/lib/admin/position-filter";
 
 interface UserTableToolbarProps {
   onSearchChange: (value: string) => void;
@@ -103,7 +103,7 @@ export function UserTableToolbar({
 
   // Handle position filter change
   const handlePositionChange = (value: string) => {
-    const newPosition = value === "all" ? null : value;
+    const newPosition = value === POSITION_FILTER_ALL ? null : value;
     setPosition(newPosition);
     onPositionChange(newPosition);
   };
@@ -157,7 +157,7 @@ export function UserTableToolbar({
         </Select>
 
         {/* Position Filter */}
-        <Select value={position || "all"} onValueChange={handlePositionChange}>
+        <Select value={position || POSITION_FILTER_ALL} onValueChange={handlePositionChange}>
           <SelectTrigger className="w-full md:w-40">
             <SelectValue placeholder="עמדה" />
           </SelectTrigger>
