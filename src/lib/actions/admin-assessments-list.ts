@@ -4,12 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
+import { POSITION_FILTER_NONE } from "@/lib/admin/position-filter";
 
 export interface AssessmentQueryParams {
   page: number;
   pageSize: number;
   search?: string;
   ageGroupId?: string;
+  position?: string;
 }
 
 export interface AssessmentsPaginatedResult {
@@ -49,6 +51,14 @@ export async function getAssessmentsPaginated(
     profileQuery = profileQuery.ilike("full_name", `%${params.search}%`);
   }
 
+  if (params.position) {
+    if (params.position === POSITION_FILTER_NONE) {
+      profileQuery = profileQuery.is("position", null);
+    } else {
+      profileQuery = profileQuery.eq("position", params.position);
+    }
+  }
+
   if (params.ageGroupId) {
     // Age group filtering is done client-side since birthdate -> age group mapping
     // requires JS logic. We fetch all matching profiles and filter, then paginate.
@@ -56,16 +66,26 @@ export async function getAssessmentsPaginated(
 
   // If age group filter is set, we need to fetch all profiles, filter, then paginate manually
   if (params.ageGroupId) {
-    const { data: allProfiles } = (await supabase
+    let ageGroupQuery = supabase
       .from("profiles")
       .select("*", { count: "exact" })
       .eq("role", "trainee")
       .is("deleted_at", null)
       .order("full_name")
-      .ilike(
-        "full_name",
-        params.search ? `%${params.search}%` : "%"
-      )) as unknown as { data: Profile[] | null; count: number | null };
+      .ilike("full_name", params.search ? `%${params.search}%` : "%");
+
+    if (params.position) {
+      if (params.position === POSITION_FILTER_NONE) {
+        ageGroupQuery = ageGroupQuery.is("position", null);
+      } else {
+        ageGroupQuery = ageGroupQuery.eq("position", params.position);
+      }
+    }
+
+    const { data: allProfiles } = (await ageGroupQuery) as unknown as {
+      data: Profile[] | null;
+      count: number | null;
+    };
 
     if (!allProfiles || allProfiles.length === 0)
       return { ...empty, total: 0 };

@@ -21,6 +21,7 @@ import { AGE_GROUPS, getAgeGroup, getAssessmentCompleteness } from "@/types/asse
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 import { getAssessmentsPaginated } from "@/lib/actions/admin-assessments-list";
+import { positionFilterOptions, POSITION_FILTER_ALL } from "@/lib/admin/position-filter";
 
 interface AssessmentsTableProps {
   initialProfiles: Profile[];
@@ -45,12 +46,21 @@ export function AssessmentsTable({
   const [total, setTotal] = useState(initialTotal);
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
   const [ageGroup, setAgeGroup] = useQueryState("age", parseAsString.withDefault("all"));
+  const [position, setPosition] = useQueryState(
+    "position",
+    parseAsString.withDefault(POSITION_FILTER_ALL),
+  );
   const [page, setPage] = useState(0);
   const [isPending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
 
   const fetchData = useCallback(
-    (newPage: number, newSearch: string, newAgeGroup: string) => {
+    (
+      newPage: number,
+      newSearch: string,
+      newAgeGroup: string,
+      newPosition: string,
+    ) => {
       const currentRequestId = ++requestIdRef.current;
       startTransition(async () => {
         const result = await getAssessmentsPaginated({
@@ -58,6 +68,7 @@ export function AssessmentsTable({
           pageSize: PAGE_SIZE,
           search: newSearch || undefined,
           ageGroupId: newAgeGroup !== "all" ? newAgeGroup : undefined,
+          position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
         });
         if (currentRequestId === requestIdRef.current) {
           setProfiles(result.profiles);
@@ -72,18 +83,24 @@ export function AssessmentsTable({
   const handleSearchChange = (value: string) => {
     setSearch(value || null);
     setPage(0);
-    fetchData(0, value, ageGroup || "all");
+    fetchData(0, value, ageGroup || "all", position || POSITION_FILTER_ALL);
   };
 
   const handleAgeGroupChange = (value: string) => {
     setAgeGroup(value === "all" ? null : value);
     setPage(0);
-    fetchData(0, search, value);
+    fetchData(0, search, value, position || POSITION_FILTER_ALL);
+  };
+
+  const handlePositionChange = (value: string) => {
+    setPosition(value === POSITION_FILTER_ALL ? null : value);
+    setPage(0);
+    fetchData(0, search, ageGroup || "all", value);
   };
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    fetchData(newPage, search, ageGroup || "all");
+    fetchData(newPage, search, ageGroup || "all", position || POSITION_FILTER_ALL);
   };
 
   return (
@@ -93,12 +110,20 @@ export function AssessmentsTable({
         onSearchChange={handleSearchChange}
         searchPlaceholder="חיפוש לפי שם..."
         filters={
-          <ToolbarSelect
-            value={ageGroup || "all"}
-            onValueChange={handleAgeGroupChange}
-            options={ageGroupOptions}
-            placeholder="קבוצת גיל"
-          />
+          <>
+            <ToolbarSelect
+              value={ageGroup || "all"}
+              onValueChange={handleAgeGroupChange}
+              options={ageGroupOptions}
+              placeholder="קבוצת גיל"
+            />
+            <ToolbarSelect
+              value={position || POSITION_FILTER_ALL}
+              onValueChange={handlePositionChange}
+              options={positionFilterOptions}
+              placeholder="עמדה"
+            />
+          </>
         }
         actions={
           <div className="flex items-center gap-2">
@@ -306,7 +331,7 @@ export function AssessmentsTable({
         </>
       ) : (
         <div className="text-center py-8 text-muted-foreground">
-          {search || (ageGroup && ageGroup !== "all")
+          {search || (ageGroup && ageGroup !== "all") || (position && position !== POSITION_FILTER_ALL)
             ? "לא נמצאו שחקנים מתאימים"
             : "אין שחקנים רשומים"}
         </div>
