@@ -22,6 +22,16 @@ Explicitly out of scope:
 - Server-side filtering (current filters on these pages are all client-side, in-memo).
 - Any change to the `profiles.position` data model or migrations.
 
+### Skipped: `/admin/submissions/shift-reports`
+
+Despite being listed in the initial scope, the shift-reports page does **not** receive a position filter.
+
+**Rationale:** `trainer_shift_reports` is a trainer-authored record, not a trainee record. Each row represents one trainer's shift and references trainees across ten separate `uuid[]` columns (`discipline_trainee_ids`, `injuries_trainee_ids`, `worked_on_trainee_ids`, etc.). A "position filter" at the row level would mean "show me reports that mentioned at least one trainee of this position in any of those arrays" — semantically ambiguous (a report mentioning a goalkeeper in injuries and a striker in achievements would match both positions), expensive to query (two-step: profiles lookup then overlaps across multiple columns), and misleading to admins who expect the filter to narrow the list to trainees of that position, not to trainer reports that happen to reference them.
+
+`POSITION_FILTER_NONE` is equally meaningless here since the record belongs to a trainer (who has no position field), not a trainee.
+
+Reconsider when per-trainee shift breakdowns become first-class records (e.g., a `shift_report_trainee_events` junction table), at which point a join-based position filter becomes straightforward and semantically clear.
+
 ## UX
 
 A single-select dropdown added to each page's existing toolbar, visually consistent with the role/status dropdowns already in place.
@@ -117,7 +127,7 @@ No component or integration tests added; matches repo convention for filter util
 
 ## Success Criteria
 
-- All six admin pages render a position dropdown in their existing filter toolbar, in Hebrew, with the 13 options listed above.
+- All five admin pages in scope (`/admin/users`, `/admin/assessments`, `/admin/nutrition`, `/admin/retention`, `/admin/submissions`) render a position dropdown in their existing filter toolbar, in Hebrew, with the 13 options listed above.
 - Selecting a specific position filters the table to matching trainees and updates the URL to `?position=<code>`.
 - Selecting `ללא עמדה` filters to rows with `position` null and sets `?position=none`.
 - Selecting `כל העמדות` clears the filter and removes the `position` param from the URL.
