@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
+import { POSITION_FILTER_NONE } from "@/lib/admin/position-filter";
 import type {
   PreWorkoutForm,
   PostWorkoutForm,
@@ -12,10 +13,11 @@ import type {
 
 type PostWorkoutWithTrainer = PostWorkoutForm & {
   trainer: { full_name: string } | null;
+  profile: { position: string | null } | null;
 };
 
 export type NutritionFormWithProfile = NutritionForm & {
-  profile: { full_name: string; birthdate: string | null } | null;
+  profile: { full_name: string; birthdate: string | null; position: string | null } | null;
 };
 
 export interface PaginatedResult<T> {
@@ -29,6 +31,7 @@ export interface SubmissionQueryParams {
   search?: string;
   startDate?: string;
   endDate?: string;
+  position?: string;
 }
 
 export async function getPreWorkoutPaginated(
@@ -42,7 +45,7 @@ export async function getPreWorkoutPaginated(
 
   let query = supabase
     .from("pre_workout_forms")
-    .select("*", { count: "exact" })
+    .select("*, profile:profiles!inner(position)", { count: "exact" })
     .order("submitted_at", { ascending: false });
 
   if (params.search) {
@@ -53,6 +56,13 @@ export async function getPreWorkoutPaginated(
   }
   if (params.endDate) {
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
+  }
+  if (params.position) {
+    if (params.position === POSITION_FILTER_NONE) {
+      query = query.is("profile.position", null);
+    } else {
+      query = query.eq("profile.position", params.position);
+    }
   }
 
   const { data, count } = (await query.range(
@@ -77,7 +87,7 @@ export async function getPostWorkoutPaginated(
 
   let query = supabase
     .from("post_workout_forms")
-    .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)", { count: "exact" })
+    .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name), profile:profiles!inner(position)", { count: "exact" })
     .order("submitted_at", { ascending: false });
 
   if (params.search) {
@@ -88,6 +98,13 @@ export async function getPostWorkoutPaginated(
   }
   if (params.endDate) {
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
+  }
+  if (params.position) {
+    if (params.position === POSITION_FILTER_NONE) {
+      query = query.is("profile.position", null);
+    } else {
+      query = query.eq("profile.position", params.position);
+    }
   }
 
   const { data, count } = (await query.range(
@@ -112,7 +129,7 @@ export async function getNutritionPaginated(
 
   let query = supabase
     .from("nutrition_forms")
-    .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate)", { count: "exact" })
+    .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate, position)", { count: "exact" })
     .order("submitted_at", { ascending: false });
 
   if (params.startDate) {
@@ -120,6 +137,13 @@ export async function getNutritionPaginated(
   }
   if (params.endDate) {
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
+  }
+  if (params.position) {
+    if (params.position === POSITION_FILTER_NONE) {
+      query = query.is("profile.position", null);
+    } else {
+      query = query.eq("profile.position", params.position);
+    }
   }
 
   const { data, count } = (await query.range(

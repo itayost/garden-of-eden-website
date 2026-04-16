@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useQueryState, parseAsString } from "nuqs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
 import { SubmissionExportButton } from "@/components/admin/exports/SubmissionExportButton";
-import { TableToolbar, ToolbarDateRange } from "@/components/admin/TableToolbar";
+import { TableToolbar, ToolbarDateRange, ToolbarSelect } from "@/components/admin/TableToolbar";
 import { HasBadge, DifficultyBadge, SatisfactionBadge } from "@/components/ui/badges";
 import { Activity, FileText, Salad, RefreshCw, type LucideIcon } from "lucide-react";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
@@ -26,6 +27,10 @@ import {
   type NutritionFormWithProfile,
 } from "@/lib/actions/admin-submissions-list";
 import type { SubmissionQueryParams } from "@/lib/actions/admin-submissions-list";
+import {
+  positionFilterOptions,
+  POSITION_FILTER_ALL,
+} from "@/lib/admin/position-filter";
 
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
 
@@ -68,9 +73,19 @@ export function PreWorkoutContent({
   const [page, setPage] = useState(0);
   const [isPending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
+  const [position, setPosition] = useQueryState(
+    "position",
+    parseAsString.withDefault(POSITION_FILTER_ALL),
+  );
 
   const fetchData = useCallback(
-    (newPage: number, newSearch: string, newStartDate: string, newEndDate: string) => {
+    (
+      newPage: number,
+      newSearch: string,
+      newStartDate: string,
+      newEndDate: string,
+      newPosition: string,
+    ) => {
       const currentRequestId = ++requestIdRef.current;
       startTransition(async () => {
         const params: SubmissionQueryParams = {
@@ -79,6 +94,7 @@ export function PreWorkoutContent({
           search: newSearch || undefined,
           startDate: newStartDate || undefined,
           endDate: newEndDate || undefined,
+          position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
         };
         const result = await getPreWorkoutPaginated(params);
         if (currentRequestId === requestIdRef.current) {
@@ -93,24 +109,29 @@ export function PreWorkoutContent({
   const handleSearchChange = (v: string) => {
     setSearch(v);
     setPage(0);
-    fetchData(0, v, startDate, endDate);
+    fetchData(0, v, startDate, endDate, position || POSITION_FILTER_ALL);
   };
   const handleStartDateChange = (v: string) => {
     setStartDate(v);
     setPage(0);
-    fetchData(0, search, v, endDate);
+    fetchData(0, search, v, endDate, position || POSITION_FILTER_ALL);
   };
   const handleEndDateChange = (v: string) => {
     setEndDate(v);
     setPage(0);
-    fetchData(0, search, startDate, v);
+    fetchData(0, search, startDate, v, position || POSITION_FILTER_ALL);
   };
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    fetchData(newPage, search, startDate, endDate);
+    fetchData(newPage, search, startDate, endDate, position || POSITION_FILTER_ALL);
+  };
+  const handlePositionChange = (value: string) => {
+    setPosition(value === POSITION_FILTER_ALL ? null : value);
+    setPage(0);
+    fetchData(0, search, startDate, endDate, value);
   };
 
-  const hasFilters = !!(search || startDate || endDate);
+  const hasFilters = !!(search || startDate || endDate || (position && position !== POSITION_FILTER_ALL));
 
   return (
     <Card>
@@ -138,12 +159,20 @@ export function PreWorkoutContent({
             onSearchChange={handleSearchChange}
             searchPlaceholder="חיפוש לפי שם..."
             filters={
-              <ToolbarDateRange
-                startDate={startDate}
-                endDate={endDate}
-                onStartDateChange={handleStartDateChange}
-                onEndDateChange={handleEndDateChange}
-              />
+              <>
+                <ToolbarSelect
+                  value={position || POSITION_FILTER_ALL}
+                  onValueChange={handlePositionChange}
+                  options={positionFilterOptions}
+                  placeholder="עמדה"
+                />
+                <ToolbarDateRange
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={handleStartDateChange}
+                  onEndDateChange={handleEndDateChange}
+                />
+              </>
             }
           />
         </div>
@@ -236,9 +265,19 @@ export function PostWorkoutContent({
   const [page, setPage] = useState(0);
   const [isPending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
+  const [position, setPosition] = useQueryState(
+    "position",
+    parseAsString.withDefault(POSITION_FILTER_ALL),
+  );
 
   const fetchData = useCallback(
-    (newPage: number, newSearch: string, newStartDate: string, newEndDate: string) => {
+    (
+      newPage: number,
+      newSearch: string,
+      newStartDate: string,
+      newEndDate: string,
+      newPosition: string,
+    ) => {
       const currentRequestId = ++requestIdRef.current;
       startTransition(async () => {
         const params: SubmissionQueryParams = {
@@ -247,6 +286,7 @@ export function PostWorkoutContent({
           search: newSearch || undefined,
           startDate: newStartDate || undefined,
           endDate: newEndDate || undefined,
+          position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
         };
         const result = await getPostWorkoutPaginated(params);
         if (currentRequestId === requestIdRef.current) {
@@ -261,24 +301,29 @@ export function PostWorkoutContent({
   const handleSearchChange = (v: string) => {
     setSearch(v);
     setPage(0);
-    fetchData(0, v, startDate, endDate);
+    fetchData(0, v, startDate, endDate, position || POSITION_FILTER_ALL);
   };
   const handleStartDateChange = (v: string) => {
     setStartDate(v);
     setPage(0);
-    fetchData(0, search, v, endDate);
+    fetchData(0, search, v, endDate, position || POSITION_FILTER_ALL);
   };
   const handleEndDateChange = (v: string) => {
     setEndDate(v);
     setPage(0);
-    fetchData(0, search, startDate, v);
+    fetchData(0, search, startDate, v, position || POSITION_FILTER_ALL);
   };
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    fetchData(newPage, search, startDate, endDate);
+    fetchData(newPage, search, startDate, endDate, position || POSITION_FILTER_ALL);
+  };
+  const handlePositionChange = (value: string) => {
+    setPosition(value === POSITION_FILTER_ALL ? null : value);
+    setPage(0);
+    fetchData(0, search, startDate, endDate, value);
   };
 
-  const hasFilters = !!(search || startDate || endDate);
+  const hasFilters = !!(search || startDate || endDate || (position && position !== POSITION_FILTER_ALL));
 
   return (
     <Card>
@@ -306,12 +351,20 @@ export function PostWorkoutContent({
             onSearchChange={handleSearchChange}
             searchPlaceholder="חיפוש לפי שם..."
             filters={
-              <ToolbarDateRange
-                startDate={startDate}
-                endDate={endDate}
-                onStartDateChange={handleStartDateChange}
-                onEndDateChange={handleEndDateChange}
-              />
+              <>
+                <ToolbarSelect
+                  value={position || POSITION_FILTER_ALL}
+                  onValueChange={handlePositionChange}
+                  options={positionFilterOptions}
+                  placeholder="עמדה"
+                />
+                <ToolbarDateRange
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={handleStartDateChange}
+                  onEndDateChange={handleEndDateChange}
+                />
+              </>
             }
           />
         </div>
@@ -406,9 +459,18 @@ export function NutritionContent({
   const [page, setPage] = useState(0);
   const [isPending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
+  const [position, setPosition] = useQueryState(
+    "position",
+    parseAsString.withDefault(POSITION_FILTER_ALL),
+  );
 
   const fetchData = useCallback(
-    (newPage: number, newStartDate: string, newEndDate: string) => {
+    (
+      newPage: number,
+      newStartDate: string,
+      newEndDate: string,
+      newPosition: string,
+    ) => {
       const currentRequestId = ++requestIdRef.current;
       startTransition(async () => {
         const params: SubmissionQueryParams = {
@@ -416,6 +478,7 @@ export function NutritionContent({
           pageSize: PAGE_SIZE,
           startDate: newStartDate || undefined,
           endDate: newEndDate || undefined,
+          position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
         };
         const result = await getNutritionPaginated(params);
         if (currentRequestId === requestIdRef.current) {
@@ -430,19 +493,24 @@ export function NutritionContent({
   const handleStartDateChange = (v: string) => {
     setStartDate(v);
     setPage(0);
-    fetchData(0, v, endDate);
+    fetchData(0, v, endDate, position || POSITION_FILTER_ALL);
   };
   const handleEndDateChange = (v: string) => {
     setEndDate(v);
     setPage(0);
-    fetchData(0, startDate, v);
+    fetchData(0, startDate, v, position || POSITION_FILTER_ALL);
   };
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    fetchData(newPage, startDate, endDate);
+    fetchData(newPage, startDate, endDate, position || POSITION_FILTER_ALL);
+  };
+  const handlePositionChange = (value: string) => {
+    setPosition(value === POSITION_FILTER_ALL ? null : value);
+    setPage(0);
+    fetchData(0, startDate, endDate, value);
   };
 
-  const hasFilters = !!(startDate || endDate);
+  const hasFilters = !!(startDate || endDate || (position && position !== POSITION_FILTER_ALL));
 
   return (
     <Card>
@@ -470,12 +538,20 @@ export function NutritionContent({
             onSearchChange={() => {}}
             searchPlaceholder=""
             filters={
-              <ToolbarDateRange
-                startDate={startDate}
-                endDate={endDate}
-                onStartDateChange={handleStartDateChange}
-                onEndDateChange={handleEndDateChange}
-              />
+              <>
+                <ToolbarSelect
+                  value={position || POSITION_FILTER_ALL}
+                  onValueChange={handlePositionChange}
+                  options={positionFilterOptions}
+                  placeholder="עמדה"
+                />
+                <ToolbarDateRange
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={handleStartDateChange}
+                  onEndDateChange={handleEndDateChange}
+                />
+              </>
             }
           />
         </div>
