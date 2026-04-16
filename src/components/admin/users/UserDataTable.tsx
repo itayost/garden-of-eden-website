@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RoleBadge, StatusBadge } from "@/components/ui/badges";
 import { columns } from "./UserTableColumns";
 import { UserTableToolbar } from "./UserTableToolbar";
+import { matchesPositionFilter } from "@/lib/admin/position-filter";
 import { UserTablePagination } from "./UserTablePagination";
 import type { Profile } from "@/types/database";
 
@@ -41,6 +42,7 @@ interface UserDataTableProps {
   initialSearch?: string;
   initialRole?: string | null;
   initialStatus?: string | null;
+  initialPosition?: string | null;
   initialShowDeleted?: boolean;
   isAdmin?: boolean;
 }
@@ -55,6 +57,7 @@ export function UserDataTable({
   initialSearch = "",
   initialRole = null,
   initialStatus = null,
+  initialPosition = null,
   initialShowDeleted = false,
   isAdmin = true,
 }: UserDataTableProps) {
@@ -67,6 +70,7 @@ export function UserDataTable({
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
   const [roleFilter, setRoleFilter] = useState<string | null>(initialRole);
   const [statusFilter, setStatusFilter] = useState<string | null>(initialStatus);
+  const [positionFilter, setPositionFilter] = useState<string | null>(initialPosition);
   const [showDeleted, setShowDeleted] = useState(initialShowDeleted);
 
   // Memoized filtered data based on all criteria
@@ -93,9 +97,12 @@ export function UserDataTable({
         if (statusFilter === "inactive" && isActive) return false;
       }
 
+      // Position filter
+      if (!matchesPositionFilter(user.position, positionFilter)) return false;
+
       return true;
     });
-  }, [data, globalFilter, roleFilter, statusFilter, showDeleted]);
+  }, [data, globalFilter, roleFilter, statusFilter, positionFilter, showDeleted]);
 
   // Initialize TanStack Table
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -131,6 +138,10 @@ export function UserDataTable({
     setStatusFilter(value);
   }, []);
 
+  const handlePositionChange = useCallback((value: string | null) => {
+    setPositionFilter(value);
+  }, []);
+
   const handleShowDeletedChange = useCallback((value: boolean) => {
     setShowDeleted(value);
   }, []);
@@ -142,6 +153,7 @@ export function UserDataTable({
         onSearchChange={handleSearchChange}
         onRoleChange={handleRoleChange}
         onStatusChange={handleStatusChange}
+        onPositionChange={handlePositionChange}
         onShowDeletedChange={handleShowDeletedChange}
         isAdmin={isAdmin}
       />

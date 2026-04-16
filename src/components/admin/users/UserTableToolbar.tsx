@@ -16,11 +16,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Search } from "lucide-react";
 import Link from "next/link";
+import { positionFilterOptions } from "@/lib/admin/position-filter";
 
 interface UserTableToolbarProps {
   onSearchChange: (value: string) => void;
   onRoleChange: (value: string | null) => void;
   onStatusChange: (value: string | null) => void;
+  onPositionChange: (value: string | null) => void;
   onShowDeletedChange: (value: boolean) => void;
   isAdmin?: boolean;
 }
@@ -34,6 +36,7 @@ export function UserTableToolbar({
   onSearchChange,
   onRoleChange,
   onStatusChange,
+  onPositionChange,
   onShowDeletedChange,
   isAdmin = true,
 }: UserTableToolbarProps) {
@@ -41,6 +44,7 @@ export function UserTableToolbar({
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
   const [role, setRole] = useQueryState("role", parseAsString);
   const [status, setStatus] = useQueryState("status", parseAsString);
+  const [position, setPosition] = useQueryState("position", parseAsString);
   const [showDeleted, setShowDeleted] = useQueryState(
     "deleted",
     parseAsBoolean.withDefault(false)
@@ -69,6 +73,10 @@ export function UserTableToolbar({
   }, [status, onStatusChange]);
 
   useEffect(() => {
+    onPositionChange(position);
+  }, [position, onPositionChange]);
+
+  useEffect(() => {
     onShowDeletedChange(showDeleted);
   }, [showDeleted, onShowDeletedChange]);
 
@@ -91,6 +99,13 @@ export function UserTableToolbar({
     const newStatus = value === "all" ? null : value;
     setStatus(newStatus);
     onStatusChange(newStatus);
+  };
+
+  // Handle position filter change
+  const handlePositionChange = (value: string) => {
+    const newPosition = value === "all" ? null : value;
+    setPosition(newPosition);
+    onPositionChange(newPosition);
   };
 
   // Handle show deleted toggle
@@ -138,6 +153,20 @@ export function UserTableToolbar({
             <SelectItem value="all">כל הסטטוסים</SelectItem>
             <SelectItem value="active">פעיל</SelectItem>
             <SelectItem value="inactive">לא פעיל</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Position Filter */}
+        <Select value={position || "all"} onValueChange={handlePositionChange}>
+          <SelectTrigger className="w-full md:w-40">
+            <SelectValue placeholder="עמדה" />
+          </SelectTrigger>
+          <SelectContent>
+            {positionFilterOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 

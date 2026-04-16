@@ -17,6 +17,7 @@ interface PageProps {
     q?: string;
     role?: string;
     status?: string;
+    position?: string;
     deleted?: string;
   }>;
 }
@@ -105,6 +106,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
             initialSearch={params.q || ""}
             initialRole={params.role || null}
             initialStatus={params.status || null}
+            initialPosition={params.position || null}
             initialShowDeleted={params.deleted === "true"}
             isAdmin={isAdmin}
           />
