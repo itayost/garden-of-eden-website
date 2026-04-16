@@ -5,7 +5,7 @@ import {
   getRetentionNotes,
 } from "@/lib/actions/admin-retention";
 import { RetentionPageClient } from "@/components/admin/retention/RetentionPageClient";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/arbox/normalize-phone";
 
 export const metadata: Metadata = {
@@ -16,15 +16,15 @@ export default async function RetentionPage() {
   const months = await getRetentionReportMonths();
   const latestMonth = months.length > 0 ? months[0].report_month : null;
 
-  const [initialData, initialNotes, supabase] = latestMonth
+  const [initialData, initialNotes] = latestMonth
     ? await Promise.all([
         getRetentionReport(latestMonth),
         getRetentionNotes(latestMonth),
-        createClient(),
       ])
-    : [null, new Map(), await createClient()];
+    : [null, new Map()];
 
-  const { data: traineeRows } = await supabase
+  const adminClient = createAdminClient();
+  const { data: traineeRows } = await adminClient
     .from("profiles")
     .select("phone, position")
     .eq("role", "trainee")

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
 import { POSITION_FILTER_NONE } from "@/lib/admin/position-filter";
@@ -40,7 +41,7 @@ export async function getPreWorkoutPaginated(
   const { error } = await verifyAdminOrTrainer();
   if (error) return { items: [], total: 0 };
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const from = params.page * params.pageSize;
 
   let query = supabase
@@ -82,7 +83,7 @@ export async function getPostWorkoutPaginated(
   const { error } = await verifyAdminOrTrainer();
   if (error) return { items: [], total: 0 };
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const from = params.page * params.pageSize;
 
   let query = supabase
@@ -124,7 +125,7 @@ export async function getNutritionPaginated(
   const { error } = await verifyAdminOrTrainer();
   if (error) return { items: [], total: 0 };
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const from = params.page * params.pageSize;
 
   let query = supabase
