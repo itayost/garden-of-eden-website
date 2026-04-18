@@ -6,16 +6,17 @@ import Image from "next/image";
 const staffMembers = [
   { name: "עדן בן חמו", role: "מייסד גארדן אוף עדן", image: "/landing/staff/eden-ben-hamo.webp", founder: true },
   { name: "עידו ברק", role: "מאמן כדורגל ואנליסט וידיאו", image: "" },
-  { name: "לידור זנטי", role: "מאמן יכולות אתלטיות", image: "" },
+  { name: "לידור זנטי", role: "מאמן יכולות אתלטיות", image: "/landing/staff/lidor-hay-zinti.webp" },
   { name: "נדב דטנר", role: "מאמן יכולות אתלטיות", image: "/landing/staff/nadav-datner.webp" },
-  { name: "דין לוי", role: "מאמן יכולות אתלטיות", image: "" },
-  { name: "דניאל קמרט", role: "תזונאי קליני", image: "" },
+  { name: "דין לוי", role: "מאמן יכולות אתלטיות", image: "/landing/staff/dean-levi.webp" },
+  { name: "דניאל קמרט", role: "תזונאי קליני", image: "/landing/staff/daniel-kamrat.webp" },
   { name: "אביעד וכשטוק", role: "מאמן יכולות אתלטיות", image: "/landing/staff/aviad-vachshtok.webp" },
   { name: "יוני דנינו", role: "ספורטרפיסט", image: "/landing/staff/yoni-danino.webp" },
   { name: "גבריאל פיזיסקי", role: "פיזוטרפיסט", image: "" },
   { name: "חוסין סקר", role: "דוקטור ספורט", image: "" },
-  { name: "עמית סוארי", role: "מאמן שוערים", image: "" },
+  { name: "עמית סוארי", role: "מאמן שוערים", image: "/landing/staff/amit-suari.webp" },
   { name: "רן אטיאס", role: "מאמן יכולות אתלטיות", image: "/landing/staff/ran-atias.webp" },
+  { name: "עומר לוינגר", role: "מאמן מנטלי", image: "/landing/staff/omer-levinger.webp" },
 ];
 
 function getInitials(name: string) {
