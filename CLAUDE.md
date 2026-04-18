@@ -1,190 +1,183 @@
-# Garden of Eden - Football Academy Website
+# CLAUDE.md
 
-## Project Overview
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Hebrew (RTL) football academy platform built with Next.js 16 (App Router) + Supabase + Vercel.
-Three user roles: **trainee**, **trainer**, **admin**. Auth via WhatsApp OTP through Supabase.
+Hebrew (RTL) football academy platform. Manages trainees, trainers, and admin operations with assessments, progress tracking, nutrition plans, shift management, and workout submissions.
 
-Production URL: https://www.edengarden.co.il
+Production: <https://www.edengarden.co.il>
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router), React 19, TypeScript (strict)
-- **Styling**: Tailwind CSS 4, Radix UI primitives, Framer Motion
-- **Database**: Supabase (Postgres + Auth + RLS)
-- **Hosting**: Vercel
-- **Caching**: Upstash Redis (rate limiting)
-- **Testing**: Vitest + React Testing Library (jsdom)
-- **Forms**: React Hook Form + Zod validation
+- **Next.js 16** (App Router) + **React 19** + **TypeScript** (strict)
+- **Supabase** (Postgres + Auth + RLS) — WhatsApp OTP auth, three roles: trainee/trainer/admin
+- **Tailwind CSS 4** + **Radix UI** (shadcn/ui based) + **Framer Motion**
+- **Vercel** hosting, **Upstash Redis** for rate limiting
+- **Meshulam** (Grow) payment gateway
+- **Vitest** + React Testing Library (jsdom), **Playwright** for E2E
+- **React Hook Form** + **Zod** validation
+
+## Critical Rules
+
+### 1. Code Organization
+
+- Many small files over few large files (200-400 lines typical, 800 max)
+- Organize by feature/domain: self-contained modules go in `src/features/<name>/`
+- Shared code stays in `src/lib/` and `src/components/`
+- Split large action files into focused files with a barrel re-export (e.g., `admin-users-create.ts`, `admin-users-update.ts` re-exported from `admin-users.ts`)
+
+### 2. Code Style
+
+- No emojis in code, comments, or docs
+- Immutability always — never mutate objects or arrays
+- All user-facing text in **Hebrew**, `dir="rtl"` on `<html>`
+- Use logical CSS properties (`start`/`end`) instead of `left`/`right`
+- Path alias: `@/` maps to `src/`
+
+### 3. Security
+
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` to the client
+- Admin actions call `verifyAdmin()`; trainer-accessible actions call `verifyAdminOrTrainer()`; user-scoped actions call `verifyUserAccess(userId)` — all from `src/lib/actions/shared/`
+- Validate all IDs with `isValidUUID()` from `src/lib/validations/common.ts`
+- Validate timestamps, ordering, durations server-side — never trust client validation alone
+- Rate-limit sensitive endpoints via Upstash Redis
+- Do not edit `.env.local` files (blocked by PreToolUse hook)
+
+### 4. Testing
+
+- No mock-based tests — the project uses real Supabase data
+- Tests cover pure utility functions only (validations, ranking-utils, webhook-security)
+- Write tests first for new utility functions
 
 ## Commands
 
 ```bash
-npm run dev          # Start dev server
-npm run build        # Production build
-npm run lint         # ESLint
-npm run test         # Vitest (watch mode)
-npm run test:run     # Vitest (single run)
-npx tsc --noEmit     # Type check
+npm run dev              # Start dev server
+npm run build            # Production build
+npm run lint             # ESLint
+npm run test             # Vitest (watch mode)
+npm run test:run         # Vitest (single run)
+npm run test:coverage    # Vitest with coverage
+npm run test:e2e         # Playwright E2E
+npm run test:e2e:ui      # Playwright UI mode
+npx tsc --noEmit         # Type check
 ```
 
-### Deploy
+### Deploy & Database
+
 ```bash
-vercel                # Preview deployment
-vercel --prod         # Production deployment
+vercel                  # Preview deployment
+vercel --prod           # Production deployment
+supabase db push        # Push migrations to Supabase
 ```
 
-### Database
+### Run a single test
+
 ```bash
-supabase db push     # Push migrations to Supabase
+npm run test:run -- path/to/file.test.ts      # Single file
+npm run test:run -- -t "test name pattern"    # By name
 ```
 
-## Project Structure
+## Architecture
 
-```
-src/
-├── app/                    # Next.js App Router pages
-│   ├── admin/              # Admin dashboard (users, assessments, nutrition, videos, shifts, submissions, end-of-shift)
-│   ├── dashboard/          # Trainee dashboard pages
-│   ├── auth/               # Auth flow (OTP login)
-│   ├── onboarding/         # New user onboarding
-│   └── api/                # API routes (cron, health, images, nutrition, payments, shifts, webhooks)
-├── components/
-│   ├── ui/                 # Shared UI primitives (shadcn/ui based)
-│   ├── admin/              # Admin-specific components (tables, forms, toolbars)
-│   ├── dashboard/          # Dashboard components
-│   ├── landing/            # Landing page sections
-│   ├── forms/              # Pre/post workout forms
-│   └── auth/               # Auth components
-├── features/               # Feature modules (self-contained)
-│   ├── achievements/
-│   ├── assessment-comparison/
-│   ├── form-drafts/
-│   ├── goals/
-│   ├── nutrition/
-│   ├── progress-charts/
-│   ├── rankings/
-│   └── streak-tracking/
-├── hooks/                  # Shared React hooks
-├── lib/
-│   ├── actions/            # Server Actions ("use server")
-│   ├── supabase/           # Supabase clients (see Gotchas below)
-│   ├── validations/        # Zod schemas
-│   ├── utils/              # Utility functions
-│   └── api/                # Auth, storage, and image-validation helpers
-├── middleware.ts            # Supabase session refresh + route protection
-└── types/                  # TypeScript type definitions
-```
+### Auth & Role Verification
 
-## Key Conventions
-
-### Language & RTL
-- The app is in **Hebrew** with RTL layout (`dir="rtl"` on `<html>`)
-- All user-facing text must be in Hebrew
-- Use logical CSS properties when possible (start/end instead of left/right)
-
-### Path Alias
-- Use `@/` for imports (maps to `src/`): `import { Button } from "@/components/ui/button"`
+Middleware (`src/middleware.ts`) refreshes Supabase sessions and gates routes. Server actions guard access via shared verify functions that return a discriminated union `{ error, user, profile }` — early-return on `error`, then use `user!` for TS narrowing.
 
 ### Server Actions
-- All server actions use `"use server"` directive
-- Admin-only actions call `verifyAdmin()` from `src/lib/actions/shared/`
-- Server actions must validate all inputs server-side (timestamps, ordering, duration) — never trust client-side validation alone
-- Trainer-accessible actions call `verifyAdminOrTrainer()` from the same module — returns discriminated union `{ error, user, profile }`; after early-return on `error`, use `user!` for TS narrowing
-- Feature actions accessing user data call `verifyUserAccess(userId)` from `src/lib/actions/shared/`
-- Actions live in `src/lib/actions/` or inside `src/features/<name>/lib/actions/`
-- Large action files are split into focused files (e.g., `admin-users-create.ts`, `admin-users-update.ts`) with a barrel re-export in the original file
 
-### Feature Modules
-- Self-contained features go in `src/features/<name>/`
-- Each feature has its own `lib/actions/`, components, and types
-- Shared features stay in `src/lib/` and `src/components/`
+All actions use `"use server"` and live in `src/lib/actions/` or `src/features/<name>/lib/actions/`. Input validation uses Zod schemas from `src/lib/validations/`.
 
-### Database
-- Supabase with Row Level Security (RLS) on all tables
-- Migrations in `supabase/migrations/` — two formats coexist:
-  - Legacy: `002_player_stats.sql`, `003_player_assessments.sql`
-  - Current: `20260201131812_description.sql` (Supabase timestamp format)
-- Three Supabase client helpers (all named `createClient` or `createAdminClient`):
-  - `createClient()` from `lib/supabase/client.ts` — browser client
-  - `createClient()` from `lib/supabase/server.ts` — server components/actions (uses cookies)
-  - `createAdminClient()` from `lib/supabase/admin.ts` — service role, bypasses RLS
-- DB helper utilities in `lib/supabase/helpers.ts`: `insertIntoTable`, `insertAndSelect`, `updateInTable`, `upsertIntoTable`
-- `typedFrom(supabase, "table_name")` from `lib/supabase/helpers.ts` — use instead of `(supabase as any).from()` for tables not in generated types
-- Supabase Storage: `avatars` bucket (public) stores all uploads — avatars, meal plan PDFs, etc. Path pattern: `{userId}/{type}/{timestamp}.{ext}`
+### Supabase Clients (three variants — pick carefully)
 
-### Components
-- UI primitives based on shadcn/ui (Radix + Tailwind)
-- Use `sonner` for toast notifications
-- Mobile-first responsive design with bottom nav for mobile
-- Reusable `DeleteConfirmDialog` in `src/components/admin/` — use for all delete confirmations
-- Reusable `TablePagination` in `src/components/admin/` — use for all paginated tables
-- Reusable `TableToolbar` in `src/components/admin/TableToolbar.tsx` — shared search + filter toolbar with composable sub-components (`ToolbarSelect`, `ToolbarCheckbox`, `ToolbarDateRange`). Parent owns state, toolbar handles debounce.
-- CSV export buttons in `src/components/admin/exports/` — per-entity export with Hebrew headers, BOM, and Papa.unparse
-- Shared `useFormSubmission` hook in `src/hooks/` — handles form submit state and error handling
-- Shared `useIsMobile` / `useMediaQuery` hooks in `src/hooks/` — responsive breakpoint detection
+- `createClient()` from `lib/supabase/client.ts` — **browser** client
+- `createClient()` from `lib/supabase/server.ts` — **server** components/actions (uses cookies)
+- `createAdminClient()` from `lib/supabase/admin.ts` — **service role**, bypasses RLS
 
-### Shared Utilities
-- `calculatePercentile()` from `src/lib/utils/math.ts` — shared stats calculation
-- `calculateUserRatings()` from `src/lib/utils/calculate-user-ratings.ts` — dashboard rating computation
+DB helpers in `lib/supabase/helpers.ts`: `insertIntoTable`, `insertAndSelect`, `updateInTable`, `upsertIntoTable`. Use `typedFrom(supabase, "table_name")` instead of `(supabase as any).from()` for tables missing from generated types.
 
-### Commits
-- Follow conventional commits: `feat(scope):`, `fix(scope):`, `refactor(scope):`
-- Keep scope to the feature area (auth, admin, mobile, nutrition, etc.)
+### Storage
 
-### Security
-- Never expose Supabase service role key to the client
-- All admin endpoints must verify role before proceeding
-- Rate limiting via Upstash Redis on sensitive endpoints
-- File upload API routes follow pattern in `src/app/api/images/` — FormData, auth check, rate limit, validate, upload via `uploadToStorage()`, return URL
-- Security headers configured in `next.config.ts` (X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy, Permissions-Policy)
-- Startup env validation in `src/lib/env.ts` (called via `src/instrumentation.ts`)
-- UUID validation via `isValidUUID()` from `src/lib/validations/common.ts` — use on all action params that accept IDs
-- Do not edit `.env.local` files
+Single public bucket `avatars` stores avatars, meal plan PDFs, and other uploads. Path pattern: `{userId}/{type}/{timestamp}.{ext}`. File upload API routes follow the pattern in `src/app/api/images/` — FormData → auth check → rate limit → validate → `uploadToStorage()` → return URL.
 
-## Environment Variables
+### Shared Admin Components (reuse — don't recreate)
 
-Required in `.env.local` (see `.env.local.example`):
+- `DeleteConfirmDialog` — standard delete confirmation
+- `TablePagination` — paginated table footer
+- `TableToolbar` with `ToolbarSelect`/`ToolbarCheckbox`/`ToolbarDateRange` — search + filter toolbar, parent owns state, toolbar handles debounce
+- CSV exports in `src/components/admin/exports/` — Hebrew headers, BOM, Papa.unparse
 
+### Shared Hooks & Utilities
+
+- `useFormSubmission` — form submit state + error handling
+- `useIsMobile` / `useMediaQuery` — responsive breakpoints
+- `calculatePercentile()` from `lib/utils/math.ts` — shared stats
+- `calculateUserRatings()` from `lib/utils/calculate-user-ratings.ts` — dashboard ratings
+
+### API Response & Error Handling
+
+```ts
+try {
+  const result = await operation()
+  return { success: true, data: result }
+} catch (error) {
+  console.error('Operation failed:', error)
+  return { success: false, error: 'User-friendly Hebrew message' }
+}
 ```
-NEXT_PUBLIC_SUPABASE_URL       # Supabase project URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY  # Supabase anon key (public)
-SUPABASE_SERVICE_ROLE_KEY      # Supabase service role (server only!)
-NEXT_PUBLIC_SITE_URL           # Site URL for auth callbacks
-GROW_USER_ID                   # Meshulam payment gateway
-GROW_PAGE_CODE                 # Meshulam page code
-GROW_API_URL                   # Meshulam API endpoint
-GROW_WEBHOOK_SECRET            # HMAC-SHA256 signature verification for webhooks
-GROW_PROCESS_TOKEN             # Fallback token for webhook verification
-REMOVEBG_API_KEY               # Remove.bg for FIFA card processing
-UPSTASH_REDIS_REST_URL         # Upstash Redis for rate limiting
-UPSTASH_REDIS_REST_TOKEN       # Upstash Redis token
-CRON_SECRET                    # Protects /api/cron/* endpoints
-```
+
+### Migrations
+
+Two formats coexist in `supabase/migrations/`:
+
+- Legacy: `002_player_stats.sql`
+- Current: `20260201131812_description.sql` (Supabase timestamp format)
+
+Both work — don't renumber old ones.
 
 ## Gotchas
 
-- **Supabase client import ambiguity**: Both `client.ts` and `server.ts` export `createClient()`. Always import from the correct file — use `lib/supabase/server` in server components/actions, `lib/supabase/client` in client components. Getting this wrong causes cryptic cookie errors.
-- **RTL layout**: CSS `left`/`right` are swapped. Use logical properties (`start`/`end`) or test manually. Framer Motion animations may need direction adjustment.
-- **Migration numbering**: Older migrations use `001_` prefix, newer ones use Supabase timestamp format. Both work — don't renumber old ones.
-- **`"use client"` boundary**: Radix UI components require client-side rendering. If a page only needs a small interactive part, extract it into a client component and keep the page as a server component.
-- **Testing**: No mock-based tests — the project has real data in Supabase. Existing tests cover pure utility functions only (validations, ranking-utils, webhook-security).
-- **Nutrition meal plans**: `trainee_meal_plans` table supports PDF upload (`pdf_url`, `pdf_path` columns). The old JSONB `meal_plan` column is nullable and unused for new entries.
-- **RLS INSERT policies for admin-on-behalf-of actions**: Existing INSERT policies typically require `auth.uid() = owner_id`. When adding admin actions that insert rows for *other* users (e.g., admin creates shift for trainer), a separate admin INSERT policy is needed — otherwise the insert is silently rejected by RLS.
-- **Supabase `.update().eq()` on nonexistent rows**: Returns no error and updates zero rows. Always pre-check existence with `.maybeSingle()` if the action needs to report "not found".
-- **Dialog edit state with `useState`**: `useState(prop)` only evaluates on mount. For edit dialogs receiving different data via props, use a `key={item.id}` prop to force remount — otherwise stale data persists.
+- **Supabase client import ambiguity**: Both `client.ts` and `server.ts` export `createClient()`. Wrong import = cryptic cookie errors. Double-check when moving code between client/server.
+- **RLS silently rejects admin-on-behalf-of inserts**: Existing INSERT policies usually require `auth.uid() = owner_id`. When an admin inserts a row for *another* user (e.g., shift for trainer), you need a separate admin INSERT policy — otherwise the insert fails silently.
+- **`.update().eq()` on nonexistent rows**: Returns no error, updates zero rows. Pre-check existence with `.maybeSingle()` if the action reports "not found".
+- **Dialog edit state staleness**: `useState(prop)` only runs on mount. For edit dialogs receiving different data via props, pass `key={item.id}` to force remount.
+- **`"use client"` boundaries**: Radix components require client rendering. Extract small interactive parts into client components and keep pages as server components when possible.
+- **RTL in Framer Motion**: `x` translations and CSS `left`/`right` are mirrored. Test both directions.
+- **Nutrition meal plans**: `trainee_meal_plans` uses PDF upload (`pdf_url`, `pdf_path`). The legacy JSONB `meal_plan` column is unused for new entries.
+- **DB trigger auto-creates profiles**: `on_auth_user_created` runs on `auth.users` insert — don't manually insert into `profiles` after `auth.admin.createUser()`.
+
+## Environment Variables
+
+See `.env.local.example`. Required:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+NEXT_PUBLIC_SITE_URL
+GROW_USER_ID, GROW_PAGE_CODE, GROW_API_URL, GROW_WEBHOOK_SECRET, GROW_PROCESS_TOKEN
+REMOVEBG_API_KEY
+UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
+CRON_SECRET
+```
+
+Startup validation in `src/lib/env.ts` (called via `src/instrumentation.ts`) fails fast if any required var is missing.
 
 ## Claude Code Automations
 
 ### Hooks (`.claude/settings.json`)
+
 - **PreToolUse**: Blocks editing `.env*` files (exit code 2)
-- **PostToolUse**: Auto-runs ESLint fix on `.ts/.tsx/.js/.jsx/.mjs` files after edit
-- **PostToolUse**: Runs `tsc --noEmit` type-check on `.ts/.tsx` files after edit
+- **PostToolUse**: Auto-runs ESLint fix on edited JS/TS files
+- **PostToolUse**: Runs `tsc --noEmit` type-check on edited `.ts/.tsx`
 
 ### Skills
+
 - `/deploy` — Type-check, build, and deploy to Vercel production
 - `/migration` — Create and apply a Supabase migration with RLS validation
 
 ### Agents
-- `code-reviewer` — Reviews for security (RLS, auth), TypeScript errors, and convention violations
+
+- `code-reviewer` — Security (RLS, auth), TypeScript errors, convention violations
 - `security-reviewer` — Deep security audit: RLS gaps, auth verification, service-role exposure, webhook security
+
+## Git Workflow
+
+Conventional commits with feature scope: `feat(auth):`, `fix(admin):`, `refactor(nutrition):`. Keep scope to the feature area (auth, admin, mobile, nutrition, shifts, etc.).
