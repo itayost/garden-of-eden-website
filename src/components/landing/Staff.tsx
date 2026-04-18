@@ -89,19 +89,13 @@ export function Staff() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-4 md:mb-6"
+          className="mb-4 md:mb-6 max-w-2xl mx-auto"
         >
-          <div className="relative overflow-hidden rounded-3xl p-6 md:p-10 bg-white border-2 border-[#CDEA68] shadow-lg flex flex-col md:flex-row items-center gap-6 md:gap-10 md:justify-between">
-            {/* decorative brand leaves on the empty side */}
-            <LeafMark
-              className="hidden md:block absolute start-6 top-6 w-24 h-24 text-[#CDEA68]/40 -rotate-12 pointer-events-none"
-            />
-            <LeafMark
-              className="hidden md:block absolute start-24 bottom-4 w-16 h-16 text-[#CDEA68]/20 rotate-45 pointer-events-none"
-            />
+          <div className="relative overflow-hidden rounded-3xl p-6 md:p-8 bg-white border-2 border-[#CDEA68] shadow-lg flex flex-col md:flex-row items-center justify-center gap-6">
+            <LeafMark className="hidden md:block absolute -end-6 -bottom-6 w-32 h-32 text-[#CDEA68]/25 -rotate-12 pointer-events-none" />
 
             {founder.image ? (
-              <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-full overflow-hidden flex-shrink-0 ring-4 ring-[#CDEA68]/30">
+              <div className="relative w-28 h-28 md:w-36 md:h-36 rounded-full overflow-hidden flex-shrink-0 ring-4 ring-[#CDEA68]/30">
                 <Image
                   src={founder.image}
                   alt={founder.name}
@@ -113,7 +107,7 @@ export function Staff() {
               <InitialsAvatar name={founder.name} size="lg" />
             )}
 
-            <div className="relative text-center md:text-start md:flex-1 md:ps-2">
+            <div className="relative text-center md:text-start">
               <span className="inline-block px-3 py-1 rounded-full bg-[#CDEA68] text-black/80 text-xs font-bold tracking-widest mb-3">
                 מייסד
               </span>
