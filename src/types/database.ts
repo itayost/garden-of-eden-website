@@ -331,6 +331,57 @@ export interface Database {
         };
         Relationships: [];
       };
+      player_rating_snapshots: {
+        Row: {
+          id: string;
+          user_id: string;
+          assessment_id: string;
+          assessment_date: string;
+          age_group: string | null;
+          pace: number | null;
+          shooting: number | null;
+          passing: number | null;
+          dribbling: number | null;
+          defending: number | null;
+          physical: number | null;
+          overall_rating: number | null;
+          computed_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          assessment_id: string;
+          assessment_date: string;
+          age_group?: string | null;
+          pace?: number | null;
+          shooting?: number | null;
+          passing?: number | null;
+          dribbling?: number | null;
+          defending?: number | null;
+          physical?: number | null;
+          overall_rating?: number | null;
+          computed_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          assessment_id?: string;
+          assessment_date?: string;
+          age_group?: string | null;
+          pace?: number | null;
+          shooting?: number | null;
+          passing?: number | null;
+          dribbling?: number | null;
+          defending?: number | null;
+          physical?: number | null;
+          overall_rating?: number | null;
+          computed_at?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
       player_stats: {
         Row: {
           id: string;
@@ -1118,6 +1169,9 @@ export type PlayerStats = Database["public"]["Tables"]["player_stats"]["Row"];
 export type PlayerStatsInsert = Database["public"]["Tables"]["player_stats"]["Insert"];
 export type PlayerStatsUpdate = Database["public"]["Tables"]["player_stats"]["Update"];
 export type PlayerStatsHistory = Database["public"]["Tables"]["player_stats_history"]["Row"];
+export type PlayerRatingSnapshotRow = Database["public"]["Tables"]["player_rating_snapshots"]["Row"];
+export type PlayerRatingSnapshotInsert = Database["public"]["Tables"]["player_rating_snapshots"]["Insert"];
+export type PlayerRatingSnapshotUpdate = Database["public"]["Tables"]["player_rating_snapshots"]["Update"];
 export type PlayerAssessmentRow = Database["public"]["Tables"]["player_assessments"]["Row"];
 export type PlayerAssessmentInsert = Database["public"]["Tables"]["player_assessments"]["Insert"];
 export type PlayerAssessmentUpdate = Database["public"]["Tables"]["player_assessments"]["Update"];
