@@ -77,9 +77,15 @@ export async function writeRatingSnapshot(
     }
     const ratings = calculateCardRatings(assessment, benchmarks);
     const row = composeSnapshot({ assessment, ageGroupId: ageGroup.id, ratings });
+    // Force computed_at to advance on every write — the DB DEFAULT only
+    // fires on INSERT, so an UPSERT that lands on UPDATE would otherwise
+    // leave computed_at stale and we'd lose the audit signal.
     const { error } = await supabase
       .from("player_rating_snapshots")
-      .upsert(row, { onConflict: "assessment_id" });
+      .upsert(
+        { ...row, computed_at: new Date().toISOString() },
+        { onConflict: "assessment_id" }
+      );
     if (error) {
       console.error("writeRatingSnapshot upsert failed:", error.message);
       return { ok: false, reason: error.message };
