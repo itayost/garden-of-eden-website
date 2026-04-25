@@ -9,12 +9,12 @@ const RadarStatsChart = dynamic(
 
 interface Props {
   stats: {
-    pace: number;
-    shooting: number;
-    passing: number;
-    dribbling: number;
-    defending: number;
-    physical: number;
+    pace: number | null;
+    shooting: number | null;
+    passing: number | null;
+    dribbling: number | null;
+    defending: number | null;
+    physical: number | null;
   };
 }
 

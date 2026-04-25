@@ -74,7 +74,14 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   }
 
   // Compute player ratings for radar chart (trainees only)
-  let stats: { pace: number; shooting: number; passing: number; dribbling: number; defending: number; physical: number } | null = null;
+  let stats: {
+    pace: number | null;
+    shooting: number | null;
+    passing: number | null;
+    dribbling: number | null;
+    defending: number | null;
+    physical: number | null;
+  } | null = null;
   if (userToEdit.role === "trainee") {
     const { data: userAssessments } = await supabase
       .from("player_assessments")

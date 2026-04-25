@@ -151,7 +151,7 @@ export default async function DashboardPage() {
                 </p>
                 <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
                   <Badge variant="outline" className="text-sm">
-                    דירוג: {calculatedRatings.overall_rating}
+                    דירוג: {calculatedRatings.overall_rating ?? "—"}
                   </Badge>
                   {profile?.position && (
                     <Badge variant="outline" className="text-sm">

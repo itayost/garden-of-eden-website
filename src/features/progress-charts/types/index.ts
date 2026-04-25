@@ -44,14 +44,15 @@ export interface PhysicalMetricChartData {
   lowerIsBetter: boolean;
 }
 
-export interface RatingDataPoint extends ChartDataPoint {
-  pace: number;
-  shooting: number;
-  passing: number;
-  dribbling: number;
-  defending: number;
-  physical: number;
-  overall_rating: number;
+export interface RatingDataPoint extends Omit<ChartDataPoint, "value"> {
+  value: number | null;
+  pace: number | null;
+  shooting: number | null;
+  passing: number | null;
+  dribbling: number | null;
+  defending: number | null;
+  physical: number | null;
+  overall_rating: number | null;
 }
 
 // ===========================================

@@ -25,13 +25,13 @@ export interface ReportData {
   };
   readonly assessments: readonly PlayerAssessment[];
   readonly stats: {
-    readonly overall_rating: number;
-    readonly pace: number;
-    readonly shooting: number;
-    readonly passing: number;
-    readonly dribbling: number;
-    readonly defending: number;
-    readonly physical: number;
+    readonly overall_rating: number | null;
+    readonly pace: number | null;
+    readonly shooting: number | null;
+    readonly passing: number | null;
+    readonly dribbling: number | null;
+    readonly defending: number | null;
+    readonly physical: number | null;
     readonly card_type: string | null;
   } | null;
   readonly groupStats: GroupStats | null;

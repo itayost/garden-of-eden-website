@@ -36,13 +36,13 @@ export interface PlayerReportHtmlProps {
   };
   assessments: PlayerAssessment[];
   stats: {
-    overall_rating: number;
-    pace: number;
-    shooting: number;
-    passing: number;
-    dribbling: number;
-    defending: number;
-    physical: number;
+    overall_rating: number | null;
+    pace: number | null;
+    shooting: number | null;
+    passing: number | null;
+    dribbling: number | null;
+    defending: number | null;
+    physical: number | null;
     card_type: string | null;
   } | null;
   attendance: { totalSessions: number; weeklyAverage: number } | null;
@@ -123,7 +123,7 @@ function buildRadarSvg(stats: NonNullable<PlayerReportHtmlProps["stats"]>): stri
   }).join("");
 
   const dataPts = axes.map(({ key, angle }) => {
-    const val = Math.max(0, Math.min(100, stats[key]));
+    const val = Math.max(0, Math.min(100, stats[key] ?? 0));
     const r = (maxR * val) / 100;
     const { x, y } = polarToCartesian(cx, cy, r, angle);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
@@ -227,7 +227,7 @@ export function buildPlayerReportHtml(
     ? `<div style="position:relative;width:${W}px;height:${H}px;flex-shrink:0;">
 <img src="data:image/webp;base64,${cardTemplateB64}" style="position:absolute;top:0;left:0;width:${W}px;height:${H}px;object-fit:contain;" alt=""/>
 <div style="position:absolute;top:${Math.round(H * 0.1)}px;left:${Math.round(W * 0.12)}px;display:flex;flex-direction:column;align-items:center;">
-<span style="font-size:32px;font-weight:900;color:#3d2a0f;line-height:1;letter-spacing:-0.02em;">${stats.overall_rating}</span>
+<span style="font-size:32px;font-weight:900;color:#3d2a0f;line-height:1;letter-spacing:-0.02em;">${stats.overall_rating ?? "—"}</span>
 <span style="font-size:12px;font-weight:700;color:#3d2a0f;margin-top:2px;">${ePos}</span>
 </div>
 <div style="position:absolute;top:${Math.round(H * 0.22)}px;left:${Math.round(W * 0.2)}px;right:${Math.round(W * 0.2)}px;height:${Math.round(H * 0.42)}px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
@@ -240,7 +240,7 @@ ${avatarDataUri
 <div style="position:absolute;bottom:${Math.round(H * 0.17)}px;left:${Math.round(W * 0.06)}px;right:${Math.round(W * 0.06)}px;display:flex;justify-content:space-around;align-items:center;" dir="ltr">
 ${(["PAC","SHO","PAS","DRI","DEF","PHY"] as const).map((label, i) => {
   const vals = [stats.pace, stats.shooting, stats.passing, stats.dribbling, stats.defending, stats.physical];
-  return `<div style="display:flex;flex-direction:column;align-items:center;"><span style="font-size:7px;font-weight:600;color:#5c4317;line-height:1.2;">${label}</span><span style="font-size:9px;font-weight:900;color:#3d2a0f;line-height:1.2;">${vals[i]}</span></div>`;
+  return `<div style="display:flex;flex-direction:column;align-items:center;"><span style="font-size:7px;font-weight:600;color:#5c4317;line-height:1.2;">${label}</span><span style="font-size:9px;font-weight:900;color:#3d2a0f;line-height:1.2;">${vals[i] ?? "—"}</span></div>`;
 }).join("")}
 </div>
 </div>`
@@ -363,7 +363,7 @@ ${fifaCardHtml}
 <div style="display:flex;gap:24px;flex:1;">
 <!-- Stats column -->
 <div style="width:140px;border-left:1px solid #1f2937;padding-left:16px;flex-shrink:0;">
-${stats ? `<div style="margin-bottom:12px;"><div style="font-size:9px;color:#6b7280;">דירוג כולל</div><div style="font-size:44px;font-weight:900;color:#22c55e;line-height:1;">${stats.overall_rating}</div></div>
+${stats ? `<div style="margin-bottom:12px;"><div style="font-size:9px;color:#6b7280;">דירוג כולל</div><div style="font-size:44px;font-weight:900;color:#22c55e;line-height:1;">${stats.overall_rating ?? "—"}</div></div>
 ${([{label:"ספרינט 5מ",key:"sprint_5m"as const},{label:"ספרינט 10מ",key:"sprint_10m"as const},{label:"ניתור לגובה",key:"jump_2leg_height"as const},{label:"קייזר",key:"kick_power_kaiser"as const}] as const).map(({label,key})=>{const v=latest?.[key];return `<div style="margin-bottom:8px;"><div style="font-size:9px;color:#6b7280;">${label}</div><div style="font-size:24px;font-weight:700;color:#f9fafb;">${v!==null&&v!==undefined?v:"—"}</div></div>`;}).join("")}`
 : `<div style="color:#6b7280;font-size:11px;">אין נתוני FIFA</div>`}
 ${attendance ? `<div style="margin-top:8px;"><div style="font-size:9px;color:#6b7280;">סה"כ אימונים</div><div style="font-size:24px;font-weight:700;color:#f9fafb;">${attendance.totalSessions}</div></div>` : `<div style="color:#6b7280;font-size:10px;margin-top:8px;">נוכחות: לא זמין</div>`}

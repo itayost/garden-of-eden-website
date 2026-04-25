@@ -20,14 +20,14 @@ function MiniRatingTooltip({
   payload
 }: {
   active?: boolean;
-  payload?: Array<{ value: number; payload: RatingDataPoint }>
+  payload?: Array<{ value: number | null; payload: RatingDataPoint }>
 }) {
   if (active && payload && payload.length) {
     const dataPoint = payload[0].payload;
     return (
       <div className="bg-background border rounded-lg shadow-lg p-2 text-xs" dir="rtl">
         <p className="font-medium">{dataPoint.dateDisplay}</p>
-        <p className="text-muted-foreground">דירוג: {dataPoint.overall_rating}</p>
+        <p className="text-muted-foreground">דירוג: {dataPoint.overall_rating ?? "—"}</p>
       </div>
     );
   }
@@ -50,15 +50,16 @@ export function MiniRatingChart({ data, height = 80 }: MiniRatingChartProps) {
 
   const latestRating = data[data.length - 1].overall_rating;
   const firstRating = data[0].overall_rating;
-  const change = latestRating - firstRating;
+  const change =
+    latestRating !== null && firstRating !== null ? latestRating - firstRating : null;
 
   let TrendIcon = Minus;
   let trendColor = "text-muted-foreground";
 
-  if (change > 0) {
+  if (change !== null && change > 0) {
     TrendIcon = TrendingUp;
     trendColor = "text-green-500";
-  } else if (change < 0) {
+  } else if (change !== null && change < 0) {
     TrendIcon = TrendingDown;
     trendColor = "text-red-500";
   }
@@ -70,10 +71,10 @@ export function MiniRatingChart({ data, height = 80 }: MiniRatingChartProps) {
           <CardTitle className="text-sm">מגמת דירוג</CardTitle>
           <div className="flex items-center gap-1">
             <TrendIcon className={`h-4 w-4 ${trendColor}`} />
-            <span className="text-lg font-bold">{latestRating}</span>
+            <span className="text-lg font-bold">{latestRating ?? "—"}</span>
           </div>
         </div>
-        {data.length > 1 && (
+        {data.length > 1 && change !== null && (
           <p className={`text-xs ${trendColor}`}>
             {change > 0 ? "+" : ""}{change} נקודות
           </p>
@@ -91,6 +92,7 @@ export function MiniRatingChart({ data, height = 80 }: MiniRatingChartProps) {
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}
+                connectNulls={false}
               />
             </LineChart>
           </ResponsiveContainer>

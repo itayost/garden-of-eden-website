@@ -184,13 +184,13 @@ function getLegPowerBonus(legPower: LegPowerTechnique | null): number {
 // ===========================================
 
 export interface CalculatedRatings {
-  pace: number;
-  shooting: number;
-  passing: number;
-  dribbling: number;
-  defending: number;
-  physical: number;
-  overall_rating: number;
+  pace: number | null;
+  shooting: number | null;
+  passing: number | null;
+  dribbling: number | null;
+  defending: number | null;
+  physical: number | null;
+  overall_rating: number | null;
 }
 
 /**
@@ -272,44 +272,38 @@ export function calculateCardRatings(
   const bodyBonus = getBodyStructureBonus(assessment.body_structure);
   const legPowerBonus = getLegPowerBonus(assessment.leg_power_technique);
 
-  // Helper to average available ratings
-  const avgRatings = (ratings: (number | null)[]): number => {
+  const avgRatings = (ratings: (number | null)[]): number | null => {
     const valid = ratings.filter((r): r is number => r !== null);
-    if (valid.length === 0) return 50; // Default to 50 if no data
+    if (valid.length === 0) return null;
     return Math.round(valid.reduce((sum, v) => sum + v, 0) / valid.length);
   };
 
-  // Clamp rating to 1-99 range
-  const clamp = (value: number): number => Math.max(1, Math.min(99, value));
+  const clampNullable = (value: number | null): number | null =>
+    value === null ? null : Math.max(1, Math.min(99, value));
 
-  // Calculate EA FC stats
-  // PACE: Sprint times weighted average (5m: 40%, 10m: 35%, 20m: 25%)
-  const paceBase = sprint5Rating !== null || sprint10Rating !== null || sprint20Rating !== null
-    ? avgRatings([sprint5Rating, sprint10Rating, sprint20Rating])
-    : 50;
-  const pace = clamp(paceBase);
+  const withBonus = (base: number | null, bonus: number): number | null =>
+    base === null ? null : base + bonus;
 
-  // PHYSICAL: Jump tests + body structure bonus
-  const physicalBase = avgRatings([jump2legDistRating, jumpRightRating, jumpLeftRating, jumpHeightRating]);
-  const physical = clamp(physicalBase + bodyBonus);
+  const pace = clampNullable(avgRatings([sprint5Rating, sprint10Rating, sprint20Rating]));
 
-  // DRIBBLING: Blaze Spot (agility/reaction) + coordination bonus
-  const dribblingBase = blazeSpotRating ?? 50;
-  const dribbling = clamp(dribblingBase + coordBonus);
+  const physical = clampNullable(
+    withBonus(
+      avgRatings([jump2legDistRating, jumpRightRating, jumpLeftRating, jumpHeightRating]),
+      bodyBonus
+    )
+  );
 
-  // DEFENDING: Flexibility + leg power technique
-  const defendingBase = avgRatings([flexAnkleRating, flexKneeRating, flexHipRating]);
-  const defending = clamp(defendingBase + legPowerBonus);
+  const dribbling = clampNullable(withBonus(blazeSpotRating, coordBonus));
 
-  // SHOOTING: Kick power
-  const shooting = clamp(kickPowerRating ?? 50);
+  const defending = clampNullable(
+    withBonus(avgRatings([flexAnkleRating, flexKneeRating, flexHipRating]), legPowerBonus)
+  );
 
-  // PASSING: Coordination + decision speed (Blaze Spot)
-  const passingBase = avgRatings([blazeSpotRating]);
-  const passing = clamp(passingBase + coordBonus);
+  const shooting = clampNullable(kickPowerRating);
 
-  // OVERALL: Average of all 6 main stats
-  const overall_rating = Math.round((pace + shooting + passing + dribbling + defending + physical) / 6);
+  const passing = clampNullable(withBonus(blazeSpotRating, coordBonus));
+
+  const overall_rating = avgRatings([pace, shooting, passing, dribbling, defending, physical]);
 
   return {
     pace,
@@ -347,18 +341,17 @@ export function calculateCardRatingsAbsolute(assessment: PlayerAssessment): Calc
 }
 
 /**
- * Return neutral ratings (50) when there's insufficient comparison data
- * Used when only 1 player in age group has assessments
- * 50 represents "unknown/unranked" - middle of the 1-99 scale
+ * Return null ratings when there's insufficient comparison data.
+ * Consumers should display a "not yet rated" placeholder rather than a number.
  */
 export function calculateNeutralRatings(): CalculatedRatings {
   return {
-    pace: 50,
-    shooting: 50,
-    passing: 50,
-    dribbling: 50,
-    defending: 50,
-    physical: 50,
-    overall_rating: 50,
+    pace: null,
+    shooting: null,
+    passing: null,
+    dribbling: null,
+    defending: null,
+    physical: null,
+    overall_rating: null,
   };
 }

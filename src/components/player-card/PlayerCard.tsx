@@ -12,19 +12,19 @@ import {
 } from "@/types/player-stats";
 
 interface MainStats {
-  pace: number;
-  shooting: number;
-  passing: number;
-  dribbling: number;
-  defending: number;
-  physical: number;
+  pace: number | null;
+  shooting: number | null;
+  passing: number | null;
+  dribbling: number | null;
+  defending: number | null;
+  physical: number | null;
 }
 
 interface PlayerCardProps {
   playerName: string;
   position: PlayerPosition;
   cardType: CardType;
-  overallRating: number;
+  overallRating: number | null;
   stats: MainStats;
   avatarUrl?: string;
   className?: string;
@@ -166,7 +166,7 @@ export function PlayerCard({
               letterSpacing: "-0.02em",
             }}
           >
-            {overallRating}
+            {overallRating ?? "—"}
           </span>
           {/* Position */}
           <span
@@ -277,7 +277,7 @@ export function PlayerCard({
                   lineHeight: 1.2,
                 }}
               >
-                {stats[key]}
+                {stats[key] ?? "—"}
               </span>
             </div>
           ))}

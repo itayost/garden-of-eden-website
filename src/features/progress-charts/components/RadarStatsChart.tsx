@@ -12,12 +12,12 @@ import { RATING_LABELS_HE } from "../lib/config/metric-definitions";
 
 interface RadarStatsChartProps {
   stats: {
-    pace: number;
-    shooting: number;
-    passing: number;
-    dribbling: number;
-    defending: number;
-    physical: number;
+    pace: number | null;
+    shooting: number | null;
+    passing: number | null;
+    dribbling: number | null;
+    defending: number | null;
+    physical: number | null;
   };
   height?: number;
 }
@@ -27,7 +27,7 @@ const STAT_KEYS = ["pace", "shooting", "passing", "dribbling", "defending", "phy
 export function RadarStatsChart({ stats, height = 300 }: RadarStatsChartProps) {
   const data = STAT_KEYS.map((key) => ({
     stat: RATING_LABELS_HE[key],
-    value: stats[key],
+    value: stats[key] ?? 0,
     fullMark: 99,
   }));
 

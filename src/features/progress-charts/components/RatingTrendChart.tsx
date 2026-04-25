@@ -76,7 +76,8 @@ export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) 
 
   const latestRating = data[data.length - 1].overall_rating;
   const firstRating = data[0].overall_rating;
-  const ratingChange = latestRating - firstRating;
+  const ratingChange =
+    latestRating !== null && firstRating !== null ? latestRating - firstRating : null;
 
   const toggleStat = (stat: RatingStat) => {
     setVisibleStats((prev) => {
@@ -95,13 +96,13 @@ export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) 
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base sm:text-lg">מגמת דירוגים</CardTitle>
-            {data.length > 1 && (
+            {data.length > 1 && ratingChange !== null && (
               <CardDescription className="text-xs">
                 שינוי בדירוג הכללי: {ratingChange > 0 ? "+" : ""}{ratingChange} נקודות
               </CardDescription>
             )}
           </div>
-          <div className="text-xl sm:text-2xl font-bold">{latestRating}</div>
+          <div className="text-xl sm:text-2xl font-bold">{latestRating ?? "—"}</div>
         </div>
       </CardHeader>
       <CardContent className="pt-2 px-3 sm:px-6">
@@ -164,6 +165,7 @@ export function RatingTrendChart({ data, height = 300 }: RatingTrendChartProps) 
                   strokeWidth={stat === "overall_rating" ? 3 : 2}
                   dot={{ r: stat === "overall_rating" ? 4 : 3 }}
                   activeDot={{ r: 6 }}
+                  connectNulls={false}
                 />
               ))}
             </LineChart>
