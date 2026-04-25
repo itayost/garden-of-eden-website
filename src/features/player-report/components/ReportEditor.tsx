@@ -112,7 +112,7 @@ export function ReportEditor({
 
       <ReportDetailsSection profile={data.profile} attendance={data.attendance} />
       <ReportAssessmentsTable assessments={data.assessments} />
-      <ReportChartsSection stats={data.stats} assessments={data.assessments} groupStats={data.groupStats} />
+      <ReportChartsSection stats={data.stats} assessments={data.assessments} ratingHistory={data.ratingHistory} />
 
       <ReportBulletList
         title="נקודות חוזקה / פרמטרים ששופרו"

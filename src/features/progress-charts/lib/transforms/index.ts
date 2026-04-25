@@ -1,11 +1,8 @@
 // Data Transformation Functions for Progress Charts
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PlayerAssessment } from "@/types/assessment";
-import {
-  calculateCardRatings,
-  calculateNeutralRatings,
-  type GroupStats,
-} from "@/lib/assessment-to-rating";
+import { getPlayerRatingHistory } from "@/lib/utils/get-player-ratings";
 import type {
   ChartDataPoint,
   PhysicalMetricKey,
@@ -71,36 +68,28 @@ export function transformCategoryToChartData(
 // ===========================================
 
 /**
- * Transform assessments to rating chart data
+ * Transform stored rating snapshots into chart-ready data points.
+ * Reads from player_rating_snapshots — ratings are frozen at assessment
+ * write time, so historical points don't shift when new trainees join
+ * the cohort.
  */
-export function transformToRatingChartData(
-  assessments: readonly PlayerAssessment[],
-  groupStats: GroupStats | null
-): RatingDataPoint[] {
-  // Sort by date ascending
-  const sorted = [...assessments].sort(
-    (a, b) =>
-      new Date(a.assessment_date).getTime() - new Date(b.assessment_date).getTime()
-  );
-
-  return sorted.map((assessment) => {
-    const ratings = groupStats
-      ? calculateCardRatings(assessment, groupStats)
-      : calculateNeutralRatings();
-
-    return {
-      date: assessment.assessment_date,
-      dateDisplay: formatHebrewDate(assessment.assessment_date),
-      value: ratings.overall_rating,
-      pace: ratings.pace,
-      shooting: ratings.shooting,
-      passing: ratings.passing,
-      dribbling: ratings.dribbling,
-      defending: ratings.defending,
-      physical: ratings.physical,
-      overall_rating: ratings.overall_rating,
-    };
-  });
+export async function transformToRatingChartData(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<RatingDataPoint[]> {
+  const history = await getPlayerRatingHistory(supabase, userId);
+  return history.map((snapshot) => ({
+    date: snapshot.date,
+    dateDisplay: formatHebrewDate(snapshot.date),
+    value: snapshot.overall_rating,
+    pace: snapshot.pace,
+    shooting: snapshot.shooting,
+    passing: snapshot.passing,
+    dribbling: snapshot.dribbling,
+    defending: snapshot.defending,
+    physical: snapshot.physical,
+    overall_rating: snapshot.overall_rating,
+  }));
 }
 
 // ===========================================

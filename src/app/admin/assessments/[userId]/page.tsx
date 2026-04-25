@@ -69,11 +69,11 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
   // Get age group
   const ageGroup = getAgeGroup(profile.birthdate);
 
-  // Calculate ratings using pre-computed benchmarks
-  const ratingsResult = assessments && assessments.length > 0
-    ? await getPlayerRatings(supabase, assessments as PlayerAssessment[], profile.birthdate)
-    : null;
-  const calculatedRatings = ratingsResult?.ratings ?? null;
+  // Ratings: read latest snapshot row (frozen at assessment write time).
+  const calculatedRatings =
+    assessments && assessments.length > 0
+      ? (await getPlayerRatings(supabase, profile.id)).ratings
+      : null;
 
   // Helper to format value with unit
   const formatValue = (key: string, value: number | null) => {

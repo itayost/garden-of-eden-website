@@ -1,6 +1,6 @@
 import type { PlayerAssessment } from "@/types/assessment";
-import type { GroupStats } from "@/lib/assessment-to-rating";
 import type { TraineeSummary } from "@/types/database";
+import type { RatingDataPoint } from "@/features/progress-charts";
 import type { ReportBulletItem } from "../lib/utils/aggregate-notes";
 
 export interface TraineeAttendance {
@@ -34,7 +34,7 @@ export interface ReportData {
     readonly physical: number | null;
     readonly card_type: string | null;
   } | null;
-  readonly groupStats: GroupStats | null;
+  readonly ratingHistory: readonly RatingDataPoint[];
   readonly attendance: TraineeAttendance | null;
   readonly strengths: readonly ReportBulletItem[];
   readonly weaknesses: readonly ReportBulletItem[];

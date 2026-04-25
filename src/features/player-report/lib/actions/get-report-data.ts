@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchEntranceReport, calculateWeeklyAverage } from "@/lib/arbox/reports";
 import { extractTraineeNotes } from "@/lib/utils/trainee-notes";
 import { categorizeNotes } from "../utils/aggregate-notes";
-import { getAgeGroup } from "@/types/assessment";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
+import { transformToRatingChartData } from "@/features/progress-charts/lib/transforms";
 import type { ReportData, TraineeAttendance } from "../../types";
 import type { ShiftReportForNotes } from "@/lib/utils/trainee-notes";
 import type { PlayerAssessment } from "@/types/assessment";
@@ -56,14 +56,16 @@ export async function getReportData(
     .is("deleted_at", null)
     .order("assessment_date", { ascending: false });
 
-  // Compute ratings using pre-computed benchmarks
+  // Read latest snapshot + full history from player_rating_snapshots.
   const typedAssessments = (assessments ?? []) as PlayerAssessment[];
-  const ageGroup = getAgeGroup(profile.birthdate);
+  const hasAssessments = typedAssessments.length > 0;
 
-  const ratingsResult = typedAssessments.length > 0
-    ? await getPlayerRatings(supabase, typedAssessments, profile.birthdate)
+  const ratingsResult = hasAssessments
+    ? await getPlayerRatings(supabase, profile.id)
     : null;
-  const groupStats = ratingsResult?.groupStats ?? null;
+  const ratingHistory = hasAssessments
+    ? await transformToRatingChartData(supabase, profile.id)
+    : [];
 
   const computedStats = ratingsResult
     ? { ...ratingsResult.ratings, card_type: null as string | null }
@@ -129,7 +131,7 @@ export async function getReportData(
         created_at: profile.created_at,
       },
       assessments: typedAssessments,
-      groupStats,
+      ratingHistory,
       stats: computedStats,
       attendance,
       strengths,

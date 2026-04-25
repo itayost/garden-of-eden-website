@@ -6,8 +6,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PlayerAssessment } from "@/types/assessment";
-import type { GroupStats } from "@/lib/assessment-to-rating";
 import { DateRangeFilter } from "./DateRangeFilter";
+import type { RatingDataPoint } from "../types";
 
 const RatingTrendChart = dynamic(
   () => import("./RatingTrendChart").then((m) => m.RatingTrendChart),
@@ -37,21 +37,19 @@ const PhysicalMetricChart = dynamic(
   }
 );
 import { useDateRangeFilter } from "../hooks/useDateRangeFilter";
-import {
-  transformToPhysicalChartData,
-  transformToRatingChartData,
-} from "../lib/transforms";
+import { transformToPhysicalChartData } from "../lib/transforms";
 import { METRIC_CATEGORIES } from "../lib/config/metric-definitions";
 import type { MetricCategory } from "../types";
 
 interface AssessmentProgressChartsProps {
   assessments: readonly PlayerAssessment[];
-  groupStats?: GroupStats | null;
+  /** Pre-computed rating snapshots (from player_rating_snapshots), full history. */
+  ratingHistory: readonly RatingDataPoint[];
 }
 
 export function AssessmentProgressCharts({
   assessments,
-  groupStats = null,
+  ratingHistory,
 }: AssessmentProgressChartsProps) {
   const { preset, setPreset, filter } = useDateRangeFilter("6m");
   const [selectedCategory, setSelectedCategory] = useState<MetricCategory>("sprint");
@@ -61,10 +59,11 @@ export function AssessmentProgressCharts({
     return filter(assessments.map((a) => ({ ...a, date: a.assessment_date })));
   }, [assessments, filter]);
 
-  // Transform data for charts
-  const ratingChartData = useMemo(() => {
-    return transformToRatingChartData(filteredAssessments, groupStats);
-  }, [filteredAssessments, groupStats]);
+  // Filter rating snapshots by the same date range
+  const ratingChartData = useMemo(
+    () => filter(ratingHistory.map((r) => ({ ...r }))),
+    [ratingHistory, filter]
+  );
 
   // Get physical metrics for the selected category
   const physicalChartDataList = useMemo(() => {

@@ -1,22 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import type { PlayerAssessment } from "@/types/assessment";
-import type { GroupStats } from "@/lib/assessment-to-rating";
-import { MiniRatingChart, transformToRatingChartData } from "@/features/progress-charts";
+import { MiniRatingChart, type RatingDataPoint } from "@/features/progress-charts";
 
 interface MiniRatingChartWrapperProps {
-  assessments: PlayerAssessment[];
-  groupStats: GroupStats | null;
+  data: RatingDataPoint[];
 }
 
-export function MiniRatingChartWrapper({
-  assessments,
-  groupStats,
-}: MiniRatingChartWrapperProps) {
-  const chartData = useMemo(() => {
-    return transformToRatingChartData(assessments, groupStats);
-  }, [assessments, groupStats]);
-
-  return <MiniRatingChart data={chartData} />;
+export function MiniRatingChartWrapper({ data }: MiniRatingChartWrapperProps) {
+  return <MiniRatingChart data={data} />;
 }

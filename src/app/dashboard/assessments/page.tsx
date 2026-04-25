@@ -20,6 +20,7 @@ import {
   getAssessmentCompleteness,
 } from "@/types/assessment";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
+import { transformToRatingChartData } from "@/features/progress-charts/lib/transforms";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 import dynamic from "next/dynamic";
@@ -57,12 +58,14 @@ export default async function DashboardAssessmentsPage() {
   // Get age group
   const ageGroup = getAgeGroup(profile?.birthdate || null);
 
-  // Calculate FIFA-style ratings using pre-computed benchmarks
-  const ratingsResult = assessments && assessments.length > 0
-    ? await getPlayerRatings(supabase, assessments, profile?.birthdate || null)
+  // FIFA-style ratings: read latest snapshot + full history for the chart.
+  const hasAssessments = assessments && assessments.length > 0;
+  const calculatedRatings = hasAssessments && user
+    ? (await getPlayerRatings(supabase, user.id)).ratings
     : null;
-  const calculatedRatings = ratingsResult?.ratings ?? null;
-  const groupStats = ratingsResult?.groupStats ?? null;
+  const ratingHistory = hasAssessments && user
+    ? await transformToRatingChartData(supabase, user.id)
+    : [];
 
   // Helper functions
   const formatValue = (key: string, value: number | null) => {
@@ -249,7 +252,7 @@ export default async function DashboardAssessmentsPage() {
             <div>
               <AssessmentChartsWrapper
                 assessments={assessments}
-                groupStats={groupStats}
+                ratingHistory={ratingHistory}
               />
             </div>
           </div>

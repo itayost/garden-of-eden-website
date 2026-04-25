@@ -19,7 +19,6 @@ import { TraineeImageSection } from "@/components/admin/users/TraineeImageSectio
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
 import { RadarStatsChartWrapper } from "./RadarStatsChartWrapper";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
-import type { PlayerAssessment } from "@/types/assessment";
 import type { Profile, UserRole } from "@/types/database";
 
 interface UserEditPageProps {
@@ -83,25 +82,15 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     physical: number | null;
   } | null = null;
   if (userToEdit.role === "trainee") {
-    const { data: userAssessments } = await supabase
-      .from("player_assessments")
-      .select("*")
-      .eq("user_id", userToEdit.id)
-      .is("deleted_at", null)
-      .order("assessment_date", { ascending: false });
-
-    const typedAssessments = (userAssessments ?? []) as PlayerAssessment[];
-    if (typedAssessments.length > 0) {
-      const { ratings } = await getPlayerRatings(supabase, typedAssessments, userToEdit.birthdate);
-      stats = {
-        pace: ratings.pace,
-        shooting: ratings.shooting,
-        passing: ratings.passing,
-        dribbling: ratings.dribbling,
-        defending: ratings.defending,
-        physical: ratings.physical,
-      };
-    }
+    const { ratings } = await getPlayerRatings(supabase, userToEdit.id);
+    stats = {
+      pace: ratings.pace,
+      shooting: ratings.shooting,
+      passing: ratings.passing,
+      dribbling: ratings.dribbling,
+      defending: ratings.defending,
+      physical: ratings.physical,
+    };
   }
 
   const formatDate = (dateStr: string) => {

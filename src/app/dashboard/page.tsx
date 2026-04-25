@@ -21,6 +21,8 @@ import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getAgeGroup } from "@/types/assessment";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
+import { transformToRatingChartData } from "@/features/progress-charts/lib/transforms";
+import { RatingMigrationBanner } from "@/components/dashboard/RatingMigrationBanner";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
 import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } from "@/features/achievements";
@@ -72,13 +74,16 @@ export default async function DashboardPage() {
 
   const hasCompletedNutrition = !!nutritionForm;
 
-  // Calculate age group and FIFA-style ratings using pre-computed benchmarks
+  // Age group + FIFA-style ratings: ratings come from the latest snapshot row,
+  // which was frozen at assessment write time (stable history, no moving baseline).
   const ageGroup = getAgeGroup(profile?.birthdate || null);
-  const ratingsResult = assessments && assessments.length > 0
-    ? await getPlayerRatings(supabase, assessments, profile?.birthdate || null)
+  const hasAssessments = assessments && assessments.length > 0;
+  const calculatedRatings = hasAssessments && user
+    ? (await getPlayerRatings(supabase, user.id)).ratings
     : null;
-  const calculatedRatings = ratingsResult?.ratings ?? null;
-  const groupStats = ratingsResult?.groupStats ?? null;
+  const ratingHistory = hasAssessments && user
+    ? await transformToRatingChartData(supabase, user.id)
+    : [];
 
   const quickActions = [
     {
@@ -123,6 +128,8 @@ export default async function DashboardPage() {
           ברוכים הבאים לאזור האישי שלך ב-Garden of Eden
         </p>
       </div>
+
+      {hasAssessments && <RatingMigrationBanner />}
 
       {/* Player Card Section */}
       {calculatedRatings ? (
@@ -251,10 +258,7 @@ export default async function DashboardPage() {
           {assessments && assessments.length > 0 && (
             <Link href="/dashboard/assessments" className="col-span-2 sm:col-span-1">
               <div className="h-full hover:shadow-md transition-shadow cursor-pointer">
-                <MiniRatingChartWrapper
-                  assessments={assessments}
-                  groupStats={groupStats}
-                />
+                <MiniRatingChartWrapper data={ratingHistory} />
               </div>
             </Link>
           )}
