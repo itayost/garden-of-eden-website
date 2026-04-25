@@ -193,126 +193,122 @@ export interface CalculatedRatings {
   overall_rating: number | null;
 }
 
+type StatKey = keyof Omit<CalculatedRatings, "overall_rating">;
+type NumericMetric = keyof GroupStats;
+type BonusFn = (a: PlayerAssessment) => number;
+
+interface PrimaryInput {
+  metric: NumericMetric;
+  lowerBetter: boolean;
+}
+
+interface StatConfig {
+  primary: readonly PrimaryInput[];
+  bonuses?: readonly BonusFn[];
+}
+
 /**
- * Calculate EA FC card ratings from a single assessment
- * Using group statistics for relative comparison
+ * Single source of truth for which raw tests feed each card stat.
+ *
+ * Rule: each numeric metric appears as a `primary` input for EXACTLY ONE stat
+ * so a single test never produces two card numbers. Categorical bonuses
+ * (coordination / body / leg power) modify the base but cannot create a
+ * rating on their own — if all `primary` inputs are null, the stat is null.
+ */
+export const CARD_STAT_CONFIG: Readonly<Record<StatKey, StatConfig>> = {
+  pace: {
+    primary: [
+      { metric: "sprint_5m", lowerBetter: true },
+      { metric: "sprint_10m", lowerBetter: true },
+      { metric: "sprint_20m", lowerBetter: true },
+    ],
+  },
+  physical: {
+    primary: [
+      { metric: "jump_2leg_distance", lowerBetter: false },
+      { metric: "jump_2leg_height", lowerBetter: false },
+    ],
+    bonuses: [(a) => getBodyStructureBonus(a.body_structure)],
+  },
+  shooting: {
+    primary: [{ metric: "kick_power_kaiser", lowerBetter: false }],
+    bonuses: [(a) => getLegPowerBonus(a.leg_power_technique)],
+  },
+  defending: {
+    primary: [
+      { metric: "flexibility_ankle", lowerBetter: false },
+      { metric: "flexibility_knee", lowerBetter: false },
+      { metric: "flexibility_hip", lowerBetter: false },
+    ],
+    bonuses: [(a) => getBodyStructureBonus(a.body_structure)],
+  },
+  dribbling: {
+    primary: [
+      { metric: "jump_right_leg", lowerBetter: false },
+      { metric: "jump_left_leg", lowerBetter: false },
+    ],
+    bonuses: [(a) => getCoordinationBonus(a.coordination)],
+  },
+  passing: {
+    primary: [{ metric: "blaze_spot_time", lowerBetter: false }],
+    bonuses: [(a) => getCoordinationBonus(a.coordination)],
+  },
+};
+
+const STAT_KEYS = Object.keys(CARD_STAT_CONFIG) as StatKey[];
+
+function avgOrNull(values: readonly (number | null)[]): number | null {
+  const valid = values.filter((v): v is number => v !== null);
+  if (valid.length === 0) return null;
+  return Math.round(valid.reduce((sum, v) => sum + v, 0) / valid.length);
+}
+
+function clampOrNull(value: number | null): number | null {
+  return value === null ? null : Math.max(1, Math.min(99, value));
+}
+
+function ratePrimary(
+  assessment: PlayerAssessment,
+  groupStats: GroupStats,
+  input: PrimaryInput
+): number | null {
+  const value = assessment[input.metric] as number | null;
+  const { best, worst } = groupStats[input.metric];
+  return input.lowerBetter
+    ? calculateRatingLowerBetter(value, best, worst)
+    : calculateRatingHigherBetter(value, best, worst);
+}
+
+function computeStat(
+  assessment: PlayerAssessment,
+  groupStats: GroupStats,
+  config: StatConfig
+): number | null {
+  const base = avgOrNull(config.primary.map((p) => ratePrimary(assessment, groupStats, p)));
+  if (base === null) return null;
+  const bonusTotal = (config.bonuses ?? []).reduce((sum, fn) => sum + fn(assessment), 0);
+  return clampOrNull(base + bonusTotal);
+}
+
+/**
+ * Calculate EA FC card ratings from a single assessment, using age-group
+ * statistics for relative comparison. Driven by CARD_STAT_CONFIG above.
  */
 export function calculateCardRatings(
   assessment: PlayerAssessment,
   groupStats: GroupStats
 ): CalculatedRatings {
-  // Calculate individual test ratings
-  const sprint5Rating = calculateRatingLowerBetter(
-    assessment.sprint_5m,
-    groupStats.sprint_5m.best,
-    groupStats.sprint_5m.worst
+  const stats = STAT_KEYS.reduce(
+    (acc, key) => {
+      acc[key] = computeStat(assessment, groupStats, CARD_STAT_CONFIG[key]);
+      return acc;
+    },
+    {} as Record<StatKey, number | null>
   );
-  const sprint10Rating = calculateRatingLowerBetter(
-    assessment.sprint_10m,
-    groupStats.sprint_10m.best,
-    groupStats.sprint_10m.worst
-  );
-  const sprint20Rating = calculateRatingLowerBetter(
-    assessment.sprint_20m,
-    groupStats.sprint_20m.best,
-    groupStats.sprint_20m.worst
-  );
-
-  const jump2legDistRating = calculateRatingHigherBetter(
-    assessment.jump_2leg_distance,
-    groupStats.jump_2leg_distance.best,
-    groupStats.jump_2leg_distance.worst
-  );
-  const jumpRightRating = calculateRatingHigherBetter(
-    assessment.jump_right_leg,
-    groupStats.jump_right_leg.best,
-    groupStats.jump_right_leg.worst
-  );
-  const jumpLeftRating = calculateRatingHigherBetter(
-    assessment.jump_left_leg,
-    groupStats.jump_left_leg.best,
-    groupStats.jump_left_leg.worst
-  );
-  const jumpHeightRating = calculateRatingHigherBetter(
-    assessment.jump_2leg_height,
-    groupStats.jump_2leg_height.best,
-    groupStats.jump_2leg_height.worst
-  );
-
-  const blazeSpotRating = calculateRatingHigherBetter(
-    assessment.blaze_spot_time,
-    groupStats.blaze_spot_time.best,
-    groupStats.blaze_spot_time.worst
-  );
-
-  const flexAnkleRating = calculateRatingHigherBetter(
-    assessment.flexibility_ankle,
-    groupStats.flexibility_ankle.best,
-    groupStats.flexibility_ankle.worst
-  );
-  const flexKneeRating = calculateRatingHigherBetter(
-    assessment.flexibility_knee,
-    groupStats.flexibility_knee.best,
-    groupStats.flexibility_knee.worst
-  );
-  const flexHipRating = calculateRatingHigherBetter(
-    assessment.flexibility_hip,
-    groupStats.flexibility_hip.best,
-    groupStats.flexibility_hip.worst
-  );
-
-  const kickPowerRating = calculateRatingHigherBetter(
-    assessment.kick_power_kaiser,
-    groupStats.kick_power_kaiser.best,
-    groupStats.kick_power_kaiser.worst
-  );
-
-  // Get categorical bonuses
-  const coordBonus = getCoordinationBonus(assessment.coordination);
-  const bodyBonus = getBodyStructureBonus(assessment.body_structure);
-  const legPowerBonus = getLegPowerBonus(assessment.leg_power_technique);
-
-  const avgRatings = (ratings: (number | null)[]): number | null => {
-    const valid = ratings.filter((r): r is number => r !== null);
-    if (valid.length === 0) return null;
-    return Math.round(valid.reduce((sum, v) => sum + v, 0) / valid.length);
-  };
-
-  const clampNullable = (value: number | null): number | null =>
-    value === null ? null : Math.max(1, Math.min(99, value));
-
-  const withBonus = (base: number | null, bonus: number): number | null =>
-    base === null ? null : base + bonus;
-
-  const pace = clampNullable(avgRatings([sprint5Rating, sprint10Rating, sprint20Rating]));
-
-  const physical = clampNullable(
-    withBonus(
-      avgRatings([jump2legDistRating, jumpRightRating, jumpLeftRating, jumpHeightRating]),
-      bodyBonus
-    )
-  );
-
-  const dribbling = clampNullable(withBonus(blazeSpotRating, coordBonus));
-
-  const defending = clampNullable(
-    withBonus(avgRatings([flexAnkleRating, flexKneeRating, flexHipRating]), legPowerBonus)
-  );
-
-  const shooting = clampNullable(kickPowerRating);
-
-  const passing = clampNullable(withBonus(blazeSpotRating, coordBonus));
-
-  const overall_rating = avgRatings([pace, shooting, passing, dribbling, defending, physical]);
 
   return {
-    pace,
-    shooting,
-    passing,
-    dribbling,
-    defending,
-    physical,
-    overall_rating,
+    ...stats,
+    overall_rating: avgOrNull(STAT_KEYS.map((k) => stats[k])),
   };
 }
 
