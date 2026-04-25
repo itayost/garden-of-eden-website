@@ -15,33 +15,35 @@ export async function grantAssessmentBadges(
 ): Promise<void> {
   const userId = newAssessment.user_id;
 
-  // Count of prior NON-DELETED assessments for this user.
-  const { count: priorCount } = await supabase
-    .from("player_assessments")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .lt("assessment_date", newAssessment.assessment_date);
+  const [
+    { count: priorCount },
+    { data: prevAssessmentRows },
+    { data: snapshotRows },
+  ] = await Promise.all([
+    supabase
+      .from("player_assessments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .lt("assessment_date", newAssessment.assessment_date),
+    supabase
+      .from("player_assessments")
+      .select("*")
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .lt("assessment_date", newAssessment.assessment_date)
+      .order("assessment_date", { ascending: false })
+      .limit(1),
+    supabase
+      .from("player_rating_snapshots")
+      .select("overall_rating, assessment_id")
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .order("assessment_date", { ascending: false })
+      .limit(2),
+  ]);
 
-  // Most-recent prior assessment (chronologically before this one).
-  const { data: prevAssessmentRows } = await supabase
-    .from("player_assessments")
-    .select("*")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .lt("assessment_date", newAssessment.assessment_date)
-    .order("assessment_date", { ascending: false })
-    .limit(1);
   const prevAssessment = (prevAssessmentRows?.[0] ?? null) as PlayerAssessment | null;
-
-  // Snapshot deltas (compare current row to the row before it).
-  const { data: snapshotRows } = await supabase
-    .from("player_rating_snapshots")
-    .select("overall_rating, assessment_id")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .order("assessment_date", { ascending: false })
-    .limit(2);
   const newSnapshotOverall =
     snapshotRows?.find((r) => r.assessment_id === newAssessment.id)?.overall_rating ?? null;
   const prevSnapshotOverall =

@@ -4,7 +4,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { typedFrom } from "@/lib/supabase/helpers";
-import type { PlayerAssessment } from "@/types/assessment";
+import type {
+  BodyStructure,
+  CoordinationLevel,
+  LegPowerTechnique,
+  PlayerAssessment,
+} from "@/types/assessment";
 import { writeRatingSnapshot } from "../snapshot";
 import { grantAssessmentBadges } from "@/features/achievements/lib/actions/grant-assessment-badges";
 
@@ -22,9 +27,9 @@ interface AssessmentInsertInput {
   flexibility_ankle?: number | null;
   flexibility_knee?: number | null;
   flexibility_hip?: number | null;
-  coordination?: PlayerAssessment["coordination"];
-  leg_power_technique?: PlayerAssessment["leg_power_technique"];
-  body_structure?: PlayerAssessment["body_structure"];
+  coordination?: CoordinationLevel | null;
+  leg_power_technique?: LegPowerTechnique | null;
+  body_structure?: BodyStructure | null;
   kick_power_kaiser?: number | null;
   concentration_notes?: string | null;
   decision_making_notes?: string | null;
@@ -42,8 +47,9 @@ interface RecordResult {
 
 /**
  * The single sanctioned way to insert a new player_assessments row.
- * After insert: recomputes ratings and writes a snapshot, then grants any
- * earned badges. Both are best-effort — failures don't fail the assessment.
+ * After insert: writes a rating snapshot and grants any earned badges.
+ * Both post-write steps are best-effort — failures log but don't fail
+ * the assessment write.
  */
 export async function recordAssessment(
   input: AssessmentInsertInput
@@ -61,13 +67,7 @@ export async function recordAssessment(
   }
   const assessment = data as PlayerAssessment;
 
-  // Best-effort post-write: snapshot then badges.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("birthdate")
-    .eq("id", assessment.user_id)
-    .single();
-  await writeRatingSnapshot(supabase, assessment, (profile as { birthdate: string | null } | null)?.birthdate ?? null);
+  await writeRatingSnapshot(supabase, assessment);
   await grantAssessmentBadges(supabase, assessment);
 
   return { success: true, data: assessment };
@@ -77,6 +77,10 @@ export async function recordAssessment(
  * Update an existing assessment row (used by the multi-step admin form
  * which writes one step at a time). Re-snapshots after the update so the
  * cached rating reflects the latest values.
+ *
+ * Why no badge grant: the multi-step form calls this once per step. Granting
+ * on each call would double-grant as the form fills in. Badges only fire on
+ * the initial INSERT in `recordAssessment`.
  */
 export async function updateAssessment(
   assessmentId: string,
@@ -96,13 +100,6 @@ export async function updateAssessment(
   }
   const assessment = data as PlayerAssessment;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("birthdate")
-    .eq("id", assessment.user_id)
-    .single();
-  await writeRatingSnapshot(supabase, assessment, (profile as { birthdate: string | null } | null)?.birthdate ?? null);
-  // Note: badge grants only fire on assessment INSERT, not on subsequent
-  // step UPDATEs, to avoid double-granting as the multi-step form fills out.
+  await writeRatingSnapshot(supabase, assessment);
   return { success: true, data: assessment };
 }

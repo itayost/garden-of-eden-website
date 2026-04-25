@@ -22,33 +22,40 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient();
 
-  // Find assessments without snapshots via LEFT JOIN.
-  const { data: assessments, error } = await supabase
-    .from("player_assessments")
-    .select("*")
-    .is("deleted_at", null);
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const { data: snapshotIds, error: sErr } = await supabase
-    .from("player_rating_snapshots")
-    .select("assessment_id");
-  if (sErr) {
-    return NextResponse.json({ error: sErr.message }, { status: 500 });
-  }
+  const [{ data: assessments, error }, { data: snapshotIds, error: sErr }] =
+    await Promise.all([
+      supabase.from("player_assessments").select("*").is("deleted_at", null),
+      supabase
+        .from("player_rating_snapshots")
+        .select("assessment_id")
+        .is("deleted_at", null),
+    ]);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (sErr) return NextResponse.json({ error: sErr.message }, { status: 500 });
 
   const known = new Set((snapshotIds ?? []).map((r) => r.assessment_id));
-  const missing = ((assessments ?? []) as PlayerAssessment[]).filter((a) => !known.has(a.id));
+  const missing = ((assessments ?? []) as PlayerAssessment[]).filter(
+    (a) => !known.has(a.id)
+  );
+  if (missing.length === 0) {
+    return NextResponse.json({ ok: true, processed: 0, found: 0 });
+  }
+
+  // Batch-fetch birthdates for every distinct user once, instead of one
+  // round-trip per orphan assessment.
+  const userIds = Array.from(new Set(missing.map((a) => a.user_id)));
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, birthdate")
+    .in("id", userIds);
+  const birthdateByUser = new Map<string, string | null>();
+  for (const p of (profiles ?? []) as { id: string; birthdate: string | null }[]) {
+    birthdateByUser.set(p.id, p.birthdate);
+  }
 
   let processed = 0;
   for (const a of missing) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("birthdate")
-      .eq("id", a.user_id)
-      .single();
-    const birthdate = (profile as { birthdate: string | null } | null)?.birthdate ?? null;
+    const birthdate = birthdateByUser.get(a.user_id) ?? null;
     const result = await writeRatingSnapshot(supabase, a, birthdate);
     if (result.ok) {
       await grantAssessmentBadges(supabase, a, { preCelebrated: true });

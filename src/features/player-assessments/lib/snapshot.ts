@@ -43,13 +43,30 @@ export function composeSnapshot(input: {
 /**
  * Compute and UPSERT a rating snapshot for a single assessment.
  * Best-effort: errors are logged and swallowed — never fails the parent action.
+ *
+ * `birthdateOverride` lets bulk callers pre-fetch birthdates and avoid an
+ * extra round-trip per assessment. Pass `undefined` to have this helper
+ * look it up; pass `null` to assert the trainee has no birthdate.
  */
 export async function writeRatingSnapshot(
   supabase: SupabaseClient,
   assessment: PlayerAssessment,
-  birthdate: string | null
+  birthdateOverride?: string | null
 ): Promise<{ ok: boolean; reason?: string }> {
   try {
+    let birthdate: string | null;
+    if (birthdateOverride === undefined) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("birthdate")
+        .eq("id", assessment.user_id)
+        .single();
+      birthdate =
+        (profile as { birthdate: string | null } | null)?.birthdate ?? null;
+    } else {
+      birthdate = birthdateOverride;
+    }
+
     const ageGroup = getAgeGroup(birthdate);
     if (!ageGroup) {
       return { ok: false, reason: "no_age_group" };

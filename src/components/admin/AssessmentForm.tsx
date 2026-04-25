@@ -151,9 +151,10 @@ export function AssessmentForm({
         const result = await updateAssessment(assessmentId, partialData);
         if (!result.success) throw new Error(result.error ?? "update failed");
       } else {
-        // Drop the assessed_by field — the action sets it from the authenticated user.
-        const { assessed_by: _assessed, ...assessmentInput } = assessmentData;
-        void _assessed;
+        // Drop assessed_by; the action sets it from the verified user.
+        const assessmentInput = Object.fromEntries(
+          Object.entries(assessmentData).filter(([k]) => k !== "assessed_by")
+        ) as Omit<typeof assessmentData, "assessed_by">;
         const result = await recordAssessment(assessmentInput);
         if (!result.success || !result.data) {
           throw new Error(result.error ?? "insert failed");
