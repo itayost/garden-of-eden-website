@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
-import { typedFrom } from "@/lib/supabase/helpers";
 import {
   assessmentSchema,
   type AssessmentFormData,
@@ -136,35 +135,30 @@ export function AssessmentForm({
       const data = form.getValues();
       const assessmentData = formDataToDbFormat(data, userId, user.id);
 
+      const { recordAssessment, updateAssessment } = await import(
+        "@/features/player-assessments/lib/actions/record-assessment"
+      );
       if (assessmentId) {
-        // Partial update: only send this step's fields so unvisited steps
-        // never overwrite existing DB values with nulls.
         const stepFields = STEP_DB_FIELDS[currentStep];
         if (!stepFields) {
           throw new Error(`שלב ${currentStep} אינו ממופה — לא ניתן לשמור`);
         }
         type DbData = ReturnType<typeof formDataToDbFormat>;
-        const partialData: Record<string, unknown> = { assessed_by: user.id };
+        const partialData: Record<string, unknown> = {};
         for (const field of stepFields) {
           partialData[field] = assessmentData[field as keyof DbData];
         }
-
-        const { error } = await typedFrom(supabase, "player_assessments")
-          .update(partialData)
-          .eq("id", assessmentId);
-
-        if (error) throw error;
+        const result = await updateAssessment(assessmentId, partialData);
+        if (!result.success) throw new Error(result.error ?? "update failed");
       } else {
-        // Create new assessment (first step)
-        const { data: newAssessment, error } = await typedFrom(supabase, "player_assessments")
-          .insert(assessmentData)
-          .select("id")
-          .single();
-
-        if (error) throw error;
-        if (newAssessment) {
-          setAssessmentId(newAssessment.id);
+        // Drop the assessed_by field — the action sets it from the authenticated user.
+        const { assessed_by: _assessed, ...assessmentInput } = assessmentData;
+        void _assessed;
+        const result = await recordAssessment(assessmentInput);
+        if (!result.success || !result.data) {
+          throw new Error(result.error ?? "insert failed");
         }
+        setAssessmentId(result.data.id);
       }
 
       // Mark step as completed (Set handles duplicates automatically)
