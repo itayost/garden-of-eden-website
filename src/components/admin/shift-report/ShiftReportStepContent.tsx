@@ -1,6 +1,14 @@
 "use client";
 
-import { UseFormReturn } from "react-hook-form";
+import { memo, useCallback, useMemo } from "react";
+import {
+  type Control,
+  type FieldPath,
+  type UseFormGetValues,
+  type UseFormReturn,
+  type UseFormSetValue,
+  useWatch,
+} from "react-hook-form";
 import {
   FormControl,
   FormField,
@@ -40,16 +48,7 @@ interface StepProps {
   trainerName: string;
 }
 
-/** Reusable yes/no question with conditional trainee multi-select + text details */
-function YesNoWithTrainees({
-  form,
-  label,
-  boolField,
-  traineeIdsField,
-  detailsField,
-  detailsPlaceholder,
-  trainees,
-}: {
+interface YesNoWithTraineesProps {
   form: UseFormReturn<ShiftReportFormData>;
   label: string;
   boolField: keyof ShiftReportFormData;
@@ -57,8 +56,19 @@ function YesNoWithTrainees({
   detailsField: keyof ShiftReportFormData;
   detailsPlaceholder: string;
   trainees: TraineeOption[];
-}) {
-  const isYes = form.watch(boolField) as boolean;
+}
+
+/** Reusable yes/no question with conditional trainee multi-select + text details */
+const YesNoWithTrainees = memo(function YesNoWithTrainees({
+  form,
+  label,
+  boolField,
+  traineeIdsField,
+  detailsField,
+  detailsPlaceholder,
+  trainees,
+}: YesNoWithTraineesProps) {
+  const isYes = useWatch({ control: form.control, name: boolField }) as boolean;
 
   return (
     <div className="space-y-3">
@@ -128,17 +138,9 @@ function YesNoWithTrainees({
       )}
     </div>
   );
-}
+});
 
-/** Reusable yes/no question with conditional text only (no trainee select) */
-function YesNoWithText({
-  form,
-  label,
-  boolField,
-  detailsField,
-  detailsPlaceholder,
-  invertedLabel,
-}: {
+interface YesNoWithTextProps {
   form: UseFormReturn<ShiftReportFormData>;
   label: string;
   boolField: keyof ShiftReportFormData;
@@ -146,8 +148,18 @@ function YesNoWithText({
   detailsPlaceholder: string;
   /** If true, show details when answer is "no" (e.g. facility questions) */
   invertedLabel?: boolean;
-}) {
-  const value = form.watch(boolField) as boolean;
+}
+
+/** Reusable yes/no question with conditional text only (no trainee select) */
+const YesNoWithText = memo(function YesNoWithText({
+  form,
+  label,
+  boolField,
+  detailsField,
+  detailsPlaceholder,
+  invertedLabel,
+}: YesNoWithTextProps) {
+  const value = useWatch({ control: form.control, name: boolField }) as boolean;
   const showDetails = invertedLabel ? !value : value;
 
   return (
@@ -209,10 +221,13 @@ function YesNoWithText({
       )}
     </div>
   );
-}
+});
 
-// Step 1: Basic Info
-function BasicInfoStep({ form, trainees, trainerName }: StepProps) {
+const BasicInfoStep = memo(function BasicInfoStep({
+  form,
+  trainees,
+  trainerName,
+}: StepProps) {
   return (
     <Card>
       <CardHeader>
@@ -252,10 +267,12 @@ function BasicInfoStep({ form, trainees, trainerName }: StepProps) {
       </CardContent>
     </Card>
   );
-}
+});
 
-// Step 2: Trainee Issues
-function TraineeIssuesStep({ form, trainees }: Omit<StepProps, "trainerName">) {
+const TraineeIssuesStep = memo(function TraineeIssuesStep({
+  form,
+  trainees,
+}: Omit<StepProps, "trainerName">) {
   return (
     <Card>
       <CardHeader>
@@ -305,7 +322,7 @@ function TraineeIssuesStep({ form, trainees }: Omit<StepProps, "trainerName">) {
       </CardContent>
     </Card>
   );
-}
+});
 
 type PerTraineeField =
   | "achievements_per_trainee"
@@ -319,17 +336,96 @@ type BoolField =
   | "has_achievements"
   | "has_worked_on_focus";
 
-/** Reusable per-trainee categories + details section */
-function PerTraineeCategoriesSection({
-  form,
-  trainees,
-  label,
-  boolField,
-  traineeIdsField,
+interface PerTraineeEntry {
+  details?: string;
+  categories?: AchievementCategory[];
+}
+
+interface PerTraineeCardProps {
+  traineeId: string;
+  traineeName: string;
+  perTraineeField: PerTraineeField;
+  control: Control<ShiftReportFormData>;
+  setValue: UseFormSetValue<ShiftReportFormData>;
+  getValues: UseFormGetValues<ShiftReportFormData>;
+  categoriesLabel: string;
+  detailsPlaceholder: string;
+}
+
+/** One trainee's card. Subscribed only to its own per-trainee path so typing
+ * here does not re-render sibling cards or the parent section. */
+const PerTraineeCard = memo(function PerTraineeCard({
+  traineeId,
+  traineeName,
   perTraineeField,
+  control,
+  setValue,
+  getValues,
   categoriesLabel,
   detailsPlaceholder,
-}: {
+}: PerTraineeCardProps) {
+  const entryPath = `${perTraineeField}.${traineeId}` as FieldPath<ShiftReportFormData>;
+  const detailsPath = `${perTraineeField}.${traineeId}.details` as FieldPath<ShiftReportFormData>;
+  const categoriesPath = `${perTraineeField}.${traineeId}.categories` as FieldPath<ShiftReportFormData>;
+
+  const entry = useWatch({ control, name: entryPath }) as PerTraineeEntry | undefined;
+  const details = entry?.details ?? "";
+  const categories = entry?.categories ?? [];
+
+  const handleDetailsChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setValue(detailsPath, e.target.value);
+    },
+    [setValue, detailsPath]
+  );
+
+  const handleToggleCategory = useCallback(
+    (category: AchievementCategory) => {
+      const current =
+        (getValues(categoriesPath) as AchievementCategory[] | undefined) ?? [];
+      const updated = current.includes(category)
+        ? current.filter((c) => c !== category)
+        : [...current, category];
+      setValue(categoriesPath, updated);
+    },
+    [getValues, setValue, categoriesPath]
+  );
+
+  return (
+    <div className="rounded-lg border bg-card p-4 space-y-3">
+      <h4 className="font-medium text-sm">{traineeName}</h4>
+
+      <div>
+        <p className="text-sm text-muted-foreground mb-2">{categoriesLabel}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {ACHIEVEMENT_CATEGORIES.map((cat) => (
+            <label
+              key={cat}
+              className="flex items-center gap-2 text-sm cursor-pointer"
+            >
+              <Checkbox
+                checked={categories.includes(cat)}
+                onCheckedChange={() => handleToggleCategory(cat)}
+              />
+              {cat}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm text-muted-foreground mb-1">פרטים</p>
+        <Textarea
+          placeholder={detailsPlaceholder}
+          value={details}
+          onChange={handleDetailsChange}
+        />
+      </div>
+    </div>
+  );
+});
+
+interface PerTraineeCategoriesSectionProps {
   form: UseFormReturn<ShiftReportFormData>;
   trainees: TraineeOption[];
   label: string;
@@ -338,48 +434,46 @@ function PerTraineeCategoriesSection({
   perTraineeField: PerTraineeField;
   categoriesLabel: string;
   detailsPlaceholder: string;
-}) {
-  const isYes = form.watch(boolField) as boolean;
-  const selectedIds = (form.watch(traineeIdsField) as string[]) || [];
-  const perTrainee = form.watch(perTraineeField) || {};
+}
 
-  const updatePerTrainee = (
-    traineeId: string,
-    field: "details" | "categories",
-    value: string | string[]
-  ) => {
-    const current = form.getValues(perTraineeField) || {};
-    const entry = current[traineeId] || { details: "", categories: [] };
-    form.setValue(perTraineeField, {
-      ...current,
-      [traineeId]: { ...entry, [field]: value },
-    });
-  };
+/** Reusable per-trainee categories + details section. Parent does NOT
+ * subscribe to perTraineeField — each PerTraineeCard subscribes to its own
+ * sub-path so a keystroke on one card only re-renders that card. */
+const PerTraineeCategoriesSection = memo(function PerTraineeCategoriesSection({
+  form,
+  trainees,
+  label,
+  boolField,
+  traineeIdsField,
+  perTraineeField,
+  categoriesLabel,
+  detailsPlaceholder,
+}: PerTraineeCategoriesSectionProps) {
+  const isYes = useWatch({ control: form.control, name: boolField }) as boolean;
+  const selectedIds =
+    (useWatch({ control: form.control, name: traineeIdsField }) as string[]) || [];
 
-  const handleTraineeIdsChange = (newIds: string[]) => {
-    form.setValue(traineeIdsField, newIds);
-    // Clean up removed trainees from per-trainee data
-    const current = form.getValues(perTraineeField) || {};
-    const cleaned: typeof current = {};
-    for (const id of newIds) {
-      cleaned[id] = current[id] || { details: "", categories: [] };
+  const traineeNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const t of trainees) {
+      map[t.id] = t.full_name || "מתאמן";
     }
-    form.setValue(perTraineeField, cleaned);
-  };
+    return map;
+  }, [trainees]);
 
-  const toggleCategory = (traineeId: string, category: AchievementCategory) => {
-    const current = form.getValues(perTraineeField) || {};
-    const entry = current[traineeId] || { details: "", categories: [] };
-    const cats = entry.categories || [];
-    const updated = cats.includes(category)
-      ? cats.filter((c) => c !== category)
-      : [...cats, category];
-    updatePerTrainee(traineeId, "categories", updated);
-  };
-
-  const getTraineeName = (tid: string) => {
-    return trainees.find((t) => t.id === tid)?.full_name || "מתאמן";
-  };
+  const handleTraineeIdsChange = useCallback(
+    (newIds: string[]) => {
+      form.setValue(traineeIdsField, newIds);
+      // Initialize entries for newly added trainees, drop entries for removed ones
+      const current = form.getValues(perTraineeField) || {};
+      const cleaned: typeof current = {};
+      for (const id of newIds) {
+        cleaned[id] = current[id] || { details: "", categories: [] };
+      }
+      form.setValue(perTraineeField, cleaned);
+    },
+    [form, traineeIdsField, perTraineeField]
+  );
 
   return (
     <div className="space-y-3">
@@ -428,55 +522,29 @@ function PerTraineeCategoriesSection({
             )}
           />
 
-          {selectedIds.map((traineeId) => {
-            const entry = perTrainee[traineeId] || { details: "", categories: [] };
-            return (
-              <div
-                key={traineeId}
-                className="rounded-lg border bg-card p-4 space-y-3"
-              >
-                <h4 className="font-medium text-sm">{getTraineeName(traineeId)}</h4>
-
-                {/* Category checkboxes */}
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">{categoriesLabel}</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {ACHIEVEMENT_CATEGORIES.map((cat) => (
-                      <label
-                        key={cat}
-                        className="flex items-center gap-2 text-sm cursor-pointer"
-                      >
-                        <Checkbox
-                          checked={(entry.categories || []).includes(cat)}
-                          onCheckedChange={() => toggleCategory(traineeId, cat)}
-                        />
-                        {cat}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Details text */}
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">פרטים</p>
-                  <Textarea
-                    placeholder={detailsPlaceholder}
-                    value={entry.details || ""}
-                    onChange={(e) =>
-                      updatePerTrainee(traineeId, "details", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-            );
-          })}
+          {selectedIds.map((traineeId) => (
+            <PerTraineeCard
+              key={traineeId}
+              traineeId={traineeId}
+              traineeName={traineeNameMap[traineeId] || "מתאמן"}
+              perTraineeField={perTraineeField}
+              control={form.control}
+              setValue={form.setValue}
+              getValues={form.getValues}
+              categoriesLabel={categoriesLabel}
+              detailsPlaceholder={detailsPlaceholder}
+            />
+          ))}
         </div>
       )}
     </div>
   );
-}
+});
 
-function TraineePositivesStep({ form, trainees }: Omit<StepProps, "trainerName">) {
+const TraineePositivesStep = memo(function TraineePositivesStep({
+  form,
+  trainees,
+}: Omit<StepProps, "trainerName">) {
   return (
     <Card>
       <CardHeader>
@@ -546,10 +614,13 @@ function TraineePositivesStep({ form, trainees }: Omit<StepProps, "trainerName">
       </CardContent>
     </Card>
   );
-}
+});
 
-// Step 4: Parents & Visitors
-function ParentsVisitorsStep({ form }: { form: UseFormReturn<ShiftReportFormData> }) {
+const ParentsVisitorsStep = memo(function ParentsVisitorsStep({
+  form,
+}: {
+  form: UseFormReturn<ShiftReportFormData>;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -582,10 +653,13 @@ function ParentsVisitorsStep({ form }: { form: UseFormReturn<ShiftReportFormData
       </CardContent>
     </Card>
   );
-}
+});
 
-// Step 5: Facility
-function FacilityStep({ form }: { form: UseFormReturn<ShiftReportFormData> }) {
+const FacilityStep = memo(function FacilityStep({
+  form,
+}: {
+  form: UseFormReturn<ShiftReportFormData>;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -612,7 +686,7 @@ function FacilityStep({ form }: { form: UseFormReturn<ShiftReportFormData> }) {
       </CardContent>
     </Card>
   );
-}
+});
 
 interface ShiftReportStepContentProps {
   step: number;

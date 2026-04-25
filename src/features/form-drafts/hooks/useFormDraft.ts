@@ -38,16 +38,29 @@ export function useFormDraft<TFormData extends FieldValues>(
     autoSaveInterval = DEFAULT_AUTO_SAVE_INTERVAL,
   } = options;
 
-  const [isDraftAvailable, setIsDraftAvailable] = useState(() => !!loadDraft<TFormData>(formId));
+  const [initialDraft] = useState(() => loadDraft<TFormData>(formId));
+  const hasInitialDraft = !!initialDraft;
+
+  const [isDraftAvailable, setIsDraftAvailable] = useState(hasInitialDraft);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(() => {
-    const draft = loadDraft<TFormData>(formId);
-    return draft ? new Date(draft.metadata.savedAt) : null;
-  });
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(() => !!loadDraft<TFormData>(formId));
+  const [lastSaved, setLastSaved] = useState<Date | null>(
+    initialDraft ? new Date(initialDraft.metadata.savedAt) : null
+  );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(hasInitialDraft);
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialLoadDoneRef = useRef(false);
+  // Refs guard the hot watcher path so we only call setState on transitions,
+  // not on every keystroke.
+  const isAutoSavingRef = useRef(false);
+  const hasUnsavedChangesRef = useRef(hasInitialDraft);
+  // Latest defaultValues kept in a ref so the autosave effect dependency list
+  // stays stable across parent re-renders (which would otherwise tear down
+  // and re-create the form-watch subscription on every render).
+  const defaultValuesRef = useRef(defaultValues);
+  useEffect(() => {
+    defaultValuesRef.current = defaultValues;
+  }, [defaultValues]);
 
   // Clear draft from storage and cancel any pending auto-save
   const clearDraft = useCallback(() => {
@@ -57,9 +70,12 @@ export function useFormDraft<TFormData extends FieldValues>(
       autoSaveTimerRef.current = null;
     }
     removeDraft(formId);
+    isAutoSavingRef.current = false;
+    hasUnsavedChangesRef.current = false;
     setIsDraftAvailable(false);
     setLastSaved(null);
     setHasUnsavedChanges(false);
+    setIsAutoSaving(false);
   }, [formId]);
 
   // Discard draft and reset form to defaults
@@ -69,34 +85,28 @@ export function useFormDraft<TFormData extends FieldValues>(
     toast.success("הטיוטה נמחקה");
   }, [clearDraft, form, defaultValues]);
 
-  // Check for existing draft on mount
   useEffect(() => {
     if (initialLoadDoneRef.current) return;
     initialLoadDoneRef.current = true;
 
-    const draft = loadDraft<TFormData>(formId);
-    if (draft) {
-      // Restore draft immediately and show toast with discard option
-      form.reset(draft.data);
+    if (!initialDraft) return;
 
-      const savedDate = new Date(draft.metadata.savedAt);
-      const formattedDate = savedDate.toLocaleDateString("he-IL", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+    form.reset(initialDraft.data);
 
-      toast("טיוטה שוחזרה", {
-        description: `נשמרה ב-${formattedDate}`,
-        action: {
-          label: "מחק טיוטה",
-          onClick: discardDraft,
-        },
-        duration: 10000,
-      });
-    }
-  }, [formId, form, discardDraft]);
+    const formattedDate = new Date(initialDraft.metadata.savedAt).toLocaleDateString(
+      "he-IL",
+      { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }
+    );
+
+    toast("טיוטה שוחזרה", {
+      description: `נשמרה ב-${formattedDate}`,
+      action: {
+        label: "מחק טיוטה",
+        onClick: discardDraft,
+      },
+      duration: 10000,
+    });
+  }, [initialDraft, form, discardDraft]);
 
   // Auto-save functionality with debouncing
   useEffect(() => {
@@ -107,18 +117,27 @@ export function useFormDraft<TFormData extends FieldValues>(
       }
 
       // Check if there's meaningful data to save
-      if (!hasMeaningfulData(data as TFormData, defaultValues as TFormData)) {
+      if (!hasMeaningfulData(data as TFormData, defaultValuesRef.current as TFormData)) {
         return;
       }
 
-      setIsAutoSaving(true);
-      setHasUnsavedChanges(true);
+      // Only call setState on the transition false -> true. After that the
+      // ref short-circuits all subsequent keystrokes.
+      if (!isAutoSavingRef.current) {
+        isAutoSavingRef.current = true;
+        setIsAutoSaving(true);
+      }
+      if (!hasUnsavedChangesRef.current) {
+        hasUnsavedChangesRef.current = true;
+        setHasUnsavedChanges(true);
+      }
 
       // Set new timer for debounced save
       autoSaveTimerRef.current = setTimeout(() => {
         const currentValues = form.getValues();
         saveDraft(formId, currentValues, expiryDays);
         setLastSaved(new Date());
+        isAutoSavingRef.current = false;
         setIsAutoSaving(false);
       }, autoSaveInterval);
     });
@@ -129,7 +148,7 @@ export function useFormDraft<TFormData extends FieldValues>(
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [form, formId, expiryDays, autoSaveInterval, defaultValues]);
+  }, [form, formId, expiryDays, autoSaveInterval]);
 
   // Browser beforeunload warning
   useEffect(() => {

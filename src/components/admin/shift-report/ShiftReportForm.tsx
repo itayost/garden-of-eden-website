@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,9 +98,11 @@ export function ShiftReportForm({
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
-  const defaultValues = existingReport
-    ? reportToFormData(existingReport)
-    : DEFAULT_SHIFT_REPORT;
+  const defaultValues = useMemo(
+    () =>
+      existingReport ? reportToFormData(existingReport) : DEFAULT_SHIFT_REPORT,
+    [existingReport]
+  );
 
   const form = useForm<ShiftReportFormData>({
     resolver: zodResolver(shiftReportSchema),
