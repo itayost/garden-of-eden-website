@@ -22,10 +22,12 @@ export const ACHIEVEMENT_CATEGORIES = [
 
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
 
-/** Per-trainee entry (achievements, worked-on focus) */
+/** Per-trainee entry. `categories` is set for sections with a category
+ * taxonomy (achievements, worked-on focus); for details-only sections it
+ * is omitted. */
 const perTraineeEntry = z.object({
   details: z.string().max(MAX_TEXT).optional(),
-  categories: z.array(z.enum(ACHIEVEMENT_CATEGORIES)),
+  categories: z.array(z.enum(ACHIEVEMENT_CATEGORIES)).optional(),
 });
 
 export const shiftReportSchema = z.object({
@@ -38,19 +40,23 @@ export const shiftReportSchema = z.object({
   trained_new_trainees: z.boolean(),
   new_trainees_ids: z.array(z.string()),
   new_trainees_details: optionalText,
+  new_trainees_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   // Step 2: Trainee Issues
   has_discipline_issues: z.boolean(),
   discipline_trainee_ids: z.array(z.string()),
   discipline_details: optionalText,
+  discipline_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   has_injuries: z.boolean(),
   injuries_trainee_ids: z.array(z.string()),
   injuries_details: optionalText,
+  injuries_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   has_physical_limitations: z.boolean(),
   limitations_trainee_ids: z.array(z.string()),
   limitations_details: optionalText,
+  limitations_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   // Step 2b: Trainer focus per trainee (what was worked on)
   has_worked_on_focus: z.boolean(),
@@ -67,22 +73,27 @@ export const shiftReportSchema = z.object({
   has_poor_mental_state: z.boolean(),
   mental_state_trainee_ids: z.array(z.string()),
   mental_state_details: optionalText,
+  mental_state_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   has_complaints: z.boolean(),
   complaints_trainee_ids: z.array(z.string()),
   complaints_details: optionalText,
+  complaints_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   has_insufficient_attention: z.boolean(),
   insufficient_attention_trainee_ids: z.array(z.string()),
   insufficient_attention_details: optionalText,
+  insufficient_attention_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   has_pro_candidates: z.boolean(),
   pro_candidates_trainee_ids: z.array(z.string()),
   pro_candidates_details: optionalText,
+  pro_candidates_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   has_social_skills: z.boolean(),
   social_skills_trainee_ids: z.array(z.string()),
   social_skills_details: optionalText,
+  social_skills_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
   // Step 4: Parents & Visitors
   has_parent_seeking_staff: z.boolean(),
@@ -109,15 +120,19 @@ export const DEFAULT_SHIFT_REPORT: ShiftReportFormData = {
   trained_new_trainees: false,
   new_trainees_ids: [],
   new_trainees_details: "",
+  new_trainees_per_trainee: {},
   has_discipline_issues: false,
   discipline_trainee_ids: [],
   discipline_details: "",
+  discipline_per_trainee: {},
   has_injuries: false,
   injuries_trainee_ids: [],
   injuries_details: "",
+  injuries_per_trainee: {},
   has_physical_limitations: false,
   limitations_trainee_ids: [],
   limitations_details: "",
+  limitations_per_trainee: {},
   has_worked_on_focus: false,
   worked_on_trainee_ids: [],
   worked_on_details: "",
@@ -129,18 +144,23 @@ export const DEFAULT_SHIFT_REPORT: ShiftReportFormData = {
   has_poor_mental_state: false,
   mental_state_trainee_ids: [],
   mental_state_details: "",
+  mental_state_per_trainee: {},
   has_complaints: false,
   complaints_trainee_ids: [],
   complaints_details: "",
+  complaints_per_trainee: {},
   has_insufficient_attention: false,
   insufficient_attention_trainee_ids: [],
   insufficient_attention_details: "",
+  insufficient_attention_per_trainee: {},
   has_pro_candidates: false,
   pro_candidates_trainee_ids: [],
   pro_candidates_details: "",
+  pro_candidates_per_trainee: {},
   has_social_skills: false,
   social_skills_trainee_ids: [],
   social_skills_details: "",
+  social_skills_per_trainee: {},
   has_parent_seeking_staff: false,
   parent_seeking_details: "",
   has_external_visitors: false,

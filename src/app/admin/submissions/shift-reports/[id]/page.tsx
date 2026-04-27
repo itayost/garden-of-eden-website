@@ -111,7 +111,7 @@ function PerTraineeCategoriesSection({
 }: {
   label: string;
   isYes: boolean;
-  perTrainee: Record<string, { details?: string; categories: string[] }> | null;
+  perTrainee: Record<string, { details?: string; categories?: string[] }> | null;
   legacyTraineeIds?: string[] | null;
   legacyDetails?: string | null;
   traineeMap: Map<string, string>;
@@ -222,7 +222,7 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
     notFound();
   }
 
-  // Collect all trainee IDs from the report
+  // Collect all trainee IDs from the report (legacy id arrays + per-trainee JSONB keys)
   const allTraineeIds = new Set<string>();
   const traineeFields = [
     report.new_trainees_ids,
@@ -244,17 +244,24 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
       }
     }
   }
-  // Also collect trainee IDs from per-trainee JSONB fields
-  const perTraineeAchievements = report.achievements_per_trainee as Record<string, unknown> | null;
-  if (perTraineeAchievements) {
-    for (const tid of Object.keys(perTraineeAchievements)) {
-      allTraineeIds.add(tid);
-    }
-  }
-  const perTraineeWorkedOn = report.worked_on_per_trainee as Record<string, unknown> | null;
-  if (perTraineeWorkedOn) {
-    for (const tid of Object.keys(perTraineeWorkedOn)) {
-      allTraineeIds.add(tid);
+  const perTraineeJsonbFields = [
+    report.new_trainees_per_trainee,
+    report.discipline_per_trainee,
+    report.injuries_per_trainee,
+    report.limitations_per_trainee,
+    report.worked_on_per_trainee,
+    report.achievements_per_trainee,
+    report.mental_state_per_trainee,
+    report.complaints_per_trainee,
+    report.insufficient_attention_per_trainee,
+    report.pro_candidates_per_trainee,
+    report.social_skills_per_trainee,
+  ] as (Record<string, unknown> | null)[];
+  for (const perTrainee of perTraineeJsonbFields) {
+    if (perTrainee) {
+      for (const tid of Object.keys(perTrainee)) {
+        allTraineeIds.add(tid);
+      }
     }
   }
 
@@ -357,11 +364,12 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="אימון מתאמנים חדשים"
               isYes={report.trained_new_trainees}
-              traineeIds={report.new_trainees_ids}
-              details={report.new_trainees_details}
+              perTrainee={report.new_trainees_per_trainee}
+              legacyTraineeIds={report.new_trainees_ids}
+              legacyDetails={report.new_trainees_details}
               traineeMap={traineeMap}
             />
           </CardContent>
@@ -376,27 +384,30 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="בעיות משמעת"
               isYes={report.has_discipline_issues}
-              traineeIds={report.discipline_trainee_ids}
-              details={report.discipline_details}
+              perTrainee={report.discipline_per_trainee}
+              legacyTraineeIds={report.discipline_trainee_ids}
+              legacyDetails={report.discipline_details}
               traineeMap={traineeMap}
             />
             <Separator />
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="פציעות"
               isYes={report.has_injuries}
-              traineeIds={report.injuries_trainee_ids}
-              details={report.injuries_details}
+              perTrainee={report.injuries_per_trainee}
+              legacyTraineeIds={report.injuries_trainee_ids}
+              legacyDetails={report.injuries_details}
               traineeMap={traineeMap}
             />
             <Separator />
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="מגבלות פיזיות"
               isYes={report.has_physical_limitations}
-              traineeIds={report.limitations_trainee_ids}
-              details={report.limitations_details}
+              perTrainee={report.limitations_per_trainee}
+              legacyTraineeIds={report.limitations_trainee_ids}
+              legacyDetails={report.limitations_details}
               traineeMap={traineeMap}
             />
           </CardContent>
@@ -440,43 +451,48 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
               traineeMap={traineeMap}
             />
             <Separator />
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="מצב נפשי ירוד"
               isYes={report.has_poor_mental_state}
-              traineeIds={report.mental_state_trainee_ids}
-              details={report.mental_state_details}
+              perTrainee={report.mental_state_per_trainee}
+              legacyTraineeIds={report.mental_state_trainee_ids}
+              legacyDetails={report.mental_state_details}
               traineeMap={traineeMap}
             />
             <Separator />
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="תלונות על אימון"
               isYes={report.has_complaints}
-              traineeIds={report.complaints_trainee_ids}
-              details={report.complaints_details}
+              perTrainee={report.complaints_per_trainee}
+              legacyTraineeIds={report.complaints_trainee_ids}
+              legacyDetails={report.complaints_details}
               traineeMap={traineeMap}
             />
             <Separator />
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="תשומת לב לא מספקת"
               isYes={report.has_insufficient_attention}
-              traineeIds={report.insufficient_attention_trainee_ids}
-              details={report.insufficient_attention_details}
+              perTrainee={report.insufficient_attention_per_trainee}
+              legacyTraineeIds={report.insufficient_attention_trainee_ids}
+              legacyDetails={report.insufficient_attention_details}
               traineeMap={traineeMap}
             />
             <Separator />
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="מועמד לתוכנית PRO"
               isYes={report.has_pro_candidates}
-              traineeIds={report.pro_candidates_trainee_ids}
-              details={report.pro_candidates_details}
+              perTrainee={report.pro_candidates_per_trainee}
+              legacyTraineeIds={report.pro_candidates_trainee_ids}
+              legacyDetails={report.pro_candidates_details}
               traineeMap={traineeMap}
             />
             <Separator />
-            <ReportSection
+            <PerTraineeCategoriesSection
               label="כישורים חברתיים"
               isYes={report.has_social_skills}
-              traineeIds={report.social_skills_trainee_ids}
-              details={report.social_skills_details}
+              perTrainee={report.social_skills_per_trainee}
+              legacyTraineeIds={report.social_skills_trainee_ids}
+              legacyDetails={report.social_skills_details}
               traineeMap={traineeMap}
             />
           </CardContent>

@@ -1,14 +1,7 @@
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
-import {
-  type Control,
-  type FieldPath,
-  type UseFormGetValues,
-  type UseFormReturn,
-  type UseFormSetValue,
-  useWatch,
-} from "react-hook-form";
+import { memo } from "react";
+import { type UseFormReturn, useWatch } from "react-hook-form";
 import {
   FormControl,
   FormField,
@@ -25,14 +18,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { type TraineeOption } from "./TraineeMultiSelect";
 import {
-  TraineeMultiSelect,
-  type TraineeOption,
-} from "./TraineeMultiSelect";
+  PerTraineeCategoriesSection,
+  PerTraineeDetailsSection,
+} from "./PerTraineeSections";
 import type { ShiftReportFormData } from "@/lib/validations/shift-report";
-import { ACHIEVEMENT_CATEGORIES, type AchievementCategory } from "@/lib/validations/shift-report";
 
 export const SHIFT_REPORT_STEPS = [
   { key: "basic", title: "מידע בסיסי" },
@@ -47,98 +39,6 @@ interface StepProps {
   trainees: TraineeOption[];
   trainerName: string;
 }
-
-interface YesNoWithTraineesProps {
-  form: UseFormReturn<ShiftReportFormData>;
-  label: string;
-  boolField: keyof ShiftReportFormData;
-  traineeIdsField: keyof ShiftReportFormData;
-  detailsField: keyof ShiftReportFormData;
-  detailsPlaceholder: string;
-  trainees: TraineeOption[];
-}
-
-/** Reusable yes/no question with conditional trainee multi-select + text details */
-const YesNoWithTrainees = memo(function YesNoWithTrainees({
-  form,
-  label,
-  boolField,
-  traineeIdsField,
-  detailsField,
-  detailsPlaceholder,
-  trainees,
-}: YesNoWithTraineesProps) {
-  const isYes = useWatch({ control: form.control, name: boolField }) as boolean;
-
-  return (
-    <div className="space-y-3">
-      <FormField
-        control={form.control}
-        name={boolField}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{label}</FormLabel>
-            <Select
-              onValueChange={(v) => field.onChange(v === "true")}
-              value={field.value ? "true" : "false"}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="false">לא</SelectItem>
-                <SelectItem value="true">כן</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {isYes && (
-        <div className="space-y-3 pr-4 border-r-2 border-primary/20">
-          <FormField
-            control={form.control}
-            name={traineeIdsField}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>בחר מתאמנים</FormLabel>
-                <FormControl>
-                  <TraineeMultiSelect
-                    trainees={trainees}
-                    selected={(field.value as string[]) || []}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name={detailsField}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>פרטים</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder={detailsPlaceholder}
-                    {...field}
-                    value={(field.value as string) || ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      )}
-    </div>
-  );
-});
 
 interface YesNoWithTextProps {
   form: UseFormReturn<ShiftReportFormData>;
@@ -255,14 +155,14 @@ const BasicInfoStep = memo(function BasicInfoStep({
           )}
         />
 
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם אימנת מתאמנים חדשים?"
           boolField="trained_new_trainees"
           traineeIdsField="new_trainees_ids"
-          detailsField="new_trainees_details"
-          detailsPlaceholder="פרט את התקדמות האימון של המתאמנים החדשים"
-          trainees={trainees}
+          perTraineeField="new_trainees_per_trainee"
+          detailsPlaceholder="פרט את התקדמות האימון של המתאמן"
         />
       </CardContent>
     </Card>
@@ -279,34 +179,34 @@ const TraineeIssuesStep = memo(function TraineeIssuesStep({
         <CardTitle>בעיות מתאמנים</CardTitle>
       </CardHeader>
       <CardContent className="space-y-8">
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם הייתה בעיית משמעת עם מתאמן?"
           boolField="has_discipline_issues"
           traineeIdsField="discipline_trainee_ids"
-          detailsField="discipline_details"
-          detailsPlaceholder="פרט את בעיית המשמעת"
-          trainees={trainees}
+          perTraineeField="discipline_per_trainee"
+          detailsPlaceholder="פרט את בעיית המשמעת של המתאמן"
         />
 
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם זיהית או שמעת על פציעה של מתאמן?"
           boolField="has_injuries"
           traineeIdsField="injuries_trainee_ids"
-          detailsField="injuries_details"
-          detailsPlaceholder="פרט את הפציעה"
-          trainees={trainees}
+          perTraineeField="injuries_per_trainee"
+          detailsPlaceholder="פרט את הפציעה של המתאמן"
         />
 
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם זיהית מגבלות פיזיות או צורך בשיפור ביצועים?"
           boolField="has_physical_limitations"
           traineeIdsField="limitations_trainee_ids"
-          detailsField="limitations_details"
-          detailsPlaceholder="פרט את המגבלות או הצורך בשיפור"
-          trainees={trainees}
+          perTraineeField="limitations_per_trainee"
+          detailsPlaceholder="פרט את המגבלות או הצורך בשיפור של המתאמן"
         />
 
         <PerTraineeCategoriesSection
@@ -321,223 +221,6 @@ const TraineeIssuesStep = memo(function TraineeIssuesStep({
         />
       </CardContent>
     </Card>
-  );
-});
-
-type PerTraineeField =
-  | "achievements_per_trainee"
-  | "worked_on_per_trainee";
-
-type TraineeIdsField =
-  | "achievements_trainee_ids"
-  | "worked_on_trainee_ids";
-
-type BoolField =
-  | "has_achievements"
-  | "has_worked_on_focus";
-
-interface PerTraineeEntry {
-  details?: string;
-  categories?: AchievementCategory[];
-}
-
-interface PerTraineeCardProps {
-  traineeId: string;
-  traineeName: string;
-  perTraineeField: PerTraineeField;
-  control: Control<ShiftReportFormData>;
-  setValue: UseFormSetValue<ShiftReportFormData>;
-  getValues: UseFormGetValues<ShiftReportFormData>;
-  categoriesLabel: string;
-  detailsPlaceholder: string;
-}
-
-/** One trainee's card. Subscribed only to its own per-trainee path so typing
- * here does not re-render sibling cards or the parent section. */
-const PerTraineeCard = memo(function PerTraineeCard({
-  traineeId,
-  traineeName,
-  perTraineeField,
-  control,
-  setValue,
-  getValues,
-  categoriesLabel,
-  detailsPlaceholder,
-}: PerTraineeCardProps) {
-  const entryPath = `${perTraineeField}.${traineeId}` as FieldPath<ShiftReportFormData>;
-  const detailsPath = `${perTraineeField}.${traineeId}.details` as FieldPath<ShiftReportFormData>;
-  const categoriesPath = `${perTraineeField}.${traineeId}.categories` as FieldPath<ShiftReportFormData>;
-
-  const entry = useWatch({ control, name: entryPath }) as PerTraineeEntry | undefined;
-  const details = entry?.details ?? "";
-  const categories = entry?.categories ?? [];
-
-  const handleDetailsChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setValue(detailsPath, e.target.value);
-    },
-    [setValue, detailsPath]
-  );
-
-  const handleToggleCategory = useCallback(
-    (category: AchievementCategory) => {
-      const current =
-        (getValues(categoriesPath) as AchievementCategory[] | undefined) ?? [];
-      const updated = current.includes(category)
-        ? current.filter((c) => c !== category)
-        : [...current, category];
-      setValue(categoriesPath, updated);
-    },
-    [getValues, setValue, categoriesPath]
-  );
-
-  return (
-    <div className="rounded-lg border bg-card p-4 space-y-3">
-      <h4 className="font-medium text-sm">{traineeName}</h4>
-
-      <div>
-        <p className="text-sm text-muted-foreground mb-2">{categoriesLabel}</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {ACHIEVEMENT_CATEGORIES.map((cat) => (
-            <label
-              key={cat}
-              className="flex items-center gap-2 text-sm cursor-pointer"
-            >
-              <Checkbox
-                checked={categories.includes(cat)}
-                onCheckedChange={() => handleToggleCategory(cat)}
-              />
-              {cat}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="text-sm text-muted-foreground mb-1">פרטים</p>
-        <Textarea
-          placeholder={detailsPlaceholder}
-          value={details}
-          onChange={handleDetailsChange}
-        />
-      </div>
-    </div>
-  );
-});
-
-interface PerTraineeCategoriesSectionProps {
-  form: UseFormReturn<ShiftReportFormData>;
-  trainees: TraineeOption[];
-  label: string;
-  boolField: BoolField;
-  traineeIdsField: TraineeIdsField;
-  perTraineeField: PerTraineeField;
-  categoriesLabel: string;
-  detailsPlaceholder: string;
-}
-
-/** Reusable per-trainee categories + details section. Parent does NOT
- * subscribe to perTraineeField — each PerTraineeCard subscribes to its own
- * sub-path so a keystroke on one card only re-renders that card. */
-const PerTraineeCategoriesSection = memo(function PerTraineeCategoriesSection({
-  form,
-  trainees,
-  label,
-  boolField,
-  traineeIdsField,
-  perTraineeField,
-  categoriesLabel,
-  detailsPlaceholder,
-}: PerTraineeCategoriesSectionProps) {
-  const isYes = useWatch({ control: form.control, name: boolField }) as boolean;
-  const selectedIds =
-    (useWatch({ control: form.control, name: traineeIdsField }) as string[]) || [];
-
-  const traineeNameMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const t of trainees) {
-      map[t.id] = t.full_name || "מתאמן";
-    }
-    return map;
-  }, [trainees]);
-
-  const handleTraineeIdsChange = useCallback(
-    (newIds: string[]) => {
-      form.setValue(traineeIdsField, newIds);
-      // Initialize entries for newly added trainees, drop entries for removed ones
-      const current = form.getValues(perTraineeField) || {};
-      const cleaned: typeof current = {};
-      for (const id of newIds) {
-        cleaned[id] = current[id] || { details: "", categories: [] };
-      }
-      form.setValue(perTraineeField, cleaned);
-    },
-    [form, traineeIdsField, perTraineeField]
-  );
-
-  return (
-    <div className="space-y-3">
-      <FormField
-        control={form.control}
-        name={boolField}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{label}</FormLabel>
-            <Select
-              onValueChange={(v) => field.onChange(v === "true")}
-              value={field.value ? "true" : "false"}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="false">לא</SelectItem>
-                <SelectItem value="true">כן</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {isYes && (
-        <div className="space-y-4 pr-4 border-r-2 border-primary/20">
-          <FormField
-            control={form.control}
-            name={traineeIdsField}
-            render={() => (
-              <FormItem>
-                <FormLabel>בחר מתאמנים</FormLabel>
-                <FormControl>
-                  <TraineeMultiSelect
-                    trainees={trainees}
-                    selected={selectedIds}
-                    onChange={handleTraineeIdsChange}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {selectedIds.map((traineeId) => (
-            <PerTraineeCard
-              key={traineeId}
-              traineeId={traineeId}
-              traineeName={traineeNameMap[traineeId] || "מתאמן"}
-              perTraineeField={perTraineeField}
-              control={form.control}
-              setValue={form.setValue}
-              getValues={form.getValues}
-              categoriesLabel={categoriesLabel}
-              detailsPlaceholder={detailsPlaceholder}
-            />
-          ))}
-        </div>
-      )}
-    </div>
   );
 });
 
@@ -562,54 +245,54 @@ const TraineePositivesStep = memo(function TraineePositivesStep({
           detailsPlaceholder="פרט את ההישגים או השיפורים"
         />
 
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם זיהית מתאמן במצב נפשי ירוד?"
           boolField="has_poor_mental_state"
           traineeIdsField="mental_state_trainee_ids"
-          detailsField="mental_state_details"
-          detailsPlaceholder="פרט את המצב הנפשי"
-          trainees={trainees}
+          perTraineeField="mental_state_per_trainee"
+          detailsPlaceholder="פרט את המצב הנפשי של המתאמן"
         />
 
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם מתאמן התלונן על איכות/משך/יחס באימון?"
           boolField="has_complaints"
           traineeIdsField="complaints_trainee_ids"
-          detailsField="complaints_details"
-          detailsPlaceholder="פרט את התלונה"
-          trainees={trainees}
+          perTraineeField="complaints_per_trainee"
+          detailsPlaceholder="פרט את התלונה של המתאמן"
         />
 
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם היה מתאמן שלא קיבל מספיק תשומת לב?"
           boolField="has_insufficient_attention"
           traineeIdsField="insufficient_attention_trainee_ids"
-          detailsField="insufficient_attention_details"
-          detailsPlaceholder="פרט והסבר"
-          trainees={trainees}
+          perTraineeField="insufficient_attention_per_trainee"
+          detailsPlaceholder="פרט והסבר לגבי המתאמן"
         />
 
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם זיהית מתאמן מתאים לשדרוג תוכנית PRO?"
           boolField="has_pro_candidates"
           traineeIdsField="pro_candidates_trainee_ids"
-          detailsField="pro_candidates_details"
+          perTraineeField="pro_candidates_per_trainee"
           detailsPlaceholder="פרט מדוע המתאמן מתאים לשדרוג"
-          trainees={trainees}
         />
 
-        <YesNoWithTrainees
+        <PerTraineeDetailsSection
           form={form}
+          trainees={trainees}
           label="האם יש שחקנים שהפגינו כישורים חברתיים בולטים?"
           boolField="has_social_skills"
           traineeIdsField="social_skills_trainee_ids"
-          detailsField="social_skills_details"
-          detailsPlaceholder="פרט את הכישורים החברתיים שזיהית"
-          trainees={trainees}
+          perTraineeField="social_skills_per_trainee"
+          detailsPlaceholder="פרט את הכישורים החברתיים שזיהית אצל המתאמן"
         />
       </CardContent>
     </Card>

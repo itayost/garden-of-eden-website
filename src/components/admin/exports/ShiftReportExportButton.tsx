@@ -62,19 +62,19 @@ export function ShiftReportExportButton({
       };
 
       const csvData = submissions.map((s) => {
-        const achievementsPerTraineeText = formatPerTrainee(
-          s.achievements_per_trainee as Record<
-            string,
-            { details?: string; categories?: string[] }
-          > | null,
-        );
+        type PerTraineeJsonb = Record<string, { details?: string; categories?: string[] }> | null;
 
-        const workedOnPerTraineeText = formatPerTrainee(
-          s.worked_on_per_trainee as Record<
-            string,
-            { details?: string; categories?: string[] }
-          > | null,
-        );
+        const newTraineesPerTraineeText = formatPerTrainee(s.new_trainees_per_trainee as PerTraineeJsonb);
+        const disciplinePerTraineeText = formatPerTrainee(s.discipline_per_trainee as PerTraineeJsonb);
+        const injuriesPerTraineeText = formatPerTrainee(s.injuries_per_trainee as PerTraineeJsonb);
+        const limitationsPerTraineeText = formatPerTrainee(s.limitations_per_trainee as PerTraineeJsonb);
+        const workedOnPerTraineeText = formatPerTrainee(s.worked_on_per_trainee as PerTraineeJsonb);
+        const achievementsPerTraineeText = formatPerTrainee(s.achievements_per_trainee as PerTraineeJsonb);
+        const mentalStatePerTraineeText = formatPerTrainee(s.mental_state_per_trainee as PerTraineeJsonb);
+        const complaintsPerTraineeText = formatPerTrainee(s.complaints_per_trainee as PerTraineeJsonb);
+        const insufficientAttentionPerTraineeText = formatPerTrainee(s.insufficient_attention_per_trainee as PerTraineeJsonb);
+        const proCandidatesPerTraineeText = formatPerTrainee(s.pro_candidates_per_trainee as PerTraineeJsonb);
+        const socialSkillsPerTraineeText = formatPerTrainee(s.social_skills_per_trainee as PerTraineeJsonb);
 
         return {
           "מאמן": s.trainer_name,
@@ -82,15 +82,19 @@ export function ShiftReportExportButton({
           "מתאמנים חדשים": yesNo(s.trained_new_trainees),
           "שמות - מתאמנים חדשים": resolveNames(s.new_trainees_ids),
           "פרטי מתאמנים חדשים": s.new_trainees_details ?? "",
+          "מתאמנים חדשים לפי מתאמן": newTraineesPerTraineeText,
           "בעיות משמעת": yesNo(s.has_discipline_issues),
           "שמות - משמעת": resolveNames(s.discipline_trainee_ids),
           "פרטי משמעת": s.discipline_details ?? "",
+          "משמעת לפי מתאמן": disciplinePerTraineeText,
           "פציעות": yesNo(s.has_injuries),
           "שמות - פציעות": resolveNames(s.injuries_trainee_ids),
           "פרטי פציעות": s.injuries_details ?? "",
+          "פציעות לפי מתאמן": injuriesPerTraineeText,
           "מגבלות פיזיות": yesNo(s.has_physical_limitations),
           "שמות - מגבלות": resolveNames(s.limitations_trainee_ids),
           "פרטי מגבלות": s.limitations_details ?? "",
+          "מגבלות לפי מתאמן": limitationsPerTraineeText,
           "עבודה ממוקדת": yesNo(s.has_worked_on_focus),
           "שמות - עבודה ממוקדת": resolveNames(s.worked_on_trainee_ids),
           "פרטי עבודה ממוקדת": s.worked_on_details ?? "",
@@ -102,18 +106,23 @@ export function ShiftReportExportButton({
           "מצב נפשי ירוד": yesNo(s.has_poor_mental_state),
           "שמות - מצב נפשי": resolveNames(s.mental_state_trainee_ids),
           "פרטי מצב נפשי": s.mental_state_details ?? "",
+          "מצב נפשי לפי מתאמן": mentalStatePerTraineeText,
           "תלונות": yesNo(s.has_complaints),
           "שמות - תלונות": resolveNames(s.complaints_trainee_ids),
           "פרטי תלונות": s.complaints_details ?? "",
+          "תלונות לפי מתאמן": complaintsPerTraineeText,
           "תשומת לב לא מספקת": yesNo(s.has_insufficient_attention),
           "שמות - תשומת לב": resolveNames(s.insufficient_attention_trainee_ids),
           "פרטי תשומת לב": s.insufficient_attention_details ?? "",
+          "תשומת לב לפי מתאמן": insufficientAttentionPerTraineeText,
           "מועמד PRO": yesNo(s.has_pro_candidates),
           "שמות - PRO": resolveNames(s.pro_candidates_trainee_ids),
           "פרטי PRO": s.pro_candidates_details ?? "",
+          "PRO לפי מתאמן": proCandidatesPerTraineeText,
           "כישורים חברתיים": yesNo(s.has_social_skills),
           "שמות - כישורים חברתיים": resolveNames(s.social_skills_trainee_ids),
           "פרטי כישורים חברתיים": s.social_skills_details ?? "",
+          "כישורים חברתיים לפי מתאמן": socialSkillsPerTraineeText,
           "הורה חיפש צוות": yesNo(s.has_parent_seeking_staff),
           "פרטי הורה": s.parent_seeking_details ?? "",
           "מבקרים חיצוניים": yesNo(s.has_external_visitors),
