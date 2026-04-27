@@ -24,9 +24,21 @@ import type { SubmissionQueryParams } from "@/lib/actions/admin-submissions-list
 
 const PAGE_SIZE = 20;
 
-function FlagBadge({ active, label }: { active: boolean; label: string }) {
+function FlagBadge({
+  active,
+  label,
+  variant = "destructive",
+}: {
+  active: boolean;
+  label: string;
+  variant?: "destructive" | "default";
+}) {
   if (!active) return null;
-  return <Badge variant="destructive" className="text-xs">{label}</Badge>;
+  return (
+    <Badge variant={variant} className="text-xs">
+      {label}
+    </Badge>
+  );
 }
 
 export function ShiftReportContent({
@@ -145,6 +157,11 @@ export function ShiftReportContent({
                     <FlagBadge active={report.has_complaints} label="תלונות" />
                     <FlagBadge active={report.has_pro_candidates} label="PRO" />
                     <FlagBadge active={!report.facility_left_clean} label="ניקיון" />
+                    <FlagBadge
+                      active={report.has_worked_on_focus}
+                      label="עבודה ממוקדת"
+                      variant="default"
+                    />
                     {!report.has_injuries &&
                       !report.has_discipline_issues &&
                       !report.has_poor_mental_state &&
@@ -189,6 +206,11 @@ export function ShiftReportContent({
                           <FlagBadge active={report.has_complaints} label="תלונות" />
                           <FlagBadge active={report.has_pro_candidates} label="PRO" />
                           <FlagBadge active={!report.facility_left_clean} label="ניקיון" />
+                          <FlagBadge
+                            active={report.has_worked_on_focus}
+                            label="עבודה ממוקדת"
+                            variant="default"
+                          />
                           {!report.has_injuries &&
                             !report.has_discipline_issues &&
                             !report.has_poor_mental_state &&

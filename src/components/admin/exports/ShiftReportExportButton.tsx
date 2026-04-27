@@ -43,27 +43,38 @@ export function ShiftReportExportButton({
         return ids.map((id) => traineeMap[id] || id.slice(0, 8)).join(", ");
       };
 
-      const csvData = submissions.map((s) => {
-        const perTrainee = s.achievements_per_trainee as Record<
-          string,
-          { details?: string; categories?: string[] }
-        > | null;
+      const formatPerTrainee = (
+        perTrainee: Record<string, { details?: string; categories?: string[] }> | null,
+      ): string => {
+        if (!perTrainee || Object.keys(perTrainee).length === 0) return "";
+        return Object.entries(perTrainee)
+          .map(([tid, entry]) => {
+            const name = traineeMap[tid] || tid.slice(0, 8);
+            const cats =
+              entry.categories && entry.categories.length > 0
+                ? `[${entry.categories.join(", ")}]`
+                : "";
+            const details = entry.details || "";
+            const parts = [cats, details].filter(Boolean).join(" - ");
+            return parts ? `${name}: ${parts}` : name;
+          })
+          .join("; ");
+      };
 
-        let achievementsPerTraineeText = "";
-        if (perTrainee && Object.keys(perTrainee).length > 0) {
-          achievementsPerTraineeText = Object.entries(perTrainee)
-            .map(([tid, entry]) => {
-              const name = traineeMap[tid] || tid.slice(0, 8);
-              const cats =
-                entry.categories && entry.categories.length > 0
-                  ? `[${entry.categories.join(", ")}]`
-                  : "";
-              const details = entry.details || "";
-              const parts = [cats, details].filter(Boolean).join(" - ");
-              return parts ? `${name}: ${parts}` : name;
-            })
-            .join("; ");
-        }
+      const csvData = submissions.map((s) => {
+        const achievementsPerTraineeText = formatPerTrainee(
+          s.achievements_per_trainee as Record<
+            string,
+            { details?: string; categories?: string[] }
+          > | null,
+        );
+
+        const workedOnPerTraineeText = formatPerTrainee(
+          s.worked_on_per_trainee as Record<
+            string,
+            { details?: string; categories?: string[] }
+          > | null,
+        );
 
         return {
           "מאמן": s.trainer_name,
@@ -80,6 +91,10 @@ export function ShiftReportExportButton({
           "מגבלות פיזיות": yesNo(s.has_physical_limitations),
           "שמות - מגבלות": resolveNames(s.limitations_trainee_ids),
           "פרטי מגבלות": s.limitations_details ?? "",
+          "עבודה ממוקדת": yesNo(s.has_worked_on_focus),
+          "שמות - עבודה ממוקדת": resolveNames(s.worked_on_trainee_ids),
+          "פרטי עבודה ממוקדת": s.worked_on_details ?? "",
+          "עבודה ממוקדת לפי מתאמן": workedOnPerTraineeText,
           "הישגים": yesNo(s.has_achievements),
           "שמות - הישגים": resolveNames(s.achievements_trainee_ids),
           "פרטי הישגים": s.achievements_details ?? "",

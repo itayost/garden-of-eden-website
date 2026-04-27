@@ -21,6 +21,7 @@ import {
   Users,
   Building,
   Pencil,
+  Target,
 } from "lucide-react";
 import type { TrainerShiftReport } from "@/types/database";
 
@@ -98,30 +99,34 @@ function ReportSection({
   );
 }
 
-/** Renders achievements with per-trainee breakdown (new format) or legacy fallback */
-function AchievementsSection({
-  report,
+/** Renders a per-trainee categories section with new JSONB format and legacy fallback.
+ * Used for both `achievements_per_trainee` and `worked_on_per_trainee`. */
+function PerTraineeCategoriesSection({
+  label,
+  isYes,
+  perTrainee,
+  legacyTraineeIds,
+  legacyDetails,
   traineeMap,
 }: {
-  report: TrainerShiftReport;
+  label: string;
+  isYes: boolean;
+  perTrainee: Record<string, { details?: string; categories: string[] }> | null;
+  legacyTraineeIds?: string[] | null;
+  legacyDetails?: string | null;
   traineeMap: Map<string, string>;
 }) {
-  const perTrainee = report.achievements_per_trainee as Record<
-    string,
-    { details?: string; categories: string[] }
-  > | null;
-
   const hasPerTraineeData =
-    perTrainee && Object.keys(perTrainee).length > 0;
+    !!perTrainee && Object.keys(perTrainee).length > 0;
 
   return (
     <>
-      <FieldRow label="הישגים יוצאי דופן">
-        <YesNoBadge value={report.has_achievements} />
+      <FieldRow label={label}>
+        <YesNoBadge value={isYes} />
       </FieldRow>
-      {report.has_achievements && hasPerTraineeData && (
+      {isYes && hasPerTraineeData && (
         <>
-          {Object.entries(perTrainee).map(([traineeId, entry]) => (
+          {Object.entries(perTrainee!).map(([traineeId, entry]) => (
             <div key={traineeId}>
               <Separator />
               <div className="py-2 space-y-1">
@@ -149,30 +154,27 @@ function AchievementsSection({
           ))}
         </>
       )}
-      {report.has_achievements && !hasPerTraineeData && (
+      {isYes && !hasPerTraineeData && (
         <>
-          {report.achievements_trainee_ids &&
-            report.achievements_trainee_ids.length > 0 && (
-              <>
-                <Separator />
-                <FieldRow label="מתאמנים">
-                  <TraineeNames
-                    ids={report.achievements_trainee_ids}
-                    traineeMap={traineeMap}
-                  />
-                </FieldRow>
-              </>
-            )}
-          {report.achievements_details && (
+          {legacyTraineeIds && legacyTraineeIds.length > 0 && (
+            <>
+              <Separator />
+              <FieldRow label="מתאמנים">
+                <TraineeNames
+                  ids={legacyTraineeIds}
+                  traineeMap={traineeMap}
+                />
+              </FieldRow>
+            </>
+          )}
+          {legacyDetails && (
             <>
               <Separator />
               <div className="py-2">
                 <span className="text-muted-foreground text-sm block mb-1">
                   פרטים
                 </span>
-                <p className="text-sm whitespace-pre-wrap">
-                  {report.achievements_details}
-                </p>
+                <p className="text-sm whitespace-pre-wrap">{legacyDetails}</p>
               </div>
             </>
           )}
@@ -227,6 +229,7 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
     report.discipline_trainee_ids,
     report.injuries_trainee_ids,
     report.limitations_trainee_ids,
+    report.worked_on_trainee_ids,
     report.achievements_trainee_ids,
     report.mental_state_trainee_ids,
     report.complaints_trainee_ids,
@@ -241,10 +244,16 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
       }
     }
   }
-  // Also collect trainee IDs from per-trainee achievements JSONB
+  // Also collect trainee IDs from per-trainee JSONB fields
   const perTraineeAchievements = report.achievements_per_trainee as Record<string, unknown> | null;
   if (perTraineeAchievements) {
     for (const tid of Object.keys(perTraineeAchievements)) {
+      allTraineeIds.add(tid);
+    }
+  }
+  const perTraineeWorkedOn = report.worked_on_per_trainee as Record<string, unknown> | null;
+  if (perTraineeWorkedOn) {
+    for (const tid of Object.keys(perTraineeWorkedOn)) {
       allTraineeIds.add(tid);
     }
   }
@@ -393,6 +402,26 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
           </CardContent>
         </Card>
 
+        {/* Step 2b: Worked On Focus */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Target className="h-5 w-5" />
+              עבודה ממוקדת
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <PerTraineeCategoriesSection
+              label="עבודה על נושאים ספציפיים"
+              isYes={report.has_worked_on_focus}
+              perTrainee={report.worked_on_per_trainee}
+              legacyTraineeIds={report.worked_on_trainee_ids}
+              legacyDetails={report.worked_on_details}
+              traineeMap={traineeMap}
+            />
+          </CardContent>
+        </Card>
+
         {/* Step 3: Positives & Wellbeing */}
         <Card>
           <CardHeader>
@@ -402,7 +431,14 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <AchievementsSection report={report} traineeMap={traineeMap} />
+            <PerTraineeCategoriesSection
+              label="הישגים יוצאי דופן"
+              isYes={report.has_achievements}
+              perTrainee={report.achievements_per_trainee}
+              legacyTraineeIds={report.achievements_trainee_ids}
+              legacyDetails={report.achievements_details}
+              traineeMap={traineeMap}
+            />
             <Separator />
             <ReportSection
               label="מצב נפשי ירוד"
