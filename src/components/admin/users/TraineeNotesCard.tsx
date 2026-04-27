@@ -46,6 +46,7 @@ const CATEGORY_COLORS: Record<NoteCategoryType, string> = {
   discipline: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
   injuries: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
   limitations: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+  worked_on: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
   achievements: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
   mental_state: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
   complaints: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",

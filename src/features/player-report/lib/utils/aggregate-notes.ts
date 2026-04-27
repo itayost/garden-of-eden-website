@@ -21,6 +21,7 @@ const WEAKNESS_CATEGORIES = new Set([
   "mental_state",
   "complaints",
   "insufficient_attention",
+  "worked_on",
 ]);
 const SOCIAL_CATEGORIES = new Set(["social_skills"]);
 

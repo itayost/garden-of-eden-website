@@ -74,7 +74,20 @@ export async function getReportData(
   // Fetch shift reports mentioning this trainee in date range
   const { data: shiftReports } = await supabase
     .from("trainer_shift_reports")
-    .select("id, report_date, trainer_name, new_trainees_ids, new_trainees_details, discipline_trainee_ids, discipline_details, injuries_trainee_ids, injuries_details, limitations_trainee_ids, limitations_details, achievements_trainee_ids, achievements_details, achievements_per_trainee, mental_state_trainee_ids, mental_state_details, complaints_trainee_ids, complaints_details, insufficient_attention_trainee_ids, insufficient_attention_details, pro_candidates_trainee_ids, pro_candidates_details, has_social_skills, social_skills_trainee_ids, social_skills_details")
+    .select(
+      "id, trainer_id, report_date, trainer_name, " +
+      "new_trainees_ids, new_trainees_details, new_trainees_per_trainee, " +
+      "discipline_trainee_ids, discipline_details, discipline_per_trainee, " +
+      "injuries_trainee_ids, injuries_details, injuries_per_trainee, " +
+      "limitations_trainee_ids, limitations_details, limitations_per_trainee, " +
+      "worked_on_trainee_ids, worked_on_details, worked_on_per_trainee, " +
+      "achievements_trainee_ids, achievements_details, achievements_per_trainee, " +
+      "mental_state_trainee_ids, mental_state_details, mental_state_per_trainee, " +
+      "complaints_trainee_ids, complaints_details, complaints_per_trainee, " +
+      "insufficient_attention_trainee_ids, insufficient_attention_details, insufficient_attention_per_trainee, " +
+      "pro_candidates_trainee_ids, pro_candidates_details, pro_candidates_per_trainee, " +
+      "has_social_skills, social_skills_trainee_ids, social_skills_details, social_skills_per_trainee"
+    )
     .gte("report_date", fromDate)
     .lte("report_date", toDate)
     .order("report_date", { ascending: false })
