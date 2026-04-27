@@ -132,6 +132,7 @@ export function TraineeNotesCard({
       const result = await editTraineeNote(
         editingNote.reportId,
         traineeId,
+        editingNote.type,
         editText,
       );
       if ("error" in result && result.error) {
@@ -246,22 +247,20 @@ export function TraineeNotesCard({
 
                           {showActions && !isEditing && (
                             <div className="flex items-center gap-1 shrink-0">
-                              {note.type === "achievements" && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() =>
-                                    handleStartEdit(
-                                      report.reportId,
-                                      note.type,
-                                      note.details,
-                                    )
-                                  }
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() =>
+                                  handleStartEdit(
+                                    report.reportId,
+                                    note.type,
+                                    note.details,
+                                  )
+                                }
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
                               <DeleteConfirmDialog
                                 title="מחיקת הערה"
                                 description="האם למחוק הערה זו? לא ניתן לשחזר פעולה זו."

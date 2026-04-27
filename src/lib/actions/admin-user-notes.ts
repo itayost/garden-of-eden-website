@@ -84,8 +84,8 @@ export async function getTraineeNotes(
 
 /**
  * Delete a trainee from a specific note category in a shift report.
- * Removes the trainee ID from the category's UUID array.
- * For achievements, also removes the per-trainee JSONB entry.
+ * Removes the trainee ID from the category's UUID array AND removes the
+ * per-trainee JSONB entry for that section.
  */
 export async function deleteTraineeNote(
   reportId: string,
@@ -106,10 +106,13 @@ export async function deleteTraineeNote(
 
   const supabase = await createClient();
 
-  // Fetch the report for ownership check and current data
+  // Fetch the report for ownership check and current data.
+  // The select string is dynamic; cast to string so Supabase's literal
+  // inference doesn't produce a too-complex union type.
+  const selectStr: string = `trainer_id, ${categoryCol.traineeIdsKey}, ${categoryCol.perTraineeKey}`;
   const { data: report, error: fetchError } = await supabase
     .from("trainer_shift_reports")
-    .select("trainer_id, " + categoryCol.traineeIdsKey + ", achievements_per_trainee")
+    .select(selectStr)
     .eq("id", reportId)
     .single();
 
@@ -117,7 +120,6 @@ export async function deleteTraineeNote(
     return { error: "דוח לא נמצא" };
   }
 
-  // Cast to Record for dynamic key access (Supabase returns unknown shape for dynamic selects)
   const reportData = report as unknown as Record<string, unknown>;
 
   // Permission check: trainers can only edit their own reports
@@ -129,18 +131,19 @@ export async function deleteTraineeNote(
   const currentIds = (reportData[categoryCol.traineeIdsKey] as string[]) ?? [];
   const updatedIds = currentIds.filter((id: string) => id !== traineeId);
 
-  // Build update payload
   const updatePayload: Record<string, unknown> = {
     [categoryCol.traineeIdsKey]: updatedIds,
   };
 
-  // For achievements: also remove from per-trainee JSONB
-  if (categoryType === "achievements" && reportData.achievements_per_trainee) {
-    const { [traineeId]: _removed, ...remaining } = reportData.achievements_per_trainee as Record<
-      string,
-      { details?: string; categories: string[] }
-    >;
-    updatePayload.achievements_per_trainee = remaining;
+  // Also remove from per-trainee JSONB (key omission, not value nulling)
+  const currentPerTrainee = reportData[categoryCol.perTraineeKey] as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  if (currentPerTrainee && Object.prototype.hasOwnProperty.call(currentPerTrainee, traineeId)) {
+    const { [traineeId]: _removed, ...remaining } = currentPerTrainee;
+    void _removed;
+    updatePayload[categoryCol.perTraineeKey] = remaining;
   }
 
   const { error: updateError } = await supabase
@@ -158,16 +161,24 @@ export async function deleteTraineeNote(
 }
 
 /**
- * Edit the per-trainee details for an achievements note.
- * Only works for the achievements category (which has per-trainee JSONB).
+ * Edit the per-trainee details for any shift-report category.
+ * Updates `<section>_per_trainee[traineeId].details`, preserving any
+ * existing `categories` array on the entry (relevant for achievements +
+ * worked_on which support category taxonomy).
  */
 export async function editTraineeNote(
   reportId: string,
   traineeId: string,
+  categoryType: NoteCategoryType,
   newDetails: string,
 ): Promise<ActionResult> {
   if (!isValidUUID(reportId) || !isValidUUID(traineeId)) {
     return { error: "מזהה לא תקין" };
+  }
+
+  const categoryCol = CATEGORY_COLUMNS.find((c) => c.type === categoryType);
+  if (!categoryCol) {
+    return { error: "קטגוריה לא תקינה" };
   }
 
   const trimmedDetails = newDetails.trim();
@@ -177,10 +188,13 @@ export async function editTraineeNote(
 
   const supabase = await createClient();
 
-  // Fetch the report for ownership check and current JSONB data
+  // Fetch the report for ownership check and current JSONB data.
+  // Cast select string to plain `string` so Supabase's literal inference
+  // doesn't produce a too-complex union type.
+  const selectStr: string = `trainer_id, ${categoryCol.traineeIdsKey}, ${categoryCol.perTraineeKey}`;
   const { data: report, error: fetchError } = await supabase
     .from("trainer_shift_reports")
-    .select("trainer_id, achievements_trainee_ids, achievements_per_trainee")
+    .select(selectStr)
     .eq("id", reportId)
     .single();
 
@@ -188,23 +202,25 @@ export async function editTraineeNote(
     return { error: "דוח לא נמצא" };
   }
 
+  const reportData = report as unknown as Record<string, unknown>;
+
   // Permission check: trainers can only edit their own reports
-  if (profile!.role !== "admin" && report.trainer_id !== user!.id) {
+  if (profile!.role !== "admin" && reportData.trainer_id !== user!.id) {
     return { error: "אין הרשאה לערוך דוח זה" };
   }
 
-  // Validate trainee exists in achievements array (prevents JSONB injection)
-  const achievementIds = (report.achievements_trainee_ids as string[]) ?? [];
-  if (!achievementIds.includes(traineeId)) {
-    return { error: "המתאמן לא נמצא בקטגוריית הישגים" };
+  // Validate trainee exists in the category's array (prevents JSONB injection)
+  const traineeIds = (reportData[categoryCol.traineeIdsKey] as string[]) ?? [];
+  if (!traineeIds.includes(traineeId)) {
+    return { error: "המתאמן לא נמצא בקטגוריה זו" };
   }
 
-  // Update the per-trainee JSONB entry, preserving categories
-  const currentPerTrainee = (report.achievements_per_trainee ?? {}) as Record<
+  // Update the per-trainee JSONB entry, preserving categories if present
+  const currentPerTrainee = (reportData[categoryCol.perTraineeKey] ?? {}) as Record<
     string,
-    { details?: string; categories: string[] }
+    { details?: string; categories?: string[] }
   >;
-  const existingEntry = currentPerTrainee[traineeId] ?? { categories: [] };
+  const existingEntry = currentPerTrainee[traineeId] ?? {};
   const updatedPerTrainee = {
     ...currentPerTrainee,
     [traineeId]: {
@@ -215,7 +231,7 @@ export async function editTraineeNote(
 
   const { error: updateError } = await supabase
     .from("trainer_shift_reports")
-    .update({ achievements_per_trainee: updatedPerTrainee })
+    .update({ [categoryCol.perTraineeKey]: updatedPerTrainee })
     .eq("id", reportId);
 
   if (updateError) {
