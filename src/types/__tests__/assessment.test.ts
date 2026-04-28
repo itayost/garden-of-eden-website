@@ -89,13 +89,31 @@ describe("getAgeGroup", () => {
   it("handles birthday edge: day of birthday", () => {
     // Born 2016-02-15 -> today is 2026-02-15 -> birthday today -> age 10
     const result = getAgeGroup("2016-02-15");
-    expect(result?.id).toBe("u12"); // age 10
+    expect(result?.id).toBe("u10"); // age 10 (U10 inclusive)
   });
 
-  it("handles U10 boundary (age 10 goes to U12)", () => {
+  it("includes age 10 in U10 (inclusive upper bound)", () => {
     // Born 2016-01-01 -> age 10
     const result = getAgeGroup("2016-01-01");
+    expect(result?.id).toBe("u10");
+  });
+
+  it("includes age 12 in U12 (inclusive upper bound)", () => {
+    // Born 2014-01-01 -> age 12 (the original Yarin Lipschitz bug)
+    const result = getAgeGroup("2014-01-01");
     expect(result?.id).toBe("u12");
+  });
+
+  it("includes age 15 in U15 (inclusive upper bound)", () => {
+    // Born 2011-01-01 -> age 15
+    const result = getAgeGroup("2011-01-01");
+    expect(result?.id).toBe("u15");
+  });
+
+  it("includes age 18 in U18 (inclusive upper bound)", () => {
+    // Born 2008-01-01 -> age 18
+    const result = getAgeGroup("2008-01-01");
+    expect(result?.id).toBe("u18");
   });
 
   it("accepts Date object", () => {

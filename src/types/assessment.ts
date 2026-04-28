@@ -39,10 +39,10 @@ export interface AgeGroup {
 
 export const AGE_GROUPS: AgeGroup[] = [
   { id: "u10", label: "U10", labelHe: "עד 10", minAge: 0, maxAge: 10 },
-  { id: "u12", label: "U12", labelHe: "עד 12", minAge: 10, maxAge: 12 },
-  { id: "u15", label: "U15", labelHe: "עד 15", minAge: 12, maxAge: 15 },
-  { id: "u18", label: "U18", labelHe: "עד 18", minAge: 15, maxAge: 18 },
-  { id: "senior", label: "Senior", labelHe: "בוגרים", minAge: 18, maxAge: 99 },
+  { id: "u12", label: "U12", labelHe: "עד 12", minAge: 11, maxAge: 12 },
+  { id: "u15", label: "U15", labelHe: "עד 15", minAge: 13, maxAge: 15 },
+  { id: "u18", label: "U18", labelHe: "עד 18", minAge: 16, maxAge: 18 },
+  { id: "senior", label: "Senior", labelHe: "בוגרים", minAge: 19, maxAge: 99 },
 ];
 
 export function getAgeGroup(birthdate: Date | string | null): AgeGroup | null {
@@ -57,7 +57,7 @@ export function getAgeGroup(birthdate: Date | string | null): AgeGroup | null {
     age--;
   }
 
-  return AGE_GROUPS.find(g => age >= g.minAge && age < g.maxAge) || AGE_GROUPS[AGE_GROUPS.length - 1];
+  return AGE_GROUPS.find(g => age >= g.minAge && age <= g.maxAge) || AGE_GROUPS[AGE_GROUPS.length - 1];
 }
 
 // ===========================================
