@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Max lengths for string inputs
 const MAX_SELECT_LENGTH = 50;
-const MAX_SHORT_TEXT = 200;
+export const MAX_SHORT_TEXT = 200;
 const MAX_MEDIUM_TEXT = 500;
 const MAX_LONG_TEXT = 2000;
 

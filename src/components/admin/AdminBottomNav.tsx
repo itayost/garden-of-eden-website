@@ -15,6 +15,7 @@ import {
   Clock,
   UserPlus,
   RefreshCw,
+  Calendar,
 } from "lucide-react";
 import { BottomNav, type BottomNavItem } from "@/components/ui/bottom-nav";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -29,6 +30,7 @@ const mainItems: BottomNavItem[] = [
 
 const moreItems = [
   { href: "/admin/leads", label: "לידים", icon: UserPlus, adminOnly: false },
+  { href: "/admin/upcoming-games", label: "משחקים קרובים", icon: Calendar, adminOnly: false },
   { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, adminOnly: false },
   { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, adminOnly: false },
   { href: "/admin/nutrition", label: "תזונה", icon: Utensils, adminOnly: false },

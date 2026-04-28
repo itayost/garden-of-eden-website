@@ -26,6 +26,7 @@ import {
   Clock,
   UserPlus,
   RefreshCw,
+  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, adminOnly: false },
   { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, adminOnly: false },
   { href: "/admin/leads", label: "לידים", icon: UserPlus, adminOnly: false },
+  { href: "/admin/upcoming-games", label: "משחקים קרובים", icon: Calendar, adminOnly: false },
   { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw, adminOnly: false },
   { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: true },
 ];

@@ -23,6 +23,14 @@
     {
       "path": "/api/cron/backfill-rating-snapshots",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/reset-next-games",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-expired-clips",
+      "schedule": "15 1 * * *"
     }
   ]
 }

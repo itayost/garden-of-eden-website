@@ -17,6 +17,8 @@ import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
+import { NextGameAdminCard } from "@/components/admin/NextGameAdminCard";
+import { ClipPlaybackCard } from "@/components/admin/ClipPlaybackCard";
 import { RadarStatsChartWrapper } from "./RadarStatsChartWrapper";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
 import type { Profile, UserRole } from "@/types/database";
@@ -211,6 +213,16 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Next Game (trainees only) */}
+          {userToEdit.role === "trainee" && (
+            <NextGameAdminCard userId={userId} />
+          )}
+
+          {/* Trainee Clip (trainees only) */}
+          {userToEdit.role === "trainee" && (
+            <ClipPlaybackCard userId={userId} />
+          )}
 
           {/* Player Radar Chart (trainees only) */}
           {userToEdit.role === "trainee" && stats && (

@@ -28,6 +28,10 @@ import { GoalsList, calculateGoalProgress } from "@/features/goals";
 import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } from "@/features/achievements";
 import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
 import { NutritionMeetingBanner } from "@/features/nutrition";
+import { NextGameCard } from "@/components/dashboard/NextGameCard";
+import { getOwnNextGame } from "@/features/next-game/lib/actions/next-game";
+import { ClipUploadCard } from "@/components/dashboard/ClipUploadCard";
+import { getOwnClipWithSignedUrl } from "@/features/clips/lib/actions/clips";
 import type { UserAchievementRow } from "@/types/database";
 
 const MiniRatingChartWrapper = dynamic(
@@ -64,6 +68,11 @@ export default async function DashboardPage() {
     supabase.from("user_streaks").select("user_id, current_streak, longest_streak, last_activity_date, total_activities").eq("user_id", user?.id || "").single() as unknown as { data: UserStreakRow | null },
     supabase.from("player_goals").select("*").eq("user_id", user?.id || "").order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
     supabase.from("user_achievements").select("id, achievement_id, badge_type, unlocked_at, celebrated").eq("user_id", user?.id || "").order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null },
+  ]);
+
+  const [nextGame, ownClipWithUrl] = await Promise.all([
+    getOwnNextGame(),
+    getOwnClipWithSignedUrl(),
   ]);
 
   // Calculate goal progress for display
@@ -218,6 +227,28 @@ export default async function DashboardPage() {
 
       {/* Nutrition Meeting Banner (1 month after registration) */}
       <NutritionMeetingBanner userCreatedAt={profile?.created_at || ""} />
+
+      {/* Next Game */}
+      <NextGameCard
+        game={
+          nextGame
+            ? { game_date: nextGame.game_date, opponent: nextGame.opponent }
+            : null
+        }
+      />
+
+      {/* Trainee Clip */}
+      <ClipUploadCard
+        clip={
+          ownClipWithUrl
+            ? {
+                uploaded_at: ownClipWithUrl.clip.uploaded_at,
+                mime_type: ownClipWithUrl.clip.mime_type,
+                signedUrl: ownClipWithUrl.signedUrl,
+              }
+            : null
+        }
+      />
 
       {/* Quick Actions */}
       <div data-tour="quick-actions">
