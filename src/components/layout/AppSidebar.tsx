@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import type { User } from "@supabase/supabase-js";
 import {
   Sidebar,
@@ -31,9 +32,13 @@ export function AppSidebar({
     <Sidebar side="right" collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <span
-            aria-hidden="true"
-            className="h-6 w-6 shrink-0 rounded-md bg-sidebar-primary"
+          <Image
+            src="/logo-transparent.png"
+            alt="Garden of Eden"
+            width={28}
+            height={28}
+            className="h-7 w-7 shrink-0 object-contain"
+            priority
           />
           <span className="font-black tracking-wide text-sidebar-foreground group-data-[collapsible=icon]:hidden">
             {headerLabel}
