@@ -37,10 +37,16 @@ export function AppTopBar({ user, profile, resolveTitle }: AppTopBarProps) {
   );
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    toast.success("התנתקת בהצלחה");
-    router.push("/");
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      toast.success("התנתקת בהצלחה");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast.error("ההתנתקות נכשלה, נסו שוב");
+    } finally {
+      router.push("/");
+    }
   };
 
   const title = resolveTitle(pathname);
