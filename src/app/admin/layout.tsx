@@ -1,7 +1,10 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminNav } from "@/components/admin/AdminNav";
+import { AdminSidebar, PAGE_TITLES } from "@/components/admin/AdminSidebar";
 import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
+import { AppTopBar } from "@/components/layout/AppTopBar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import type { Profile } from "@/types/database";
 
 export default async function AdminLayout({
@@ -16,7 +19,6 @@ export default async function AdminLayout({
     redirect("/auth/login?redirect=/admin");
   }
 
-  // Check if user is admin or trainer - only columns needed by AdminNav/AdminBottomNav
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, avatar_url, processed_avatar_url, role")
@@ -27,13 +29,24 @@ export default async function AdminLayout({
     redirect("/dashboard");
   }
 
+  const cookieStore = await cookies();
+  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
+
   return (
-    <div className="min-h-screen bg-muted/30">
-      <AdminNav user={user} profile={profile} />
-      <main className="container mx-auto px-4 pt-8 pb-20 md:pb-8">
-        {children}
-      </main>
-      <AdminBottomNav isAdmin={profile?.role === "admin"} />
-    </div>
+    <SidebarProvider defaultOpen={sidebarOpen}>
+      <AdminSidebar user={user} profile={profile} />
+      <SidebarInset>
+        <AppTopBar
+          user={user}
+          profile={profile}
+          titles={PAGE_TITLES}
+          fallbackTitle="ניהול"
+        />
+        <main className="container mx-auto px-4 pt-6 pb-20 md:pb-8">
+          {children}
+        </main>
+        <AdminBottomNav isAdmin={profile?.role === "admin"} />
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

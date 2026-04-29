@@ -24,10 +24,11 @@ export type PageTitleResolver = (pathname: string) => string;
 type AppTopBarProps = {
   user: User;
   profile: Profile | null;
-  resolveTitle: PageTitleResolver;
+  titles: Record<string, string>;
+  fallbackTitle: string;
 };
 
-export function AppTopBar({ user, profile, resolveTitle }: AppTopBarProps) {
+export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const mounted = useSyncExternalStore(
@@ -35,6 +36,8 @@ export function AppTopBar({ user, profile, resolveTitle }: AppTopBarProps) {
     () => true,
     () => false,
   );
+
+  const resolveTitle = makeTitleResolver(titles, fallbackTitle);
 
   const handleLogout = async () => {
     try {
