@@ -100,7 +100,10 @@ export function AdminSidebar({ user, profile }: AdminSidebarProps) {
     <AppSidebar
       headerLabel="GARDEN OF EDEN"
       headerBadge={
-        <Badge variant="secondary" className="ms-auto bg-gold text-earth">
+        <Badge
+          variant="secondary"
+          className="ms-auto bg-gold text-earth group-data-[collapsible=icon]:hidden"
+        >
           ניהול
         </Badge>
       }

@@ -30,12 +30,12 @@ export function AppSidebar({
   return (
     <Sidebar side="right" collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5">
+        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <span
             aria-hidden="true"
-            className="h-6 w-6 rounded-md bg-sidebar-primary"
+            className="h-6 w-6 shrink-0 rounded-md bg-sidebar-primary"
           />
-          <span className="font-black tracking-wide text-sidebar-foreground">
+          <span className="font-black tracking-wide text-sidebar-foreground group-data-[collapsible=icon]:hidden">
             {headerLabel}
           </span>
           {headerBadge}
@@ -45,14 +45,14 @@ export function AppSidebar({
       <SidebarContent>{children}</SidebarContent>
 
       <SidebarFooter>
-        <div className="flex items-center gap-2 px-2 py-1.5">
+        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <span
             aria-hidden="true"
-            className="grid h-8 w-8 place-items-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold"
           >
             {initial}
           </span>
-          <span className="truncate text-sm text-sidebar-foreground">
+          <span className="truncate text-sm text-sidebar-foreground group-data-[collapsible=icon]:hidden">
             {displayName}
           </span>
         </div>
