@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +37,10 @@ export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarPro
     () => false,
   );
 
-  const resolveTitle = makeTitleResolver(titles, fallbackTitle);
+  const resolveTitle = useMemo(
+    () => makeTitleResolver(titles, fallbackTitle),
+    [titles, fallbackTitle],
+  );
 
   const handleLogout = async () => {
     try {
@@ -55,40 +58,37 @@ export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarPro
   const title = resolveTitle(pathname);
   const displayName = profile?.full_name ?? user.phone ?? "משתמש";
 
+  const triggerButton = (
+    <Button variant="ghost" className="ms-auto gap-2">
+      <UserIcon className="h-5 w-5" />
+      <span className="hidden sm:inline">{displayName}</span>
+    </Button>
+  );
+
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border bg-background px-4">
       <SidebarTrigger />
       <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-      <div className="ms-auto">
-        {mounted ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2">
-                <UserIcon className="h-5 w-5" />
-                <span className="hidden sm:inline">{displayName}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem className="text-muted-foreground">
-                {user.phone}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="text-destructive"
-              >
-                <LogOut className="ml-2 h-4 w-4" />
-                התנתקות
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Button variant="ghost" className="gap-2">
-            <UserIcon className="h-5 w-5" />
-            <span className="hidden sm:inline">{displayName}</span>
-          </Button>
-        )}
-      </div>
+      {mounted ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="text-muted-foreground">
+              {user.phone}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+              התנתקות
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        triggerButton
+      )}
     </header>
   );
 }

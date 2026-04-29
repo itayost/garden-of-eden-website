@@ -38,7 +38,7 @@ export function AppSidebar({
           <span className="font-black tracking-wide text-sidebar-foreground">
             {headerLabel}
           </span>
-          {headerBadge ? <span className="ms-auto">{headerBadge}</span> : null}
+          {headerBadge}
         </div>
       </SidebarHeader>
 

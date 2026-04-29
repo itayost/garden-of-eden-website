@@ -23,7 +23,7 @@ export default async function AdminLayout({
     .from("profiles")
     .select("full_name, avatar_url, processed_avatar_url, role")
     .eq("id", user.id)
-    .single() as unknown as { data: Profile | null };
+    .maybeSingle() as unknown as { data: Profile | null };
 
   if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");

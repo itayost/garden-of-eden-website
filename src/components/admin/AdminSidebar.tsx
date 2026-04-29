@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { isActivePath } from "@/lib/utils/active-path";
 import {
   Calendar,
   ClipboardCheck,
@@ -34,6 +35,7 @@ type NavItem = {
   label: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  exact?: boolean;
 };
 
 type NavSection = {
@@ -44,7 +46,7 @@ type NavSection = {
 export const NAV_SECTIONS: NavSection[] = [
   {
     label: "ראשי",
-    items: [{ href: "/admin", label: "דשבורד", icon: LayoutDashboard }],
+    items: [{ href: "/admin", label: "דשבורד", icon: LayoutDashboard, exact: true }],
   },
   {
     label: "שחקנים",
@@ -78,17 +80,9 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-export const PAGE_TITLES: Record<string, string> = NAV_SECTIONS.flatMap(
-  (s) => s.items,
-).reduce<Record<string, string>>((acc, item) => {
-  acc[item.href] = item.label;
-  return acc;
-}, {});
-
-function isActive(pathname: string, href: string): boolean {
-  if (href === "/admin") return pathname === "/admin";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+export const PAGE_TITLES: Record<string, string> = Object.fromEntries(
+  NAV_SECTIONS.flatMap((s) => s.items).map((item) => [item.href, item.label]),
+);
 
 type AdminSidebarProps = {
   user: User;
@@ -103,10 +97,7 @@ export function AdminSidebar({ user, profile }: AdminSidebarProps) {
     <AppSidebar
       headerLabel="GARDEN OF EDEN"
       headerBadge={
-        <Badge
-          variant="secondary"
-          className="bg-gold text-earth"
-        >
+        <Badge variant="secondary" className="ms-auto bg-gold text-earth">
           ניהול
         </Badge>
       }
@@ -124,7 +115,7 @@ export function AdminSidebar({ user, profile }: AdminSidebarProps) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {visibleItems.map((item) => {
-                  const active = isActive(pathname, item.href);
+                  const active = isActivePath(pathname, item.href, item.exact);
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton

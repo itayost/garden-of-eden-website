@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { isActivePath } from "@/lib/utils/active-path";
 import {
   FileText,
   Home,
@@ -26,10 +27,11 @@ type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  exact?: boolean;
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "ראשי", icon: Home },
+  { href: "/dashboard", label: "ראשי", icon: Home, exact: true },
   { href: "/dashboard/assessments", label: "מבדקים", icon: Target },
   { href: "/dashboard/rankings", label: "דירוג", icon: Trophy },
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
@@ -37,17 +39,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
 ];
 
-export const PAGE_TITLES: Record<string, string> = NAV_ITEMS.reduce<
-  Record<string, string>
->((acc, item) => {
-  acc[item.href] = item.label;
-  return acc;
-}, {});
-
-function isActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard") return pathname === "/dashboard";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+export const PAGE_TITLES: Record<string, string> = Object.fromEntries(
+  NAV_ITEMS.map((item) => [item.href, item.label]),
+);
 
 type DashboardSidebarProps = {
   user: User;
@@ -66,7 +60,7 @@ export function DashboardSidebar({ user, profile }: DashboardSidebarProps) {
         <SidebarGroupContent>
           <SidebarMenu>
             {NAV_ITEMS.map((item) => {
-              const active = isActive(pathname, item.href);
+              const active = isActivePath(pathname, item.href, item.exact);
               return (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton

@@ -9,7 +9,9 @@ test.describe("desktop sidebar — accessibility", () => {
       page,
     }) => {
       await page.goto(path);
-      await expect(page.locator("[data-sidebar='sidebar']")).toBeVisible();
+      const sidebar = page.locator("[data-slot='sidebar']");
+      await expect(sidebar).toBeVisible();
+      await expect(sidebar).toHaveAttribute("data-state", "expanded");
 
       const expandedResults = await new AxeBuilder({ page })
         .include("[data-sidebar='sidebar']")
@@ -18,8 +20,7 @@ test.describe("desktop sidebar — accessibility", () => {
       expect(expandedResults.violations).toEqual([]);
 
       await page.locator("[data-sidebar='trigger']").click();
-      // Wait for collapse animation to finish.
-      await page.waitForTimeout(400);
+      await expect(sidebar).toHaveAttribute("data-state", "collapsed");
 
       const collapsedResults = await new AxeBuilder({ page })
         .include("[data-sidebar='sidebar']")
@@ -27,8 +28,8 @@ test.describe("desktop sidebar — accessibility", () => {
         .analyze();
       expect(collapsedResults.violations).toEqual([]);
 
-      // Restore expanded state for the next test.
       await page.locator("[data-sidebar='trigger']").click();
+      await expect(sidebar).toHaveAttribute("data-state", "expanded");
     });
   }
 
