@@ -83,15 +83,16 @@
   --chart-3: oklch(0.7 0.18 85);
   --chart-4: oklch(0.55 0.15 180);
   --chart-5: oklch(0.6 0.1 50);
-  /* Sidebar - Deep forest */
-  --sidebar: oklch(0.12 0.05 145);
-  --sidebar-foreground: oklch(0.95 0.01 90);
-  --sidebar-primary: oklch(0.65 0.2 145);
-  --sidebar-primary-foreground: oklch(0.12 0.05 145);
-  --sidebar-accent: oklch(0.2 0.05 145);
-  --sidebar-accent-foreground: oklch(0.95 0.01 90);
-  --sidebar-border: oklch(0.22 0.04 145);
-  --sidebar-ring: oklch(0.65 0.2 145);
+  /* Sidebar: light brand surface (cream) with forest text + accents.
+     Dark-mode block below remains unchanged (handled in a future iteration). */
+  --sidebar: oklch(99% 0.005 90);
+  --sidebar-foreground: oklch(15% 0.04 145);
+  --sidebar-primary: oklch(15% 0.04 145);
+  --sidebar-primary-foreground: oklch(99% 0.005 90);
+  --sidebar-accent: oklch(96% 0.015 145);
+  --sidebar-accent-foreground: oklch(15% 0.04 145);
+  --sidebar-border: oklch(88% 0.02 145);
+  --sidebar-ring: oklch(45% 0.15 145);
 }
 
 .dark {
