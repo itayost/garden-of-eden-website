@@ -87,7 +87,7 @@
      Dark-mode block below remains unchanged (handled in a future iteration). */
   --sidebar: oklch(99% 0.005 90);
   --sidebar-foreground: oklch(15% 0.04 145);
-  --sidebar-primary: oklch(15% 0.04 145);
+  --sidebar-primary: oklch(45% 0.15 145);
   --sidebar-primary-foreground: oklch(99% 0.005 90);
   --sidebar-accent: oklch(96% 0.015 145);
   --sidebar-accent-foreground: oklch(15% 0.04 145);
