@@ -105,7 +105,7 @@ export function AdminSidebar({ user, profile }: AdminSidebarProps) {
       headerBadge={
         <Badge
           variant="secondary"
-          className="bg-[--color-gold] text-[--color-earth]"
+          className="bg-gold text-earth"
         >
           ניהול
         </Badge>
