@@ -39,9 +39,15 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
 ];
 
-export const PAGE_TITLES: Record<string, string> = Object.fromEntries(
-  NAV_ITEMS.map((item) => [item.href, item.label]),
-);
+export const PAGE_TITLES: Record<string, string> = {
+  ...Object.fromEntries(NAV_ITEMS.map((item) => [item.href, item.label])),
+  "/dashboard/forms/next-game": "המשחק הבא שלי",
+  "/dashboard/forms/nutrition": "שאלון תזונה",
+  "/dashboard/forms/post-workout": "שאלון אחרי אימון",
+  "/dashboard/forms/pre-workout": "שאלון לפני אימון",
+  "/dashboard/settings": "הגדרות",
+  "/dashboard/settings/security": "אבטחה",
+};
 
 type DashboardSidebarProps = {
   user: User;

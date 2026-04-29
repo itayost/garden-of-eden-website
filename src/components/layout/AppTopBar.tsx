@@ -68,7 +68,7 @@ export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarPro
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border bg-background px-4">
       <SidebarTrigger />
-      <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+      <span className="text-lg font-semibold text-foreground">{title}</span>
       {mounted ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>

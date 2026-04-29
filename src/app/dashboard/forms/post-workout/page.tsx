@@ -96,6 +96,7 @@ export default function PostWorkoutFormPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <h1 className="sr-only">שאלון אחרי אימון</h1>
       <FormBackButton />
 
       <Card>

@@ -15,7 +15,12 @@ test.describe("desktop sidebar — accessibility", () => {
 
       const expandedResults = await new AxeBuilder({ page })
         .include("[data-sidebar='sidebar']")
-        .withRules(["color-contrast", "aria-required-children"])
+        .withRules([
+          "color-contrast",
+          "aria-required-children",
+          "heading-order",
+          "empty-heading",
+        ])
         .analyze();
       expect(expandedResults.violations).toEqual([]);
 
@@ -24,7 +29,12 @@ test.describe("desktop sidebar — accessibility", () => {
 
       const collapsedResults = await new AxeBuilder({ page })
         .include("[data-sidebar='sidebar']")
-        .withRules(["color-contrast", "aria-required-children"])
+        .withRules([
+          "color-contrast",
+          "aria-required-children",
+          "heading-order",
+          "empty-heading",
+        ])
         .analyze();
       expect(collapsedResults.violations).toEqual([]);
 
@@ -41,4 +51,38 @@ test.describe("desktop sidebar — accessibility", () => {
     await expect(current).toHaveCount(1);
     await expect(current).toContainText("משתמשים");
   });
+});
+
+const HEADING_ROUTES = [
+  "/admin",
+  "/admin/users",
+  "/admin/assessments",
+  "/admin/nutrition",
+  "/admin/submissions",
+  "/admin/end-of-shift",
+  "/admin/shifts",
+  "/admin/leads",
+  "/admin/upcoming-games",
+  "/admin/retention",
+  "/admin/videos",
+  "/dashboard",
+  "/dashboard/assessments",
+  "/dashboard/rankings",
+  "/dashboard/forms",
+  "/dashboard/forms/next-game",
+  "/dashboard/forms/nutrition",
+  "/dashboard/forms/post-workout",
+  "/dashboard/forms/pre-workout",
+  "/dashboard/nutrition",
+  "/dashboard/videos",
+  "/dashboard/settings/security",
+];
+
+test.describe("heading hierarchy — one h1 per page", () => {
+  for (const route of HEADING_ROUTES) {
+    test(`${route} has exactly one h1`, async ({ page }) => {
+      await page.goto(route);
+      await expect(page.locator("h1")).toHaveCount(1);
+    });
+  }
 });

@@ -63,6 +63,7 @@ export default function PreWorkoutFormPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <h1 className="sr-only">שאלון לפני אימון</h1>
       <FormBackButton />
 
       <Card>

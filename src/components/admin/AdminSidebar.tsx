@@ -80,9 +80,12 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-export const PAGE_TITLES: Record<string, string> = Object.fromEntries(
-  NAV_SECTIONS.flatMap((s) => s.items).map((item) => [item.href, item.label]),
-);
+export const PAGE_TITLES: Record<string, string> = {
+  ...Object.fromEntries(
+    NAV_SECTIONS.flatMap((s) => s.items).map((item) => [item.href, item.label]),
+  ),
+  "/admin/reports/generate": "סיכום שחקן",
+};
 
 type AdminSidebarProps = {
   user: User;

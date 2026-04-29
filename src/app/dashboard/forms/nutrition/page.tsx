@@ -103,6 +103,7 @@ export default function NutritionFormPage() {
   if (alreadyCompleted) {
     return (
       <div className="max-w-2xl mx-auto">
+        <h1 className="sr-only">שאלון תזונה</h1>
         <FormBackButton />
 
         <Card className="text-center py-12">
@@ -123,6 +124,7 @@ export default function NutritionFormPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <h1 className="sr-only">שאלון תזונה</h1>
       <FormBackButton />
 
       <Card>
