@@ -5,36 +5,42 @@ import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { resolveTraineeNamesForExport } from "@/lib/actions/admin-submissions-list";
-import type { TrainerShiftReport } from "@/types/database";
+import {
+  getAllShiftReportsForExport,
+  resolveTraineeNamesForExport,
+  SHIFT_REPORT_EXPORT_CAP,
+  type ShiftReportFilter,
+} from "@/lib/actions/admin-submissions-list";
 
 interface ShiftReportExportButtonProps {
-  submissions: TrainerShiftReport[];
+  filters: ShiftReportFilter;
+  total: number;
 }
 
 /**
- * Export button for shift reports (pre-filtered by parent)
- *
- * Features:
- * - CSV export with UTF-8 BOM for Hebrew Excel support
- * - Hebrew column headers
- * - Boolean fields exported as כן/לא
- * - Trainee names resolved from UUIDs on export click
- * - Per-trainee achievement breakdown
+ * Fetches every report matching the page's current filter (search + date
+ * range) on click — not just the visible page — so an arbitrary span exports
+ * in a single CSV.
  */
 export function ShiftReportExportButton({
-  submissions,
+  filters,
+  total,
 }: ShiftReportExportButtonProps) {
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
-    if (submissions.length === 0) {
-      toast.error("אין נתונים לייצוא");
-      return;
-    }
-
     setLoading(true);
     try {
+      const { items: submissions, truncated } = await getAllShiftReportsForExport(filters);
+      if (submissions.length === 0) {
+        toast.error("אין נתונים לייצוא");
+        return;
+      }
+      if (truncated) {
+        toast.warning(
+          `הוצגו ${SHIFT_REPORT_EXPORT_CAP} דוחות בלבד — צמצמי את טווח התאריכים לקבלת הכל`,
+        );
+      }
       const traineeMap = await resolveTraineeNamesForExport(submissions);
 
       const yesNo = (value: boolean) => (value ? "כן" : "לא");
@@ -150,7 +156,8 @@ export function ShiftReportExportButton({
       URL.revokeObjectURL(link.href);
 
       toast.success(`יוצאו ${submissions.length} דוחות`);
-    } catch {
+    } catch (error) {
+      console.error("Shift report export failed:", error);
       toast.error("שגיאה בייצוא הנתונים");
     } finally {
       setLoading(false);
@@ -161,14 +168,14 @@ export function ShiftReportExportButton({
     <Button
       onClick={handleExport}
       variant="outline"
-      disabled={submissions.length === 0 || loading}
+      disabled={total === 0 || loading}
     >
       {loading ? (
         <Loader2 className="h-4 w-4 ml-2 animate-spin" />
       ) : (
         <Download className="h-4 w-4 ml-2" />
       )}
-      {loading ? "מייצא..." : `ייצוא ל-CSV (${submissions.length})`}
+      {loading ? "מייצא..." : `ייצוא ל-CSV (${total})`}
     </Button>
   );
 }

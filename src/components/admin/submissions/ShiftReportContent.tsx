@@ -116,7 +116,14 @@ export function ShiftReportContent({
               </div>
               {isPending && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
             </div>
-            <ShiftReportExportButton submissions={items} />
+            <ShiftReportExportButton
+              filters={{
+                search: search || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+              }}
+              total={total}
+            />
           </div>
           <TableToolbar
             searchValue={search}

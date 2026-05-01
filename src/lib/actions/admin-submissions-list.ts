@@ -175,6 +175,44 @@ export async function getShiftReportsPaginated(
   return { items: data || [], total: count || 0 };
 }
 
+export type ShiftReportFilter = Pick<
+  SubmissionQueryParams,
+  "search" | "startDate" | "endDate"
+>;
+
+/** Hard cap to prevent runaway queries — well above any realistic shift-report span */
+export const SHIFT_REPORT_EXPORT_CAP = 5000;
+
+export async function getAllShiftReportsForExport(
+  filters: ShiftReportFilter
+): Promise<{ items: TrainerShiftReport[]; truncated: boolean }> {
+  const { error } = await verifyAdminOrTrainer();
+  if (error) return { items: [], truncated: false };
+
+  const supabase = await createClient();
+
+  let query = typedFrom(supabase, "trainer_shift_reports")
+    .select("*")
+    .order("report_date", { ascending: false });
+
+  if (filters.search) {
+    query = query.ilike("trainer_name", `%${filters.search}%`);
+  }
+  if (filters.startDate) {
+    query = query.gte("report_date", filters.startDate);
+  }
+  if (filters.endDate) {
+    query = query.lte("report_date", filters.endDate);
+  }
+
+  const { data } = (await query.range(0, SHIFT_REPORT_EXPORT_CAP - 1)) as unknown as {
+    data: TrainerShiftReport[] | null;
+  };
+
+  const items = data || [];
+  return { items, truncated: items.length >= SHIFT_REPORT_EXPORT_CAP };
+}
+
 /** Resolve trainee UUIDs to names for CSV export */
 export async function resolveTraineeNamesForExport(
   reports: TrainerShiftReport[]
