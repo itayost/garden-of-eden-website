@@ -271,7 +271,8 @@ const styles = StyleSheet.create({
 const METRIC_KEYS: (keyof PlayerAssessment)[] = [
   "sprint_5m", "sprint_10m", "sprint_20m",
   "jump_2leg_height", "jump_2leg_distance", "jump_right_leg", "jump_left_leg",
-  "blaze_spot_time", "kick_power_kaiser",
+  "blaze_spot_time",
+  "kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct",
   "flexibility_ankle", "flexibility_knee", "flexibility_hip",
   "coordination", "body_structure", "leg_power_technique",
 ];
@@ -406,10 +407,16 @@ export function PlayerReportPdfDocument({
                   <Text style={styles.statLabel}>{"קפיצה (ס\"מ)"}</Text>
                 </View>
               )}
-              {latestAssessment?.kick_power_kaiser != null && (
+              {latestAssessment?.kick_power_right_foot != null && (
                 <View style={styles.statBlock}>
-                  <Text style={styles.statSmallNumber}>{String(latestAssessment.kick_power_kaiser)}</Text>
-                  <Text style={styles.statLabel}>{"כוח בעיטה (W)"}</Text>
+                  <Text style={styles.statSmallNumber}>{String(latestAssessment.kick_power_right_foot)}</Text>
+                  <Text style={styles.statLabel}>{"בעיטה ימין (W)"}</Text>
+                </View>
+              )}
+              {latestAssessment?.kick_power_left_foot != null && (
+                <View style={styles.statBlock}>
+                  <Text style={styles.statSmallNumber}>{String(latestAssessment.kick_power_left_foot)}</Text>
+                  <Text style={styles.statLabel}>{"בעיטה שמאל (W)"}</Text>
                 </View>
               )}
               <View style={styles.statDivider} />

@@ -15,6 +15,8 @@ const HIGHER_IS_BETTER = new Set([
   "jump_right_leg",
   "jump_left_leg",
   "kick_power_kaiser",
+  "kick_power_right_foot",
+  "kick_power_left_foot",
   "flexibility_ankle",
   "flexibility_knee",
   "flexibility_hip",

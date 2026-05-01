@@ -6,6 +6,7 @@ const validAssessment = {
   sprint_5m: null, sprint_10m: null, sprint_20m: null,
   jump_2leg_height: null, jump_2leg_distance: null, jump_right_leg: null, jump_left_leg: null,
   blaze_spot_time: null, kick_power_kaiser: null,
+  kick_power_right_foot: null, kick_power_left_foot: null, kick_power_machine_pct: null,
   flexibility_ankle: null, flexibility_knee: null, flexibility_hip: null,
   coordination: null, leg_power_technique: null, body_structure: null,
   concentration_notes: null, decision_making_notes: null, work_ethic_notes: null,

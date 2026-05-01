@@ -618,6 +618,9 @@ export interface Database {
           leg_power_technique: "normal" | "deficient" | null;
           body_structure: "thin_weak" | "good_build" | "strong_athletic" | null;
           kick_power_kaiser: number | null;
+          kick_power_right_foot: number | null;
+          kick_power_left_foot: number | null;
+          kick_power_machine_pct: number | null;
           concentration_notes: string | null;
           decision_making_notes: string | null;
           work_ethic_notes: string | null;
@@ -648,6 +651,9 @@ export interface Database {
           leg_power_technique?: "normal" | "deficient" | null;
           body_structure?: "thin_weak" | "good_build" | "strong_athletic" | null;
           kick_power_kaiser?: number | null;
+          kick_power_right_foot?: number | null;
+          kick_power_left_foot?: number | null;
+          kick_power_machine_pct?: number | null;
           concentration_notes?: string | null;
           decision_making_notes?: string | null;
           work_ethic_notes?: string | null;
@@ -678,6 +684,9 @@ export interface Database {
           leg_power_technique?: "normal" | "deficient" | null;
           body_structure?: "thin_weak" | "good_build" | "strong_athletic" | null;
           kick_power_kaiser?: number | null;
+          kick_power_right_foot?: number | null;
+          kick_power_left_foot?: number | null;
+          kick_power_machine_pct?: number | null;
           concentration_notes?: string | null;
           decision_making_notes?: string | null;
           work_ethic_notes?: string | null;

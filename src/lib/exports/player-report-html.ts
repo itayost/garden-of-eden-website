@@ -68,7 +68,8 @@ function buildSingleValueCard(
 const NUMERIC_METRIC_KEYS: (keyof PlayerAssessment)[] = [
   "sprint_5m", "sprint_10m", "sprint_20m",
   "jump_2leg_height", "jump_2leg_distance", "jump_right_leg", "jump_left_leg",
-  "blaze_spot_time", "kick_power_kaiser",
+  "blaze_spot_time",
+  "kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct",
   "flexibility_ankle", "flexibility_knee", "flexibility_hip",
 ];
 
@@ -364,7 +365,7 @@ ${fifaCardHtml}
 <!-- Stats column -->
 <div style="width:140px;border-left:1px solid #1f2937;padding-left:16px;flex-shrink:0;">
 ${stats ? `<div style="margin-bottom:12px;"><div style="font-size:9px;color:#6b7280;">דירוג כולל</div><div style="font-size:44px;font-weight:900;color:#22c55e;line-height:1;">${stats.overall_rating ?? "—"}</div></div>
-${([{label:"ספרינט 5מ",key:"sprint_5m"as const},{label:"ספרינט 10מ",key:"sprint_10m"as const},{label:"ניתור לגובה",key:"jump_2leg_height"as const},{label:"קייזר",key:"kick_power_kaiser"as const}] as const).map(({label,key})=>{const v=latest?.[key];return `<div style="margin-bottom:8px;"><div style="font-size:9px;color:#6b7280;">${label}</div><div style="font-size:24px;font-weight:700;color:#f9fafb;">${v!==null&&v!==undefined?v:"—"}</div></div>`;}).join("")}`
+${([{label:"ספרינט 5מ",key:"sprint_5m"as const},{label:"ספרינט 10מ",key:"sprint_10m"as const},{label:"ניתור לגובה",key:"jump_2leg_height"as const},{label:"בעיטה ימין",key:"kick_power_right_foot"as const},{label:"בעיטה שמאל",key:"kick_power_left_foot"as const}] as const).map(({label,key})=>{const v=latest?.[key];return `<div style="margin-bottom:8px;"><div style="font-size:9px;color:#6b7280;">${label}</div><div style="font-size:24px;font-weight:700;color:#f9fafb;">${v!==null&&v!==undefined?v:"—"}</div></div>`;}).join("")}`
 : `<div style="color:#6b7280;font-size:11px;">אין נתוני FIFA</div>`}
 ${attendance ? `<div style="margin-top:8px;"><div style="font-size:9px;color:#6b7280;">סה"כ אימונים</div><div style="font-size:24px;font-weight:700;color:#f9fafb;">${attendance.totalSessions}</div></div>` : `<div style="color:#6b7280;font-size:10px;margin-top:8px;">נוכחות: לא זמין</div>`}
 </div>

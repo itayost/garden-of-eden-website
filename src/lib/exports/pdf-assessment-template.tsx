@@ -178,13 +178,17 @@ export function AssessmentPdfDocument({
           <View style={styles.tableHeader}>
             <Text style={styles.tableCellHeader}>תאריך</Text>
             <Text style={styles.tableCellHeader}>בלייז ספוט (פגיעות)</Text>
-            <Text style={styles.tableCellHeader}>כוח בעיטה</Text>
+            <Text style={styles.tableCellHeader}>בעיטה - ימין</Text>
+            <Text style={styles.tableCellHeader}>בעיטה - שמאל</Text>
+            <Text style={styles.tableCellHeader}>אחוזי מכשיר</Text>
           </View>
           {assessments.map((a) => (
             <View key={a.id} style={styles.tableRow}>
               <Text style={styles.tableCell}>{formatDate(a.assessment_date)}</Text>
               <Text style={styles.tableCell}>{a.blaze_spot_time ?? "---"}</Text>
-              <Text style={styles.tableCell}>{a.kick_power_kaiser ?? "---"}</Text>
+              <Text style={styles.tableCell}>{a.kick_power_right_foot ?? "---"}</Text>
+              <Text style={styles.tableCell}>{a.kick_power_left_foot ?? "---"}</Text>
+              <Text style={styles.tableCell}>{a.kick_power_machine_pct ?? "---"}</Text>
             </View>
           ))}
         </View>

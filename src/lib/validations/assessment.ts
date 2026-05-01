@@ -33,8 +33,10 @@ export const assessmentSchema = z.object({
   leg_power_technique: z.enum(["normal", "deficient"]).optional().nullable(),
   body_structure: z.enum(["thin_weak", "good_build", "strong_athletic"]).optional().nullable(),
 
-  // Kick power - Kaiser force units (0-999)
   kick_power_kaiser: z.number().min(0).max(999).optional().nullable(),
+  kick_power_right_foot: z.number().min(0).max(999).optional().nullable(),
+  kick_power_left_foot: z.number().min(0).max(999).optional().nullable(),
+  kick_power_machine_pct: z.number().min(0).max(100).optional().nullable(),
 
   // Mental notes (free text) with max length
   concentration_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
@@ -67,6 +69,9 @@ export const ASSESSMENT_FIELDS: (keyof AssessmentFormData)[] = [
   "leg_power_technique",
   "body_structure",
   "kick_power_kaiser",
+  "kick_power_right_foot",
+  "kick_power_left_foot",
+  "kick_power_machine_pct",
   "concentration_notes",
   "decision_making_notes",
   "work_ethic_notes",
@@ -93,6 +98,9 @@ export const DEFAULT_ASSESSMENT: AssessmentFormData = {
   leg_power_technique: null,
   body_structure: null,
   kick_power_kaiser: null,
+  kick_power_right_foot: null,
+  kick_power_left_foot: null,
+  kick_power_machine_pct: null,
   concentration_notes: null,
   decision_making_notes: null,
   work_ethic_notes: null,

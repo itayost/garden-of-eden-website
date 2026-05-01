@@ -34,7 +34,9 @@ export type PhysicalMetricKey =
   | "flexibility_ankle"
   | "flexibility_knee"
   | "flexibility_hip"
-  | "kick_power_kaiser";
+  | "kick_power_kaiser"
+  | "kick_power_right_foot"
+  | "kick_power_left_foot";
 
 export interface PhysicalMetricChartData {
   metric: PhysicalMetricKey;

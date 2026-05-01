@@ -100,13 +100,29 @@ export const METRIC_DEFINITIONS: Record<PhysicalMetricKey, MetricDefinition> = {
     category: "flexibility",
   },
 
-  // Power (higher is better)
+  // Power (higher is better) — legacy key retained for back-compat with old data
   kick_power_kaiser: {
     key: "kick_power_kaiser",
     labelHe: ASSESSMENT_LABELS_HE.kick_power_kaiser,
     unit: ASSESSMENT_UNITS.kick_power_kaiser,
     lowerIsBetter: false,
     color: "hsl(var(--chart-1))",
+    category: "power",
+  },
+  kick_power_right_foot: {
+    key: "kick_power_right_foot",
+    labelHe: ASSESSMENT_LABELS_HE.kick_power_right_foot,
+    unit: ASSESSMENT_UNITS.kick_power_right_foot,
+    lowerIsBetter: false,
+    color: "hsl(var(--chart-1))",
+    category: "power",
+  },
+  kick_power_left_foot: {
+    key: "kick_power_left_foot",
+    labelHe: ASSESSMENT_LABELS_HE.kick_power_left_foot,
+    unit: ASSESSMENT_UNITS.kick_power_left_foot,
+    lowerIsBetter: false,
+    color: "hsl(var(--chart-2))",
     category: "power",
   },
 };
@@ -134,7 +150,7 @@ export const METRIC_CATEGORIES: Record<
   },
   power: {
     labelHe: "כוח",
-    metrics: ["kick_power_kaiser"],
+    metrics: ["kick_power_right_foot", "kick_power_left_foot"],
   },
 };
 

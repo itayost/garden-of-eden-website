@@ -31,6 +31,9 @@ interface AssessmentInsertInput {
   leg_power_technique?: LegPowerTechnique | null;
   body_structure?: BodyStructure | null;
   kick_power_kaiser?: number | null;
+  kick_power_right_foot?: number | null;
+  kick_power_left_foot?: number | null;
+  kick_power_machine_pct?: number | null;
   concentration_notes?: string | null;
   decision_making_notes?: string | null;
   work_ethic_notes?: string | null;

@@ -114,6 +114,8 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
       flexibility_knee: latestAssessment.flexibility_knee,
       flexibility_hip: latestAssessment.flexibility_hip,
       kick_power_kaiser: latestAssessment.kick_power_kaiser,
+      kick_power_right_foot: latestAssessment.kick_power_right_foot,
+      kick_power_left_foot: latestAssessment.kick_power_left_foot,
     }
     : {};
 
@@ -341,9 +343,21 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span>{ASSESSMENT_LABELS_HE.kick_power_kaiser}</span>
+                            <span>{ASSESSMENT_LABELS_HE.kick_power_right_foot}</span>
                             <span className="font-medium">
-                              {formatValue("kick_power_kaiser", a.kick_power_kaiser)}
+                              {formatValue("kick_power_right_foot", a.kick_power_right_foot)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>{ASSESSMENT_LABELS_HE.kick_power_left_foot}</span>
+                            <span className="font-medium">
+                              {formatValue("kick_power_left_foot", a.kick_power_left_foot)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>{ASSESSMENT_LABELS_HE.kick_power_machine_pct}</span>
+                            <span className="font-medium">
+                              {formatValue("kick_power_machine_pct", a.kick_power_machine_pct)}
                             </span>
                           </div>
                         </div>

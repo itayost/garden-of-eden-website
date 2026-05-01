@@ -93,8 +93,11 @@ export interface PlayerAssessment {
   leg_power_technique: LegPowerTechnique | null;
   body_structure: BodyStructure | null;
 
-  // Kick power (Kaiser force units)
+  // Legacy single-foot column. New code reads right/left + machine_pct below.
   kick_power_kaiser: number | null;
+  kick_power_right_foot: number | null;
+  kick_power_left_foot: number | null;
+  kick_power_machine_pct: number | null;
 
   // Mental notes
   concentration_notes: string | null;
@@ -140,6 +143,9 @@ export const ASSESSMENT_LABELS_HE: Record<string, string> = {
 
   // Kick power
   kick_power_kaiser: "עוצמת בעיטה (קייזר)",
+  kick_power_right_foot: "עוצמת בעיטה - רגל ימין",
+  kick_power_left_foot: "עוצמת בעיטה - רגל שמאל",
+  kick_power_machine_pct: "אחוזים במכשיר",
 
   // Mental notes
   concentration_notes: "ריכוז",
@@ -167,6 +173,9 @@ export const ASSESSMENT_UNITS: Record<string, string> = {
   flexibility_knee: 'ס"מ',
   flexibility_hip: 'ס"מ',
   kick_power_kaiser: 'יח׳ כוח',
+  kick_power_right_foot: 'יח׳ כוח',
+  kick_power_left_foot: 'יח׳ כוח',
+  kick_power_machine_pct: '%',
 };
 
 // ===========================================
@@ -218,8 +227,8 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
   },
   {
     key: "power",
-    title: "כוח",
-    fields: ["kick_power_kaiser"],
+    title: "כוח בעיטה",
+    fields: ["kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct"],
     type: "number",
   },
   {
@@ -275,7 +284,7 @@ export function getAssessmentCompleteness(assessment: Partial<PlayerAssessment>)
     "jump_2leg_distance", "jump_right_leg", "jump_left_leg", "jump_2leg_height",
     "blaze_spot_time",
     "flexibility_ankle", "flexibility_knee", "flexibility_hip",
-    "kick_power_kaiser"
+    "kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct",
   ];
 
   const categoricalFields = ["coordination", "leg_power_technique", "body_structure"];

@@ -19,6 +19,8 @@ const FULL_GROUP_STATS: GroupStats = {
   flexibility_knee: { best: 20, worst: 8 },
   flexibility_hip: { best: 25, worst: 10 },
   kick_power_kaiser: { best: 500, worst: 50 },
+  kick_power_right_foot: { best: 500, worst: 50 },
+  kick_power_left_foot: { best: 500, worst: 50 },
 };
 
 const NO_DATA_GROUP_STATS: GroupStats = {
@@ -34,6 +36,8 @@ const NO_DATA_GROUP_STATS: GroupStats = {
   flexibility_knee: { best: -1, worst: -1 },
   flexibility_hip: { best: -1, worst: -1 },
   kick_power_kaiser: { best: -1, worst: -1 },
+  kick_power_right_foot: { best: -1, worst: -1 },
+  kick_power_left_foot: { best: -1, worst: -1 },
 };
 
 function emptyAssessment(): PlayerAssessment {
@@ -56,6 +60,9 @@ function emptyAssessment(): PlayerAssessment {
     leg_power_technique: null,
     body_structure: null,
     kick_power_kaiser: null,
+    kick_power_right_foot: null,
+    kick_power_left_foot: null,
+    kick_power_machine_pct: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,
@@ -134,6 +141,8 @@ describe("calculateCardRatings — full assessment", () => {
     flexibility_knee: 15,
     flexibility_hip: 20,
     kick_power_kaiser: 300,
+    kick_power_right_foot: 300,
+    kick_power_left_foot: 280,
     coordination: "advanced",
     body_structure: "strong_athletic",
     leg_power_technique: "normal",

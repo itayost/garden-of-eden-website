@@ -4,7 +4,7 @@
 
 import type { PhysicalMetricKey, GoalCelebration } from "../../types";
 
-/** Physical metrics that can have goals set */
+/** Metrics that can have new goals set. */
 export const GOAL_METRICS: PhysicalMetricKey[] = [
   "sprint_5m",
   "sprint_10m",
@@ -17,7 +17,8 @@ export const GOAL_METRICS: PhysicalMetricKey[] = [
   "flexibility_ankle",
   "flexibility_knee",
   "flexibility_hip",
-  "kick_power_kaiser",
+  "kick_power_right_foot",
+  "kick_power_left_foot",
 ];
 
 /** Metrics where lower values are better (sprints only) */
@@ -54,6 +55,8 @@ export const METRIC_LABELS_HE: Record<PhysicalMetricKey, string> = {
   flexibility_knee: "גמישות ברך",
   flexibility_hip: "גמישות אגן",
   kick_power_kaiser: "עוצמת בעיטה",
+  kick_power_right_foot: "עוצמת בעיטה - רגל ימין",
+  kick_power_left_foot: "עוצמת בעיטה - רגל שמאל",
 };
 
 /** Units for metrics */
@@ -70,6 +73,8 @@ export const METRIC_UNITS: Record<PhysicalMetricKey, string> = {
   flexibility_knee: 'ס"מ',
   flexibility_hip: 'ס"מ',
   kick_power_kaiser: 'יח׳ כוח',
+  kick_power_right_foot: 'יח׳ כוח',
+  kick_power_left_foot: 'יח׳ כוח',
 };
 
 /** Check if a metric is lower-is-better */

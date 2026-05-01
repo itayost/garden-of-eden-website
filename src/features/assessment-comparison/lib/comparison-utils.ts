@@ -45,6 +45,9 @@ const NUMERIC_FIELDS = [
   "flexibility_knee",
   "flexibility_hip",
   "kick_power_kaiser",
+  "kick_power_right_foot",
+  "kick_power_left_foot",
+  "kick_power_machine_pct",
 ] as const;
 
 // Categorical fields that can be compared

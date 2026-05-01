@@ -38,8 +38,8 @@ export const RANKING_CATEGORIES: Record<RankingCategory, CategoryConfig> = {
   power: {
     id: "power",
     labelHe: "כוח",
-    metrics: ["kick_power_kaiser"],
-    primaryMetric: "kick_power_kaiser",
+    metrics: ["kick_power_right_foot", "kick_power_left_foot"],
+    primaryMetric: "kick_power_right_foot",
     lowerIsBetter: false,
     icon: "Target",
   },

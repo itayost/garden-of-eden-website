@@ -4,8 +4,13 @@ import {
   isLowerBetter,
   getAssessmentCompleteness,
   computeSectionCompleteness,
+  ASSESSMENT_SECTIONS,
 } from "../assessment";
 import type { PlayerAssessment } from "../assessment";
+
+const TOTAL_FIELDS = ASSESSMENT_SECTIONS
+  .filter((s) => s.type !== "textarea")
+  .reduce((sum, s) => sum + s.fields.length, 0);
 
 function createMockAssessment(
   overrides: Partial<PlayerAssessment> = {}
@@ -26,6 +31,9 @@ function createMockAssessment(
     leg_power_technique: null,
     body_structure: null,
     kick_power_kaiser: null,
+    kick_power_right_foot: null,
+    kick_power_left_foot: null,
+    kick_power_machine_pct: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,
@@ -171,7 +179,9 @@ describe("getAssessmentCompleteness", () => {
       flexibility_ankle: 12,
       flexibility_knee: 15,
       flexibility_hip: 20,
-      kick_power_kaiser: 85,
+      kick_power_right_foot: 85,
+      kick_power_left_foot: 80,
+      kick_power_machine_pct: 35,
       coordination: "advanced",
       leg_power_technique: "normal",
       body_structure: "strong_athletic",
@@ -180,14 +190,12 @@ describe("getAssessmentCompleteness", () => {
   });
 
   it("returns correct percentage for partial assessment", () => {
-    // 12 numeric + 3 categorical = 15 total
-    // Fill 3 of 15
     const assessment = createMockAssessment({
       sprint_5m: 1.2,
       sprint_10m: 2.3,
       sprint_20m: 3.5,
     });
-    expect(getAssessmentCompleteness(assessment)).toBe(Math.round((3 / 15) * 100)); // 20
+    expect(getAssessmentCompleteness(assessment)).toBe(Math.round((3 / TOTAL_FIELDS) * 100));
   });
 
   it("counts categorical fields", () => {
@@ -196,7 +204,7 @@ describe("getAssessmentCompleteness", () => {
       leg_power_technique: "normal",
       body_structure: "good_build",
     });
-    expect(getAssessmentCompleteness(assessment)).toBe(Math.round((3 / 15) * 100)); // 20
+    expect(getAssessmentCompleteness(assessment)).toBe(Math.round((3 / TOTAL_FIELDS) * 100));
   });
 
   it("handles mix of numeric and categorical", () => {
@@ -204,7 +212,7 @@ describe("getAssessmentCompleteness", () => {
       sprint_5m: 1.2,
       coordination: "advanced",
     });
-    expect(getAssessmentCompleteness(assessment)).toBe(Math.round((2 / 15) * 100)); // 13
+    expect(getAssessmentCompleteness(assessment)).toBe(Math.round((2 / TOTAL_FIELDS) * 100));
   });
 });
 
@@ -258,13 +266,13 @@ describe("computeSectionCompleteness", () => {
     expect(mental.total).toBe(5);
   });
 
-  it("full assessment (all 15 fields) gives completed === total for all quantitative sections", () => {
+  it("full assessment gives completed === total for all quantitative sections", () => {
     const full = createMockAssessment({
       sprint_5m: 1.1, sprint_10m: 2.2, sprint_20m: 3.3,
       jump_2leg_distance: 200, jump_right_leg: 180, jump_left_leg: 175, jump_2leg_height: 60,
       blaze_spot_time: 30, flexibility_ankle: 10, flexibility_knee: 15, flexibility_hip: 20,
       coordination: "advanced", leg_power_technique: "normal", body_structure: "good_build",
-      kick_power_kaiser: 500,
+      kick_power_right_foot: 500, kick_power_left_foot: 480, kick_power_machine_pct: 35,
     });
     const result = computeSectionCompleteness(full);
     const quantitative = result.filter((s) => s.key !== "mental");

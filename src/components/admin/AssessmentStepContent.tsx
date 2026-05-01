@@ -340,11 +340,13 @@ export function AssessmentStepContent({
               כוח בעיטה
             </CardTitle>
             <CardDescription>
-              תוצאת מבדק קייזר ביחידות כוח (0-999)
+              עוצמת בעיטה לכל רגל (0-999) ואחוזי המכשיר בעת המבדק (0-100)
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <NumberInput name="kick_power_kaiser" step="1" form={form} previousAssessment={previousAssessment} />
+          <CardContent className="space-y-4">
+            <NumberInput name="kick_power_right_foot" step="1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="kick_power_left_foot" step="1" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="kick_power_machine_pct" step="1" form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );

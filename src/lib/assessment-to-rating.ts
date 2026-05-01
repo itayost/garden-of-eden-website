@@ -97,6 +97,8 @@ export interface GroupStats {
   flexibility_knee: { best: number; worst: number };
   flexibility_hip: { best: number; worst: number };
   kick_power_kaiser: { best: number; worst: number };
+  kick_power_right_foot: { best: number; worst: number };
+  kick_power_left_foot: { best: number; worst: number };
 }
 
 /**
@@ -135,6 +137,8 @@ export function calculateGroupStats(assessments: PlayerAssessment[]): GroupStats
     flexibility_knee: getMinMax(assessments.map((a) => a.flexibility_knee), false),
     flexibility_hip: getMinMax(assessments.map((a) => a.flexibility_hip), false),
     kick_power_kaiser: getMinMax(assessments.map((a) => a.kick_power_kaiser), false),
+    kick_power_right_foot: getMinMax(assessments.map((a) => a.kick_power_right_foot), false),
+    kick_power_left_foot: getMinMax(assessments.map((a) => a.kick_power_left_foot), false),
   };
 }
 
@@ -231,7 +235,10 @@ export const CARD_STAT_CONFIG: Readonly<Record<StatKey, StatConfig>> = {
     bonuses: [(a) => getBodyStructureBonus(a.body_structure)],
   },
   shooting: {
-    primary: [{ metric: "kick_power_kaiser", lowerBetter: false }],
+    primary: [
+      { metric: "kick_power_right_foot", lowerBetter: false },
+      { metric: "kick_power_left_foot", lowerBetter: false },
+    ],
     bonuses: [(a) => getLegPowerBonus(a.leg_power_technique)],
   },
   defending: {
@@ -331,6 +338,8 @@ export function calculateCardRatingsAbsolute(assessment: PlayerAssessment): Calc
     flexibility_knee: { best: 20, worst: 8 },
     flexibility_hip: { best: 25, worst: 10 },
     kick_power_kaiser: { best: 500, worst: 50 },
+    kick_power_right_foot: { best: 500, worst: 50 },
+    kick_power_left_foot: { best: 500, worst: 50 },
   };
 
   return calculateCardRatings(assessment, defaultStats);
