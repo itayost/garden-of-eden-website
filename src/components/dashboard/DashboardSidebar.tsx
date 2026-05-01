@@ -45,6 +45,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/dashboard/forms/nutrition": "שאלון תזונה",
   "/dashboard/forms/post-workout": "שאלון אחרי אימון",
   "/dashboard/forms/pre-workout": "שאלון לפני אימון",
+  "/dashboard/forms/mental": "שאלון מנטלי",
   "/dashboard/settings": "הגדרות",
   "/dashboard/settings/security": "אבטחה",
 };

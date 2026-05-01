@@ -55,14 +55,25 @@ export const nutritionSchema = z.object({
   additional_comments: optionalLongText,
 });
 
+export const mentalQuestionnaireSchema = z.object({
+  last_session_conclusion: optionalLongText,
+  mental_insight: optionalLongText,
+  tool_to_take: optionalLongText,
+  wants_more_zoom: z.boolean(),
+  zoom_feeling: optionalLongText,
+  wants_one_on_one: z.boolean(),
+});
+
 export type PreWorkoutFormData = z.infer<typeof preWorkoutSchema>;
 export type PostWorkoutFormData = z.infer<typeof postWorkoutSchema>;
 export type NutritionFormData = z.infer<typeof nutritionSchema>;
+export type MentalQuestionnaireFormData = z.infer<typeof mentalQuestionnaireSchema>;
 
 // Aliases for backward compatibility (same types now, no transforms)
 export type PreWorkoutFormInput = PreWorkoutFormData;
 export type PostWorkoutFormInput = PostWorkoutFormData;
 export type NutritionFormInput = NutritionFormData;
+export type MentalQuestionnaireFormInput = MentalQuestionnaireFormData;
 
 // Helper to convert form data to database format (strings to numbers)
 export function convertFormNumbers<T extends Record<string, unknown>>(

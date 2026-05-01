@@ -1,13 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, FileText, Salad, ClipboardCheck } from "lucide-react";
+import { Activity, Brain, FileText, Salad, ClipboardCheck } from "lucide-react";
 import type { PreWorkoutForm, PostWorkoutForm, TrainerShiftReport } from "@/types/database";
-import type { NutritionFormWithProfile } from "@/lib/actions/admin-submissions-list";
+import type {
+  MentalQuestionnaireWithProfile,
+  NutritionFormWithProfile,
+} from "@/lib/actions/admin-submissions-list";
 import {
   PreWorkoutContent,
   PostWorkoutContent,
   NutritionContent,
+  MentalContent,
 } from "@/components/admin/submissions/SubmissionsContent";
 import { ShiftReportContent } from "@/components/admin/submissions/ShiftReportContent";
 
@@ -29,6 +33,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
     { data: postWorkout, count: postWorkoutCount },
     { data: nutrition, count: nutritionCount },
     { data: shiftReports, count: shiftReportsCount },
+    { data: mental, count: mentalCount },
   ] = await Promise.all([
     supabase
       .from("pre_workout_forms")
@@ -49,6 +54,10 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
       .select("*", { count: "exact" })
       .order("report_date", { ascending: false })
       .range(0, PAGE_SIZE - 1) as unknown as { data: TrainerShiftReport[] | null; count: number | null },
+    typedFrom(supabase, "mental_questionnaires")
+      .select("*", { count: "exact" })
+      .order("submitted_at", { ascending: false })
+      .range(0, PAGE_SIZE - 1) as unknown as { data: MentalQuestionnaireWithProfile[] | null; count: number | null },
   ]);
 
   const defaultTab = tab || "pre-workout";
@@ -80,6 +89,10 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
             <ClipboardCheck className="h-4 w-4" />
             דוחות משמרת ({shiftReportsCount || 0})
           </TabsTrigger>
+          <TabsTrigger value="mental" className="gap-2">
+            <Brain className="h-4 w-4" />
+            שאלונים מנטליים ({mentalCount || 0})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pre-workout">
@@ -107,6 +120,13 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
           <ShiftReportContent
             initialItems={shiftReports || []}
             initialTotal={shiftReportsCount || 0}
+          />
+        </TabsContent>
+
+        <TabsContent value="mental">
+          <MentalContent
+            initialItems={mental || []}
+            initialTotal={mentalCount || 0}
           />
         </TabsContent>
       </Tabs>

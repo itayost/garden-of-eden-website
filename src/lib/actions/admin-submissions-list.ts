@@ -23,6 +23,23 @@ export type NutritionFormWithProfile = NutritionForm & {
   profile: { full_name: string; birthdate: string | null; position: string | null } | null;
 };
 
+export type MentalQuestionnaire = {
+  id: string;
+  user_id: string;
+  full_name: string;
+  last_session_conclusion: string | null;
+  mental_insight: string | null;
+  tool_to_take: string | null;
+  wants_more_zoom: boolean | null;
+  zoom_feeling: string | null;
+  wants_one_on_one: boolean | null;
+  submitted_at: string;
+};
+
+export type MentalQuestionnaireWithProfile = MentalQuestionnaire & {
+  profile: { position: string | null } | null;
+};
+
 export interface PaginatedResult<T> {
   items: T[];
   total: number;
@@ -84,7 +101,10 @@ export async function getPostWorkoutPaginated(
 
   let query = supabase
     .from("post_workout_forms")
-    .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name), profile:profiles!inner(position)", { count: "exact" })
+    .select(
+      "*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name), profile:profiles!post_workout_forms_user_id_fkey(position)",
+      { count: "exact" },
+    )
     .order("submitted_at", { ascending: false });
 
   if (params.search) {
@@ -136,6 +156,41 @@ export async function getNutritionPaginated(
     from + params.pageSize - 1
   )) as unknown as {
     data: NutritionFormWithProfile[] | null;
+    count: number | null;
+  };
+
+  return { items: data || [], total: count || 0 };
+}
+
+export async function getMentalPaginated(
+  params: SubmissionQueryParams
+): Promise<PaginatedResult<MentalQuestionnaireWithProfile>> {
+  const { error } = await verifyAdminOrTrainer();
+  if (error) return { items: [], total: 0 };
+
+  const supabase = createAdminClient();
+  const from = params.page * params.pageSize;
+
+  let query = typedFrom(supabase, "mental_questionnaires")
+    .select("*, profile:profiles!inner(position)", { count: "exact" })
+    .order("submitted_at", { ascending: false });
+
+  if (params.search) {
+    query = query.ilike("full_name", `%${params.search}%`);
+  }
+  if (params.startDate) {
+    query = query.gte("submitted_at", params.startDate);
+  }
+  if (params.endDate) {
+    query = query.lte("submitted_at", params.endDate + "T23:59:59");
+  }
+  query = applyPositionFilter(query, "profile.position", params.position);
+
+  const { data, count } = (await query.range(
+    from,
+    from + params.pageSize - 1
+  )) as unknown as {
+    data: MentalQuestionnaireWithProfile[] | null;
     count: number | null;
   };
 
@@ -258,10 +313,11 @@ export async function getSubmissionCounts(): Promise<{
   postWorkout: number;
   nutrition: number;
   shiftReports: number;
+  mental: number;
 }> {
   const { error } = await verifyAdminOrTrainer();
   if (error)
-    return { preWorkout: 0, postWorkout: 0, nutrition: 0, shiftReports: 0 };
+    return { preWorkout: 0, postWorkout: 0, nutrition: 0, shiftReports: 0, mental: 0 };
 
   const supabase = await createClient();
 
@@ -270,6 +326,7 @@ export async function getSubmissionCounts(): Promise<{
     { count: postWorkout },
     { count: nutrition },
     { count: shiftReports },
+    { count: mental },
   ] = await Promise.all([
     supabase
       .from("pre_workout_forms")
@@ -284,6 +341,10 @@ export async function getSubmissionCounts(): Promise<{
       count: "exact",
       head: true,
     }),
+    typedFrom(supabase, "mental_questionnaires").select("*", {
+      count: "exact",
+      head: true,
+    }),
   ]);
 
   return {
@@ -291,5 +352,6 @@ export async function getSubmissionCounts(): Promise<{
     postWorkout: postWorkout || 0,
     nutrition: nutrition || 0,
     shiftReports: shiftReports || 0,
+    mental: mental || 0,
   };
 }

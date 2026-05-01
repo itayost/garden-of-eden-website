@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/utils/uuid";
 import {
   Card,
@@ -11,8 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Activity, FileText, Salad, User, Calendar } from "lucide-react";
+import { ArrowRight, Activity, Brain, FileText, Salad, User, Calendar } from "lucide-react";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
+import type { MentalQuestionnaire } from "@/lib/actions/admin-submissions-list";
 
 // Form type configuration
 const formTypeConfig = {
@@ -30,6 +32,11 @@ const formTypeConfig = {
     table: "nutrition_forms",
     title: "שאלון תזונה",
     icon: Salad,
+  },
+  "mental": {
+    table: "mental_questionnaires",
+    title: "שאלון מנטלי",
+    icon: Brain,
   },
 } as const;
 
@@ -376,6 +383,63 @@ function NutritionFields({ form }: { form: NutritionFormWithProfile }) {
   );
 }
 
+// Mental questionnaire fields renderer
+function MentalFields({ form }: { form: MentalQuestionnaire }) {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Brain className="h-5 w-5" />
+            תובנות מהאימון המנטלי
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-muted-foreground text-sm mb-1">מסקנה מהאימון המנטלי האחרון</p>
+            <p className="text-sm whitespace-pre-wrap">{form.last_session_conclusion || "—"}</p>
+          </div>
+          <Separator />
+          <div>
+            <p className="text-muted-foreground text-sm mb-1">חידוש בעניין המנטלי</p>
+            <p className="text-sm whitespace-pre-wrap">{form.mental_insight || "—"}</p>
+          </div>
+          <Separator />
+          <div>
+            <p className="text-muted-foreground text-sm mb-1">כלי שייקח להמשך</p>
+            <p className="text-sm whitespace-pre-wrap">{form.tool_to_take || "—"}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">מפגש הזום</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <FieldRow label="הרגשה במהלך הזום" value={form.zoom_feeling} />
+          <Separator />
+          <FieldRow label="רוצה יותר מפגשי זום">
+            {form.wants_more_zoom == null ? (
+              <span className="text-sm font-medium">—</span>
+            ) : (
+              <YesNoBadge value={form.wants_more_zoom} />
+            )}
+          </FieldRow>
+          <Separator />
+          <FieldRow label="רוצה ליווי 1-על-1 עם עומר">
+            {form.wants_one_on_one == null ? (
+              <span className="text-sm font-medium">—</span>
+            ) : (
+              <YesNoBadge value={form.wants_one_on_one} />
+            )}
+          </FieldRow>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default async function FormDetailPage({ params }: FormDetailPageProps) {
   const { formType, formId } = await params;
 
@@ -414,25 +478,36 @@ export default async function FormDetailPage({ params }: FormDetailPageProps) {
   }
 
   // Fetch form data based on type
-  let formData: PreWorkoutForm | PostWorkoutWithTrainer | NutritionFormWithProfile | null = null;
+  let formData:
+    | PreWorkoutForm
+    | PostWorkoutWithTrainer
+    | NutritionFormWithProfile
+    | MentalQuestionnaire
+    | null = null;
 
   if (validFormType === "post-workout") {
     const { data } = await supabase
-      .from(config.table)
+      .from("post_workout_forms")
       .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)")
       .eq("id", formId)
       .single();
     formData = data as PostWorkoutWithTrainer | null;
   } else if (validFormType === "nutrition") {
     const { data } = await supabase
-      .from(config.table)
+      .from("nutrition_forms")
       .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate)")
       .eq("id", formId)
       .single();
     formData = data as NutritionFormWithProfile | null;
+  } else if (validFormType === "mental") {
+    const { data } = await typedFrom(supabase, "mental_questionnaires")
+      .select("*")
+      .eq("id", formId)
+      .single();
+    formData = data as MentalQuestionnaire | null;
   } else {
     const { data } = await supabase
-      .from(config.table)
+      .from("pre_workout_forms")
       .select("*")
       .eq("id", formId)
       .single();
@@ -501,6 +576,9 @@ export default async function FormDetailPage({ params }: FormDetailPageProps) {
       )}
       {validFormType === "nutrition" && (
         <NutritionFields form={formData as NutritionFormWithProfile} />
+      )}
+      {validFormType === "mental" && (
+        <MentalFields form={formData as MentalQuestionnaire} />
       )}
     </div>
   );

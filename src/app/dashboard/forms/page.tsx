@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, ClipboardCheck, Salad, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Activity, Brain, ClipboardCheck, Salad, CheckCircle2, ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "טפסים | Garden of Eden",
@@ -60,6 +60,16 @@ export default async function FormsPage() {
         ? "bg-green-100 text-green-700"
         : "bg-orange-100 text-orange-700",
       completed: hasCompletedNutrition,
+    },
+    {
+      title: "שאלון מנטלי",
+      description: "משוב מאימון מנטלי / מפגש זום עם עומר",
+      icon: Brain,
+      href: "/dashboard/forms/mental",
+      color: "bg-purple-500",
+      badge: "אחרי כל מפגש זום",
+      mobileBadge: "מנטלי",
+      badgeColor: "bg-purple-100 text-purple-700",
     },
   ];
 

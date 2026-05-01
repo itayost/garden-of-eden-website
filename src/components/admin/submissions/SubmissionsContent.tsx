@@ -15,8 +15,8 @@ import {
 import { ClickableTableRow } from "@/components/admin/ClickableTableRow";
 import { SubmissionExportButton } from "@/components/admin/exports/SubmissionExportButton";
 import { TableToolbar, ToolbarDateRange, ToolbarSelect } from "@/components/admin/TableToolbar";
-import { HasBadge, DifficultyBadge, SatisfactionBadge } from "@/components/ui/badges";
-import { Activity, FileText, Salad, RefreshCw, type LucideIcon } from "lucide-react";
+import { HasBadge, DifficultyBadge, SatisfactionBadge, YesNoBadge } from "@/components/ui/badges";
+import { Activity, Brain, FileText, Salad, RefreshCw, type LucideIcon } from "lucide-react";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import type { PreWorkoutForm, PostWorkoutForm } from "@/types/database";
 import { formatDateTime } from "@/lib/utils/date";
@@ -24,7 +24,9 @@ import {
   getPreWorkoutPaginated,
   getPostWorkoutPaginated,
   getNutritionPaginated,
+  getMentalPaginated,
   type NutritionFormWithProfile,
+  type MentalQuestionnaireWithProfile,
 } from "@/lib/actions/admin-submissions-list";
 import type { SubmissionQueryParams } from "@/lib/actions/admin-submissions-list";
 import {
@@ -618,6 +620,197 @@ export function NutritionContent({
           <EmptyState icon={Salad} message="אין שאלונים מתאימים לחיפוש" />
         ) : (
           <EmptyState icon={Salad} message="אין שאלונים עדיין" />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Mental questionnaire content component
+export function MentalContent({
+  initialItems,
+  initialTotal,
+}: {
+  initialItems: MentalQuestionnaireWithProfile[];
+  initialTotal: number;
+}) {
+  const [items, setItems] = useState(initialItems);
+  const [total, setTotal] = useState(initialTotal);
+  const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(0);
+  const [isPending, startTransition] = useTransition();
+  const requestIdRef = useRef(0);
+  const [position, setPosition] = useQueryState(
+    "position",
+    parseAsString.withDefault(POSITION_FILTER_ALL),
+  );
+
+  const fetchData = useCallback(
+    (
+      newPage: number,
+      newSearch: string,
+      newStartDate: string,
+      newEndDate: string,
+      newPosition: string,
+    ) => {
+      const currentRequestId = ++requestIdRef.current;
+      startTransition(async () => {
+        const params: SubmissionQueryParams = {
+          page: newPage,
+          pageSize: PAGE_SIZE,
+          search: newSearch || undefined,
+          startDate: newStartDate || undefined,
+          endDate: newEndDate || undefined,
+          position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
+        };
+        const result = await getMentalPaginated(params);
+        if (currentRequestId === requestIdRef.current) {
+          setItems(result.items);
+          setTotal(result.total);
+        }
+      });
+    },
+    []
+  );
+
+  const handleSearchChange = (v: string) => {
+    setSearch(v);
+    setPage(0);
+    fetchData(0, v, startDate, endDate, position || POSITION_FILTER_ALL);
+  };
+  const handleStartDateChange = (v: string) => {
+    setStartDate(v);
+    setPage(0);
+    fetchData(0, search, v, endDate, position || POSITION_FILTER_ALL);
+  };
+  const handleEndDateChange = (v: string) => {
+    setEndDate(v);
+    setPage(0);
+    fetchData(0, search, startDate, v, position || POSITION_FILTER_ALL);
+  };
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchData(newPage, search, startDate, endDate, position || POSITION_FILTER_ALL);
+  };
+  const handlePositionChange = (value: string) => {
+    setPosition(value === POSITION_FILTER_ALL ? null : value);
+    setPage(0);
+    fetchData(0, search, startDate, endDate, value);
+  };
+
+  const hasFilters = !!(search || startDate || endDate || (position && position !== POSITION_FILTER_ALL));
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2">
+              <div>
+                <CardTitle>שאלונים מנטליים</CardTitle>
+                <CardDescription>
+                  {hasFilters
+                    ? `מציג ${items.length} מתוך ${total} שאלונים`
+                    : `כל השאלונים המנטליים שהוגשו`}
+                </CardDescription>
+              </div>
+              {isPending && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
+            </div>
+            <SubmissionExportButton
+              formType="mental"
+              submissions={items}
+            />
+          </div>
+          <TableToolbar
+            searchValue={search}
+            onSearchChange={handleSearchChange}
+            searchPlaceholder="חיפוש לפי שם..."
+            filters={
+              <>
+                <ToolbarSelect
+                  value={position || POSITION_FILTER_ALL}
+                  onValueChange={handlePositionChange}
+                  options={positionFilterOptions}
+                  placeholder="עמדה"
+                />
+                <ToolbarDateRange
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={handleStartDateChange}
+                  onEndDateChange={handleEndDateChange}
+                />
+              </>
+            }
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {items.length > 0 ? (
+          <>
+            {/* Mobile: Card list */}
+            <div className="space-y-2 sm:hidden">
+              {items.map((form) => (
+                <Link
+                  key={form.id}
+                  href={`/admin/submissions/mental/${form.id}`}
+                  className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{form.full_name}</span>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(form.submitted_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      עוד זום: <YesNoBadge value={!!form.wants_more_zoom} />
+                    </span>
+                    <span className="flex items-center gap-1">
+                      1-על-1: <YesNoBadge value={!!form.wants_one_on_one} />
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop: Table */}
+            <div className="overflow-x-auto hidden sm:block" dir="rtl">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>שם</TableHead>
+                    <TableHead>מפגשי זום נוספים</TableHead>
+                    <TableHead>1-על-1 עם עומר</TableHead>
+                    <TableHead>הרגשה בזום</TableHead>
+                    <TableHead>תאריך</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((form) => (
+                    <ClickableTableRow key={form.id} href={`/admin/submissions/mental/${form.id}`}>
+                      <TableCell className="font-medium">{form.full_name}</TableCell>
+                      <TableCell><YesNoBadge value={!!form.wants_more_zoom} /></TableCell>
+                      <TableCell><YesNoBadge value={!!form.wants_one_on_one} /></TableCell>
+                      <TableCell className="max-w-[240px] truncate">{form.zoom_feeling || "-"}</TableCell>
+                      <TableCell>{formatDateTime(form.submitted_at)}</TableCell>
+                    </ClickableTableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <SimpleTablePagination
+              totalItems={total}
+              pageSize={PAGE_SIZE}
+              currentPage={page}
+              onPageChange={handlePageChange}
+              itemLabel="שאלונים"
+            />
+          </>
+        ) : hasFilters ? (
+          <EmptyState icon={Brain} message="אין שאלונים מתאימים לחיפוש" />
+        ) : (
+          <EmptyState icon={Brain} message="אין שאלונים עדיין" />
         )}
       </CardContent>
     </Card>

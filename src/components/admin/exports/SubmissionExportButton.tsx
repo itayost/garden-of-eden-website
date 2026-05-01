@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 import type { PreWorkoutForm, PostWorkoutForm } from "@/types/database";
-import type { NutritionFormWithProfile } from "@/lib/actions/admin-submissions-list";
+import type {
+  MentalQuestionnaire,
+  NutritionFormWithProfile,
+} from "@/lib/actions/admin-submissions-list";
 
 /** Post workout form with trainer relation included */
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
@@ -14,7 +17,7 @@ type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string }
 type AnySubmission = { submitted_at: string; [key: string]: unknown };
 
 interface SubmissionExportButtonProps {
-  formType: "pre_workout" | "post_workout" | "nutrition";
+  formType: "pre_workout" | "post_workout" | "nutrition" | "mental";
   submissions: AnySubmission[];
 }
 
@@ -66,7 +69,7 @@ export function SubmissionExportButton({
  * Transform submissions to CSV data with Hebrew column names
  */
 function transformToCSV(
-  formType: "pre_workout" | "post_workout" | "nutrition",
+  formType: "pre_workout" | "post_workout" | "nutrition" | "mental",
   submissions: AnySubmission[]
 ): Record<string, string | number>[] {
   switch (formType) {
@@ -112,6 +115,18 @@ function transformToCSV(
         "תאריך הגשה": formatDateHebrew(s.submitted_at),
       }));
 
+    case "mental":
+      return (submissions as MentalQuestionnaire[]).map((s) => ({
+        "שם מלא": s.full_name,
+        "מסקנה מהאימון": s.last_session_conclusion ?? "",
+        "חידוש מנטלי": s.mental_insight ?? "",
+        "כלי להמשך": s.tool_to_take ?? "",
+        "רוצה עוד זום": s.wants_more_zoom == null ? "" : s.wants_more_zoom ? "כן" : "לא",
+        "הרגשה בזום": s.zoom_feeling ?? "",
+        "1-על-1 עם עומר": s.wants_one_on_one == null ? "" : s.wants_one_on_one ? "כן" : "לא",
+        "תאריך הגשה": formatDateHebrew(s.submitted_at),
+      }));
+
     default:
       return [];
   }
@@ -145,6 +160,8 @@ function formTypeToHebrew(type: string): string {
       return "שאלון-אחרי-אימון";
     case "nutrition":
       return "שאלון-תזונה";
+    case "mental":
+      return "שאלון-מנטלי";
     default:
       return "שאלונים";
   }
