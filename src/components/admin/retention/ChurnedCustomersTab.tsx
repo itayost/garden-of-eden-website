@@ -1,5 +1,6 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,11 @@ import {
 import type { NoteColor } from "@/lib/validations/churned-customers";
 
 interface ChurnedCustomersTabProps {
-  readonly initialRows: readonly ChurnedCustomer[];
+  readonly rows: readonly ChurnedCustomer[];
+  readonly setRows: Dispatch<SetStateAction<readonly ChurnedCustomer[]>>;
 }
 
-export function ChurnedCustomersTab({ initialRows }: ChurnedCustomersTabProps) {
-  const [rows, setRows] = useState<readonly ChurnedCustomer[]>(initialRows);
+export function ChurnedCustomersTab({ rows, setRows }: ChurnedCustomersTabProps) {
   const [name, setName] = useState("");
   const [endDate, setEndDate] = useState("");
   const [note, setNote] = useState("");
@@ -66,7 +67,7 @@ export function ChurnedCustomersTab({ initialRows }: ChurnedCustomersTabProps) {
       toast.success("עודכן");
       return { error: null };
     },
-    [],
+    [setRows],
   );
 
   const handleDelete = useCallback(
@@ -76,12 +77,15 @@ export function ChurnedCustomersTab({ initialRows }: ChurnedCustomersTabProps) {
       setRows((prev) => prev.filter((r) => r.id !== id));
       return { success: true };
     },
-    [],
+    [setRows],
   );
 
-  const handlePasted = useCallback((inserted: readonly ChurnedCustomer[]) => {
-    setRows((prev) => [...inserted, ...prev]);
-  }, []);
+  const handlePasted = useCallback(
+    (inserted: readonly ChurnedCustomer[]) => {
+      setRows((prev) => [...inserted, ...prev]);
+    },
+    [setRows],
+  );
 
   return (
     <div className="space-y-4">

@@ -15,12 +15,14 @@ import {
   ToolbarSelect,
 } from "@/components/admin/TableToolbar";
 import { RetentionNoteCell } from "./RetentionNoteCell";
+import { MoveToChurnedButton } from "./MoveToChurnedButton";
 import type { RetentionEntry } from "@/lib/arbox/retention";
 import type { RetentionNote } from "@/lib/actions/admin-retention";
 import {
   NOTE_COLOR_BG,
   type NoteColor,
 } from "@/lib/validations/churned-customers";
+import { buildChurnedKey } from "@/lib/utils/churned-key";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 import { Clock } from "lucide-react";
 import { normalizePhone } from "@/lib/arbox/normalize-phone";
@@ -58,6 +60,12 @@ interface RetentionTableProps {
     noteColor: NoteColor,
   ) => Promise<void>;
   traineePositions: Readonly<Record<string, string | null>>;
+  movedKeys?: ReadonlySet<string>;
+  onMoveToChurned?: (
+    entry: RetentionEntry,
+    note: string,
+    noteColor: NoteColor,
+  ) => Promise<void>;
 }
 
 export function RetentionTable({
@@ -66,6 +74,8 @@ export function RetentionTable({
   notes,
   onSaveNote,
   traineePositions,
+  movedKeys,
+  onMoveToChurned,
 }: RetentionTableProps) {
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
   const [position, setPosition] = useQueryState(
@@ -128,6 +138,9 @@ export function RetentionTable({
                   </TableHead>
                 ))}
                 <TableHead className="text-right">הערות</TableHead>
+                {onMoveToChurned && (
+                  <TableHead className="text-right">פעולות</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -162,6 +175,26 @@ export function RetentionTable({
                         }
                       />
                     </TableCell>
+                    {onMoveToChurned && (
+                      <TableCell>
+                        <MoveToChurnedButton
+                          traineeName={entry.name}
+                          endDate={entry.end_date}
+                          alreadyMoved={
+                            movedKeys?.has(
+                              buildChurnedKey(entry.name, entry.end_date),
+                            ) ?? false
+                          }
+                          onConfirm={() =>
+                            onMoveToChurned(
+                              entry,
+                              existingNote,
+                              existingColor,
+                            )
+                          }
+                        />
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}

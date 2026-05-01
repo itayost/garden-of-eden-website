@@ -16,8 +16,12 @@ import {
   getRetentionNotes,
   upsertRetentionNote,
 } from "@/lib/actions/admin-retention";
+import { createChurnedCustomer } from "@/lib/actions/admin-churned-customers";
 import { getAttendanceMonthKeys } from "@/lib/arbox/retention";
-import type { RetentionReportData } from "@/lib/arbox/retention";
+import type {
+  RetentionEntry,
+  RetentionReportData,
+} from "@/lib/arbox/retention";
 import type {
   RetentionReportMonth,
   RetentionNote,
@@ -25,6 +29,7 @@ import type {
 import type { ChurnedCustomer } from "@/lib/actions/admin-churned-customers";
 import type { NoteColor } from "@/lib/validations/churned-customers";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
+import { buildChurnedKey } from "@/lib/utils/churned-key";
 import { toast } from "sonner";
 
 function formatReportMonth(reportMonth: string): string {
@@ -54,7 +59,33 @@ export function RetentionPageClient({
   const [data, setData] = useState<RetentionReportData | null>(initialData);
   const [notes, setNotes] =
     useState<ReadonlyMap<string, RetentionNote>>(initialNotes);
+  const [churned, setChurned] =
+    useState<readonly ChurnedCustomer[]>(initialChurned);
   const [isPending, startTransition] = useTransition();
+
+  const movedKeys = useMemo(
+    () =>
+      new Set(churned.map((c) => buildChurnedKey(c.name, c.end_date))),
+    [churned],
+  );
+
+  const handleMoveToChurned = useCallback(
+    async (entry: RetentionEntry, note: string, noteColor: NoteColor) => {
+      const result = await createChurnedCustomer({
+        name: entry.name,
+        endDate: entry.end_date,
+        note,
+        noteColor,
+      });
+      if (result.error || !result.data) {
+        toast.error(result.error ?? "שגיאה בהעברה");
+        return;
+      }
+      setChurned((prev) => [result.data!, ...prev]);
+      toast.success("הועבר ללקוחות שעזבו");
+    },
+    [],
+  );
 
   const handleMonthChange = (month: string) => {
     setSelectedMonth(month);
@@ -167,6 +198,8 @@ export function RetentionPageClient({
                     notes={notes}
                     onSaveNote={handleSaveNote}
                     traineePositions={traineePositions}
+                    movedKeys={movedKeys}
+                    onMoveToChurned={handleMoveToChurned}
                   />
                 </TabsContent>
                 <TabsContent value="pro" className="mt-4">
@@ -176,6 +209,8 @@ export function RetentionPageClient({
                     notes={notes}
                     onSaveNote={handleSaveNote}
                     traineePositions={traineePositions}
+                    movedKeys={movedKeys}
+                    onMoveToChurned={handleMoveToChurned}
                   />
                 </TabsContent>
                 <TabsContent value="training_card" className="mt-4">
@@ -185,12 +220,14 @@ export function RetentionPageClient({
                     notes={notes}
                     onSaveNote={handleSaveNote}
                     traineePositions={traineePositions}
+                    movedKeys={movedKeys}
+                    onMoveToChurned={handleMoveToChurned}
                   />
                 </TabsContent>
               </>
             )}
             <TabsContent value="churned" className="mt-4">
-              <ChurnedCustomersTab initialRows={initialChurned} />
+              <ChurnedCustomersTab rows={churned} setRows={setChurned} />
             </TabsContent>
           </>
         )}
