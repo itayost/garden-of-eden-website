@@ -141,6 +141,7 @@ export function ReportEditor({
         key={data.latestSummary?.id ?? "no-summary"}
         userId={userId}
         initialSummary={data.latestSummary?.summary ?? ""}
+        initialUpdatedAt={data.latestSummary?.updated_at ?? null}
         onSummaryChange={setSummary}
       />
     </div>

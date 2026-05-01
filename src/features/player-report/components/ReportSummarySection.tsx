@@ -7,19 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
 import { saveSummary } from "../lib/actions";
 import { toast } from "sonner";
+import { formatDateTime } from "@/lib/utils/date";
 
 interface ReportSummarySectionProps {
   userId: string;
   initialSummary: string;
+  initialUpdatedAt?: string | null;
   onSummaryChange: (summary: string) => void;
 }
 
 export function ReportSummarySection({
   userId,
   initialSummary,
+  initialUpdatedAt = null,
   onSummaryChange,
 }: ReportSummarySectionProps) {
   const [summary, setSummary] = useState(initialSummary);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(initialUpdatedAt);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -30,6 +34,7 @@ export function ReportSummarySection({
       if (error) {
         toast.error(error);
       } else {
+        setUpdatedAt(new Date().toISOString());
         toast.success("הסיכום נשמר בהצלחה");
       }
     } finally {
@@ -45,7 +50,17 @@ export function ReportSummarySection({
   return (
     <Card data-testid="report-summary">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>סיכום / הערות נוספות</CardTitle>
+        <div>
+          <CardTitle>סיכום / הערות נוספות</CardTitle>
+          {updatedAt && (
+            <p
+              className="text-xs text-muted-foreground mt-1"
+              data-testid="summary-updated-at"
+            >
+              עודכן: {formatDateTime(updatedAt)}
+            </p>
+          )}
+        </div>
         <Button
           variant="outline"
           size="sm"
