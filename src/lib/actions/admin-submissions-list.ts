@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
 import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
+import { CATEGORY_COLUMNS } from "@/lib/utils/trainee-notes";
 import type {
   PreWorkoutForm,
   PostWorkoutForm,
@@ -184,29 +185,14 @@ export async function resolveTraineeNamesForExport(
   const allIds = new Set<string>();
 
   for (const report of reports) {
-    const idFields = [
-      report.new_trainees_ids,
-      report.discipline_trainee_ids,
-      report.injuries_trainee_ids,
-      report.limitations_trainee_ids,
-      report.achievements_trainee_ids,
-      report.mental_state_trainee_ids,
-      report.complaints_trainee_ids,
-      report.insufficient_attention_trainee_ids,
-      report.pro_candidates_trainee_ids,
-      report.social_skills_trainee_ids,
-    ];
-    for (const ids of idFields) {
+    for (const col of CATEGORY_COLUMNS) {
+      const ids = report[col.traineeIdsKey] as string[] | null | undefined;
       if (ids) {
-        for (const id of ids) {
-          allIds.add(id);
-        }
+        for (const id of ids) allIds.add(id);
       }
-    }
-    const perTrainee = report.achievements_per_trainee as Record<string, unknown> | null;
-    if (perTrainee) {
-      for (const id of Object.keys(perTrainee)) {
-        allIds.add(id);
+      const perTrainee = report[col.perTraineeKey] as Record<string, unknown> | null;
+      if (perTrainee) {
+        for (const id of Object.keys(perTrainee)) allIds.add(id);
       }
     }
   }
