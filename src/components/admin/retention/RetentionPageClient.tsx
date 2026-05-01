@@ -23,6 +23,7 @@ import type {
   RetentionNote,
 } from "@/lib/actions/admin-retention";
 import type { ChurnedCustomer } from "@/lib/actions/admin-churned-customers";
+import type { NoteColor } from "@/lib/validations/churned-customers";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 import { toast } from "sonner";
 
@@ -79,12 +80,18 @@ export function RetentionPageClient({
   };
 
   const handleSaveNote = useCallback(
-    async (traineePhone: string, traineeName: string, note: string) => {
+    async (
+      traineePhone: string,
+      traineeName: string,
+      note: string,
+      noteColor: NoteColor,
+    ) => {
       const { error } = await upsertRetentionNote(
         selectedMonth,
         traineePhone,
         traineeName,
         note,
+        noteColor,
       );
       if (error) {
         toast.error(error);
@@ -93,11 +100,12 @@ export function RetentionPageClient({
       // Optimistic update
       setNotes((prev) => {
         const next = new Map(prev);
-        if (!note.trim()) {
+        if (!note.trim() && noteColor === "none") {
           next.delete(traineePhone);
         } else {
           next.set(traineePhone, {
             note: note.trim(),
+            note_color: noteColor,
             author_id: "",
             updated_at: new Date().toISOString(),
           });

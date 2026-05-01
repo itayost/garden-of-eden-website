@@ -17,6 +17,10 @@ import {
 import { RetentionNoteCell } from "./RetentionNoteCell";
 import type { RetentionEntry } from "@/lib/arbox/retention";
 import type { RetentionNote } from "@/lib/actions/admin-retention";
+import {
+  NOTE_COLOR_BG,
+  type NoteColor,
+} from "@/lib/validations/churned-customers";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 import { Clock } from "lucide-react";
 import { normalizePhone } from "@/lib/arbox/normalize-phone";
@@ -51,6 +55,7 @@ interface RetentionTableProps {
     traineePhone: string,
     traineeName: string,
     note: string,
+    noteColor: NoteColor,
   ) => Promise<void>;
   traineePositions: Readonly<Record<string, string | null>>;
 }
@@ -128,7 +133,10 @@ export function RetentionTable({
             <TableBody>
               {filtered.map((entry, i) => {
                 const noteKey = getNoteKey(entry);
-                const existingNote = notes.get(noteKey)?.note ?? "";
+                const existingNoteRecord = notes.get(noteKey);
+                const existingNote = existingNoteRecord?.note ?? "";
+                const existingColor: NoteColor =
+                  existingNoteRecord?.note_color ?? "none";
 
                 return (
                   <TableRow key={`${entry.user_id ?? entry.name}-${i}`}>
@@ -145,10 +153,13 @@ export function RetentionTable({
                           : "\u2014"}
                       </TableCell>
                     ))}
-                    <TableCell>
+                    <TableCell className={NOTE_COLOR_BG[existingColor]}>
                       <RetentionNoteCell
                         note={existingNote}
-                        onSave={(note) => onSaveNote(noteKey, entry.name, note)}
+                        noteColor={existingColor}
+                        onSave={(note, noteColor) =>
+                          onSaveNote(noteKey, entry.name, note, noteColor)
+                        }
                       />
                     </TableCell>
                   </TableRow>

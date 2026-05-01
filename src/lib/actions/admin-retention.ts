@@ -5,9 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import type { RetentionReportData } from "@/lib/arbox/retention";
+import {
+  NOTE_COLORS,
+  type NoteColor,
+} from "@/lib/validations/churned-customers";
 
 export interface RetentionNote {
   readonly note: string;
+  readonly note_color: NoteColor;
   readonly author_id: string;
   readonly updated_at: string;
 }
@@ -56,13 +61,14 @@ export async function getRetentionNotes(
 
   const supabase = await createClient();
   const { data } = await typedFrom(supabase, "retention_notes")
-    .select("trainee_phone, note, author_id, updated_at")
+    .select("trainee_phone, note, note_color, author_id, updated_at")
     .eq("report_month", reportMonth);
 
   const map = new Map<string, RetentionNote>();
   for (const row of data ?? []) {
     map.set(row.trainee_phone as string, {
       note: row.note as string,
+      note_color: (row.note_color ?? "none") as NoteColor,
       author_id: row.author_id as string,
       updated_at: row.updated_at as string,
     });
@@ -75,6 +81,7 @@ const upsertNoteSchema = z.object({
   traineePhone: z.string().min(1),
   traineeName: z.string().min(1),
   note: z.string(),
+  noteColor: z.enum(NOTE_COLORS).default("none"),
 });
 
 export async function upsertRetentionNote(
@@ -82,6 +89,7 @@ export async function upsertRetentionNote(
   traineePhone: string,
   traineeName: string,
   note: string,
+  noteColor: NoteColor = "none",
 ): Promise<{ error: string | null }> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
@@ -91,13 +99,14 @@ export async function upsertRetentionNote(
     traineePhone,
     traineeName,
     note,
+    noteColor,
   });
   if (!parsed.success) return { error: "קלט לא תקין" };
 
   const supabase = await createClient();
 
-  // If note is empty, delete the row
-  if (!note.trim()) {
+  // Delete only when both note text is empty AND no color is set
+  if (!note.trim() && noteColor === "none") {
     await typedFrom(supabase, "retention_notes")
       .delete()
       .eq("report_month", reportMonth)
@@ -111,6 +120,7 @@ export async function upsertRetentionNote(
       trainee_phone: traineePhone,
       trainee_name: traineeName,
       note: note.trim(),
+      note_color: noteColor,
       author_id: user!.id,
       updated_at: new Date().toISOString(),
     },
