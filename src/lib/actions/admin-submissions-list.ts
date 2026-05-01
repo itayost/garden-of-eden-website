@@ -6,6 +6,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
 import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
 import { CATEGORY_COLUMNS } from "@/lib/utils/trainee-notes";
+import { SHIFT_REPORT_EXPORT_CAP } from "./admin-submissions-constants";
 import type {
   PreWorkoutForm,
   PostWorkoutForm,
@@ -179,9 +180,6 @@ export type ShiftReportFilter = Pick<
   SubmissionQueryParams,
   "search" | "startDate" | "endDate"
 >;
-
-/** Hard cap to prevent runaway queries — well above any realistic shift-report span */
-export const SHIFT_REPORT_EXPORT_CAP = 5000;
 
 export async function getAllShiftReportsForExport(
   filters: ShiftReportFilter

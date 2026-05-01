@@ -8,9 +8,9 @@ import { toast } from "sonner";
 import {
   getAllShiftReportsForExport,
   resolveTraineeNamesForExport,
-  SHIFT_REPORT_EXPORT_CAP,
   type ShiftReportFilter,
 } from "@/lib/actions/admin-submissions-list";
+import { SHIFT_REPORT_EXPORT_CAP } from "@/lib/actions/admin-submissions-constants";
 
 interface ShiftReportExportButtonProps {
   filters: ShiftReportFilter;
