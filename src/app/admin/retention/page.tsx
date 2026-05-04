@@ -8,17 +8,29 @@ import { listChurnedCustomers } from "@/lib/actions/admin-churned-customers";
 import { RetentionPageClient } from "@/components/admin/retention/RetentionPageClient";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import { buildRetentionMonthOptions } from "@/lib/utils/retention-month-list";
 
 export const metadata: Metadata = {
   title: "שימור לקוחות | Garden of Eden",
 };
 
+function getCurrentCalendarMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
 export default async function RetentionPage() {
-  const [months, initialChurned] = await Promise.all([
+  const [storedMonths, initialChurned] = await Promise.all([
     getRetentionReportMonths(),
     listChurnedCustomers(),
   ]);
-  const latestMonth = months.length > 0 ? months[0].report_month : null;
+
+  const currentCalendarMonth = getCurrentCalendarMonth();
+  const months = buildRetentionMonthOptions(storedMonths, currentCalendarMonth);
+  const initialMonth = currentCalendarMonth;
+  const hasStoredRow = storedMonths.some(
+    (m) => m.report_month === currentCalendarMonth,
+  );
 
   const adminClient = createAdminClient();
   const traineeRowsPromise = adminClient
@@ -27,13 +39,17 @@ export default async function RetentionPage() {
     .eq("role", "trainee")
     .not("phone", "is", null);
 
-  const [initialData, initialNotes, traineeRowsResult] = latestMonth
+  const [initialData, initialNotes, traineeRowsResult] = hasStoredRow
     ? await Promise.all([
-        getRetentionReport(latestMonth),
-        getRetentionNotes(latestMonth),
+        getRetentionReport(initialMonth),
+        getRetentionNotes(initialMonth),
         traineeRowsPromise,
       ])
-    : [null, new Map(), await traineeRowsPromise];
+    : [
+        null,
+        new Map<string, never>(),
+        await traineeRowsPromise,
+      ];
 
   const traineeRows = traineeRowsResult.data;
 
@@ -50,7 +66,7 @@ export default async function RetentionPage() {
       <h1 className="text-2xl font-bold">שימור לקוחות</h1>
       <RetentionPageClient
         months={months}
-        initialMonth={latestMonth}
+        initialMonth={initialMonth}
         initialData={initialData}
         initialNotes={initialNotes}
         initialChurned={initialChurned}

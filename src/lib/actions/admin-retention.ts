@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import type { RetentionReportData } from "@/lib/arbox/retention";
+import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
+import { checkRateLimit, isAdminExempt } from "@/lib/rate-limit";
 import {
   NOTE_COLORS,
   type NoteColor,
@@ -19,7 +21,7 @@ export interface RetentionNote {
 
 export interface RetentionReportMonth {
   readonly report_month: string;
-  readonly created_at: string;
+  readonly created_at: string | null;
 }
 
 export async function getRetentionReportMonths(): Promise<
@@ -133,4 +135,51 @@ export async function upsertRetentionNote(
   }
 
   return { error: null };
+}
+
+const reportMonthSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-01$/, "פורמט חודש לא תקין");
+
+export interface RefreshRetentionReportResult {
+  readonly error: string | null;
+  readonly data: RetentionReportData | null;
+  readonly refreshedAt: string | null;
+}
+
+export async function refreshRetentionReport(
+  reportMonth: string,
+): Promise<RefreshRetentionReportResult> {
+  const { error: authError, user, profile } = await verifyAdminOrTrainer();
+  if (authError) {
+    return { error: authError, data: null, refreshedAt: null };
+  }
+
+  const parsed = reportMonthSchema.safeParse(reportMonth);
+  if (!parsed.success) {
+    return { error: "קלט לא תקין", data: null, refreshedAt: null };
+  }
+
+  if (!isAdminExempt(profile!.role)) {
+    const limit = await checkRateLimit(`retention-refresh:${user!.id}`, "general");
+    if (limit.rateLimited) {
+      return {
+        error: "יותר מדי בקשות, נסה שוב בעוד רגע",
+        data: null,
+        refreshedAt: null,
+      };
+    }
+  }
+
+  try {
+    const { data, refreshedAt } = await persistRetentionReport(parsed.data);
+    return { error: null, data, refreshedAt };
+  } catch (err) {
+    console.error("[RetentionRefresh] Failed:", err);
+    return {
+      error: "שגיאה בריענון הדוח",
+      data: null,
+      refreshedAt: null,
+    };
+  }
 }

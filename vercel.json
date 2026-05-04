@@ -14,11 +14,7 @@
     },
     {
       "path": "/api/cron/retention-report",
-      "schedule": "0 4 1 * *"
-    },
-    {
-      "path": "/api/cron/retention-attendance",
-      "schedule": "0 5 * * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/cron/backfill-rating-snapshots",

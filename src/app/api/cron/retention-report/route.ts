@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { typedFrom } from "@/lib/supabase/helpers";
-import { buildRetentionReport } from "@/lib/arbox/retention";
+import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
 
 export const maxDuration = 60;
 
@@ -28,43 +26,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Determine report month (1st of current month)
     const now = new Date();
     const reportMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 
     console.log(`[Retention Report] Building report for ${reportMonth}`);
 
-    const data = await buildRetentionReport(reportMonth);
+    const { data, refreshedAt } = await persistRetentionReport(reportMonth);
 
     const totalEntries =
       data.monthly.length + data.pro.length + data.training_card.length;
     console.log(
-      `[Retention Report] Found ${totalEntries} expiring memberships (monthly: ${data.monthly.length}, pro: ${data.pro.length}, training_card: ${data.training_card.length})`,
+      `[Retention Report] Saved ${totalEntries} entries for ${reportMonth} (monthly: ${data.monthly.length}, pro: ${data.pro.length}, training_card: ${data.training_card.length})`,
     );
-
-    // Upsert into Supabase
-    const supabase = createAdminClient();
-    const { error } = await typedFrom(supabase, "retention_reports").upsert(
-      {
-        report_month: reportMonth,
-        data: data as unknown as Record<string, unknown>,
-      },
-      { onConflict: "report_month" },
-    );
-
-    if (error) {
-      console.error("[Retention Report] Supabase upsert error:", error);
-      return NextResponse.json(
-        { error: "Failed to save report" },
-        { status: 500 },
-      );
-    }
-
-    console.log(`[Retention Report] Saved report for ${reportMonth}`);
 
     return NextResponse.json({
       success: true,
       report_month: reportMonth,
+      refreshed_at: refreshedAt,
       counts: {
         monthly: data.monthly.length,
         pro: data.pro.length,

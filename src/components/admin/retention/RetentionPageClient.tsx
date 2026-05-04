@@ -9,12 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { RefreshCw, CalendarPlus, Loader2 } from "lucide-react";
 import { RetentionTable } from "./RetentionTable";
 import { ChurnedCustomersTab } from "./ChurnedCustomersTab";
 import {
   getRetentionReport,
   getRetentionNotes,
   upsertRetentionNote,
+  refreshRetentionReport,
 } from "@/lib/actions/admin-retention";
 import { createChurnedCustomer } from "@/lib/actions/admin-churned-customers";
 import { getAttendanceMonthKeys } from "@/lib/arbox/retention";
@@ -30,6 +38,7 @@ import type { ChurnedCustomer } from "@/lib/actions/admin-churned-customers";
 import type { NoteColor } from "@/lib/validations/churned-customers";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 import { buildChurnedKey } from "@/lib/utils/churned-key";
+import { formatRelativeTime } from "@/lib/utils/date";
 import { toast } from "sonner";
 
 function formatReportMonth(reportMonth: string): string {
@@ -38,9 +47,29 @@ function formatReportMonth(reportMonth: string): string {
   return `${HEBREW_MONTHS[monthIndex]} ${year}`;
 }
 
+function upsertMonthInList(
+  months: readonly RetentionReportMonth[],
+  reportMonth: string,
+  refreshedAt: string,
+): readonly RetentionReportMonth[] {
+  const existingIndex = months.findIndex(
+    (m) => m.report_month === reportMonth,
+  );
+  if (existingIndex !== -1) {
+    if (months[existingIndex].created_at === refreshedAt) return months;
+    return months.map((m, i) =>
+      i === existingIndex ? { ...m, created_at: refreshedAt } : m,
+    );
+  }
+  const entry = { report_month: reportMonth, created_at: refreshedAt };
+  const insertIndex = months.findIndex((m) => m.report_month < reportMonth);
+  if (insertIndex === -1) return [...months, entry];
+  return [...months.slice(0, insertIndex), entry, ...months.slice(insertIndex)];
+}
+
 interface RetentionPageClientProps {
   months: readonly RetentionReportMonth[];
-  initialMonth: string | null;
+  initialMonth: string;
   initialData: RetentionReportData | null;
   initialNotes: ReadonlyMap<string, RetentionNote>;
   initialChurned: readonly ChurnedCustomer[];
@@ -48,26 +77,40 @@ interface RetentionPageClientProps {
 }
 
 export function RetentionPageClient({
-  months,
+  months: initialMonths,
   initialMonth,
   initialData,
   initialNotes,
   initialChurned,
   traineePositions,
 }: RetentionPageClientProps) {
-  const [selectedMonth, setSelectedMonth] = useState(initialMonth ?? "");
+  const [allMonths, setAllMonths] =
+    useState<readonly RetentionReportMonth[]>(initialMonths);
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [data, setData] = useState<RetentionReportData | null>(initialData);
   const [notes, setNotes] =
     useState<ReadonlyMap<string, RetentionNote>>(initialNotes);
   const [churned, setChurned] =
     useState<readonly ChurnedCustomer[]>(initialChurned);
   const [isPending, startTransition] = useTransition();
+  const [isRefreshing, startRefreshTransition] = useTransition();
 
   const movedKeys = useMemo(
     () =>
       new Set(churned.map((c) => buildChurnedKey(c.name, c.end_date))),
     [churned],
   );
+
+  const lastRefreshedAt = useMemo(
+    () =>
+      allMonths.find((m) => m.report_month === selectedMonth)?.created_at ??
+      null,
+    [allMonths, selectedMonth],
+  );
+
+  const lastRefreshedLabel = lastRefreshedAt
+    ? formatRelativeTime(lastRefreshedAt)
+    : null;
 
   const handleMoveToChurned = useCallback(
     async (entry: RetentionEntry, note: string, noteColor: NoteColor) => {
@@ -87,13 +130,7 @@ export function RetentionPageClient({
     [],
   );
 
-  const handleMonthChange = (month: string) => {
-    setSelectedMonth(month);
-    if (month === initialMonth) {
-      setData(initialData);
-      setNotes(initialNotes);
-      return;
-    }
+  const loadMonth = useCallback((month: string) => {
     startTransition(async () => {
       try {
         const [result, notesResult] = await Promise.all([
@@ -108,7 +145,40 @@ export function RetentionPageClient({
         setNotes(new Map());
       }
     });
+  }, []);
+
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month);
+    loadMonth(month);
   };
+
+  const handleRefresh = useCallback(
+    (target: string, options: { switchTo?: boolean } = {}) => {
+      startRefreshTransition(async () => {
+        const result = await refreshRetentionReport(target);
+        if (result.error || !result.data || !result.refreshedAt) {
+          toast.error(result.error ?? "שגיאה בריענון הדוח");
+          return;
+        }
+        const refreshedAt = result.refreshedAt;
+        setAllMonths((prev) => upsertMonthInList(prev, target, refreshedAt));
+        if (options.switchTo && target !== selectedMonth) {
+          setSelectedMonth(target);
+          setData(result.data);
+          try {
+            const newNotes = await getRetentionNotes(target);
+            setNotes(newNotes);
+          } catch {
+            setNotes(new Map());
+          }
+        } else if (target === selectedMonth) {
+          setData(result.data);
+        }
+        toast.success("הדוח עודכן");
+      });
+    },
+    [selectedMonth],
+  );
 
   const handleSaveNote = useCallback(
     async (
@@ -152,34 +222,81 @@ export function RetentionPageClient({
     [selectedMonth],
   );
 
-  const hasMonths = months.length > 0;
+  const hasData = data !== null;
+  const refreshDisabled = isRefreshing || isPending;
+
+  const generateCta = (
+    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+      <p className="text-muted-foreground">
+        אין דוח עדיין עבור {formatReportMonth(selectedMonth)}.
+      </p>
+      <Button
+        onClick={() => handleRefresh(selectedMonth)}
+        disabled={refreshDisabled}
+      >
+        {isRefreshing ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <CalendarPlus className="size-4" />
+        )}
+        צור דוח
+      </Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      {hasMonths && (
+      <div className="flex flex-wrap items-center gap-3">
         <Select value={selectedMonth} onValueChange={handleMonthChange}>
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="בחר חודש" />
           </SelectTrigger>
           <SelectContent>
-            {months.map((m) => (
+            {allMonths.map((m) => (
               <SelectItem key={m.report_month} value={m.report_month}>
                 {formatReportMonth(m.report_month)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      )}
 
-      <Tabs defaultValue={hasMonths ? "monthly" : "churned"} dir="rtl">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleRefresh(selectedMonth)}
+          disabled={refreshDisabled}
+        >
+          {isRefreshing ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <RefreshCw className="size-4" />
+          )}
+          רענן
+        </Button>
+
+        <CustomMonthPicker
+          disabled={refreshDisabled}
+          onSelect={(reportMonth) =>
+            handleRefresh(reportMonth, { switchTo: true })
+          }
+        />
+
+        {lastRefreshedLabel && (
+          <span className="text-xs text-muted-foreground">
+            עודכן {lastRefreshedLabel}
+          </span>
+        )}
+      </div>
+
+      <Tabs defaultValue="monthly" dir="rtl">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="monthly" disabled={!hasMonths}>
+          <TabsTrigger value="monthly">
             מנוי חודשי{data ? ` (${data.monthly.length})` : ""}
           </TabsTrigger>
-          <TabsTrigger value="pro" disabled={!hasMonths}>
+          <TabsTrigger value="pro">
             מנוי PRO{data ? ` (${data.pro.length})` : ""}
           </TabsTrigger>
-          <TabsTrigger value="training_card" disabled={!hasMonths}>
+          <TabsTrigger value="training_card">
             כרטיסת אימונים{data ? ` (${data.training_card.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="churned">לקוחות שעזבו</TabsTrigger>
@@ -189,11 +306,11 @@ export function RetentionPageClient({
           <p className="text-center text-muted-foreground py-8">טוען...</p>
         ) : (
           <>
-            {hasMonths && data && (
-              <>
-                <TabsContent value="monthly" className="mt-4">
+            {(["monthly", "pro", "training_card"] as const).map((category) => (
+              <TabsContent key={category} value={category} className="mt-4">
+                {hasData ? (
                   <RetentionTable
-                    entries={data.monthly}
+                    entries={data[category]}
                     monthKeys={monthKeys}
                     notes={notes}
                     onSaveNote={handleSaveNote}
@@ -201,31 +318,11 @@ export function RetentionPageClient({
                     movedKeys={movedKeys}
                     onMoveToChurned={handleMoveToChurned}
                   />
-                </TabsContent>
-                <TabsContent value="pro" className="mt-4">
-                  <RetentionTable
-                    entries={data.pro}
-                    monthKeys={monthKeys}
-                    notes={notes}
-                    onSaveNote={handleSaveNote}
-                    traineePositions={traineePositions}
-                    movedKeys={movedKeys}
-                    onMoveToChurned={handleMoveToChurned}
-                  />
-                </TabsContent>
-                <TabsContent value="training_card" className="mt-4">
-                  <RetentionTable
-                    entries={data.training_card}
-                    monthKeys={monthKeys}
-                    notes={notes}
-                    onSaveNote={handleSaveNote}
-                    traineePositions={traineePositions}
-                    movedKeys={movedKeys}
-                    onMoveToChurned={handleMoveToChurned}
-                  />
-                </TabsContent>
-              </>
-            )}
+                ) : (
+                  generateCta
+                )}
+              </TabsContent>
+            ))}
             <TabsContent value="churned" className="mt-4">
               <ChurnedCustomersTab rows={churned} setRows={setChurned} />
             </TabsContent>
@@ -233,5 +330,82 @@ export function RetentionPageClient({
         )}
       </Tabs>
     </div>
+  );
+}
+
+interface CustomMonthPickerProps {
+  disabled: boolean;
+  onSelect: (reportMonth: string) => void;
+}
+
+function CustomMonthPicker({ disabled, onSelect }: CustomMonthPickerProps) {
+  const now = new Date();
+  const defaultYear = now.getFullYear();
+  const defaultMonth = now.getMonth() + 1;
+  const [open, setOpen] = useState(false);
+  const [year, setYear] = useState(defaultYear);
+  const [month, setMonth] = useState(defaultMonth);
+
+  const yearOptions = useMemo(
+    () => [defaultYear - 1, defaultYear, defaultYear + 1],
+    [defaultYear],
+  );
+
+  const handleSubmit = () => {
+    const reportMonth = `${year}-${String(month).padStart(2, "0")}-01`;
+    onSelect(reportMonth);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" disabled={disabled}>
+          <CalendarPlus className="size-4" />
+          חודש מותאם
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 space-y-3" align="start">
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground">חודש</label>
+          <Select
+            value={String(month)}
+            onValueChange={(v) => setMonth(parseInt(v, 10))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {HEBREW_MONTHS.map((label, idx) => (
+                <SelectItem key={idx + 1} value={String(idx + 1)}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground">שנה</label>
+          <Select
+            value={String(year)}
+            onValueChange={(v) => setYear(parseInt(v, 10))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button className="w-full" onClick={handleSubmit} disabled={disabled}>
+          צור דוח לחודש זה
+        </Button>
+      </PopoverContent>
+    </Popover>
   );
 }
