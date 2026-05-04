@@ -82,8 +82,10 @@ async function fetchReportPage<T>(
     cache: "no-store",
   });
 
-  if ((res.status === 429 || res.status >= 500) && attempt < 4) {
-    const delayMs = 500 * 2 ** (attempt - 1);
+  if ((res.status === 429 || res.status >= 500) && attempt < 6) {
+    const delayMs = res.status === 429
+      ? 1000 * 2 ** (attempt - 1)
+      : 500 * 2 ** (attempt - 1);
     await new Promise((r) => setTimeout(r, delayMs));
     return fetchReportPage(reportName, fromDate, toDate, page, attempt + 1);
   }
@@ -272,21 +274,20 @@ export async function buildRetentionReport(
   const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
   const toExpiring = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${lastDay}`;
 
-  // Fetch expiring memberships + sessions for current month (parallel)
-  const [expiringMemberships, expiringSessions] = await Promise.all([
-    fetchExpiringMemberships(reportMonth, toExpiring),
-    fetchExpiringSessions(reportMonth, toExpiring),
-  ]);
+  // Serialized to stay under Arbox's per-key concurrency/rate cap.
+  const expiringMemberships = await fetchExpiringMemberships(
+    reportMonth,
+    toExpiring,
+  );
+  const expiringSessions = await fetchExpiringSessions(reportMonth, toExpiring);
 
   const allExpiring = [...expiringMemberships, ...expiringSessions];
 
-  // Fetch bookings for current + previous 3 months (one call per month, 31-day API limit)
-  const bookingChunks = await Promise.all(
-    getAttendanceMonthRanges(reportMonth).map(({ from, to }) =>
-      fetchBookingsReport(from, to),
-    ),
-  );
-  const bookings = bookingChunks.flat();
+  const bookings: BookingEntry[] = [];
+  for (const { from, to } of getAttendanceMonthRanges(reportMonth)) {
+    const chunk = await fetchBookingsReport(from, to);
+    bookings.push(...chunk);
+  }
   const bookingIndex = buildBookingIndex(bookings);
 
   const monthKeys = getAttendanceMonthKeys(reportMonth);

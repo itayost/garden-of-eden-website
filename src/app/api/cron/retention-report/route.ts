@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
