@@ -176,6 +176,14 @@ export async function refreshRetentionReport(
     return { error: null, data, refreshedAt };
   } catch (err) {
     console.error("[RetentionRefresh] Failed:", err);
+    const message = err instanceof Error ? err.message : "";
+    if (/\b429\b/.test(message)) {
+      return {
+        error: "Arbox מוגבל זמנית, נסה שוב בעוד מספר דקות",
+        data: null,
+        refreshedAt: null,
+      };
+    }
     return {
       error: "שגיאה בריענון הדוח",
       data: null,

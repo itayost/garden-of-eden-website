@@ -71,6 +71,7 @@ async function fetchReportPage<T>(
   fromDate: string,
   toDate: string,
   page: number,
+  attempt = 1,
 ): Promise<readonly T[]> {
   const apiKey = process.env.ARBOX_API_KEY;
   if (!apiKey) throw new Error("ARBOX_API_KEY is not set");
@@ -80,6 +81,12 @@ async function fetchReportPage<T>(
     headers: { "api-key": apiKey, Accept: "application/json" },
     cache: "no-store",
   });
+
+  if ((res.status === 429 || res.status >= 500) && attempt < 4) {
+    const delayMs = 500 * 2 ** (attempt - 1);
+    await new Promise((r) => setTimeout(r, delayMs));
+    return fetchReportPage(reportName, fromDate, toDate, page, attempt + 1);
+  }
 
   if (!res.ok) {
     throw new Error(`Arbox ${reportName} failed: ${res.status}`);
