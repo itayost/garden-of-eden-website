@@ -35,6 +35,7 @@ export interface Database {
           deleted_at: string | null;
           arbox_user_id: number | null;
           club: string | null;
+          welcome_message_sent_at: string | null;
         };
         Insert: {
           id: string;
@@ -54,6 +55,7 @@ export interface Database {
           deleted_at?: string | null;
           arbox_user_id?: number | null;
           club?: string | null;
+          welcome_message_sent_at?: string | null;
         };
         Update: {
           id?: string;
@@ -73,6 +75,7 @@ export interface Database {
           deleted_at?: string | null;
           arbox_user_id?: number | null;
           club?: string | null;
+          welcome_message_sent_at?: string | null;
         };
         Relationships: [];
       };

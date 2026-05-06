@@ -211,6 +211,14 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
                   {userToEdit.profile_completed ? "כן" : "לא"}
                 </span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-sm">הודעת ברוכים הבאים</span>
+                <span className="text-sm">
+                  {userToEdit.welcome_message_sent_at
+                    ? `נשלחה ${formatDate(userToEdit.welcome_message_sent_at)}`
+                    : "לא נשלחה"}
+                </span>
+              </div>
             </CardContent>
           </Card>
 

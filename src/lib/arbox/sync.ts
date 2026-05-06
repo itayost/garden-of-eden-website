@@ -1,6 +1,35 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendWelcomeMessage } from "@/lib/whatsapp/welcome";
 import { fetchAllArboxUsers, fetchArboxBirthdays, type ArboxUser } from "./client";
 import { normalizePhone } from "./normalize-phone";
+
+const WELCOME_RETRY_BATCH = 50;
+
+async function attemptWelcome(
+  supabase: ReturnType<typeof createAdminClient>,
+  profileId: string,
+  phone: string,
+  fullName: string | null
+): Promise<void> {
+  const result = await sendWelcomeMessage(phone, fullName);
+  if (result.success) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ welcome_message_sent_at: new Date().toISOString() })
+      .eq("id", profileId);
+    if (error) {
+      console.error(
+        `[Arbox Sync] Welcome stamp failed for profile ${profileId}:`,
+        error
+      );
+    }
+  } else {
+    console.error(
+      `[Arbox Sync] Welcome message failed for ${phone} (profile ${profileId}):`,
+      result.error
+    );
+  }
+}
 
 export type SyncResult = {
   created: number;
@@ -100,6 +129,8 @@ async function processArboxUser(
     return "error";
   }
 
+  await attemptWelcome(supabase, authData.user.id, phone, arboxUser.name);
+
   return "created";
 }
 
@@ -117,8 +148,36 @@ export async function syncArboxUsers(): Promise<SyncResult> {
     else result[outcome]++;
   }
 
+  await retryPendingWelcomes(supabase);
+
   console.log("[Arbox Sync] Complete:", result);
   return result;
+}
+
+async function retryPendingWelcomes(
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<void> {
+  const { data: pending, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone")
+    .is("welcome_message_sent_at", null)
+    .not("arbox_user_id", "is", null)
+    .not("phone", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(WELCOME_RETRY_BATCH);
+
+  if (error) {
+    console.error("[Arbox Sync] Welcome retry lookup failed:", error);
+    return;
+  }
+  if (!pending || pending.length === 0) return;
+
+  console.log(`[Arbox Sync] Retrying welcome for ${pending.length} profile(s)`);
+
+  for (const row of pending) {
+    if (!row.phone) continue;
+    await attemptWelcome(supabase, row.id, row.phone, row.full_name);
+  }
 }
 
 /**

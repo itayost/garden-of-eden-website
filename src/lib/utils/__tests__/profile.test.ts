@@ -26,6 +26,7 @@ function createProfile(overrides: Partial<Profile> = {}): Profile {
     deleted_at: null,
     arbox_user_id: null,
     club: null,
+    welcome_message_sent_at: null,
     ...overrides,
   };
 }
