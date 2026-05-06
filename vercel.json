@@ -9,6 +9,10 @@
       "schedule": "0 2 * * *"
     },
     {
+      "path": "/api/cron/welcome-dispatch",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/cron/recalculate-benchmarks",
       "schedule": "0 3 * * *"
     },
