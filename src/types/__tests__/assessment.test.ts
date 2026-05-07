@@ -96,32 +96,33 @@ describe("getAgeGroup", () => {
 
   it("handles birthday edge: day of birthday", () => {
     // Born 2016-02-15 -> today is 2026-02-15 -> birthday today -> age 10
+    // U10 = under 10, so a player who has just turned 10 moves up to U12
     const result = getAgeGroup("2016-02-15");
-    expect(result?.id).toBe("u10"); // age 10 (U10 inclusive)
-  });
-
-  it("includes age 10 in U10 (inclusive upper bound)", () => {
-    // Born 2016-01-01 -> age 10
-    const result = getAgeGroup("2016-01-01");
-    expect(result?.id).toBe("u10");
-  });
-
-  it("includes age 12 in U12 (inclusive upper bound)", () => {
-    // Born 2014-01-01 -> age 12 (the original Yarin Lipschitz bug)
-    const result = getAgeGroup("2014-01-01");
     expect(result?.id).toBe("u12");
   });
 
-  it("includes age 15 in U15 (inclusive upper bound)", () => {
-    // Born 2011-01-01 -> age 15
-    const result = getAgeGroup("2011-01-01");
+  it("places age 10 in U12 (U10 means under 10)", () => {
+    // Born 2016-01-01 -> age 10
+    const result = getAgeGroup("2016-01-01");
+    expect(result?.id).toBe("u12");
+  });
+
+  it("places age 12 in U15 (U12 means under 12)", () => {
+    // Born 2014-01-01 -> age 12
+    const result = getAgeGroup("2014-01-01");
     expect(result?.id).toBe("u15");
   });
 
-  it("includes age 18 in U18 (inclusive upper bound)", () => {
+  it("places age 15 in U18 (U15 means under 15)", () => {
+    // Born 2011-01-01 -> age 15
+    const result = getAgeGroup("2011-01-01");
+    expect(result?.id).toBe("u18");
+  });
+
+  it("places age 18 in Senior (U18 means under 18)", () => {
     // Born 2008-01-01 -> age 18
     const result = getAgeGroup("2008-01-01");
-    expect(result?.id).toBe("u18");
+    expect(result?.id).toBe("senior");
   });
 
   it("accepts Date object", () => {

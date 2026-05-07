@@ -37,12 +37,14 @@ export interface AgeGroup {
   maxAge: number;
 }
 
+// "U-N" means "under N" — a player aged exactly N moves up to the next bucket.
+// U10 covers ages 0-9, U12 covers 10-11, U15 covers 12-14, U18 covers 15-17, Senior is 18+.
 export const AGE_GROUPS: AgeGroup[] = [
-  { id: "u10", label: "U10", labelHe: "עד 10", minAge: 0, maxAge: 10 },
-  { id: "u12", label: "U12", labelHe: "עד 12", minAge: 11, maxAge: 12 },
-  { id: "u15", label: "U15", labelHe: "עד 15", minAge: 13, maxAge: 15 },
-  { id: "u18", label: "U18", labelHe: "עד 18", minAge: 16, maxAge: 18 },
-  { id: "senior", label: "Senior", labelHe: "בוגרים", minAge: 19, maxAge: 99 },
+  { id: "u10", label: "U10", labelHe: "עד 10", minAge: 0, maxAge: 9 },
+  { id: "u12", label: "U12", labelHe: "עד 12", minAge: 10, maxAge: 11 },
+  { id: "u15", label: "U15", labelHe: "עד 15", minAge: 12, maxAge: 14 },
+  { id: "u18", label: "U18", labelHe: "עד 18", minAge: 15, maxAge: 17 },
+  { id: "senior", label: "Senior", labelHe: "בוגרים", minAge: 18, maxAge: 99 },
 ];
 
 export function getAgeGroup(birthdate: Date | string | null): AgeGroup | null {
