@@ -17,8 +17,13 @@ import { Plus, Pencil, RefreshCw } from "lucide-react";
 import { TableToolbar, ToolbarSelect } from "@/components/admin/TableToolbar";
 import { MonthPicker } from "@/components/admin/assessments/MonthPicker";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
-import { AGE_GROUPS, getAgeGroup, getAssessmentCompleteness } from "@/types/assessment";
-import type { PlayerAssessment } from "@/types/assessment";
+import {
+  AGE_GROUPS,
+  ASSESSMENT_SECTIONS,
+  getAgeGroup,
+  getAssessmentCompleteness,
+} from "@/types/assessment";
+import type { AssessmentSectionKey, PlayerAssessment } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 import { getAssessmentsPaginated } from "@/lib/actions/admin-assessments-list";
 import { positionFilterOptions, POSITION_FILTER_ALL } from "@/lib/admin/position-filter";
@@ -36,6 +41,30 @@ const ageGroupOptions = [
   ...AGE_GROUPS.map((g) => ({ value: g.id, label: g.labelHe })),
 ];
 
+const TEST_FILTER_ALL = "all";
+const testFilterOptions = [
+  { value: TEST_FILTER_ALL, label: "כל המבדקים" },
+  ...ASSESSMENT_SECTIONS.map((s) => ({ value: s.key, label: s.title })),
+];
+
+const ASSESSMENT_SECTION_KEYS = new Set<string>(
+  ASSESSMENT_SECTIONS.map((s) => s.key),
+);
+
+function asSectionKey(value: string): AssessmentSectionKey | undefined {
+  return ASSESSMENT_SECTION_KEYS.has(value)
+    ? (value as AssessmentSectionKey)
+    : undefined;
+}
+
+interface FilterValues {
+  page: number;
+  search: string;
+  ageGroup: string;
+  position: string;
+  test: string;
+}
+
 export function AssessmentsTable({
   initialProfiles,
   initialAssessmentsByUser,
@@ -50,57 +79,69 @@ export function AssessmentsTable({
     "position",
     parseAsString.withDefault(POSITION_FILTER_ALL),
   );
+  const [test, setTest] = useQueryState(
+    "test",
+    parseAsString.withDefault(TEST_FILTER_ALL),
+  );
   const [page, setPage] = useState(0);
   const [isPending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
 
-  const fetchData = useCallback(
-    (
-      newPage: number,
-      newSearch: string,
-      newAgeGroup: string,
-      newPosition: string,
-    ) => {
-      const currentRequestId = ++requestIdRef.current;
-      startTransition(async () => {
-        const result = await getAssessmentsPaginated({
-          page: newPage,
-          pageSize: PAGE_SIZE,
-          search: newSearch || undefined,
-          ageGroupId: newAgeGroup !== "all" ? newAgeGroup : undefined,
-          position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
-        });
-        if (currentRequestId === requestIdRef.current) {
-          setProfiles(result.profiles);
-          setAssessmentsByUser(result.assessmentsByUser);
-          setTotal(result.total);
-        }
+  const currentFilters: FilterValues = {
+    page,
+    search,
+    ageGroup,
+    position,
+    test,
+  };
+
+  const fetchData = useCallback((filters: FilterValues) => {
+    const currentRequestId = ++requestIdRef.current;
+    startTransition(async () => {
+      const result = await getAssessmentsPaginated({
+        page: filters.page,
+        pageSize: PAGE_SIZE,
+        search: filters.search || undefined,
+        ageGroupId: filters.ageGroup !== "all" ? filters.ageGroup : undefined,
+        position:
+          filters.position !== POSITION_FILTER_ALL ? filters.position : undefined,
+        test: filters.test !== TEST_FILTER_ALL ? asSectionKey(filters.test) : undefined,
       });
-    },
-    []
-  );
+      if (currentRequestId === requestIdRef.current) {
+        setProfiles(result.profiles);
+        setAssessmentsByUser(result.assessmentsByUser);
+        setTotal(result.total);
+      }
+    });
+  }, []);
 
   const handleSearchChange = (value: string) => {
     setSearch(value || null);
     setPage(0);
-    fetchData(0, value, ageGroup || "all", position || POSITION_FILTER_ALL);
+    fetchData({ ...currentFilters, page: 0, search: value });
   };
 
   const handleAgeGroupChange = (value: string) => {
     setAgeGroup(value === "all" ? null : value);
     setPage(0);
-    fetchData(0, search, value, position || POSITION_FILTER_ALL);
+    fetchData({ ...currentFilters, page: 0, ageGroup: value });
   };
 
   const handlePositionChange = (value: string) => {
     setPosition(value === POSITION_FILTER_ALL ? null : value);
     setPage(0);
-    fetchData(0, search, ageGroup || "all", value);
+    fetchData({ ...currentFilters, page: 0, position: value });
+  };
+
+  const handleTestChange = (value: string) => {
+    setTest(value === TEST_FILTER_ALL ? null : value);
+    setPage(0);
+    fetchData({ ...currentFilters, page: 0, test: value });
   };
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    fetchData(newPage, search, ageGroup || "all", position || POSITION_FILTER_ALL);
+    fetchData({ ...currentFilters, page: newPage });
   };
 
   return (
@@ -122,6 +163,12 @@ export function AssessmentsTable({
               onValueChange={handlePositionChange}
               options={positionFilterOptions}
               placeholder="עמדה"
+            />
+            <ToolbarSelect
+              value={test || TEST_FILTER_ALL}
+              onValueChange={handleTestChange}
+              options={testFilterOptions}
+              placeholder="מבדק"
             />
           </>
         }
@@ -331,7 +378,10 @@ export function AssessmentsTable({
         </>
       ) : (
         <div className="text-center py-8 text-muted-foreground">
-          {search || (ageGroup && ageGroup !== "all") || (position && position !== POSITION_FILTER_ALL)
+          {search ||
+          (ageGroup && ageGroup !== "all") ||
+          (position && position !== POSITION_FILTER_ALL) ||
+          (test && test !== TEST_FILTER_ALL)
             ? "לא נמצאו שחקנים מתאימים"
             : "אין שחקנים רשומים"}
         </div>
