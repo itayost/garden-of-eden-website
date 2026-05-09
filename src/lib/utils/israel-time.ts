@@ -58,6 +58,22 @@ export function isSaturdayInIsrael(date: Date = new Date()): boolean {
   return getIsraelTime(date).dayOfWeek === 6;
 }
 
+const ISRAEL_DAY_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: ISRAEL_TZ,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * Returns the calendar date in Israel time as an ISO YYYY-MM-DD string.
+ * Hoisted formatter — safe to call inside hot loops.
+ */
+export function israelDateStr(value: string | Date): string {
+  const d = typeof value === "string" ? new Date(value) : value;
+  return ISRAEL_DAY_FORMATTER.format(d);
+}
+
 /**
  * Returns the auto-clockout target hour for the given day, or null if no auto-clockout.
  * - Saturday: null (no auto-clockout)

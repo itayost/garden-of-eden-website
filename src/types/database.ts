@@ -8,6 +8,8 @@ export type Json =
 
 export type UserRole = "trainee" | "trainer" | "admin";
 export type NutritionAppointmentStatus = 'not_scheduled' | 'scheduled' | 'completed';
+export type ShiftChangeRequestType = "edit" | "retro_add";
+export type ShiftChangeRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 export interface Database {
   // Required for proper Supabase client type inference
@@ -1183,6 +1185,66 @@ export interface Database {
         };
         Relationships: [];
       };
+      shift_change_requests: {
+        Row: {
+          id: string;
+          trainer_id: string;
+          trainer_name: string;
+          request_type: ShiftChangeRequestType;
+          target_shift_id: string | null;
+          original_start_time: string | null;
+          original_end_time: string | null;
+          requested_start_time: string;
+          requested_end_time: string;
+          reason: string | null;
+          status: ShiftChangeRequestStatus;
+          decided_by: string | null;
+          decided_at: string | null;
+          decision_note: string | null;
+          applied_shift_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trainer_id: string;
+          trainer_name: string;
+          request_type: ShiftChangeRequestType;
+          target_shift_id?: string | null;
+          original_start_time?: string | null;
+          original_end_time?: string | null;
+          requested_start_time: string;
+          requested_end_time: string;
+          reason?: string | null;
+          status?: ShiftChangeRequestStatus;
+          decided_by?: string | null;
+          decided_at?: string | null;
+          decision_note?: string | null;
+          applied_shift_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          trainer_id?: string;
+          trainer_name?: string;
+          request_type?: ShiftChangeRequestType;
+          target_shift_id?: string | null;
+          original_start_time?: string | null;
+          original_end_time?: string | null;
+          requested_start_time?: string;
+          requested_end_time?: string;
+          reason?: string | null;
+          status?: ShiftChangeRequestStatus;
+          decided_by?: string | null;
+          decided_at?: string | null;
+          decision_note?: string | null;
+          applied_shift_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1192,6 +1254,8 @@ export interface Database {
     };
     Enums: {
       user_role: UserRole;
+      shift_change_request_type: ShiftChangeRequestType;
+      shift_change_request_status: ShiftChangeRequestStatus;
     };
   };
 }
@@ -1227,6 +1291,9 @@ export type PaymentInsert = Database["public"]["Tables"]["payments"]["Insert"];
 export type PaymentUpdate = Database["public"]["Tables"]["payments"]["Update"];
 export type TrainerShiftReport = Database["public"]["Tables"]["trainer_shift_reports"]["Row"];
 export type TrainerShift = Database["public"]["Tables"]["trainer_shifts"]["Row"];
+export type ShiftChangeRequest = Database["public"]["Tables"]["shift_change_requests"]["Row"];
+export type ShiftChangeRequestInsert = Database["public"]["Tables"]["shift_change_requests"]["Insert"];
+export type ShiftChangeRequestUpdate = Database["public"]["Tables"]["shift_change_requests"]["Update"];
 export type TraineeSummary = Database["public"]["Tables"]["trainee_summaries"]["Row"];
 
 /** Achievement badge types */

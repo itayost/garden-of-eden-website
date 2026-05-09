@@ -7,8 +7,7 @@ import { verifyAdmin, verifyAdminOrTrainer } from "./shared/verify-admin";
 import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
 import { isValidUUID } from "@/lib/validations/common";
 import { resolveTimestamp } from "@/lib/utils/resolve-timestamp";
-
-const MAX_SHIFT_HOURS = 12;
+import { MAX_SHIFT_HOURS } from "@/lib/constants/shifts";
 
 type ActionResult =
   | { error: string; success?: never }

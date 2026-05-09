@@ -37,6 +37,7 @@ import {
   ShiftFormDialog,
   type ShiftFormTrainer,
 } from "@/components/admin/shifts/ShiftFormDialog";
+import { EditShiftRequestDialog } from "@/components/admin/shifts/EditShiftRequestDialog";
 import type { TrainerShift } from "@/types/database";
 
 interface TrainerShiftsViewProps {
@@ -140,6 +141,9 @@ export function TrainerShiftsView({
   const [search, setSearch] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingShift, setEditingShift] = useState<TrainerShift | null>(null);
+  const [editRequestShift, setEditRequestShift] = useState<TrainerShift | null>(
+    null
+  );
 
   const allSummaries = aggregateByTrainer(shifts);
 
@@ -393,6 +397,19 @@ export function TrainerShiftsView({
                               />
                             </div>
                           )}
+                          {!isAdmin && shift.end_time && (
+                            <div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7"
+                                onClick={() => setEditRequestShift(shift)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                                בקש שינוי
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -541,7 +558,22 @@ export function TrainerShiftsView({
                                 </div>
                               </TableCell>
                             )}
-                            <TableCell />
+                            <TableCell>
+                              {!isAdmin && shift.end_time && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs h-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditRequestShift(shift);
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3 me-1" />
+                                  בקש שינוי
+                                </Button>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                     </Fragment>
@@ -570,6 +602,18 @@ export function TrainerShiftsView({
             editShift={editingShift ?? undefined}
           />
         </>
+      )}
+
+      {/* Trainer edit-request dialog */}
+      {!isAdmin && editRequestShift && (
+        <EditShiftRequestDialog
+          key={editRequestShift.id}
+          open={!!editRequestShift}
+          onOpenChange={(open) => {
+            if (!open) setEditRequestShift(null);
+          }}
+          shift={editRequestShift}
+        />
       )}
     </div>
   );
