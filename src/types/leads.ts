@@ -6,13 +6,48 @@
  */
 
 // =============================================================================
-// Enum union types
+// Enum tuples (single source of truth for runtime + types)
 // =============================================================================
 
-export type LeadStatus = "new" | "callback" | "in_progress" | "closed" | "disqualified";
-export type LeadContactType = "call" | "whatsapp" | "meeting" | "message_sent";
-export type LeadContactOutcome = "interested" | "not_interested" | "callback" | "no_answer";
-export type LeadMessageType = "template" | "flow" | "text";
+export const LEAD_STATUSES = [
+  "new",
+  "callback",
+  "in_progress",
+  "closed",
+  "disqualified",
+] as const;
+export const LEAD_CONTACT_TYPES = ["call", "whatsapp", "meeting", "message_sent"] as const;
+export const LEAD_CONTACT_OUTCOMES = [
+  "interested",
+  "not_interested",
+  "callback",
+  "no_answer",
+] as const;
+export const LEAD_MESSAGE_TYPES = ["template", "flow", "text"] as const;
+export const LEAD_SOURCES = ["paid", "organic"] as const;
+
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+export type LeadContactType = (typeof LEAD_CONTACT_TYPES)[number];
+export type LeadContactOutcome = (typeof LEAD_CONTACT_OUTCOMES)[number];
+export type LeadMessageType = (typeof LEAD_MESSAGE_TYPES)[number];
+export type LeadSource = (typeof LEAD_SOURCES)[number];
+
+// =============================================================================
+// Shared constants
+// =============================================================================
+
+/** PostgREST select string for a lead with its assigned trainer joined. */
+export const LEAD_SELECT_WITH_TRAINER =
+  "*, assigned_trainer:profiles!leads_assigned_trainer_id_fkey(id, full_name)";
+
+/** Sentinel value for the "unassigned" option in trainer pickers and filters. */
+export const LEAD_UNASSIGNED_VALUE = "__unassigned__";
+
+/** Whether a value matches the WhatsApp-formatted Israeli phone shape (972XXXXXXXXX). */
+export const LEAD_PHONE_REGEX = /^972\d{9}$/;
+export function isLeadPhone(value: string): boolean {
+  return LEAD_PHONE_REGEX.test(value);
+}
 
 // =============================================================================
 // Table interfaces
@@ -24,6 +59,7 @@ export interface Lead {
   name: string;
   is_from_haifa: boolean;
   status: LeadStatus;
+  source: LeadSource;
   note: string | null;
   payment: number | null;
   months: number | null;
@@ -31,6 +67,11 @@ export interface Lead {
   flow_age_group: string | null;
   flow_team: string | null;
   flow_frequency: string | null;
+  club: string | null;
+  birth_year: number | null;
+  additional_info: string | null;
+  assigned_trainer_id: string | null;
+  assigned_trainer?: { id: string; full_name: string | null } | null;
   created_at: string;
   updated_at: string;
 }
@@ -94,6 +135,11 @@ export const LEAD_MESSAGE_TYPE_LABELS: Record<LeadMessageType, string> = {
   template: "תבנית",
   flow: "פלואו",
   text: "טקסט",
+};
+
+export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
+  paid: "ממומנים",
+  organic: "אורגניים",
 };
 
 // =============================================================================

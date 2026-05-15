@@ -38,7 +38,13 @@ import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadContactLogForm } from "./LeadContactLogForm";
 import { LeadContactTimeline } from "./LeadContactTimeline";
 import { LeadCloseDealDialog } from "./LeadCloseDealDialog";
-import { leadUpdateSchema, type LeadUpdateInput } from "@/lib/validations/leads";
+import { TrainerAssignmentSelect } from "./TrainerAssignmentSelect";
+import {
+  leadUpdateSchema,
+  parseBirthYearInput,
+  type LeadUpdateInput,
+} from "@/lib/validations/leads";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import {
   getLeadByIdAction,
   updateLeadAction,
@@ -72,6 +78,7 @@ interface LeadDetailSheetProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  trainers: TrainerOption[];
 }
 
 function formatPhone(phone: string): string {
@@ -82,7 +89,7 @@ function formatPhone(phone: string): string {
   return phone;
 }
 
-export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetProps) {
+export function LeadDetailSheet({ lead, open, onOpenChange, trainers }: LeadDetailSheetProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState<LeadStatus | null>(null);
@@ -107,6 +114,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
 
   const currentStatus = watch("status");
   const isFromHaifa = watch("is_from_haifa");
+  const assignedTrainerId = watch("assigned_trainer_id");
 
   const loadDetails = useCallback(async (leadId: string) => {
     setDetailLoading(true);
@@ -128,11 +136,16 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
         name: l.name,
         phone: l.phone,
         status: l.status,
+        source: l.source,
         is_from_haifa: l.is_from_haifa,
         note: l.note || "",
         payment: l.payment,
         months: l.months,
         total_payment: l.total_payment,
+        club: l.club || "",
+        birth_year: l.birth_year,
+        additional_info: l.additional_info || "",
+        assigned_trainer_id: l.assigned_trainer_id,
       });
     } catch {
       toast.error("שגיאה בטעינת פרטי ליד");
@@ -149,11 +162,16 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
         name: lead.name,
         phone: lead.phone,
         status: lead.status,
+        source: lead.source,
         is_from_haifa: lead.is_from_haifa,
         note: lead.note || "",
         payment: lead.payment,
         months: lead.months,
         total_payment: lead.total_payment,
+        club: lead.club || "",
+        birth_year: lead.birth_year,
+        additional_info: lead.additional_info || "",
+        assigned_trainer_id: lead.assigned_trainer_id,
       });
       loadDetails(lead.id);
     }
@@ -433,8 +451,51 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">מועדון</Label>
+                  <Input {...register("club")} placeholder="שם המועדון" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">שנתון</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={1990}
+                    max={2030}
+                    placeholder="למשל 2014"
+                    {...register("birth_year", { setValueAs: parseBirthYearInput })}
+                  />
+                  {errors.birth_year && (
+                    <p className="text-xs text-destructive">
+                      {errors.birth_year.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-1">
-                <Label className="text-xs">הערה</Label>
+                <Label className="text-xs">מאמן משוייך</Label>
+                <TrainerAssignmentSelect
+                  trainers={trainers}
+                  value={assignedTrainerId ?? null}
+                  onChange={(id) =>
+                    setValue("assigned_trainer_id", id, { shouldDirty: true })
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">מידע נוסף</Label>
+                <Textarea
+                  rows={2}
+                  placeholder="פרטי רקע, היסטוריה, וכו'"
+                  {...register("additional_info")}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">הערות</Label>
                 <Textarea rows={2} {...register("note")} />
               </div>
 

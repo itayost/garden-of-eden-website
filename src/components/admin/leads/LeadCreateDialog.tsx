@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,19 +26,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { leadCreateSchema, type LeadCreateInput } from "@/lib/validations/leads";
+import { TrainerAssignmentSelect } from "./TrainerAssignmentSelect";
+import {
+  leadCreateSchema,
+  parseBirthYearInput,
+  type LeadCreateInput,
+} from "@/lib/validations/leads";
 import { createLeadAction, sendWhatsAppFlowAction } from "@/lib/actions/admin-leads";
-import { LEAD_STATUS_LABELS, type LeadStatus } from "@/types/leads";
+import { LEAD_STATUS_LABELS, LEAD_SOURCE_LABELS, type LeadStatus, type LeadSource } from "@/types/leads";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
 interface LeadCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultSource: LeadSource;
+  trainers: TrainerOption[];
 }
 
-export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) {
+function buildLeadDefaults(
+  defaultSource: LeadSource,
+): z.input<typeof leadCreateSchema> {
+  return {
+    name: "",
+    phone: "",
+    status: "new",
+    source: defaultSource,
+    is_from_haifa: false,
+    note: "",
+    club: "",
+    birth_year: null,
+    additional_info: "",
+    assigned_trainer_id: null,
+  };
+}
+
+export function LeadCreateDialog({
+  open,
+  onOpenChange,
+  defaultSource,
+  trainers,
+}: LeadCreateDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [autoSendFlow, setAutoSendFlow] = useState(true);
+  const [autoSendFlow, setAutoSendFlow] = useState(defaultSource === "paid");
 
   const {
     register,
@@ -46,20 +77,21 @@ export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) 
     setValue,
     watch,
     formState: { errors },
-  } = useForm<LeadCreateInput>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(leadCreateSchema) as any,
-    defaultValues: {
-      name: "",
-      phone: "",
-      status: "new",
-      is_from_haifa: false,
-      note: "",
-    },
+  } = useForm<z.input<typeof leadCreateSchema>, unknown, LeadCreateInput>({
+    resolver: zodResolver(leadCreateSchema),
+    defaultValues: buildLeadDefaults(defaultSource),
   });
 
+  // Keep source in sync if the active tab changes while the dialog is mounted
+  useEffect(() => {
+    setValue("source", defaultSource);
+    setAutoSendFlow(defaultSource === "paid");
+  }, [defaultSource, setValue]);
+
   const status = watch("status");
+  const source = watch("source");
   const isFromHaifa = watch("is_from_haifa");
+  const assignedTrainerId = watch("assigned_trainer_id");
 
   const onSubmit = async (data: LeadCreateInput) => {
     setLoading(true);
@@ -85,8 +117,8 @@ export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) 
         toast.success("ליד נוצר בהצלחה");
       }
 
-      reset();
-      setAutoSendFlow(true);
+      reset(buildLeadDefaults(defaultSource));
+      setAutoSendFlow(defaultSource === "paid");
       onOpenChange(false);
       router.refresh();
     } catch {
@@ -128,29 +160,98 @@ export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) 
             )}
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>סטטוס</Label>
+              <Select
+                value={status}
+                onValueChange={(v) =>
+                  setValue("status", v as LeadStatus, { shouldValidate: true })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    Object.entries(LEAD_STATUS_LABELS) as [LeadStatus, string][]
+                  )
+                    .filter(([value]) => value !== "closed")
+                    .map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>מקור</Label>
+              <Select
+                value={source ?? defaultSource}
+                onValueChange={(v) =>
+                  setValue("source", v as LeadSource, { shouldValidate: true })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.entries(LEAD_SOURCE_LABELS) as [LeadSource, string][]).map(
+                    ([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="club">מועדון</Label>
+              <Input id="club" placeholder="שם המועדון" {...register("club")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="birth_year">שנתון</Label>
+              <Input
+                id="birth_year"
+                type="number"
+                inputMode="numeric"
+                min={1990}
+                max={2030}
+                placeholder="למשל 2014"
+                {...register("birth_year", { setValueAs: parseBirthYearInput })}
+              />
+              {errors.birth_year && (
+                <p className="text-xs text-destructive">
+                  {errors.birth_year.message}
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label>סטטוס</Label>
-            <Select
-              value={status}
-              onValueChange={(v) =>
-                setValue("status", v as LeadStatus, { shouldValidate: true })
+            <Label>מאמן משוייך</Label>
+            <TrainerAssignmentSelect
+              trainers={trainers}
+              value={assignedTrainerId ?? null}
+              onChange={(id) =>
+                setValue("assigned_trainer_id", id, { shouldDirty: true })
               }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(
-                  Object.entries(LEAD_STATUS_LABELS) as [LeadStatus, string][]
-                )
-                  .filter(([value]) => value !== "closed")
-                  .map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="additional_info">מידע נוסף</Label>
+            <Textarea
+              id="additional_info"
+              rows={2}
+              placeholder="פרטי רקע, היסטוריה, וכו'"
+              {...register("additional_info")}
+            />
           </div>
 
           <div className="flex items-center gap-2">
@@ -167,7 +268,7 @@ export function LeadCreateDialog({ open, onOpenChange }: LeadCreateDialogProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="note">הערה</Label>
+            <Label htmlFor="note">הערות</Label>
             <Textarea
               id="note"
               placeholder="הערות נוספות..."

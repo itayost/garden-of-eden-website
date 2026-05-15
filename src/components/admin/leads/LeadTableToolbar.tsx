@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQueryState, parseAsString, parseAsBoolean } from "nuqs";
 import { useDebouncedCallback } from "use-debounce";
 import { Search, Plus, X } from "lucide-react";
@@ -15,8 +15,9 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { LEAD_STATUS_LABELS, type LeadStatus } from "@/types/leads";
+import { LEAD_STATUS_LABELS, LEAD_UNASSIGNED_VALUE, type LeadStatus } from "@/types/leads";
 import { TEAMS } from "@/lib/whatsapp/flow-constants";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
 interface LeadTableToolbarProps {
   onSearchChange: (value: string) => void;
@@ -24,8 +25,10 @@ interface LeadTableToolbarProps {
   onHaifaChange: (value: boolean) => void;
   onTeamChange: (value: string | null) => void;
   onFlowChange: (value: string | null) => void;
+  onAssignedTrainerChange: (value: string | null) => void;
   onCreateClick: () => void;
   statusValue?: string | null;
+  trainers: TrainerOption[];
 }
 
 export function LeadTableToolbar({
@@ -34,8 +37,10 @@ export function LeadTableToolbar({
   onHaifaChange,
   onTeamChange,
   onFlowChange,
+  onAssignedTrainerChange,
   onCreateClick,
   statusValue,
+  trainers,
 }: LeadTableToolbarProps) {
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
   const [status, setStatus] = useQueryState("status", parseAsString);
@@ -45,41 +50,21 @@ export function LeadTableToolbar({
   );
   const [team, setTeam] = useQueryState("team", parseAsString);
   const [flow, setFlow] = useQueryState("flow", parseAsString);
+  const [assignedTrainer, setAssignedTrainer] = useQueryState("at", parseAsString);
   const [searchInput, setSearchInput] = useState(search);
-  const isExternalUpdate = useRef(false);
 
   const debouncedSearch = useDebouncedCallback((value: string) => {
     setSearch(value || null);
     onSearchChange(value);
   }, 300);
 
-  // Sync external statusValue (from stat card clicks) into nuqs
+  // Sync external statusValue (from stat card clicks) into nuqs.
+  // The parent already has the new value; we only mirror it into the URL.
   useEffect(() => {
     if (statusValue !== undefined && statusValue !== status) {
-      isExternalUpdate.current = true;
       setStatus(statusValue);
     }
   }, [statusValue, status, setStatus]);
-
-  useEffect(() => {
-    onSearchChange(search);
-  }, [search, onSearchChange]);
-  useEffect(() => {
-    if (isExternalUpdate.current) {
-      isExternalUpdate.current = false;
-      return;
-    }
-    onStatusChange(status);
-  }, [status, onStatusChange]);
-  useEffect(() => {
-    onHaifaChange(haifa);
-  }, [haifa, onHaifaChange]);
-  useEffect(() => {
-    onTeamChange(team);
-  }, [team, onTeamChange]);
-  useEffect(() => {
-    onFlowChange(flow);
-  }, [flow, onFlowChange]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -87,31 +72,34 @@ export function LeadTableToolbar({
     debouncedSearch(value);
   };
 
-  const handleStatusChange = (value: string) => {
-    const newStatus = value === "all" ? null : value;
-    setStatus(newStatus);
-    onStatusChange(newStatus);
-  };
+  // Factory for Select filters whose "all" sentinel maps to null in both
+  // the URL state (nuqs setter) and the parent callback.
+  const makeSelectHandler =
+    (
+      setter: (next: string | null) => void,
+      callback: (next: string | null) => void,
+    ) =>
+    (value: string) => {
+      const next = value === "all" ? null : value;
+      setter(next);
+      callback(next);
+    };
+
+  const handleStatusChange = makeSelectHandler(setStatus, onStatusChange);
+  const handleTeamChange = makeSelectHandler(setTeam, onTeamChange);
+  const handleFlowChange = makeSelectHandler(setFlow, onFlowChange);
+  const handleAssignedTrainerChange = makeSelectHandler(
+    setAssignedTrainer,
+    onAssignedTrainerChange,
+  );
 
   const handleHaifaChange = (checked: boolean) => {
     setHaifa(checked || null);
     onHaifaChange(checked);
   };
 
-  const handleTeamChange = (value: string) => {
-    const newTeam = value === "all" ? null : value;
-    setTeam(newTeam);
-    onTeamChange(newTeam);
-  };
-
-  const handleFlowChange = (value: string) => {
-    const newFlow = value === "all" ? null : value;
-    setFlow(newFlow);
-    onFlowChange(newFlow);
-  };
-
   const hasActiveFilters =
-    search || status || haifa || team || flow;
+    search || status || haifa || team || flow || assignedTrainer;
 
   const handleClearFilters = () => {
     setSearchInput("");
@@ -120,11 +108,13 @@ export function LeadTableToolbar({
     setHaifa(null);
     setTeam(null);
     setFlow(null);
+    setAssignedTrainer(null);
     onSearchChange("");
     onStatusChange(null);
     onHaifaChange(false);
     onTeamChange(null);
     onFlowChange(null);
+    onAssignedTrainerChange(null);
   };
 
   return (
@@ -187,6 +177,23 @@ export function LeadTableToolbar({
             <SelectItem value="all">הכל</SelectItem>
             <SelectItem value="complete">הושלם</SelectItem>
             <SelectItem value="pending">ממתין</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={assignedTrainer || "all"}
+          onValueChange={handleAssignedTrainerChange}
+        >
+          <SelectTrigger className="w-full md:w-44">
+            <SelectValue placeholder="מאמן משוייך" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">כל המאמנים</SelectItem>
+            <SelectItem value={LEAD_UNASSIGNED_VALUE}>ללא שיוך</SelectItem>
+            {trainers.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.full_name || "מאמן ללא שם"}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         {hasActiveFilters && (

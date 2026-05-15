@@ -30,7 +30,18 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     };
   }
 
-  const { phone, name, is_from_haifa, status, note } = validated.data;
+  const {
+    phone,
+    name,
+    is_from_haifa,
+    status,
+    source,
+    note,
+    club,
+    birth_year,
+    additional_info,
+    assigned_trainer_id,
+  } = validated.data;
 
   const supabase = await createClient();
 
@@ -44,8 +55,22 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     return { error: "מספר טלפון כבר קיים במערכת" };
   }
 
+  const nullIfEmpty = (v: string | null | undefined) => (v ? v : null);
+  const insertPayload = {
+    phone,
+    name,
+    is_from_haifa,
+    status,
+    source: source ?? "paid",
+    note: nullIfEmpty(note),
+    club: nullIfEmpty(club),
+    birth_year: birth_year ?? null,
+    additional_info: nullIfEmpty(additional_info),
+    assigned_trainer_id: assigned_trainer_id ?? null,
+  };
+
   const { data: newLead, error } = await typedFrom(supabase, "leads")
-    .insert({ phone, name, is_from_haifa, status, note: note || null })
+    .insert(insertPayload)
     .select()
     .single();
 

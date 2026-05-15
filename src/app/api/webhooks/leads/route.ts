@@ -41,7 +41,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { phone, name, is_from_haifa, note } = parseResult.data;
+    const {
+      phone,
+      name,
+      is_from_haifa,
+      note,
+      source,
+      club,
+      birth_year,
+      additional_info,
+    } = parseResult.data;
     const supabase = createAdminClient();
 
     // Check phone uniqueness
@@ -58,11 +67,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert new lead
-    const { data: newLead, error: insertError } = await typedFrom(
-      supabase,
-      "leads"
-    )
-      .insert({ phone, name, is_from_haifa, note: note || null })
+    const { data: newLead, error: insertError } = await typedFrom(supabase, "leads")
+      .insert({
+        phone,
+        name,
+        is_from_haifa,
+        note: note || null,
+        source: source ?? "paid",
+        club: club || null,
+        birth_year: birth_year ?? null,
+        additional_info: additional_info || null,
+      })
       .select("id")
       .single();
 

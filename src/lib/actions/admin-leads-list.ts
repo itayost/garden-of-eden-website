@@ -4,7 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
-import type { Lead, LeadStatus, LeadContactLog, LeadSentMessage, LeadFlowResponse } from "@/types/leads";
+import {
+  LEAD_SELECT_WITH_TRAINER,
+  LEAD_STATUSES,
+  type Lead,
+  type LeadContactLog,
+  type LeadFlowResponse,
+  type LeadSentMessage,
+  type LeadSource,
+  type LeadStatus,
+} from "@/types/leads";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -18,6 +27,8 @@ interface LeadsFilters {
   endDate?: string;
   page?: number;
   pageSize?: number;
+  source?: LeadSource;
+  assignedTrainerId?: string | null;
 }
 
 interface LeadDetail {
@@ -44,10 +55,20 @@ export async function getLeadsAction(
   if (authError) return { error: authError };
 
   const supabase = await createClient();
-  const { search, status, isFromHaifa, startDate, endDate, page = 1, pageSize = 20 } = filters;
+  const {
+    search,
+    status,
+    isFromHaifa,
+    startDate,
+    endDate,
+    page = 1,
+    pageSize = 20,
+    source,
+    assignedTrainerId,
+  } = filters;
   const from = (page - 1) * pageSize;
 
-  let query = typedFrom(supabase, "leads").select("*", { count: "exact" });
+  let query = typedFrom(supabase, "leads").select(LEAD_SELECT_WITH_TRAINER, { count: "exact" });
 
   if (search) {
     // Sanitize search input: escape PostgREST special chars to prevent filter injection
@@ -56,18 +77,16 @@ export async function getLeadsAction(
       query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`);
     }
   }
-  if (status) {
-    query = query.eq("status", status);
+  if (status) query = query.eq("status", status);
+  if (isFromHaifa) query = query.eq("is_from_haifa", true);
+  if (source) query = query.eq("source", source);
+  if (assignedTrainerId === null) {
+    query = query.is("assigned_trainer_id", null);
+  } else if (assignedTrainerId) {
+    query = query.eq("assigned_trainer_id", assignedTrainerId);
   }
-  if (isFromHaifa) {
-    query = query.eq("is_from_haifa", true);
-  }
-  if (startDate) {
-    query = query.gte("created_at", startDate);
-  }
-  if (endDate) {
-    query = query.lte("created_at", endDate + "T23:59:59");
-  }
+  if (startDate) query = query.gte("created_at", startDate);
+  if (endDate) query = query.lte("created_at", endDate + "T23:59:59");
 
   query = query.order("created_at", { ascending: false }).range(from, from + pageSize - 1);
 
@@ -93,7 +112,7 @@ export async function getLeadByIdAction(id: string): Promise<ActionResult<LeadDe
   const supabase = await createClient();
 
   const [leadRes, contactRes, messagesRes, flowRes] = await Promise.all([
-    typedFrom(supabase, "leads").select("*").eq("id", id).single(),
+    typedFrom(supabase, "leads").select(LEAD_SELECT_WITH_TRAINER).eq("id", id).single(),
     typedFrom(supabase, "lead_contact_log")
       .select("*")
       .eq("lead_id", id)
@@ -125,13 +144,16 @@ export async function getLeadByIdAction(id: string): Promise<ActionResult<LeadDe
 }
 
 /**
- * Get aggregated leads statistics
+ * Get aggregated leads statistics, optionally scoped by source.
  */
-export async function getLeadsStatsAction(): Promise<ActionResult<LeadsStats>> {
+export async function getLeadsStatsAction(
+  filters: { source?: LeadSource } = {}
+): Promise<ActionResult<LeadsStats>> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const supabase = await createClient();
+  const { source } = filters;
 
   // Calculate start of current week (Sunday)
   const now = new Date();
@@ -140,25 +162,23 @@ export async function getLeadsStatsAction(): Promise<ActionResult<LeadsStats>> {
   weekStart.setDate(now.getDate() - dayOfWeek);
   weekStart.setHours(0, 0, 0, 0);
 
-  const statuses: LeadStatus[] = ["new", "callback", "in_progress", "closed", "disqualified"];
+  const baseQuery = () => {
+    const q = typedFrom(supabase, "leads").select("*", { count: "exact", head: true });
+    return source ? q.eq("source", source) : q;
+  };
 
   const [totalRes, weekRes, ...statusResults] = await Promise.all([
-    typedFrom(supabase, "leads").select("*", { count: "exact", head: true }),
-    typedFrom(supabase, "leads")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", weekStart.toISOString()),
-    ...statuses.map((s) =>
-      typedFrom(supabase, "leads").select("*", { count: "exact", head: true }).eq("status", s)
-    ),
+    baseQuery(),
+    baseQuery().gte("created_at", weekStart.toISOString()),
+    ...LEAD_STATUSES.map((s) => baseQuery().eq("status", s)),
   ]);
 
   const total = totalRes.count ?? 0;
   const newThisWeek = weekRes.count ?? 0;
 
-  const byStatus = {} as Record<LeadStatus, number>;
-  statuses.forEach((s, i) => {
-    byStatus[s] = statusResults[i].count ?? 0;
-  });
+  const byStatus = Object.fromEntries(
+    LEAD_STATUSES.map((s, i) => [s, statusResults[i].count ?? 0])
+  ) as Record<LeadStatus, number>;
 
   const conversionRate = total > 0 ? Math.round((byStatus.closed / total) * 10000) / 100 : 0;
 

@@ -10,8 +10,35 @@ import {
 } from "@/lib/whatsapp/flow-constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { isLeadPhone } from "@/types/leads";
 
 const FLOW_VERSION = "3.0";
+const DEFAULT_CUSTOMER_NAME = "חבר/ה";
+
+// Screen builders — single source of truth for each Flow screen payload.
+function ageSelectionScreen(customerName: string = DEFAULT_CUSTOMER_NAME) {
+  return {
+    version: FLOW_VERSION,
+    screen: "AGE_SELECTION" as const,
+    data: { customer_name: customerName, age_groups: AGE_GROUPS },
+  };
+}
+
+function teamSelectionScreen(showOtherField: boolean = false) {
+  return {
+    version: FLOW_VERSION,
+    screen: "TEAM_SELECTION" as const,
+    data: { teams: TEAMS, show_other_field: showOtherField },
+  };
+}
+
+function frequencySelectionScreen() {
+  return {
+    version: FLOW_VERSION,
+    screen: "FREQUENCY_SELECTION" as const,
+    data: { frequency_options: FREQUENCY_OPTIONS },
+  };
+}
 
 /**
  * WhatsApp Flow data_exchange endpoint
@@ -111,9 +138,9 @@ async function handleInit(
   flowToken: string
 ): Promise<Record<string, unknown>> {
   const phone = flowToken.split("_")[1] || "";
-  let customerName = "חבר/ה";
+  let customerName = DEFAULT_CUSTOMER_NAME;
 
-  if (/^972\d{9}$/.test(phone)) {
+  if (isLeadPhone(phone)) {
     try {
       const supabase = createAdminClient();
       const { data: lead } = await typedFrom(supabase, "leads")
@@ -126,14 +153,7 @@ async function handleInit(
     }
   }
 
-  return {
-    version: FLOW_VERSION,
-    screen: "AGE_SELECTION",
-    data: {
-      customer_name: customerName,
-      age_groups: AGE_GROUPS,
-    },
-  };
+  return ageSelectionScreen(customerName);
 }
 
 /**
@@ -156,41 +176,25 @@ async function handleDataExchange(
       if (phone) {
         await saveFlowField(phone, { flow_age_group: data.age as string });
       }
-      return {
-        version: FLOW_VERSION,
-        screen: "TEAM_SELECTION",
-        data: {
-          teams: TEAMS,
-          show_other_field: false,
-        },
-      };
+      return teamSelectionScreen();
 
-    case "TEAM_SELECTION":
+    case "TEAM_SELECTION": {
       // If "other" selected but no text provided, stay on screen
       if (data.team === "team_other" && !data.other_team) {
-        return {
-          version: FLOW_VERSION,
-          screen: "TEAM_SELECTION",
-          data: {
-            teams: TEAMS,
-            show_other_field: true,
-          },
-        };
+        return teamSelectionScreen(true);
       }
       // Save team immediately (use other_team text if "other" selected)
       if (phone) {
-        const teamValue = data.team === "team_other"
-          ? (data.other_team as string)
-          : (data.team as string);
+        const teamValue =
+          data.team === "team_other"
+            ? (data.other_team as string)
+            : (data.team as string);
         await saveFlowField(phone, { flow_team: teamValue });
+        // Mirror to admin-editable `club` only when not already set
+        await saveLeadClubIfEmpty(phone, teamValue);
       }
-      return {
-        version: FLOW_VERSION,
-        screen: "FREQUENCY_SELECTION",
-        data: {
-          frequency_options: FREQUENCY_OPTIONS,
-        },
-      };
+      return frequencySelectionScreen();
+    }
 
     case "FREQUENCY_SELECTION":
       // Save frequency and mark flow complete
@@ -201,9 +205,7 @@ async function handleDataExchange(
       return {
         version: FLOW_VERSION,
         screen: "CONFIRMATION",
-        data: {
-          website_url: "https://www.edengarden.co.il/",
-        },
+        data: { website_url: "https://www.edengarden.co.il/" },
       };
 
     case "CONFIRMATION":
@@ -212,24 +214,14 @@ async function handleDataExchange(
         screen: "SUCCESS",
         data: {
           extension_message_response: {
-            params: {
-              flow_token: flowToken,
-              status: "completed",
-            },
+            params: { flow_token: flowToken, status: "completed" },
           },
         },
       };
 
     default:
       console.error("[WhatsApp Flow] Unknown screen:", currentScreen);
-      return {
-        version: FLOW_VERSION,
-        screen: "AGE_SELECTION",
-        data: {
-          customer_name: "חבר/ה",
-          age_groups: AGE_GROUPS,
-        },
-      };
+      return ageSelectionScreen();
   }
 }
 
@@ -241,40 +233,13 @@ function handleBack(
 ): Record<string, unknown> {
   switch (currentScreen) {
     case "TEAM_SELECTION":
-      return {
-        version: FLOW_VERSION,
-        screen: "AGE_SELECTION",
-        data: {
-          customer_name: "חבר/ה",
-          age_groups: AGE_GROUPS,
-        },
-      };
+      return ageSelectionScreen();
     case "FREQUENCY_SELECTION":
-      return {
-        version: FLOW_VERSION,
-        screen: "TEAM_SELECTION",
-        data: {
-          teams: TEAMS,
-          show_other_field: false,
-        },
-      };
+      return teamSelectionScreen();
     case "CONFIRMATION":
-      return {
-        version: FLOW_VERSION,
-        screen: "FREQUENCY_SELECTION",
-        data: {
-          frequency_options: FREQUENCY_OPTIONS,
-        },
-      };
+      return frequencySelectionScreen();
     default:
-      return {
-        version: FLOW_VERSION,
-        screen: "AGE_SELECTION",
-        data: {
-          customer_name: "חבר/ה",
-          age_groups: AGE_GROUPS,
-        },
-      };
+      return ageSelectionScreen();
   }
 }
 
@@ -293,7 +258,7 @@ async function saveFlowField(
   phone: string,
   fields: Record<string, string>
 ): Promise<void> {
-  if (!/^972\d{9}$/.test(phone)) return;
+  if (!isLeadPhone(phone)) return;
 
   try {
     const supabase = createAdminClient();
@@ -312,6 +277,27 @@ async function saveFlowField(
 }
 
 /**
+ * Mirror flow_team into the admin-editable `club` column, but only when it is
+ * currently NULL. This preserves any admin edit made between webhook creation
+ * and flow completion.
+ */
+async function saveLeadClubIfEmpty(phone: string, club: string): Promise<void> {
+  if (!isLeadPhone(phone) || !club) return;
+  try {
+    const supabase = createAdminClient();
+    const { error } = await typedFrom(supabase, "leads")
+      .update({ club })
+      .eq("phone", phone)
+      .is("club", null);
+    if (error) {
+      console.error("[WhatsApp Flow] Error saving club:", error);
+    }
+  } catch (error) {
+    console.error("[WhatsApp Flow] Error saving club:", error);
+  }
+}
+
+/**
  * Save complete flow response record
  */
 async function saveFlowResponse(
@@ -319,7 +305,7 @@ async function saveFlowResponse(
   flowToken: string,
   data: Record<string, unknown>
 ): Promise<void> {
-  if (!/^972\d{9}$/.test(phone)) return;
+  if (!isLeadPhone(phone)) return;
 
   try {
     const supabase = createAdminClient();

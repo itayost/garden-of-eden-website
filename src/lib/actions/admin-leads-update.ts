@@ -6,13 +6,13 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { leadUpdateSchema, type LeadUpdateInput } from "@/lib/validations/leads";
 import { isValidUUID } from "@/lib/validations/common";
-import type { Lead, LeadStatus } from "@/types/leads";
+import { LEAD_STATUSES, type Lead, type LeadStatus } from "@/types/leads";
 
 type ActionResult =
   | { success: true; data?: Lead }
   | { error: string; fieldErrors?: Record<string, string[]> };
 
-const VALID_STATUSES: LeadStatus[] = ["new", "callback", "in_progress", "closed", "disqualified"];
+const NULLABLE_TEXT_KEYS = new Set(["note", "club", "additional_info"]);
 
 /**
  * Update a lead's fields
@@ -36,18 +36,19 @@ export async function updateLeadAction(input: LeadUpdateInput): Promise<ActionRe
   const { id, ...fields } = validated.data;
   const supabase = await createClient();
 
-  // Build update object with only defined values
-  const updateData: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(fields)) {
-    if (value !== undefined) {
-      // Treat empty string note as null
-      updateData[key] = key === "note" && value === "" ? null : value;
-    }
-  }
+  // Keep only defined fields; coerce "" → null for nullable text columns.
+  const entries = Object.entries(fields)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => [
+      key,
+      NULLABLE_TEXT_KEYS.has(key) && value === "" ? null : value,
+    ] as const);
 
-  if (Object.keys(updateData).length === 0) {
+  if (entries.length === 0) {
     return { error: "לא סופקו שדות לעדכון" };
   }
+
+  const updateData: Record<string, unknown> = Object.fromEntries(entries);
 
   // If phone is changing, check uniqueness
   if (updateData.phone) {
@@ -90,7 +91,7 @@ export async function updateLeadStatusAction(
 
   if (!isValidUUID(id)) return { error: "מזהה לא תקין" };
 
-  if (!VALID_STATUSES.includes(status)) {
+  if (!LEAD_STATUSES.includes(status)) {
     return { error: "סטטוס לא תקין" };
   }
 

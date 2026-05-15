@@ -18,20 +18,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { columns } from "./LeadTableColumns";
+import { getLeadColumns } from "./LeadTableColumns";
 import { LeadTableToolbar } from "./LeadTableToolbar";
 import { LeadStatsPanel } from "./LeadStatsPanel";
 import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadDetailSheet } from "./LeadDetailSheet";
 import { LeadCreateDialog } from "./LeadCreateDialog";
 import { TablePagination } from "@/components/admin/TablePagination";
-import type { Lead, LeadStatus } from "@/types/leads";
+import { LEAD_UNASSIGNED_VALUE, type Lead, type LeadStatus, type LeadSource } from "@/types/leads";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
 interface LeadDataTableProps {
   data: Lead[];
+  source: LeadSource;
+  trainers: TrainerOption[];
   initialSearch?: string;
   initialStatus?: string | null;
   initialHaifa?: boolean;
+  initialAssignedTrainerId?: string | null;
 }
 
 function formatPhone(phone: string): string {
@@ -44,9 +48,12 @@ function formatPhone(phone: string): string {
 
 export function LeadDataTable({
   data,
+  source,
+  trainers,
   initialSearch = "",
   initialStatus = null,
   initialHaifa = false,
+  initialAssignedTrainerId = null,
 }: LeadDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
@@ -54,9 +61,17 @@ export function LeadDataTable({
   const [haifaFilter, setHaifaFilter] = useState(initialHaifa);
   const [teamFilter, setTeamFilter] = useState<string | null>(null);
   const [flowFilter, setFlowFilter] = useState<string | null>(null);
+  const [assignedTrainerFilter, setAssignedTrainerFilter] = useState<string | null>(
+    initialAssignedTrainerId
+  );
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+
+  const columns = useMemo(
+    () => getLeadColumns({ showPaidIndicator: source === "paid" }),
+    [source]
+  );
 
   const filteredData = useMemo(() => {
     return data.filter((lead) => {
@@ -77,9 +92,16 @@ export function LeadDataTable({
         if (flowFilter === "pending" && lead.flow_age_group !== null)
           return false;
       }
+      if (assignedTrainerFilter) {
+        if (assignedTrainerFilter === LEAD_UNASSIGNED_VALUE) {
+          if (lead.assigned_trainer_id) return false;
+        } else if (lead.assigned_trainer_id !== assignedTrainerFilter) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [data, globalFilter, statusFilter, haifaFilter, teamFilter, flowFilter]);
+  }, [data, globalFilter, statusFilter, haifaFilter, teamFilter, flowFilter, assignedTrainerFilter]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -112,6 +134,10 @@ export function LeadDataTable({
     (v: string | null) => setFlowFilter(v),
     []
   );
+  const handleAssignedTrainerChange = useCallback(
+    (v: string | null) => setAssignedTrainerFilter(v),
+    []
+  );
   const handleCreateClick = useCallback(() => setCreateOpen(true), []);
 
   const handleStatStatusFilter = useCallback(
@@ -135,8 +161,10 @@ export function LeadDataTable({
         onHaifaChange={handleHaifaChange}
         onTeamChange={handleTeamChange}
         onFlowChange={handleFlowChange}
+        onAssignedTrainerChange={handleAssignedTrainerChange}
         onCreateClick={handleCreateClick}
         statusValue={statusFilter}
+        trainers={trainers}
       />
 
       {/* Mobile: Card list */}
@@ -244,10 +272,16 @@ export function LeadDataTable({
         lead={selectedLead}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+        trainers={trainers}
       />
 
       {/* Create Dialog */}
-      <LeadCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <LeadCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        defaultSource={source}
+        trainers={trainers}
+      />
     </div>
   );
 }
