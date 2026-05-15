@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 
 interface UpsertMealPlanPdfResult {
@@ -54,12 +55,10 @@ export async function upsertMealPlanPdf(
       }
     }
 
-    const { error } = await supabase
-      .from("trainee_meal_plans")
+    const { error } = await typedFrom(supabase, "trainee_meal_plans")
       .update({
         pdf_url: pdfUrl,
         pdf_path: pdfPath,
-        meal_plan: null,
       })
       .eq("id", existingPlan.id);
 
@@ -68,11 +67,10 @@ export async function upsertMealPlanPdf(
       return { success: false, error: "שגיאה בעדכון תוכנית התזונה" };
     }
   } else {
-    const { error } = await supabase.from("trainee_meal_plans").insert({
+    const { error } = await typedFrom(supabase, "trainee_meal_plans").insert({
       user_id: userId,
       pdf_url: pdfUrl,
       pdf_path: pdfPath,
-      meal_plan: null,
       created_by: user!.id,
     });
 
