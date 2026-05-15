@@ -8,7 +8,9 @@ import {
   SleepChart,
   MealPlanPdfViewer,
   NutritionRecommendations,
+  TraineeMeasurementsHistory,
   getNutritionData,
+  getTraineeMeasurements,
 } from "@/features/nutrition";
 import type { Metadata } from "next";
 
@@ -26,12 +28,16 @@ export default async function NutritionPage() {
     redirect("/auth/login?redirect=/dashboard/nutrition");
   }
 
-  const nutritionData = await getNutritionData(user.id);
+  const [nutritionData, measurements] = await Promise.all([
+    getNutritionData(user.id),
+    getTraineeMeasurements(user.id),
+  ]);
 
   const allEmpty =
     nutritionData.sleepData.length === 0 &&
     !nutritionData.mealPlan &&
-    !nutritionData.recommendation;
+    !nutritionData.recommendation &&
+    measurements.length === 0;
 
   return (
     <div className="space-y-6">
@@ -71,6 +77,8 @@ export default async function NutritionPage() {
       ) : (
         <>
           <SleepChart data={nutritionData.sleepData} />
+
+          <TraineeMeasurementsHistory measurements={measurements} />
 
           <MealPlanPdfViewer mealPlan={nutritionData.mealPlan} />
 

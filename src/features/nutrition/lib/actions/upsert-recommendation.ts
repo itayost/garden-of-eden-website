@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { Profile } from "@/types/database";
+import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 
 interface UpsertRecommendationResult {
@@ -18,34 +18,18 @@ export async function upsertRecommendation(
   userId: string,
   recommendationText: string
 ): Promise<UpsertRecommendationResult> {
+  const { error: authError, user } = await verifyAdminOrTrainer();
+  if (authError) return { success: false, error: authError };
+
   if (!isValidUUID(userId)) {
     return { success: false, error: "מזהה משתמש לא תקין" };
-  }
-
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, error: "Unauthorized" };
-  }
-
-  // Verify caller is trainer or admin
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()) as { data: Pick<Profile, "role"> | null };
-
-  if (!profile || !["trainer", "admin"].includes(profile.role)) {
-    return { success: false, error: "רק מאמנים יכולים לנהל המלצות תזונה" };
   }
 
   if (!recommendationText || recommendationText.trim().length < 10) {
     return { success: false, error: "ההמלצה חייבת להכיל לפחות 10 תווים" };
   }
+
+  const supabase = await createClient();
 
   // Check if recommendation already exists
   const { data: existingRec } = (await supabase
@@ -69,7 +53,7 @@ export async function upsertRecommendation(
     const { error } = await supabase.from("nutrition_recommendations").insert({
       user_id: userId,
       recommendation_text: recommendationText,
-      created_by: user.id,
+      created_by: user!.id,
     });
 
     if (error) {

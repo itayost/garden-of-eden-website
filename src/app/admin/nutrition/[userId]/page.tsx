@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import type { Profile } from "@/types/database";
+import type { Profile, UserRole } from "@/types/database";
 import dynamic from "next/dynamic";
 import { getNutritionData } from "@/features/nutrition";
 
@@ -12,6 +12,7 @@ const SleepChart = dynamic(
 );
 import { MealPlanPdfUpload } from "@/components/admin/nutrition/MealPlanPdfUpload";
 import { RecommendationForm } from "@/components/admin/nutrition/RecommendationForm";
+import { MeasurementsCard } from "@/components/admin/nutrition/MeasurementsCard";
 
 interface PageProps {
   params: Promise<{ userId: string }>;
@@ -23,16 +24,33 @@ export default async function AdminTraineeNutritionPage({
   const { userId } = await params;
   const supabase = await createClient();
 
-  const { data: trainee } = (await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .is("deleted_at", null)
-    .single()) as unknown as { data: Profile | null };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/auth/login");
+  }
+
+  const [{ data: trainee }, { data: callerProfile }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .is("deleted_at", null)
+      .single() as unknown as Promise<{ data: Profile | null }>,
+    supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .is("deleted_at", null)
+      .single() as unknown as Promise<{ data: { role: UserRole } | null }>,
+  ]);
 
   if (!trainee || trainee.role !== "trainee") {
     notFound();
   }
+
+  const currentUserRole: UserRole = callerProfile?.role ?? "trainee";
 
   const nutritionData = await getNutritionData(userId);
 
@@ -55,6 +73,12 @@ export default async function AdminTraineeNutritionPage({
       </div>
 
       <SleepChart data={nutritionData.sleepData} />
+
+      <MeasurementsCard
+        userId={userId}
+        dateOfBirth={trainee.birthdate}
+        currentUserRole={currentUserRole}
+      />
 
       <MealPlanPdfUpload
         userId={userId}
