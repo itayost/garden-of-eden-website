@@ -17,7 +17,7 @@ export function MentalRecordingsCard() {
             <Brain className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="font-semibold">הקלטות מפגשי מנטל</p>
+            <h3 className="font-semibold">הקלטות מפגשי מנטל</h3>
             <p className="text-sm text-muted-foreground">
               צפו בהקלטות ממפגשי הזום הקודמים בנושא מנטליות
             </p>
@@ -28,8 +28,9 @@ export function MentalRecordingsCard() {
             href={MENTAL_RECORDINGS_DRIVE_URL}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="לצפייה בהקלטות (נפתח בכרטיסייה חדשה)"
           >
-            <ExternalLink className="h-4 w-4 ml-1" />
+            <ExternalLink className="h-4 w-4 me-1" />
             לצפייה בהקלטות
           </a>
         </Button>
