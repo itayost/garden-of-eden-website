@@ -31,6 +31,7 @@ import { NutritionMeetingBanner } from "@/features/nutrition";
 import { NextGameCard } from "@/components/dashboard/NextGameCard";
 import { getOwnNextGame } from "@/features/next-game/lib/actions/next-game";
 import { ClipUploadCard } from "@/components/dashboard/ClipUploadCard";
+import { MentalRecordingsCard } from "@/components/dashboard/MentalRecordingsCard";
 import { getOwnClipWithSignedUrl } from "@/features/clips/lib/actions/clips";
 import type { UserAchievementRow } from "@/types/database";
 
@@ -249,6 +250,9 @@ export default async function DashboardPage() {
             : null
         }
       />
+
+      {/* Mental Session Recordings */}
+      <MentalRecordingsCard />
 
       {/* Quick Actions */}
       <div data-tour="quick-actions">
