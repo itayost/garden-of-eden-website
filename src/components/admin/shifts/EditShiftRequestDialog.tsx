@@ -125,6 +125,8 @@ export function EditShiftRequestDialog({
                 id="edit-start"
                 type="time"
                 dir="ltr"
+                lang="he-IL"
+                step={60}
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
@@ -135,6 +137,8 @@ export function EditShiftRequestDialog({
                 id="edit-end"
                 type="time"
                 dir="ltr"
+                lang="he-IL"
+                step={60}
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />

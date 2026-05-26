@@ -199,6 +199,8 @@ export function ShiftFormDialog({
                 id="shift-start"
                 type="time"
                 dir="ltr"
+                lang="he-IL"
+                step={60}
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
@@ -209,6 +211,8 @@ export function ShiftFormDialog({
                 id="shift-end"
                 type="time"
                 dir="ltr"
+                lang="he-IL"
+                step={60}
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
