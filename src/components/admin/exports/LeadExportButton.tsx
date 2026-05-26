@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
-import { LEAD_STATUS_LABELS, LEAD_SOURCE_LABELS } from "@/types/leads";
+import { LEAD_STATUS_LABELS } from "@/types/leads";
 import type { Lead } from "@/types/leads";
 
 interface LeadExportButtonProps {
@@ -25,7 +25,7 @@ export function LeadExportButton({
     const csvData = leads.map((lead) => ({
       שם: lead.name,
       טלפון: formatPhone(lead.phone),
-      מקור: LEAD_SOURCE_LABELS[lead.source],
+      טאב: lead.tab?.name ?? "",
       סטטוס: LEAD_STATUS_LABELS[lead.status],
       מועדון: lead.club || "",
       שנתון: lead.birth_year ?? "",
