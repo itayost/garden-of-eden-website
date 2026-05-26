@@ -3,9 +3,9 @@ import {
   LEAD_CONTACT_OUTCOMES,
   LEAD_CONTACT_TYPES,
   LEAD_PHONE_REGEX,
-  LEAD_SOURCES,
   LEAD_STATUSES,
 } from "@/types/leads";
+import { leadTabSlugSchema } from "./lead-tabs";
 
 /** Normalize Israeli phone formats to 972xxxxxxxxx. Returns null if unrecognizable. */
 export function normalizeLeadPhone(phone: string): string | null {
@@ -66,7 +66,7 @@ export const leadCreateSchema = z.object({
   name: nameSchema,
   is_from_haifa: z.boolean(),
   status: z.enum(LEAD_STATUSES),
-  source: z.enum(LEAD_SOURCES).optional().default("paid"),
+  tab_id: z.string().uuid("מזהה טאב לא תקין").optional(),
   note: noteSchema,
   club: clubSchema,
   birth_year: birthYearSchema,
@@ -82,7 +82,7 @@ export const leadUpdateSchema = z.object({
   phone: phoneSchema.optional(),
   is_from_haifa: z.boolean().optional(),
   status: z.enum(LEAD_STATUSES).optional(),
-  source: z.enum(LEAD_SOURCES).optional(),
+  tab_id: z.string().uuid("מזהה טאב לא תקין").optional(),
   note: noteSchema,
   payment: z.number().min(0).nullable().optional(),
   months: z.number().int().min(0).nullable().optional(),
@@ -113,7 +113,8 @@ export const leadWebhookSchema = z.object({
   name: z.string().min(1).max(100),
   is_from_haifa: z.boolean().optional().default(false),
   note: z.string().max(2000).optional(),
-  source: z.enum(LEAD_SOURCES).optional().default("paid"),
+  tab_slug: leadTabSlugSchema.optional(),
+  source: z.enum(["paid", "organic"]).optional(),
   club: z.string().max(100).optional(),
   birth_year: z.number().int().min(1990).max(2030).optional(),
   additional_info: z.string().max(2000).optional(),
