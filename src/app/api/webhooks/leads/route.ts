@@ -47,11 +47,43 @@ export async function POST(request: NextRequest) {
       is_from_haifa,
       note,
       source,
+      tab_slug,
       club,
       birth_year,
       additional_info,
     } = parseResult.data;
     const supabase = createAdminClient();
+
+    const requestedSlug = tab_slug ?? source ?? null;
+
+    let tab_id: string;
+    if (requestedSlug) {
+      const { data: tab } = await typedFrom(supabase, "lead_tabs")
+        .select("id")
+        .eq("slug", requestedSlug)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (!tab) {
+        return NextResponse.json(
+          { error: "Invalid tab_slug" },
+          { status: 400 },
+        );
+      }
+      tab_id = tab.id as string;
+    } else {
+      const { data: defaultTab } = await typedFrom(supabase, "lead_tabs")
+        .select("id")
+        .eq("is_default", true)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (!defaultTab) {
+        return NextResponse.json(
+          { error: "No default tab configured" },
+          { status: 500 },
+        );
+      }
+      tab_id = defaultTab.id as string;
+    }
 
     // Check phone uniqueness
     const { data: existing } = await typedFrom(supabase, "leads")
@@ -73,7 +105,7 @@ export async function POST(request: NextRequest) {
         name,
         is_from_haifa,
         note: note || null,
-        source: source ?? "paid",
+        tab_id,
         club: club || null,
         birth_year: birth_year ?? null,
         additional_info: additional_info || null,
