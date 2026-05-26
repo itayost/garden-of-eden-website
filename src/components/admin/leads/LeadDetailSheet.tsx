@@ -68,6 +68,7 @@ import {
   type LeadSentMessage,
   type LeadFlowResponse,
 } from "@/types/leads";
+import type { LeadTab } from "@/types/lead-tabs";
 
 // Build lookup maps from flow-constants arrays
 const AGE_GROUP_MAP = Object.fromEntries(AGE_GROUPS.map((g) => [g.id, g.title]));
@@ -79,6 +80,7 @@ interface LeadDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trainers: TrainerOption[];
+  tabs: LeadTab[];
 }
 
 function formatPhone(phone: string): string {
@@ -89,7 +91,7 @@ function formatPhone(phone: string): string {
   return phone;
 }
 
-export function LeadDetailSheet({ lead, open, onOpenChange, trainers }: LeadDetailSheetProps) {
+export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: LeadDetailSheetProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState<LeadStatus | null>(null);
@@ -136,7 +138,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers }: LeadDeta
         name: l.name,
         phone: l.phone,
         status: l.status,
-        source: l.source,
+        tab_id: l.tab_id,
         is_from_haifa: l.is_from_haifa,
         note: l.note || "",
         payment: l.payment,
@@ -162,7 +164,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers }: LeadDeta
         name: lead.name,
         phone: lead.phone,
         status: lead.status,
-        source: lead.source,
+        tab_id: lead.tab_id,
         is_from_haifa: lead.is_from_haifa,
         note: lead.note || "",
         payment: lead.payment,
@@ -449,6 +451,28 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers }: LeadDeta
                     </Label>
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">טאב</Label>
+                <Select
+                  value={watch("tab_id") ?? lead.tab_id}
+                  onValueChange={(v) =>
+                    setValue("tab_id", v, { shouldDirty: true, shouldValidate: true })
+                  }
+                  dir="rtl"
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tabs.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

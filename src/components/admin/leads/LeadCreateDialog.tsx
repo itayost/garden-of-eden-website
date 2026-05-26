@@ -33,24 +33,26 @@ import {
   type LeadCreateInput,
 } from "@/lib/validations/leads";
 import { createLeadAction, sendWhatsAppFlowAction } from "@/lib/actions/admin-leads";
-import { LEAD_STATUS_LABELS, LEAD_SOURCE_LABELS, type LeadStatus, type LeadSource } from "@/types/leads";
+import { LEAD_STATUS_LABELS, type LeadStatus } from "@/types/leads";
+import type { LeadTab } from "@/types/lead-tabs";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
 interface LeadCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultSource: LeadSource;
+  defaultTabId: string;
+  tabs: LeadTab[];
   trainers: TrainerOption[];
 }
 
 function buildLeadDefaults(
-  defaultSource: LeadSource,
+  defaultTabId: string,
 ): z.input<typeof leadCreateSchema> {
   return {
     name: "",
     phone: "",
     status: "new",
-    source: defaultSource,
+    tab_id: defaultTabId,
     is_from_haifa: false,
     note: "",
     club: "",
@@ -63,12 +65,15 @@ function buildLeadDefaults(
 export function LeadCreateDialog({
   open,
   onOpenChange,
-  defaultSource,
+  defaultTabId,
+  tabs,
   trainers,
 }: LeadCreateDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [autoSendFlow, setAutoSendFlow] = useState(defaultSource === "paid");
+  const [autoSendFlow, setAutoSendFlow] = useState(
+    tabs.find((t) => t.id === defaultTabId)?.slug === "paid",
+  );
 
   const {
     register,
@@ -79,17 +84,17 @@ export function LeadCreateDialog({
     formState: { errors },
   } = useForm<z.input<typeof leadCreateSchema>, unknown, LeadCreateInput>({
     resolver: zodResolver(leadCreateSchema),
-    defaultValues: buildLeadDefaults(defaultSource),
+    defaultValues: buildLeadDefaults(defaultTabId),
   });
 
-  // Keep source in sync if the active tab changes while the dialog is mounted
+  // Keep tab_id in sync if the active tab changes while the dialog is mounted
   useEffect(() => {
-    setValue("source", defaultSource);
-    setAutoSendFlow(defaultSource === "paid");
-  }, [defaultSource, setValue]);
+    setValue("tab_id", defaultTabId);
+    setAutoSendFlow(tabs.find((t) => t.id === defaultTabId)?.slug === "paid");
+  }, [defaultTabId, tabs, setValue]);
 
   const status = watch("status");
-  const source = watch("source");
+  const tabId = watch("tab_id");
   const isFromHaifa = watch("is_from_haifa");
   const assignedTrainerId = watch("assigned_trainer_id");
 
@@ -117,8 +122,8 @@ export function LeadCreateDialog({
         toast.success("ליד נוצר בהצלחה");
       }
 
-      reset(buildLeadDefaults(defaultSource));
-      setAutoSendFlow(defaultSource === "paid");
+      reset(buildLeadDefaults(defaultTabId));
+      setAutoSendFlow(tabs.find((t) => t.id === defaultTabId)?.slug === "paid");
       onOpenChange(false);
       router.refresh();
     } catch {
@@ -186,24 +191,23 @@ export function LeadCreateDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>מקור</Label>
+              <Label>טאב</Label>
               <Select
-                value={source ?? defaultSource}
+                value={tabId ?? defaultTabId}
                 onValueChange={(v) =>
-                  setValue("source", v as LeadSource, { shouldValidate: true })
+                  setValue("tab_id", v, { shouldDirty: true, shouldValidate: true })
                 }
+                dir="rtl"
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.entries(LEAD_SOURCE_LABELS) as [LeadSource, string][]).map(
-                    ([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    )
-                  )}
+                  {tabs.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
