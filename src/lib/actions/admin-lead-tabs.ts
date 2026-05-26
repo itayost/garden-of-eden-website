@@ -162,6 +162,19 @@ export async function updateLeadTabAction(
       console.error("Clear default tab error:", clearErr);
       return { error: "שגיאה בקביעת ברירת מחדל" };
     }
+  } else if (is_default === false) {
+    // Refuse to leave the system without a default tab — that would break
+    // every lead creation path that relies on the default fallback.
+    const { data: current } = await typedFrom(supabase, "lead_tabs")
+      .select("is_default")
+      .eq("id", id)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (current?.is_default) {
+      return {
+        error: "לא ניתן להסיר ברירת מחדל ללא קביעת ברירת מחדל חלופית",
+      };
+    }
   }
 
   const patch: Record<string, unknown> = {};

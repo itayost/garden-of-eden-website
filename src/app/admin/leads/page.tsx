@@ -71,28 +71,29 @@ export default async function AdminLeadsPage({ searchParams }: PageProps) {
 
   const activeTab = resolveActiveTab(tabs, params.tab, params.source);
 
-  const [activeRes, countRows] = await Promise.all([
+  // Fetch the active tab's leads + a per-tab count in parallel. Counts use
+  // `head: true, count: "exact"` so the DB returns only an aggregate — this
+  // avoids PostgREST's default 1000-row return cap silently undercounting
+  // once any tab exceeds 1000 leads.
+  const [activeRes, ...countResults] = await Promise.all([
     typedFrom(supabase, "leads")
       .select(LEAD_SELECT_WITH_RELATIONS)
       .eq("tab_id", activeTab.id)
       .order("created_at", { ascending: false })
       .limit(LEADS_PAGE_LIMIT),
-    typedFrom(supabase, "leads")
-      .select("tab_id")
-      .in(
-        "tab_id",
-        tabs.map((t) => t.id),
-      ),
+    ...tabs.map((t) =>
+      typedFrom(supabase, "leads")
+        .select("id", { count: "exact", head: true })
+        .eq("tab_id", t.id),
+    ),
   ]);
 
   const typedLeads: Lead[] = (activeRes.data as Lead[] | null) || [];
 
   const counts: Record<string, number> = {};
-  for (const t of tabs) counts[t.slug] = 0;
-  for (const row of (countRows.data as { tab_id: string }[] | null) ?? []) {
-    const tab = tabs.find((t) => t.id === row.tab_id);
-    if (tab) counts[tab.slug] = (counts[tab.slug] ?? 0) + 1;
-  }
+  tabs.forEach((t, i) => {
+    counts[t.slug] = countResults[i]?.count ?? 0;
+  });
 
   const trainers =
     "data" in trainersRes && trainersRes.data ? trainersRes.data : [];
