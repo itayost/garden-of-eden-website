@@ -35,7 +35,7 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     name,
     is_from_haifa,
     status,
-    source,
+    tab_id,
     note,
     club,
     birth_year,
@@ -44,6 +44,17 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
   } = validated.data;
 
   const supabase = await createClient();
+
+  let resolvedTabId = tab_id;
+  if (!resolvedTabId) {
+    const { data: defaultTab } = await typedFrom(supabase, "lead_tabs")
+      .select("id")
+      .eq("is_default", true)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!defaultTab) return { error: "אין טאב ברירת מחדל" };
+    resolvedTabId = defaultTab.id as string;
+  }
 
   // Check phone uniqueness
   const { data: existing } = await typedFrom(supabase, "leads")
@@ -61,7 +72,7 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     name,
     is_from_haifa,
     status,
-    source: source ?? "paid",
+    tab_id: resolvedTabId,
     note: nullIfEmpty(note),
     club: nullIfEmpty(club),
     birth_year: birth_year ?? null,

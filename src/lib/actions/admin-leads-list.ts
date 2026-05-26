@@ -5,13 +5,12 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import {
-  LEAD_SELECT_WITH_TRAINER,
+  LEAD_SELECT_WITH_RELATIONS,
   LEAD_STATUSES,
   type Lead,
   type LeadContactLog,
   type LeadFlowResponse,
   type LeadSentMessage,
-  type LeadSource,
   type LeadStatus,
 } from "@/types/leads";
 
@@ -27,7 +26,7 @@ interface LeadsFilters {
   endDate?: string;
   page?: number;
   pageSize?: number;
-  source?: LeadSource;
+  tabId?: string;
   assignedTrainerId?: string | null;
 }
 
@@ -63,12 +62,12 @@ export async function getLeadsAction(
     endDate,
     page = 1,
     pageSize = 20,
-    source,
+    tabId,
     assignedTrainerId,
   } = filters;
   const from = (page - 1) * pageSize;
 
-  let query = typedFrom(supabase, "leads").select(LEAD_SELECT_WITH_TRAINER, { count: "exact" });
+  let query = typedFrom(supabase, "leads").select(LEAD_SELECT_WITH_RELATIONS, { count: "exact" });
 
   if (search) {
     // Sanitize search input: escape PostgREST special chars to prevent filter injection
@@ -79,7 +78,7 @@ export async function getLeadsAction(
   }
   if (status) query = query.eq("status", status);
   if (isFromHaifa) query = query.eq("is_from_haifa", true);
-  if (source) query = query.eq("source", source);
+  if (tabId) query = query.eq("tab_id", tabId);
   if (assignedTrainerId === null) {
     query = query.is("assigned_trainer_id", null);
   } else if (assignedTrainerId) {
@@ -112,7 +111,7 @@ export async function getLeadByIdAction(id: string): Promise<ActionResult<LeadDe
   const supabase = await createClient();
 
   const [leadRes, contactRes, messagesRes, flowRes] = await Promise.all([
-    typedFrom(supabase, "leads").select(LEAD_SELECT_WITH_TRAINER).eq("id", id).single(),
+    typedFrom(supabase, "leads").select(LEAD_SELECT_WITH_RELATIONS).eq("id", id).single(),
     typedFrom(supabase, "lead_contact_log")
       .select("*")
       .eq("lead_id", id)
@@ -144,16 +143,16 @@ export async function getLeadByIdAction(id: string): Promise<ActionResult<LeadDe
 }
 
 /**
- * Get aggregated leads statistics, optionally scoped by source.
+ * Get aggregated leads statistics, optionally scoped by tab.
  */
 export async function getLeadsStatsAction(
-  filters: { source?: LeadSource } = {}
+  filters: { tabId?: string } = {}
 ): Promise<ActionResult<LeadsStats>> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const supabase = await createClient();
-  const { source } = filters;
+  const { tabId } = filters;
 
   // Calculate start of current week (Sunday)
   const now = new Date();
@@ -164,7 +163,7 @@ export async function getLeadsStatsAction(
 
   const baseQuery = () => {
     const q = typedFrom(supabase, "leads").select("*", { count: "exact", head: true });
-    return source ? q.eq("source", source) : q;
+    return tabId ? q.eq("tab_id", tabId) : q;
   };
 
   const [totalRes, weekRes, ...statusResults] = await Promise.all([
