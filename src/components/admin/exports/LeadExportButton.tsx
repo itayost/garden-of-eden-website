@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
-import { LEAD_STATUS_LABELS } from "@/types/leads";
+import { LEAD_SOURCE_LABELS, LEAD_STATUS_LABELS } from "@/types/leads";
 import type { Lead } from "@/types/leads";
 
 interface LeadExportButtonProps {
@@ -26,6 +26,7 @@ export function LeadExportButton({
       שם: lead.name,
       טלפון: formatPhone(lead.phone),
       טאב: lead.tab?.name ?? "",
+      מקור: LEAD_SOURCE_LABELS[lead.source],
       סטטוס: LEAD_STATUS_LABELS[lead.status],
       מועדון: lead.club || "",
       שנתון: lead.birth_year ?? "",

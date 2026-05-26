@@ -27,11 +27,13 @@ export const LEAD_CONTACT_OUTCOMES = [
   "no_answer",
 ] as const;
 export const LEAD_MESSAGE_TYPES = ["template", "flow", "text"] as const;
+export const LEAD_SOURCES = ["paid", "organic"] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export type LeadContactType = (typeof LEAD_CONTACT_TYPES)[number];
 export type LeadContactOutcome = (typeof LEAD_CONTACT_OUTCOMES)[number];
 export type LeadMessageType = (typeof LEAD_MESSAGE_TYPES)[number];
+export type LeadSource = (typeof LEAD_SOURCES)[number];
 
 // =============================================================================
 // Shared constants
@@ -60,6 +62,11 @@ export interface Lead {
   name: string;
   is_from_haifa: boolean;
   status: LeadStatus;
+  /**
+   * Acquisition channel: where the lead originated from. Independent of
+   * `tab_id` (which an admin may change later for organisation purposes).
+   */
+  source: LeadSource;
   note: string | null;
   payment: number | null;
   months: number | null;
@@ -137,6 +144,11 @@ export const LEAD_MESSAGE_TYPE_LABELS: Record<LeadMessageType, string> = {
   template: "תבנית",
   flow: "פלואו",
   text: "טקסט",
+};
+
+export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
+  paid: "ממומן",
+  organic: "אורגני",
 };
 
 // =============================================================================

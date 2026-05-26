@@ -98,13 +98,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert new lead
+    // Insert new lead. `source` records the acquisition channel and is
+    // independent of `tab_id` (the organizational bucket). Webhook traffic
+    // defaults to "paid" because that's the dominant channel; callers can
+    // override by sending `source: "organic"`.
     const { data: newLead, error: insertError } = await typedFrom(supabase, "leads")
       .insert({
         phone,
         name,
         is_from_haifa,
         note: note || null,
+        source: source ?? "paid",
         tab_id,
         club: club || null,
         birth_year: birth_year ?? null,

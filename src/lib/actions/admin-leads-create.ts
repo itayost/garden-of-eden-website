@@ -35,6 +35,7 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     name,
     is_from_haifa,
     status,
+    source,
     tab_id,
     note,
     club,
@@ -72,6 +73,9 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     name,
     is_from_haifa,
     status,
+    // Default to "organic" for admin-initiated manual creates — paid leads
+    // come in via the webhook which sets `source` explicitly.
+    source: source ?? "organic",
     tab_id: resolvedTabId,
     note: nullIfEmpty(note),
     club: nullIfEmpty(club),

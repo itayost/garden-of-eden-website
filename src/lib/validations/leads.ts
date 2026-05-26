@@ -3,6 +3,7 @@ import {
   LEAD_CONTACT_OUTCOMES,
   LEAD_CONTACT_TYPES,
   LEAD_PHONE_REGEX,
+  LEAD_SOURCES,
   LEAD_STATUSES,
 } from "@/types/leads";
 import { leadTabSlugSchema } from "./lead-tabs";
@@ -66,6 +67,7 @@ export const leadCreateSchema = z.object({
   name: nameSchema,
   is_from_haifa: z.boolean(),
   status: z.enum(LEAD_STATUSES),
+  source: z.enum(LEAD_SOURCES).optional(),
   tab_id: z.string().uuid("מזהה טאב לא תקין").optional(),
   note: noteSchema,
   club: clubSchema,
@@ -82,6 +84,7 @@ export const leadUpdateSchema = z.object({
   phone: phoneSchema.optional(),
   is_from_haifa: z.boolean().optional(),
   status: z.enum(LEAD_STATUSES).optional(),
+  source: z.enum(LEAD_SOURCES).optional(),
   tab_id: z.string().uuid("מזהה טאב לא תקין").optional(),
   note: noteSchema,
   payment: z.number().min(0).nullable().optional(),

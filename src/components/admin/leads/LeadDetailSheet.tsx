@@ -59,10 +59,13 @@ import {
   FREQUENCY_OPTIONS,
 } from "@/lib/whatsapp/flow-constants";
 import {
+  LEAD_SOURCES,
+  LEAD_SOURCE_LABELS,
   LEAD_STATUS_LABELS,
   LEAD_STATUS_COLORS,
   LEAD_MESSAGE_TYPE_LABELS,
   type Lead,
+  type LeadSource,
   type LeadStatus,
   type LeadContactLog,
   type LeadSentMessage,
@@ -138,6 +141,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
         name: l.name,
         phone: l.phone,
         status: l.status,
+        source: l.source,
         tab_id: l.tab_id,
         is_from_haifa: l.is_from_haifa,
         note: l.note || "",
@@ -164,6 +168,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
         name: lead.name,
         phone: lead.phone,
         status: lead.status,
+        source: lead.source,
         tab_id: lead.tab_id,
         is_from_haifa: lead.is_from_haifa,
         note: lead.note || "",
@@ -453,26 +458,52 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs">טאב</Label>
-                <Select
-                  value={watch("tab_id") ?? lead.tab_id}
-                  onValueChange={(v) =>
-                    setValue("tab_id", v, { shouldDirty: true, shouldValidate: true })
-                  }
-                  dir="rtl"
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tabs.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">טאב</Label>
+                  <Select
+                    value={watch("tab_id") ?? lead.tab_id}
+                    onValueChange={(v) =>
+                      setValue("tab_id", v, { shouldDirty: true, shouldValidate: true })
+                    }
+                    dir="rtl"
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tabs.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">מקור</Label>
+                  <Select
+                    value={watch("source") ?? lead.source}
+                    onValueChange={(v) =>
+                      setValue("source", v as LeadSource, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    dir="rtl"
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEAD_SOURCES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {LEAD_SOURCE_LABELS[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

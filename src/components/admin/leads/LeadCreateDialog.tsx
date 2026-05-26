@@ -33,7 +33,13 @@ import {
   type LeadCreateInput,
 } from "@/lib/validations/leads";
 import { createLeadAction, sendWhatsAppFlowAction } from "@/lib/actions/admin-leads";
-import { LEAD_STATUS_LABELS, type LeadStatus } from "@/types/leads";
+import {
+  LEAD_SOURCES,
+  LEAD_SOURCE_LABELS,
+  LEAD_STATUS_LABELS,
+  type LeadSource,
+  type LeadStatus,
+} from "@/types/leads";
 import type { LeadTab } from "@/types/lead-tabs";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
@@ -52,6 +58,8 @@ function buildLeadDefaults(
     name: "",
     phone: "",
     status: "new",
+    // Manual creates default to "organic"; paid leads come via the webhook.
+    source: "organic",
     tab_id: defaultTabId,
     is_from_haifa: false,
     note: "",
@@ -95,6 +103,7 @@ export function LeadCreateDialog({
 
   const status = watch("status");
   const tabId = watch("tab_id");
+  const source = watch("source");
   const isFromHaifa = watch("is_from_haifa");
   const assignedTrainerId = watch("assigned_trainer_id");
 
@@ -211,6 +220,28 @@ export function LeadCreateDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>מקור</Label>
+            <Select
+              value={source ?? "organic"}
+              onValueChange={(v) =>
+                setValue("source", v as LeadSource, { shouldValidate: true })
+              }
+              dir="rtl"
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LEAD_SOURCES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {LEAD_SOURCE_LABELS[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
