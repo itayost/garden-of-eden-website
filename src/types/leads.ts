@@ -5,6 +5,9 @@
  * Phone stored as 972xxxxxxxxx (no + prefix) to match WhatsApp API format.
  */
 
+import type { LeadTab } from "./lead-tabs";
+export type { LeadTab } from "./lead-tabs";
+
 // =============================================================================
 // Enum tuples (single source of truth for runtime + types)
 // =============================================================================
@@ -24,21 +27,19 @@ export const LEAD_CONTACT_OUTCOMES = [
   "no_answer",
 ] as const;
 export const LEAD_MESSAGE_TYPES = ["template", "flow", "text"] as const;
-export const LEAD_SOURCES = ["paid", "organic"] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export type LeadContactType = (typeof LEAD_CONTACT_TYPES)[number];
 export type LeadContactOutcome = (typeof LEAD_CONTACT_OUTCOMES)[number];
 export type LeadMessageType = (typeof LEAD_MESSAGE_TYPES)[number];
-export type LeadSource = (typeof LEAD_SOURCES)[number];
 
 // =============================================================================
 // Shared constants
 // =============================================================================
 
-/** PostgREST select string for a lead with its assigned trainer joined. */
-export const LEAD_SELECT_WITH_TRAINER =
-  "*, assigned_trainer:profiles!leads_assigned_trainer_id_fkey(id, full_name)";
+/** PostgREST select string for a lead with its assigned trainer and tab joined. */
+export const LEAD_SELECT_WITH_RELATIONS =
+  "*, assigned_trainer:profiles!leads_assigned_trainer_id_fkey(id, full_name), tab:lead_tabs!leads_tab_id_fkey(id, slug, name, color, position, is_default, created_at, updated_at)";
 
 /** Sentinel value for the "unassigned" option in trainer pickers and filters. */
 export const LEAD_UNASSIGNED_VALUE = "__unassigned__";
@@ -59,7 +60,6 @@ export interface Lead {
   name: string;
   is_from_haifa: boolean;
   status: LeadStatus;
-  source: LeadSource;
   note: string | null;
   payment: number | null;
   months: number | null;
@@ -72,6 +72,8 @@ export interface Lead {
   additional_info: string | null;
   assigned_trainer_id: string | null;
   assigned_trainer?: { id: string; full_name: string | null } | null;
+  tab_id: string;
+  tab?: LeadTab | null;
   created_at: string;
   updated_at: string;
 }
@@ -135,11 +137,6 @@ export const LEAD_MESSAGE_TYPE_LABELS: Record<LeadMessageType, string> = {
   template: "תבנית",
   flow: "פלואו",
   text: "טקסט",
-};
-
-export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
-  paid: "ממומנים",
-  organic: "אורגניים",
 };
 
 // =============================================================================
