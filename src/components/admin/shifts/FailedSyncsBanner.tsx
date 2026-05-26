@@ -22,6 +22,7 @@ function formatTimestamp(timestamp: string): string {
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
   } catch {
     return timestamp;

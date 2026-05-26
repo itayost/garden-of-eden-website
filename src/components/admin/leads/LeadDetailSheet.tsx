@@ -582,6 +582,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers }: LeadDeta
                             month: "2-digit",
                             hour: "2-digit",
                             minute: "2-digit",
+                            hour12: false,
                           })}
                         </span>
                       </div>
@@ -625,6 +626,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers }: LeadDeta
                             month: "2-digit",
                             hour: "2-digit",
                             minute: "2-digit",
+                            hour12: false,
                           })}
                         </p>
                       </div>

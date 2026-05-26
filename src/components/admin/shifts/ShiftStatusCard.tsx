@@ -280,6 +280,7 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
                     {new Date(activeShift.start_time).toLocaleTimeString("he-IL", {
                       hour: "2-digit",
                       minute: "2-digit",
+                      hour12: false,
                     })}
                   </p>
                 </div>

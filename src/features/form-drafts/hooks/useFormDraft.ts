@@ -95,7 +95,7 @@ export function useFormDraft<TFormData extends FieldValues>(
 
     const formattedDate = new Date(initialDraft.metadata.savedAt).toLocaleDateString(
       "he-IL",
-      { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }
+      { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }
     );
 
     toast("טיוטה שוחזרה", {

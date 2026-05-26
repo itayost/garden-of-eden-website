@@ -27,6 +27,7 @@ const DATE_FMT = new Intl.DateTimeFormat("he-IL", {
 const TIME_FMT = new Intl.DateTimeFormat("he-IL", {
   hour: "2-digit",
   minute: "2-digit",
+  hour12: false,
 });
 
 function formatDate(iso: string): string {
