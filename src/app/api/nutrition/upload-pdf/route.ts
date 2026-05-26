@@ -13,6 +13,7 @@ import { isValidUUID } from "@/lib/validations/common";
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
 const STORAGE_BUCKET = "avatars";
+const VALID_PLAN_TYPES = new Set(["workout_day", "rest_day"]);
 
 /**
  * POST /api/nutrition/upload-pdf
@@ -22,6 +23,7 @@ const STORAGE_BUCKET = "avatars";
  * Request body (FormData):
  * - pdf: File (PDF, max 10MB)
  * - traineeUserId: string (UUID of the trainee)
+ * - planType: "workout_day" | "rest_day"
  *
  * Response:
  * - Success: { pdfUrl, pdfPath }
@@ -51,10 +53,16 @@ export async function POST(request: NextRequest) {
 
     const pdf = formData.get("pdf") as File | null;
     const traineeUserId = formData.get("traineeUserId") as string | null;
+    const planType = formData.get("planType") as string | null;
 
     // 3. Validate traineeUserId
     if (!traineeUserId || !isValidUUID(traineeUserId)) {
       return badRequestResponse("Missing or invalid traineeUserId");
+    }
+
+    // 3a. Validate planType
+    if (!planType || !VALID_PLAN_TYPES.has(planType)) {
+      return badRequestResponse("סוג תפריט לא תקין");
     }
 
     // 3b. Verify trainee exists
@@ -84,7 +92,8 @@ export async function POST(request: NextRequest) {
 
     // 5. Upload PDF to storage
     const timestamp = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    const pdfPath = `${traineeUserId}/meal-plan/${timestamp}.pdf`;
+    const planTypeFolder = planType.replace("_", "-"); // workout-day / rest-day
+    const pdfPath = `${traineeUserId}/meal-plan/${planTypeFolder}/${timestamp}.pdf`;
 
     const uploadResult = await uploadToStorage(
       supabase,

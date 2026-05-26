@@ -5,23 +5,47 @@ import { revalidatePath } from "next/cache";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
+import type { MealPlanType } from "../../types";
 
 interface UpsertMealPlanPdfResult {
   success: boolean;
   error?: string;
 }
 
+const VALID_PLAN_TYPES: readonly MealPlanType[] = ["workout_day", "rest_day"];
+
+type ExistingRow = {
+  id: string;
+  workout_day_pdf_path: string | null;
+  rest_day_pdf_path: string | null;
+};
+
+function columnsFor(planType: MealPlanType): {
+  urlCol: "workout_day_pdf_url" | "rest_day_pdf_url";
+  pathCol: "workout_day_pdf_path" | "rest_day_pdf_path";
+} {
+  return planType === "workout_day"
+    ? { urlCol: "workout_day_pdf_url", pathCol: "workout_day_pdf_path" }
+    : { urlCol: "rest_day_pdf_url", pathCol: "rest_day_pdf_path" };
+}
+
 /**
  * Create or update a meal plan PDF for a trainee.
+ * One PDF per plan type (workout day / rest day) per trainee.
  * Only trainers and admins can manage meal plans.
  */
 export async function upsertMealPlanPdf(
   userId: string,
+  planType: MealPlanType,
   pdfUrl: string,
   pdfPath: string
 ): Promise<UpsertMealPlanPdfResult> {
   if (!isValidUUID(userId)) {
     return { success: false, error: "מזהה משתמש לא תקין" };
+  }
+
+  if (!VALID_PLAN_TYPES.includes(planType)) {
+    return { success: false, error: "סוג תפריט לא תקין" };
   }
 
   if (!pdfUrl || !pdfPath) {
@@ -35,21 +59,26 @@ export async function upsertMealPlanPdf(
   const { user } = authResult;
 
   const supabase = await createClient();
+  const { urlCol, pathCol } = columnsFor(planType);
 
-  // Check if plan already exists
   const { data: existingPlan } = (await supabase
     .from("trainee_meal_plans")
-    .select("id, pdf_path")
+    .select("id, workout_day_pdf_path, rest_day_pdf_path")
     .eq("user_id", userId)
     .is("deleted_at", null)
-    .maybeSingle()) as { data: { id: string; pdf_path: string | null } | null };
+    .maybeSingle()) as { data: ExistingRow | null };
 
   if (existingPlan) {
-    // Delete old PDF from storage if exists
-    if (existingPlan.pdf_path) {
+    // Remove the old PDF for this plan type (if any).
+    const oldPath =
+      planType === "workout_day"
+        ? existingPlan.workout_day_pdf_path
+        : existingPlan.rest_day_pdf_path;
+
+    if (oldPath) {
       const { error: deleteError } = await supabase.storage
         .from("avatars")
-        .remove([existingPlan.pdf_path]);
+        .remove([oldPath]);
       if (deleteError) {
         console.error("Failed to delete old PDF from storage:", deleteError);
       }
@@ -57,8 +86,8 @@ export async function upsertMealPlanPdf(
 
     const { error } = await typedFrom(supabase, "trainee_meal_plans")
       .update({
-        pdf_url: pdfUrl,
-        pdf_path: pdfPath,
+        [urlCol]: pdfUrl,
+        [pathCol]: pdfPath,
       })
       .eq("id", existingPlan.id);
 
@@ -69,8 +98,8 @@ export async function upsertMealPlanPdf(
   } else {
     const { error } = await typedFrom(supabase, "trainee_meal_plans").insert({
       user_id: userId,
-      pdf_url: pdfUrl,
-      pdf_path: pdfPath,
+      [urlCol]: pdfUrl,
+      [pathCol]: pdfPath,
       created_by: user!.id,
     });
 

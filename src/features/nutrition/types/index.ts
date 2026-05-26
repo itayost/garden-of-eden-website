@@ -1,12 +1,27 @@
 /** Sleep hour ranges from pre_workout_forms */
 export type SleepRange = "4-6" | "6-8" | "8-11";
 
-/** Database row for trainee_meal_plans (PDF-based; legacy JSONB column unused) */
+/** Plan types — one trainee can have one menu per type */
+export type MealPlanType = "workout_day" | "rest_day";
+
+/** Hebrew labels for each plan type */
+export const MEAL_PLAN_TYPE_LABELS_HE: Record<MealPlanType, string> = {
+  workout_day: "תפריט ליום עם אימון",
+  rest_day: "תפריט ליום מנוחה",
+};
+
+/** Database row for trainee_meal_plans (PDF-based; legacy single pdf_url/pdf_path kept for back-compat) */
 export interface TraineeMealPlanRow {
   id: string;
   user_id: string;
+  /** @deprecated Use workout_day_pdf_url / rest_day_pdf_url. Kept for back-compat. */
   pdf_url: string | null;
+  /** @deprecated Use workout_day_pdf_path / rest_day_pdf_path. Kept for back-compat. */
   pdf_path: string | null;
+  workout_day_pdf_url: string | null;
+  workout_day_pdf_path: string | null;
+  rest_day_pdf_url: string | null;
+  rest_day_pdf_path: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
