@@ -17,14 +17,16 @@ import {
   type TraineeMealPlanRow,
 } from "@/features/nutrition/types";
 import { deleteMealPlanPdf, upsertMealPlanPdf } from "@/features/nutrition";
+import {
+  MEAL_PLAN_TYPES,
+  pdfUrlFor,
+} from "@/features/nutrition/lib/meal-plan-slots";
 import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 
 interface MealPlanPdfUploadProps {
   userId: string;
   existingPlan: TraineeMealPlanRow | null;
 }
-
-const PLAN_TYPES: readonly MealPlanType[] = ["workout_day", "rest_day"];
 
 export function MealPlanPdfUpload({
   userId,
@@ -42,28 +44,18 @@ export function MealPlanPdfUpload({
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
-        {PLAN_TYPES.map((planType) => (
+        {MEAL_PLAN_TYPES.map((planType) => (
           <MealPlanPdfSlot
             key={planType}
             userId={userId}
             planType={planType}
-            existingUrl={urlFor(existingPlan, planType)}
+            existingUrl={pdfUrlFor(existingPlan, planType)}
             updatedAt={existingPlan?.updated_at ?? null}
           />
         ))}
       </CardContent>
     </Card>
   );
-}
-
-function urlFor(
-  plan: TraineeMealPlanRow | null,
-  planType: MealPlanType
-): string | null {
-  if (!plan) return null;
-  return planType === "workout_day"
-    ? plan.workout_day_pdf_url
-    : plan.rest_day_pdf_url;
 }
 
 interface MealPlanPdfSlotProps {

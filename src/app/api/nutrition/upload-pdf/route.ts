@@ -10,10 +10,10 @@ import {
 import { uploadToStorage } from "@/lib/api/storage";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/validations/common";
+import { MEAL_PLAN_TYPES } from "@/features/nutrition/lib/meal-plan-slots";
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
 const STORAGE_BUCKET = "avatars";
-const VALID_PLAN_TYPES = new Set(["workout_day", "rest_day"]);
 
 /**
  * POST /api/nutrition/upload-pdf
@@ -61,7 +61,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 3a. Validate planType
-    if (!planType || !VALID_PLAN_TYPES.has(planType)) {
+    if (
+      !planType ||
+      !(MEAL_PLAN_TYPES as readonly string[]).includes(planType)
+    ) {
       return badRequestResponse("סוג תפריט לא תקין");
     }
 

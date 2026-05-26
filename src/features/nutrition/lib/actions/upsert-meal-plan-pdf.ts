@@ -5,29 +5,21 @@ import { revalidatePath } from "next/cache";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
-import type { MealPlanType } from "../../types";
+import type { MealPlanType, TraineeMealPlanRow } from "../../types";
+import {
+  MEAL_PLAN_SLOT_COLUMNS,
+  MEAL_PLAN_TYPES,
+} from "../meal-plan-slots";
 
 interface UpsertMealPlanPdfResult {
   success: boolean;
   error?: string;
 }
 
-const VALID_PLAN_TYPES: readonly MealPlanType[] = ["workout_day", "rest_day"];
-
-type ExistingRow = {
-  id: string;
-  workout_day_pdf_path: string | null;
-  rest_day_pdf_path: string | null;
-};
-
-function columnsFor(planType: MealPlanType): {
-  urlCol: "workout_day_pdf_url" | "rest_day_pdf_url";
-  pathCol: "workout_day_pdf_path" | "rest_day_pdf_path";
-} {
-  return planType === "workout_day"
-    ? { urlCol: "workout_day_pdf_url", pathCol: "workout_day_pdf_path" }
-    : { urlCol: "rest_day_pdf_url", pathCol: "rest_day_pdf_path" };
-}
+type ExistingPathRow = Pick<
+  TraineeMealPlanRow,
+  "id" | "workout_day_pdf_path" | "rest_day_pdf_path"
+>;
 
 /**
  * Create or update a meal plan PDF for a trainee.
@@ -44,7 +36,7 @@ export async function upsertMealPlanPdf(
     return { success: false, error: "מזהה משתמש לא תקין" };
   }
 
-  if (!VALID_PLAN_TYPES.includes(planType)) {
+  if (!MEAL_PLAN_TYPES.includes(planType)) {
     return { success: false, error: "סוג תפריט לא תקין" };
   }
 
@@ -59,14 +51,14 @@ export async function upsertMealPlanPdf(
   const { user } = authResult;
 
   const supabase = await createClient();
-  const { urlCol, pathCol } = columnsFor(planType);
+  const { url: urlCol, path: pathCol } = MEAL_PLAN_SLOT_COLUMNS[planType];
 
   const { data: existingPlan } = (await supabase
     .from("trainee_meal_plans")
     .select("id, workout_day_pdf_path, rest_day_pdf_path")
     .eq("user_id", userId)
     .is("deleted_at", null)
-    .maybeSingle()) as { data: ExistingRow | null };
+    .maybeSingle()) as { data: ExistingPathRow | null };
 
   if (existingPlan) {
     // Remove the old PDF for this plan type (if any).

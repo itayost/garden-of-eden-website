@@ -6,13 +6,12 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import type { MealPlanType } from "../../types";
+import { MEAL_PLAN_SLOT_COLUMNS, MEAL_PLAN_TYPES } from "../meal-plan-slots";
 
 interface DeleteMealPlanPdfResult {
   success: boolean;
   error?: string;
 }
-
-const VALID_PLAN_TYPES: readonly MealPlanType[] = ["workout_day", "rest_day"];
 
 type ExistingRow = {
   id: string;
@@ -37,7 +36,7 @@ export async function deleteMealPlanPdf(
     return { success: false, error: "מזהה משתמש לא תקין" };
   }
 
-  if (!VALID_PLAN_TYPES.includes(planType)) {
+  if (!MEAL_PLAN_TYPES.includes(planType)) {
     return { success: false, error: "סוג תפריט לא תקין" };
   }
 
@@ -76,13 +75,9 @@ export async function deleteMealPlanPdf(
   }
 
   // Clear just this plan-type's columns.
-  const clearCols =
-    planType === "workout_day"
-      ? { workout_day_pdf_url: null, workout_day_pdf_path: null }
-      : { rest_day_pdf_url: null, rest_day_pdf_path: null };
-
+  const { url: urlCol, path: pathCol } = MEAL_PLAN_SLOT_COLUMNS[planType];
   const { error } = await typedFrom(supabase, "trainee_meal_plans")
-    .update(clearCols)
+    .update({ [urlCol]: null, [pathCol]: null })
     .eq("id", existingPlan.id);
 
   if (error) {

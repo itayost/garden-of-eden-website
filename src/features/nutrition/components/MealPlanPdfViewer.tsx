@@ -10,24 +10,13 @@ import {
 import { FileText } from "lucide-react";
 import {
   MEAL_PLAN_TYPE_LABELS_HE,
-  type MealPlanType,
   type TraineeMealPlanRow,
 } from "../types";
 import { formatDateHe } from "../lib/utils";
+import { MEAL_PLAN_TYPES, pdfUrlFor } from "../lib/meal-plan-slots";
 
 interface MealPlanPdfViewerProps {
   mealPlan: TraineeMealPlanRow | null;
-}
-
-const PLAN_TYPES: readonly MealPlanType[] = ["workout_day", "rest_day"];
-
-function urlFor(
-  plan: TraineeMealPlanRow,
-  planType: MealPlanType
-): string | null {
-  return planType === "workout_day"
-    ? plan.workout_day_pdf_url
-    : plan.rest_day_pdf_url;
 }
 
 export function MealPlanPdfViewer({ mealPlan }: MealPlanPdfViewerProps) {
@@ -62,8 +51,8 @@ export function MealPlanPdfViewer({ mealPlan }: MealPlanPdfViewerProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6 lg:grid-cols-2">
-        {PLAN_TYPES.map((planType) => {
-          const url = urlFor(mealPlan!, planType);
+        {MEAL_PLAN_TYPES.map((planType) => {
+          const url = pdfUrlFor(mealPlan, planType);
           const label = MEAL_PLAN_TYPE_LABELS_HE[planType];
           return (
             <div key={planType} className="space-y-2">
