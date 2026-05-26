@@ -22,15 +22,18 @@ import { getLeadColumns } from "./LeadTableColumns";
 import { LeadTableToolbar } from "./LeadTableToolbar";
 import { LeadStatsPanel } from "./LeadStatsPanel";
 import { LeadStatusBadge } from "./LeadStatusBadge";
+import { LeadTabBadge } from "./LeadTabBadge";
 import { LeadDetailSheet } from "./LeadDetailSheet";
 import { LeadCreateDialog } from "./LeadCreateDialog";
 import { TablePagination } from "@/components/admin/TablePagination";
-import { LEAD_UNASSIGNED_VALUE, type Lead, type LeadStatus, type LeadSource } from "@/types/leads";
+import { LEAD_UNASSIGNED_VALUE, type Lead, type LeadStatus } from "@/types/leads";
+import type { LeadTab } from "@/types/lead-tabs";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
 interface LeadDataTableProps {
   data: Lead[];
-  source: LeadSource;
+  activeTab: LeadTab;
+  tabs: LeadTab[];
   trainers: TrainerOption[];
   initialSearch?: string;
   initialStatus?: string | null;
@@ -48,7 +51,8 @@ function formatPhone(phone: string): string {
 
 export function LeadDataTable({
   data,
-  source,
+  activeTab,
+  tabs,
   trainers,
   initialSearch = "",
   initialStatus = null,
@@ -69,8 +73,8 @@ export function LeadDataTable({
   const [createOpen, setCreateOpen] = useState(false);
 
   const columns = useMemo(
-    () => getLeadColumns({ showPaidIndicator: source === "paid" }),
-    [source]
+    () => getLeadColumns({ showPaidIndicator: activeTab.slug === "paid" }),
+    [activeTab.slug]
   );
 
   const filteredData = useMemo(() => {
@@ -184,6 +188,7 @@ export function LeadDataTable({
                       {lead.name}
                     </span>
                     <LeadStatusBadge status={lead.status} />
+                    <LeadTabBadge tab={lead.tab ?? null} className="shrink-0" />
                     {lead.flow_age_group !== null ? (
                       <span className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
                     ) : (
@@ -273,13 +278,15 @@ export function LeadDataTable({
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         trainers={trainers}
+        tabs={tabs}
       />
 
       {/* Create Dialog */}
       <LeadCreateDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        defaultSource={source}
+        defaultTabId={activeTab.id}
+        tabs={tabs}
         trainers={trainers}
       />
     </div>

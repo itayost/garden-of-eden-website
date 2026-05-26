@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LeadStatusBadge } from "./LeadStatusBadge";
+import { LeadTabBadge } from "./LeadTabBadge";
 import type { Lead } from "@/types/leads";
 
 function formatPhone(phone: string): string {
@@ -58,6 +59,12 @@ export function getLeadColumns({ showPaidIndicator }: GetLeadColumnsOptions): Co
           <ArrowUpDown className="mr-2 h-4 w-4" />
         </Button>
       ),
+    },
+    {
+      id: "tab",
+      header: "טאב",
+      cell: ({ row }) => <LeadTabBadge tab={row.original.tab ?? null} />,
+      enableSorting: false,
     },
     {
       accessorKey: "phone",
