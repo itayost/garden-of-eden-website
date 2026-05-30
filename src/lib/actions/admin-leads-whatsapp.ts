@@ -67,6 +67,7 @@ export async function sendWhatsAppFlowAction(leadId: string): Promise<ActionResu
 
   const leadResult = await getLeadForWhatsApp(leadId);
   if ("error" in leadResult) return { error: leadResult.error };
+  if (!leadResult.lead.phone) return { error: "אין מספר טלפון לליד זה" };
 
   try {
     const result = await sendFlowTemplate(leadResult.lead.phone, leadResult.lead.name);
@@ -96,6 +97,7 @@ export async function sendWhatsAppTextAction(
 
   const leadResult = await getLeadForWhatsApp(leadId);
   if ("error" in leadResult) return { error: leadResult.error };
+  if (!leadResult.lead.phone) return { error: "אין מספר טלפון לליד זה" };
 
   try {
     const result = await sendTextMessage(leadResult.lead.phone, text);

@@ -41,7 +41,8 @@ interface LeadDataTableProps {
   initialAssignedTrainerId?: string | null;
 }
 
-function formatPhone(phone: string): string {
+function formatPhone(phone: string | null): string {
+  if (!phone) return "—";
   if (phone.startsWith("972")) {
     const local = "0" + phone.slice(3);
     return local.slice(0, 3) + "-" + local.slice(3);
@@ -83,7 +84,7 @@ export function LeadDataTable({
         const s = globalFilter.toLowerCase();
         if (
           !lead.name.toLowerCase().includes(s) &&
-          !lead.phone.includes(globalFilter)
+          !(lead.phone ?? "").includes(globalFilter)
         )
           return false;
       }

@@ -86,7 +86,8 @@ interface LeadDetailSheetProps {
   tabs: LeadTab[];
 }
 
-function formatPhone(phone: string): string {
+function formatPhone(phone: string | null): string {
+  if (!phone) return "—";
   if (phone.startsWith("972")) {
     const local = "0" + phone.slice(3);
     return local.slice(0, 3) + "-" + local.slice(3);
@@ -139,7 +140,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
       reset({
         id: l.id,
         name: l.name,
-        phone: l.phone,
+        phone: l.phone ?? "",
         status: l.status,
         source: l.source,
         tab_id: l.tab_id,
@@ -166,7 +167,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
       reset({
         id: lead.id,
         name: lead.name,
-        phone: lead.phone,
+        phone: lead.phone ?? "",
         status: lead.status,
         source: lead.source,
         tab_id: lead.tab_id,

@@ -33,6 +33,26 @@ const phoneSchema = z
   .transform((v) => normalizeLeadPhone(v) ?? v)
   .pipe(z.string().regex(LEAD_PHONE_REGEX, "מספר טלפון לא תקין"));
 
+/**
+ * Phone variant for editing leads. An empty string clears the number (name-only
+ * leads), `undefined` leaves it unchanged, and any other value is normalised and
+ * validated like a regular phone.
+ */
+const phoneUpdateSchema = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((v) => {
+    if (v === null || v === undefined) return v;
+    if (v.trim() === "") return null;
+    return normalizeLeadPhone(v) ?? v;
+  })
+  .pipe(
+    z.union([
+      z.string().regex(LEAD_PHONE_REGEX, "מספר טלפון לא תקין"),
+      z.null(),
+      z.undefined(),
+    ]),
+  );
+
 const birthYearSchema = z
   .number()
   .int()
@@ -81,7 +101,7 @@ export type LeadCreateInput = z.infer<typeof leadCreateSchema>;
 export const leadUpdateSchema = z.object({
   id: z.string().uuid("מזהה ליד לא תקין"),
   name: nameSchema.optional(),
-  phone: phoneSchema.optional(),
+  phone: phoneUpdateSchema,
   is_from_haifa: z.boolean().optional(),
   status: z.enum(LEAD_STATUSES).optional(),
   source: z.enum(LEAD_SOURCES).optional(),

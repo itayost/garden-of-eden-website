@@ -68,7 +68,8 @@ export function LeadExportButton({
   );
 }
 
-function formatPhone(phone: string): string {
+function formatPhone(phone: string | null): string {
+  if (!phone) return "";
   if (phone.startsWith("972")) return "0" + phone.slice(3);
   return phone;
 }

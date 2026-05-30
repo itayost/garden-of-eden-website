@@ -7,7 +7,8 @@ import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadTabBadge } from "./LeadTabBadge";
 import type { Lead } from "@/types/leads";
 
-function formatPhone(phone: string): string {
+function formatPhone(phone: string | null): string {
+  if (!phone) return "—";
   if (phone.startsWith("972")) {
     const local = "0" + phone.slice(3);
     return local.slice(0, 3) + "-" + local.slice(3);

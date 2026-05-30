@@ -58,7 +58,8 @@ export function isLeadPhone(value: string): boolean {
 
 export interface Lead {
   id: string;
-  phone: string;
+  /** Null for name-only leads that have no contact number yet. */
+  phone: string | null;
   name: string;
   is_from_haifa: boolean;
   status: LeadStatus;
