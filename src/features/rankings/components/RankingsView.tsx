@@ -10,6 +10,8 @@ import { AgeGroupFilter } from "./AgeGroupFilter";
 import { CategoryLeaderCards } from "./CategoryLeaderCards";
 import { LeaderboardTable } from "./LeaderboardTable";
 import { GroupStatisticsCard } from "./GroupStatisticsCard";
+import { CategoryMetricBreakdown } from "./CategoryMetricBreakdown";
+import { RANKING_CATEGORIES } from "../lib/config/categories";
 
 const DistributionChart = dynamic(
   () => import("./DistributionChart").then((m) => m.DistributionChart),
@@ -149,11 +151,18 @@ export function RankingsView({
           {/* Main Content Grid */}
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
             {/* Leaderboard - Takes 2 columns */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               <LeaderboardTable
                 leaderboard={data.leaderboard}
                 category={data.selectedCategory}
                 currentUserId={currentUserId}
+              />
+              {/* Per-test breakdown: shows exactly which tests the category
+                  aggregates (e.g. ניתור -> distance / height / each leg) with
+                  the leader and the player's own standing per test. */}
+              <CategoryMetricBreakdown
+                categoryLabel={RANKING_CATEGORIES[data.selectedCategory].labelHe}
+                breakdown={data.subMetricBreakdown}
               />
             </div>
 

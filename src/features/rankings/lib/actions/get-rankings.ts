@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { PlayerAssessment } from "@/types/assessment";
-import { getAgeGroup } from "@/types/assessment";
+import { getAgeGroup, ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS } from "@/types/assessment";
 import type {
   RankingEntry,
   CategoryLeader,
@@ -10,6 +10,7 @@ import type {
   DistributionBin,
   RankingCategory,
   AgeGroupOption,
+  SubMetricRanking,
 } from "../../types";
 import { RANKING_CATEGORIES } from "../config/categories";
 import {
@@ -34,6 +35,8 @@ export interface RankingsData {
   selectedCategory: RankingCategory;
   selectedAgeGroup: string;
   availableAgeGroups: AgeGroupOption[];
+  /** Per-test breakdown of the selected category (for the expandable view). */
+  subMetricBreakdown: SubMetricRanking[];
 }
 
 // ===========================================
@@ -155,6 +158,29 @@ export async function getRankingsData(
   const statistics = calculateGroupStatistics(metricValues);
   const distribution = createDistributionBins(metricValues, 8);
 
+  // Per-test breakdown for the selected category, so players can see exactly
+  // which test each category aggregates (e.g. ניתור -> distance / height /
+  // right leg / left leg) along with the group leader, their own value, and
+  // group stats for each individual test.
+  const subMetricBreakdown: SubMetricRanking[] = categoryConfig.metrics.map((subMetric) => {
+    const subRankings = calculateRankings(latestAssessments, userNames, subMetric, lowerIsBetter);
+    for (const entry of subRankings) {
+      entry.ageGroupId = userAgeGroups.get(entry.userId) || "unknown";
+    }
+    const subValues = extractMetricValues(latestAssessments, subMetric);
+
+    return {
+      metric: subMetric,
+      labelHe: ASSESSMENT_LABELS_HE[subMetric] ?? subMetric,
+      unit: ASSESSMENT_UNITS[subMetric] ?? "",
+      lowerIsBetter,
+      isPrimary: subMetric === metric,
+      leader: subRankings.length > 0 ? subRankings[0] : null,
+      currentUserEntry: user ? subRankings.find((entry) => entry.userId === user.id) ?? null : null,
+      statistics: calculateGroupStatistics(subValues),
+    };
+  });
+
   // Find current user's rank
   let currentUserRank: RankingEntry | null = null;
   if (user) {
@@ -192,6 +218,7 @@ export async function getRankingsData(
     selectedCategory: category,
     selectedAgeGroup: ageGroupId,
     availableAgeGroups,
+    subMetricBreakdown,
   };
 }
 
@@ -217,5 +244,6 @@ function createEmptyRankingsData(
     selectedCategory: category,
     selectedAgeGroup: ageGroupId,
     availableAgeGroups: [{ id: "all", label: "כל הגילאים" }],
+    subMetricBreakdown: [],
   };
 }

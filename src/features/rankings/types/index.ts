@@ -38,6 +38,24 @@ export interface CategoryLeader {
   totalPlayers: number;
 }
 
+/**
+ * Per-metric breakdown for a single ranking category.
+ * Lets players see exactly which test a category aggregates
+ * (e.g. "ניתור" -> ניתור למרחק 2 רגליים, ניתור לגובה, רגל ימין/שמאל)
+ * with the group leader, their own value, and group stats for each test.
+ */
+export interface SubMetricRanking {
+  metric: string;
+  labelHe: string;
+  unit: string;
+  lowerIsBetter: boolean;
+  /** True when this is the metric the category ranks by. */
+  isPrimary: boolean;
+  leader: RankingEntry | null;
+  currentUserEntry: RankingEntry | null;
+  statistics: GroupStatistics | null;
+}
+
 // ===========================================
 // GROUP STATISTICS
 // ===========================================
