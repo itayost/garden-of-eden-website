@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Trophy, Medal, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS } from "@/types/assessment";
 import type { RankingEntry, RankingCategory } from "../types";
 import { RANKING_CATEGORIES } from "../lib/config/categories";
 
@@ -46,6 +47,8 @@ export function LeaderboardTable({
   currentUserId,
 }: LeaderboardTableProps) {
   const config = RANKING_CATEGORIES[category];
+  const metricLabel = ASSESSMENT_LABELS_HE[config.primaryMetric] ?? config.labelHe;
+  const unit = ASSESSMENT_UNITS[config.primaryMetric] ?? "";
 
   if (leaderboard.length === 0) {
     return (
@@ -55,6 +58,7 @@ export function LeaderboardTable({
             <Trophy className="h-5 w-5" />
             טבלת דירוג - {config.labelHe}
           </CardTitle>
+          <p className="text-xs text-muted-foreground ps-7">{metricLabel}</p>
         </CardHeader>
         <CardContent className="px-3 sm:px-6 py-8 text-center text-muted-foreground">
           אין נתונים להצגה
@@ -77,6 +81,7 @@ export function LeaderboardTable({
           <Trophy className="h-5 w-5" />
           טבלת דירוג - {config.labelHe}
         </CardTitle>
+        <p className="text-xs text-muted-foreground ps-7">{metricLabel}</p>
       </CardHeader>
       <CardContent className="px-3 sm:px-6">
         {/* Mobile: Card list */}
@@ -141,7 +146,7 @@ export function LeaderboardTable({
               <TableRow>
                 <TableHead className="w-[80px] text-right">דירוג</TableHead>
                 <TableHead className="text-right">שם</TableHead>
-                <TableHead className="text-center">תוצאה</TableHead>
+                <TableHead className="text-center">תוצאה{unit ? ` (${unit})` : ""}</TableHead>
                 <TableHead className="text-center">אחוזון</TableHead>
                 <TableHead className="text-center hidden md:table-cell">תאריך</TableHead>
               </TableRow>

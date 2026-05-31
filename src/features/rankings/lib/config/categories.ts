@@ -5,7 +5,7 @@ import type { RankingCategory, CategoryConfig } from "../../types";
 export const RANKING_CATEGORIES: Record<RankingCategory, CategoryConfig> = {
   sprint: {
     id: "sprint",
-    labelHe: "מהירות",
+    labelHe: "ספרינט",
     metrics: ["sprint_5m", "sprint_10m", "sprint_20m"],
     primaryMetric: "sprint_10m",
     lowerIsBetter: true,
@@ -13,7 +13,7 @@ export const RANKING_CATEGORIES: Record<RankingCategory, CategoryConfig> = {
   },
   jump: {
     id: "jump",
-    labelHe: "קפיצה",
+    labelHe: "ניתור",
     metrics: ["jump_2leg_distance", "jump_2leg_height", "jump_right_leg", "jump_left_leg"],
     primaryMetric: "jump_2leg_distance",
     lowerIsBetter: false,

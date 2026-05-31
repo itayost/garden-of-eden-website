@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Crown, Zap, ArrowUp, Shuffle, Move, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS } from "@/types/assessment";
 import type { CategoryLeader, RankingCategory } from "../types";
 import { RANKING_CATEGORIES } from "../lib/config/categories";
 
@@ -60,6 +61,9 @@ export function CategoryLeaderCards({
                 )}
               </div>
               <CardTitle className="text-sm">{config.labelHe}</CardTitle>
+              <p className="text-[10px] leading-tight text-muted-foreground">
+                {ASSESSMENT_LABELS_HE[config.primaryMetric] ?? config.labelHe}
+              </p>
             </CardHeader>
             <CardContent className="px-3 pt-2 sm:px-6 sm:pt-3">
               {leader.leader ? (
@@ -72,7 +76,7 @@ export function CategoryLeaderCards({
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {(leader.leader.metricValue ?? 0).toFixed(2)}{" "}
-                    {leader.category === "sprint" ? "שניות" : leader.category === "agility" ? "פגיעות" : leader.category === "power" ? "%" : "ס״מ"}
+                    {ASSESSMENT_UNITS[config.primaryMetric] ?? "ס״מ"}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {leader.totalPlayers} משתתפים
