@@ -4,7 +4,7 @@ const BASE_URL = ARBOX_BASE_URL;
 
 export type ArboxUser = {
   user_id: number;
-  name: string; // full name from report
+  full_name: string | null; // "full_name" field from allClientsReport
   email: string | null;
   phone: string | null;
   gender: string | null;

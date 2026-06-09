@@ -174,7 +174,7 @@ async function main() {
     const phone = normalizePhone(user.phone);
     if (phone) arboxByPhone.set(phone, user);
 
-    const name = normalizeName(user.name || "");
+    const name = normalizeName(user.full_name || "");
     if (name) arboxByName.set(name, user);
   }
 
