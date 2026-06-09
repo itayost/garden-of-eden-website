@@ -8,16 +8,14 @@ import { listChurnedCustomers } from "@/lib/actions/admin-churned-customers";
 import { RetentionPageClient } from "@/components/admin/retention/RetentionPageClient";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/arbox/normalize-phone";
-import { buildRetentionMonthOptions } from "@/lib/utils/retention-month-list";
+import {
+  buildRetentionMonthOptions,
+  getCurrentCalendarMonth,
+} from "@/lib/utils/retention-month-list";
 
 export const metadata: Metadata = {
   title: "שימור לקוחות | Garden of Eden",
 };
-
-function getCurrentCalendarMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-}
 
 export default async function RetentionPage() {
   const [storedMonths, initialChurned] = await Promise.all([
@@ -67,6 +65,7 @@ export default async function RetentionPage() {
       <RetentionPageClient
         months={months}
         initialMonth={initialMonth}
+        currentMonth={currentCalendarMonth}
         initialData={initialData}
         initialNotes={initialNotes}
         initialChurned={initialChurned}

@@ -70,6 +70,7 @@ function upsertMonthInList(
 interface RetentionPageClientProps {
   months: readonly RetentionReportMonth[];
   initialMonth: string;
+  currentMonth: string;
   initialData: RetentionReportData | null;
   initialNotes: ReadonlyMap<string, RetentionNote>;
   initialChurned: readonly ChurnedCustomer[];
@@ -79,6 +80,7 @@ interface RetentionPageClientProps {
 export function RetentionPageClient({
   months: initialMonths,
   initialMonth,
+  currentMonth,
   initialData,
   initialNotes,
   initialChurned,
@@ -223,9 +225,19 @@ export function RetentionPageClient({
   );
 
   const hasData = data !== null;
-  const refreshDisabled = isRefreshing || isPending;
+  // Past months are frozen snapshots — refreshing would overwrite them with
+  // live Arbox data whose end-dates have since moved forward.
+  const isLocked = selectedMonth < currentMonth;
+  const refreshDisabled = isRefreshing || isPending || isLocked;
 
-  const generateCta = (
+  const generateCta = isLocked ? (
+    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+      <p className="text-muted-foreground">
+        לא נשמר דוח עבור {formatReportMonth(selectedMonth)}. דוחות של חודשים
+        שהסתיימו נעולים ולא ניתן ליצור אותם כעת.
+      </p>
+    </div>
+  ) : (
     <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
       <p className="text-muted-foreground">
         אין דוח עדיין עבור {formatReportMonth(selectedMonth)}.
@@ -265,6 +277,7 @@ export function RetentionPageClient({
           size="sm"
           onClick={() => handleRefresh(selectedMonth)}
           disabled={refreshDisabled}
+          title={isLocked ? "דוח של חודש שהסתיים נעול" : undefined}
         >
           {isRefreshing ? (
             <Loader2 className="size-4 animate-spin" />
@@ -275,16 +288,23 @@ export function RetentionPageClient({
         </Button>
 
         <CustomMonthPicker
-          disabled={refreshDisabled}
+          disabled={isRefreshing || isPending}
+          currentMonth={currentMonth}
           onSelect={(reportMonth) =>
             handleRefresh(reportMonth, { switchTo: true })
           }
         />
 
-        {lastRefreshedLabel && (
+        {isLocked ? (
           <span className="text-xs text-muted-foreground">
-            עודכן {lastRefreshedLabel}
+            🔒 דוח חודש שהסתיים — נעול
           </span>
+        ) : (
+          lastRefreshedLabel && (
+            <span className="text-xs text-muted-foreground">
+              עודכן {lastRefreshedLabel}
+            </span>
+          )
         )}
       </div>
 
@@ -335,10 +355,15 @@ export function RetentionPageClient({
 
 interface CustomMonthPickerProps {
   disabled: boolean;
+  currentMonth: string;
   onSelect: (reportMonth: string) => void;
 }
 
-function CustomMonthPicker({ disabled, onSelect }: CustomMonthPickerProps) {
+function CustomMonthPicker({
+  disabled,
+  currentMonth,
+  onSelect,
+}: CustomMonthPickerProps) {
   const now = new Date();
   const defaultYear = now.getFullYear();
   const defaultMonth = now.getMonth() + 1;
@@ -353,6 +378,10 @@ function CustomMonthPicker({ disabled, onSelect }: CustomMonthPickerProps) {
 
   const handleSubmit = () => {
     const reportMonth = `${year}-${String(month).padStart(2, "0")}-01`;
+    if (reportMonth < currentMonth) {
+      toast.error("לא ניתן ליצור דוח לחודש שהסתיים");
+      return;
+    }
     onSelect(reportMonth);
     setOpen(false);
   };

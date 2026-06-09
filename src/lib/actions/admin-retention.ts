@@ -6,6 +6,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import type { RetentionReportData } from "@/lib/arbox/retention";
 import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
+import { isPastReportMonth } from "@/lib/utils/retention-month-list";
 import { checkRateLimit, isAdminExempt } from "@/lib/rate-limit";
 import {
   NOTE_COLORS,
@@ -158,6 +159,16 @@ export async function refreshRetentionReport(
   const parsed = reportMonthSchema.safeParse(reportMonth);
   if (!parsed.success) {
     return { error: "קלט לא תקין", data: null, refreshedAt: null };
+  }
+
+  // Past months are frozen snapshots — rebuilding from live Arbox data would
+  // overwrite them with members whose end-dates have since moved forward.
+  if (isPastReportMonth(parsed.data)) {
+    return {
+      error: "לא ניתן לעדכן דוח של חודש שהסתיים — הדוח נעול",
+      data: null,
+      refreshedAt: null,
+    };
   }
 
   if (!isAdminExempt(profile!.role)) {

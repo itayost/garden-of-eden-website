@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { isPastReportMonth } from "@/lib/utils/retention-month-list";
 import { buildRetentionReport, type RetentionReportData } from "./retention";
 
 export interface PersistRetentionReportResult {
@@ -10,6 +11,14 @@ export interface PersistRetentionReportResult {
 export async function persistRetentionReport(
   reportMonth: string,
 ): Promise<PersistRetentionReportResult> {
+  // Safety net: a past month is a frozen snapshot and must never be rebuilt
+  // (the cron only ever builds the current month, so it is unaffected).
+  if (isPastReportMonth(reportMonth)) {
+    throw new Error(
+      `Refusing to overwrite frozen retention snapshot for past month ${reportMonth}`,
+    );
+  }
+
   const data = await buildRetentionReport(reportMonth);
 
   const supabase = createAdminClient();

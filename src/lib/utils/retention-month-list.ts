@@ -3,6 +3,23 @@ export interface RetentionMonthOption {
   readonly created_at: string | null;
 }
 
+/**
+ * Current calendar month as a report-month key ("YYYY-MM-01").
+ * Report months are immutable snapshots once they pass; a month strictly
+ * earlier than this value must never be rebuilt/overwritten.
+ */
+export function getCurrentCalendarMonth(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+/** Whether reportMonth is strictly before the current calendar month (frozen). */
+export function isPastReportMonth(
+  reportMonth: string,
+  now: Date = new Date(),
+): boolean {
+  return reportMonth < getCurrentCalendarMonth(now);
+}
+
 export function buildRetentionMonthOptions(
   months: readonly RetentionMonthOption[],
   currentCalendarMonth: string,
