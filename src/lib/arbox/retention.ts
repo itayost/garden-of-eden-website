@@ -120,33 +120,89 @@ async function fetchAllPages<T>(
   return all;
 }
 
+// -------------------------------------------------------
+// Raw Arbox rows -> typed entries.
+// The Arbox reports expose the member name as `full_name` (with
+// `first_name`/`last_name`), not `name`. Map defensively so a renamed or
+// missing field degrades to "" / null instead of throwing and killing the
+// whole report.
+// -------------------------------------------------------
+
+type RawArboxRow = Record<string, unknown>;
+
+function str(value: unknown): string | null {
+  if (value == null) return null;
+  const s = String(value).trim();
+  return s.length > 0 ? s : null;
+}
+
+function num(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Member name from an Arbox report row: full_name, else first+last, else "". */
+function arboxName(row: RawArboxRow): string {
+  const full = str(row.full_name) ?? str(row.name);
+  if (full) return full;
+  const composed = [str(row.first_name), str(row.last_name)]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return composed;
+}
+
+function toExpiringEntry(row: RawArboxRow): ExpiringMembershipEntry {
+  return {
+    user_id: num(row.user_id),
+    name: arboxName(row),
+    phone: str(row.phone),
+    membership_type_name: str(row.membership_type_name),
+    end_date: str(row.end_date),
+  };
+}
+
+function toBookingEntry(row: RawArboxRow): BookingEntry {
+  return {
+    user_id: num(row.user_id),
+    name: arboxName(row),
+    phone: str(row.phone),
+    date: str(row.date) ?? "",
+    check_in: str(row.check_in) ?? "",
+  };
+}
+
 export async function fetchExpiringMemberships(
   fromDate: string,
   toDate: string,
 ): Promise<readonly ExpiringMembershipEntry[]> {
-  return fetchAllPages<ExpiringMembershipEntry>("expiringMembershipsReport", fromDate, toDate);
+  const rows = await fetchAllPages<RawArboxRow>("expiringMembershipsReport", fromDate, toDate);
+  return rows.map(toExpiringEntry);
 }
 
 export async function fetchExpiringSessions(
   fromDate: string,
   toDate: string,
 ): Promise<readonly ExpiringMembershipEntry[]> {
-  return fetchAllPages<ExpiringMembershipEntry>("expiringSessionsReport", fromDate, toDate);
+  const rows = await fetchAllPages<RawArboxRow>("expiringSessionsReport", fromDate, toDate);
+  return rows.map(toExpiringEntry);
 }
 
 export async function fetchBookingsReport(
   fromDate: string,
   toDate: string,
 ): Promise<readonly BookingEntry[]> {
-  return fetchAllPages<BookingEntry>("bookingsReport", fromDate, toDate);
+  const rows = await fetchAllPages<RawArboxRow>("bookingsReport", fromDate, toDate);
+  return rows.map(toBookingEntry);
 }
 
 // -------------------------------------------------------
 // Processing: pre-index bookings for O(N+M) lookup
 // -------------------------------------------------------
 
-export function normalizeName(name: string): string {
-  return name.trim().toLowerCase();
+export function normalizeName(name: string | null | undefined): string {
+  return (name ?? "").trim().toLowerCase();
 }
 
 export interface BookingIndex {
@@ -162,6 +218,7 @@ export function buildBookingIndex(bookings: readonly BookingEntry[]): BookingInd
 
   for (const b of bookings) {
     if (b.check_in !== "Yes") continue;
+    if (!b.date) continue;
 
     const monthKey = b.date.slice(0, 7);
 

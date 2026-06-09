@@ -184,8 +184,11 @@ export async function refreshRetentionReport(
         refreshedAt: null,
       };
     }
+    // Surface the real cause to admins so future regressions are diagnosable
+    // from the toast itself; non-admins get the generic message.
+    const detail = isAdminExempt(profile!.role) && message ? `: ${message}` : "";
     return {
-      error: "שגיאה בריענון הדוח",
+      error: `שגיאה בריענון הדוח${detail}`,
       data: null,
       refreshedAt: null,
     };
