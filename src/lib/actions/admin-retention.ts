@@ -18,6 +18,7 @@ export interface RetentionNote {
   readonly note_color: NoteColor;
   readonly author_id: string;
   readonly updated_at: string;
+  readonly assigned_trainer_id: string | null;
 }
 
 export interface RetentionReportMonth {
@@ -64,7 +65,9 @@ export async function getRetentionNotes(
 
   const supabase = await createClient();
   const { data } = await typedFrom(supabase, "retention_notes")
-    .select("trainee_phone, note, note_color, author_id, updated_at")
+    .select(
+      "trainee_phone, note, note_color, author_id, updated_at, assigned_trainer_id",
+    )
     .eq("report_month", reportMonth);
 
   const map = new Map<string, RetentionNote>();
@@ -74,6 +77,7 @@ export async function getRetentionNotes(
       note_color: (row.note_color ?? "none") as NoteColor,
       author_id: row.author_id as string,
       updated_at: row.updated_at as string,
+      assigned_trainer_id: (row.assigned_trainer_id ?? null) as string | null,
     });
   }
   return map;
@@ -108,15 +112,26 @@ export async function upsertRetentionNote(
 
   const supabase = await createClient();
 
-  // Delete only when both note text is empty AND no color is set
+  // Empty note + no color: delete the row only if no trainer is assigned —
+  // otherwise keep the row so the assignment survives a cleared note.
   if (!note.trim() && noteColor === "none") {
-    await typedFrom(supabase, "retention_notes")
-      .delete()
+    const { data: existing } = await typedFrom(supabase, "retention_notes")
+      .select("assigned_trainer_id")
       .eq("report_month", reportMonth)
-      .eq("trainee_phone", traineePhone);
-    return { error: null };
+      .eq("trainee_phone", traineePhone)
+      .maybeSingle();
+
+    if (!existing || existing.assigned_trainer_id == null) {
+      await typedFrom(supabase, "retention_notes")
+        .delete()
+        .eq("report_month", reportMonth)
+        .eq("trainee_phone", traineePhone);
+      return { error: null };
+    }
+    // Trainer still assigned — fall through to clear note/color, keep the row.
   }
 
+  // updated_at is set by the set_retention_notes_updated_at trigger.
   const { error: dbError } = await typedFrom(supabase, "retention_notes").upsert(
     {
       report_month: reportMonth,
@@ -125,7 +140,6 @@ export async function upsertRetentionNote(
       note: note.trim(),
       note_color: noteColor,
       author_id: user!.id,
-      updated_at: new Date().toISOString(),
     },
     { onConflict: "report_month,trainee_phone" },
   );
@@ -133,6 +147,79 @@ export async function upsertRetentionNote(
   if (dbError) {
     console.error("[RetentionNotes] Upsert error:", dbError);
     return { error: "שגיאה בשמירת ההערה" };
+  }
+
+  return { error: null };
+}
+
+const setTrainerSchema = z.object({
+  reportMonth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  traineePhone: z.string().min(1),
+  traineeName: z.string().min(1),
+  trainerId: z.string().uuid().nullable(),
+});
+
+/**
+ * Assign (or clear) the trainer for a trainee in a given month's retention list.
+ * Stored alongside the note in retention_notes; preserves any existing note/color.
+ */
+export async function setRetentionTrainer(
+  reportMonth: string,
+  traineePhone: string,
+  traineeName: string,
+  trainerId: string | null,
+): Promise<{ error: string | null }> {
+  const { error: authError, user } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+
+  const parsed = setTrainerSchema.safeParse({
+    reportMonth,
+    traineePhone,
+    traineeName,
+    trainerId,
+  });
+  if (!parsed.success) return { error: "קלט לא תקין" };
+
+  const supabase = await createClient();
+
+  // Clearing the trainer with no note/color left: remove the row entirely.
+  if (trainerId === null) {
+    const { data: existing } = await typedFrom(supabase, "retention_notes")
+      .select("note, note_color")
+      .eq("report_month", reportMonth)
+      .eq("trainee_phone", traineePhone)
+      .maybeSingle();
+
+    const hasNote =
+      existing &&
+      (((existing.note as string) ?? "").trim() !== "" ||
+        ((existing.note_color as string) ?? "none") !== "none");
+
+    if (!hasNote) {
+      await typedFrom(supabase, "retention_notes")
+        .delete()
+        .eq("report_month", reportMonth)
+        .eq("trainee_phone", traineePhone);
+      return { error: null };
+    }
+  }
+
+  // note/note_color are left untouched on the conflict path; updated_at is set
+  // by the set_retention_notes_updated_at trigger.
+  const { error: dbError } = await typedFrom(supabase, "retention_notes").upsert(
+    {
+      report_month: reportMonth,
+      trainee_phone: traineePhone,
+      trainee_name: traineeName,
+      assigned_trainer_id: trainerId,
+      author_id: user!.id,
+    },
+    { onConflict: "report_month,trainee_phone" },
+  );
+
+  if (dbError) {
+    console.error("[RetentionTrainer] Upsert error:", dbError);
+    return { error: "שגיאה בשיוך מאמן" };
   }
 
   return { error: null };

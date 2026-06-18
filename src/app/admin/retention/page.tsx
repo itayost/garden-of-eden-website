@@ -5,6 +5,7 @@ import {
   getRetentionNotes,
 } from "@/lib/actions/admin-retention";
 import { listChurnedCustomers } from "@/lib/actions/admin-churned-customers";
+import { listTrainersForAssignmentAction } from "@/lib/actions/admin-trainers-list";
 import { RetentionPageClient } from "@/components/admin/retention/RetentionPageClient";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/arbox/normalize-phone";
@@ -18,10 +19,14 @@ export const metadata: Metadata = {
 };
 
 export default async function RetentionPage() {
-  const [storedMonths, initialChurned] = await Promise.all([
+  const [storedMonths, initialChurned, trainersRes] = await Promise.all([
     getRetentionReportMonths(),
     listChurnedCustomers(),
+    listTrainersForAssignmentAction(),
   ]);
+
+  const trainers =
+    "data" in trainersRes && trainersRes.data ? trainersRes.data : [];
 
   const currentCalendarMonth = getCurrentCalendarMonth();
   const months = buildRetentionMonthOptions(storedMonths, currentCalendarMonth);
@@ -70,6 +75,7 @@ export default async function RetentionPage() {
         initialNotes={initialNotes}
         initialChurned={initialChurned}
         traineePositions={traineePositions}
+        trainers={trainers}
       />
     </div>
   );

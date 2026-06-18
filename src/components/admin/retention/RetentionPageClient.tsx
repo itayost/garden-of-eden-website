@@ -22,9 +22,11 @@ import {
   getRetentionReport,
   getRetentionNotes,
   upsertRetentionNote,
+  setRetentionTrainer,
   refreshRetentionReport,
 } from "@/lib/actions/admin-retention";
 import { createChurnedCustomer } from "@/lib/actions/admin-churned-customers";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { getAttendanceMonthKeys } from "@/lib/arbox/retention";
 import type {
   RetentionEntry,
@@ -75,6 +77,7 @@ interface RetentionPageClientProps {
   initialNotes: ReadonlyMap<string, RetentionNote>;
   initialChurned: readonly ChurnedCustomer[];
   traineePositions: Readonly<Record<string, string | null>>;
+  trainers: TrainerOption[];
 }
 
 export function RetentionPageClient({
@@ -85,6 +88,7 @@ export function RetentionPageClient({
   initialNotes,
   initialChurned,
   traineePositions,
+  trainers,
 }: RetentionPageClientProps) {
   const [allMonths, setAllMonths] =
     useState<readonly RetentionReportMonth[]>(initialMonths);
@@ -200,17 +204,59 @@ export function RetentionPageClient({
         toast.error(error);
         return;
       }
-      // Optimistic update
+      // Optimistic update — keep any existing trainer assignment.
       setNotes((prev) => {
         const next = new Map(prev);
-        if (!note.trim() && noteColor === "none") {
+        const existing = prev.get(traineePhone);
+        const trainerId = existing?.assigned_trainer_id ?? null;
+        if (!note.trim() && noteColor === "none" && trainerId == null) {
           next.delete(traineePhone);
         } else {
           next.set(traineePhone, {
             note: note.trim(),
             note_color: noteColor,
-            author_id: "",
+            author_id: existing?.author_id ?? "",
             updated_at: new Date().toISOString(),
+            assigned_trainer_id: trainerId,
+          });
+        }
+        return next;
+      });
+    },
+    [selectedMonth],
+  );
+
+  const handleAssignTrainer = useCallback(
+    async (
+      traineePhone: string,
+      traineeName: string,
+      trainerId: string | null,
+    ) => {
+      const { error } = await setRetentionTrainer(
+        selectedMonth,
+        traineePhone,
+        traineeName,
+        trainerId,
+      );
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      // Optimistic update — keep any existing note/color.
+      setNotes((prev) => {
+        const next = new Map(prev);
+        const existing = prev.get(traineePhone);
+        const noteText = existing?.note ?? "";
+        const color: NoteColor = existing?.note_color ?? "none";
+        if (trainerId == null && !noteText.trim() && color === "none") {
+          next.delete(traineePhone);
+        } else {
+          next.set(traineePhone, {
+            note: noteText,
+            note_color: color,
+            author_id: existing?.author_id ?? "",
+            updated_at: new Date().toISOString(),
+            assigned_trainer_id: trainerId,
           });
         }
         return next;
@@ -335,6 +381,8 @@ export function RetentionPageClient({
                     notes={notes}
                     onSaveNote={handleSaveNote}
                     traineePositions={traineePositions}
+                    trainers={trainers}
+                    onAssignTrainer={handleAssignTrainer}
                     movedKeys={movedKeys}
                     onMoveToChurned={handleMoveToChurned}
                   />

@@ -16,6 +16,9 @@ import {
 } from "@/components/admin/TableToolbar";
 import { RetentionNoteCell } from "./RetentionNoteCell";
 import { MoveToChurnedButton } from "./MoveToChurnedButton";
+import { TrainerAssignmentSelect } from "@/components/admin/leads/TrainerAssignmentSelect";
+import { formatRelativeTime } from "@/lib/utils/date";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import type { RetentionEntry } from "@/lib/arbox/retention";
 import type { RetentionNote } from "@/lib/actions/admin-retention";
 import {
@@ -60,6 +63,12 @@ interface RetentionTableProps {
     noteColor: NoteColor,
   ) => Promise<void>;
   traineePositions: Readonly<Record<string, string | null>>;
+  trainers: TrainerOption[];
+  onAssignTrainer: (
+    traineePhone: string,
+    traineeName: string,
+    trainerId: string | null,
+  ) => Promise<void>;
   movedKeys?: ReadonlySet<string>;
   onMoveToChurned?: (
     entry: RetentionEntry,
@@ -74,6 +83,8 @@ export function RetentionTable({
   notes,
   onSaveNote,
   traineePositions,
+  trainers,
+  onAssignTrainer,
   movedKeys,
   onMoveToChurned,
 }: RetentionTableProps) {
@@ -138,6 +149,8 @@ export function RetentionTable({
                   </TableHead>
                 ))}
                 <TableHead className="text-right">הערות</TableHead>
+                <TableHead className="text-right">מאמן משוייך</TableHead>
+                <TableHead className="text-right">תאריך עדכון אחרון</TableHead>
                 {onMoveToChurned && (
                   <TableHead className="text-right">פעולות</TableHead>
                 )}
@@ -174,6 +187,21 @@ export function RetentionTable({
                           onSaveNote(noteKey, entry.name, note, noteColor)
                         }
                       />
+                    </TableCell>
+                    <TableCell>
+                      <TrainerAssignmentSelect
+                        trainers={trainers}
+                        value={existingNoteRecord?.assigned_trainer_id ?? null}
+                        onChange={(trainerId) =>
+                          onAssignTrainer(noteKey, entry.name, trainerId)
+                        }
+                        triggerClassName="w-40"
+                      />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                      {existingNoteRecord?.updated_at
+                        ? formatRelativeTime(existingNoteRecord.updated_at)
+                        : "—"}
                     </TableCell>
                     {onMoveToChurned && (
                       <TableCell>

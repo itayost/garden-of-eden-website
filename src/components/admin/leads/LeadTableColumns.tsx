@@ -5,6 +5,7 @@ import { ArrowUpDown, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadTabBadge } from "./LeadTabBadge";
+import { formatRelativeTime } from "@/lib/utils/date";
 import type { Lead } from "@/types/leads";
 
 function formatPhone(phone: string | null): string {
@@ -147,6 +148,23 @@ export function getLeadColumns({ showPaidIndicator }: GetLeadColumnsOptions): Co
         </Button>
       ),
       cell: ({ row }) => formatDate(row.getValue("created_at")),
+    },
+    {
+      accessorKey: "updated_at",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          עדכון אחרון
+          <ArrowUpDown className="mr-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          {formatRelativeTime(row.getValue("updated_at"))}
+        </span>
+      ),
     }
   );
 
