@@ -81,6 +81,9 @@ export function ShiftReportExportButton({
         const insufficientAttentionPerTraineeText = formatPerTrainee(s.insufficient_attention_per_trainee as PerTraineeJsonb);
         const proCandidatesPerTraineeText = formatPerTrainee(s.pro_candidates_per_trainee as PerTraineeJsonb);
         const socialSkillsPerTraineeText = formatPerTrainee(s.social_skills_per_trainee as PerTraineeJsonb);
+        const homeworkPerTraineeText = formatPerTrainee(s.homework_per_trainee as PerTraineeJsonb);
+        const videoFeedbackPerTraineeText = formatPerTrainee(s.video_feedback_per_trainee as PerTraineeJsonb);
+        const praisePerTraineeText = formatPerTrainee(s.praise_per_trainee as PerTraineeJsonb);
 
         return {
           "מאמן": s.trainer_name,
@@ -129,6 +132,15 @@ export function ShiftReportExportButton({
           "שמות - כישורים חברתיים": resolveNames(s.social_skills_trainee_ids),
           "פרטי כישורים חברתיים": s.social_skills_details ?? "",
           "כישורים חברתיים לפי מתאמן": socialSkillsPerTraineeText,
+          "שיעורי בית": yesNo(s.has_homework),
+          "שמות - שיעורי בית": resolveNames(s.homework_trainee_ids),
+          "שיעורי בית לפי מתאמן": homeworkPerTraineeText,
+          "פידבק וידאו להורים": yesNo(s.has_video_feedback),
+          "שמות - פידבק וידאו": resolveNames(s.video_feedback_trainee_ids),
+          "פידבק וידאו לפי מתאמן": videoFeedbackPerTraineeText,
+          "פרגון": yesNo(s.has_praise),
+          "שמות - פרגון": resolveNames(s.praise_trainee_ids),
+          "פרגון לפי מתאמן": praisePerTraineeText,
           "הורה חיפש צוות": yesNo(s.has_parent_seeking_staff),
           "פרטי הורה": s.parent_seeking_details ?? "",
           "מבקרים חיצוניים": yesNo(s.has_external_visitors),
