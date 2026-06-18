@@ -118,6 +118,30 @@ export const leadUpdateSchema = z.object({
 
 export type LeadUpdateInput = z.infer<typeof leadUpdateSchema>;
 
+/** A single row from a pasted leads table. phone is already normalized (or null). */
+export const bulkLeadRowSchema = z.object({
+  name: nameSchema,
+  phone: z
+    .string()
+    .regex(LEAD_PHONE_REGEX, "מספר טלפון לא תקין")
+    .nullable(),
+  note: z.string().max(2000, "הערה ארוכה מדי").nullable(),
+  club: z.string().max(100, "שם מועדון ארוך מדי").nullable(),
+  birth_year: birthYearSchema,
+  is_from_haifa: z.boolean(),
+});
+
+export type BulkLeadRow = z.infer<typeof bulkLeadRowSchema>;
+
+/** Tab/source/status applied to every row of a bulk paste import. */
+export const bulkLeadImportSettingsSchema = z.object({
+  tab_id: z.string().uuid("מזהה טאב לא תקין"),
+  source: z.enum(LEAD_SOURCES),
+  status: z.enum(LEAD_STATUSES),
+});
+
+export type BulkLeadImportSettings = z.infer<typeof bulkLeadImportSettingsSchema>;
+
 export const contactLogSchema = z.object({
   lead_id: z.string().uuid("מזהה ליד לא תקין"),
   contact_type: z.enum(LEAD_CONTACT_TYPES, { message: "יש לבחור סוג יצירת קשר" }),

@@ -170,6 +170,8 @@ export function LeadDataTable({
         onCreateClick={handleCreateClick}
         statusValue={statusFilter}
         trainers={trainers}
+        tabs={tabs}
+        activeTabId={activeTab.id}
       />
 
       {/* Mobile: Card list */}

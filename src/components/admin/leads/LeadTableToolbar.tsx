@@ -16,8 +16,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { LEAD_STATUS_LABELS, LEAD_UNASSIGNED_VALUE, type LeadStatus } from "@/types/leads";
+import type { LeadTab } from "@/types/lead-tabs";
 import { TEAMS } from "@/lib/whatsapp/flow-constants";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
+import { PasteLeadsDialog } from "./PasteLeadsDialog";
 
 interface LeadTableToolbarProps {
   onSearchChange: (value: string) => void;
@@ -29,6 +31,8 @@ interface LeadTableToolbarProps {
   onCreateClick: () => void;
   statusValue?: string | null;
   trainers: TrainerOption[];
+  tabs: LeadTab[];
+  activeTabId: string;
 }
 
 export function LeadTableToolbar({
@@ -41,6 +45,8 @@ export function LeadTableToolbar({
   onCreateClick,
   statusValue,
   trainers,
+  tabs,
+  activeTabId,
 }: LeadTableToolbarProps) {
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
   const [status, setStatus] = useQueryState("status", parseAsString);
@@ -208,10 +214,13 @@ export function LeadTableToolbar({
           </Button>
         )}
       </div>
-      <Button onClick={onCreateClick}>
-        <Plus className="h-4 w-4 ml-2" />
-        ליד חדש
-      </Button>
+      <div className="flex items-center gap-2">
+        <PasteLeadsDialog tabs={tabs} activeTabId={activeTabId} />
+        <Button onClick={onCreateClick}>
+          <Plus className="h-4 w-4 ml-2" />
+          ליד חדש
+        </Button>
+      </div>
     </div>
   );
 }
