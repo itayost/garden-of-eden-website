@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +29,22 @@ interface ShiftReportFormProps {
   trainerName: string;
   trainees: TraineeOption[];
   existingReport?: TrainerShiftReport | null;
+}
+
+/** Turn an unknown thrown value into a user-facing Hebrew message. Supabase
+ * PostgrestError is a plain object (not an Error), so `instanceof Error` misses
+ * it; map the codes worth a specific message and otherwise fall back to a
+ * generic Hebrew string. The raw (English) DB message is never surfaced to the
+ * user — the full error is already logged to the console for diagnosis. */
+function getSaveErrorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "code" in error) {
+    if ((error as { code?: string }).code === "23505") {
+      return "כבר קיים דוח לתאריך זה. רענן את הדף כדי לערוך את הדוח הקיים.";
+    }
+    return "שגיאה בשמירת הדוח";
+  }
+  if (error instanceof Error) return error.message;
+  return "שגיאה בשמירת הדוח";
 }
 
 function reportToFormData(report: TrainerShiftReport): ShiftReportFormData {
@@ -137,6 +153,21 @@ export function ShiftReportForm({
     DEFAULT_SHIFT_REPORT
   );
 
+  // A restored draft can carry a stale report_date from a previous shift, which
+  // silently shifts a new report off "today" and collides with the existing
+  // report for that date on the unique (trainer_id, report_date) index. For a
+  // new report the date always means today, so reset it after the draft restore.
+  // Registered after useFormDraft so it runs after the hook's restore effect.
+  useEffect(() => {
+    if (existingReport) return;
+    const today = new Date().toISOString().split("T")[0];
+    if (form.getValues("report_date") !== today) {
+      form.setValue("report_date", today);
+    }
+    // Mount-only: the draft restore is one-time, so re-syncing once is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveStep = useCallback(async () => {
     setSaving(true);
 
@@ -213,9 +244,11 @@ export function ShiftReportForm({
 
         if (error) throw error;
       } else {
-        // Create new report
+        // Create or merge — upsert on the (trainer_id, report_date) natural key
+        // so a stale draft date or an already-existing report for the same day
+        // updates the row instead of colliding with the unique index.
         const { data: newReport, error } = await typedFrom(supabase, "trainer_shift_reports")
-          .insert(reportData)
+          .upsert(reportData, { onConflict: "trainer_id,report_date" })
           .select("id")
           .single();
 
@@ -232,9 +265,7 @@ export function ShiftReportForm({
       return true;
     } catch (error: unknown) {
       console.error("Save error:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "שגיאה בשמירת הדוח";
-      toast.error(errorMessage);
+      toast.error(getSaveErrorMessage(error));
       return false;
     } finally {
       setSaving(false);
