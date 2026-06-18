@@ -17,6 +17,7 @@ import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
+import { CommunicationHistoryCard } from "@/components/admin/users/CommunicationHistoryCard";
 import { NextGameAdminCard } from "@/components/admin/NextGameAdminCard";
 import { ClipPlaybackCard } from "@/components/admin/ClipPlaybackCard";
 import { RadarStatsChartWrapper } from "./RadarStatsChartWrapper";
@@ -161,6 +162,15 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
           {/* Trainer Notes (trainees only) */}
           {userToEdit.role === "trainee" && (
             <TraineeNotesCard
+              traineeId={userId}
+              currentUserId={currentUser.id}
+              isAdmin={isAdmin}
+            />
+          )}
+
+          {/* Communication History (trainees only) */}
+          {userToEdit.role === "trainee" && (
+            <CommunicationHistoryCard
               traineeId={userId}
               currentUserId={currentUser.id}
               isAdmin={isAdmin}
