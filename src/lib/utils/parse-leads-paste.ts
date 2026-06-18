@@ -78,8 +78,9 @@ export function parseLeadsPaste(input: string): ParseLeadsResult {
   if (rawLines.length === 0) return { valid, errors };
 
   const headerLine = rawLines[0];
-  // Tab-separated (Google Sheets default) unless the header only has commas.
-  const sep = headerLine.includes("\t") ? "\t" : ",";
+  // Tab-separated (Google Sheets default). Fall back to comma only when no line
+  // contains a tab — guards a single-column header sitting above tabbed data.
+  const sep = rawLines.some((l) => l.includes("\t")) ? "\t" : ",";
 
   const headerCells = headerLine.split(sep).map(normalizeHeaderCell);
   const columns: (FieldKey | null)[] = headerCells.map(
@@ -123,7 +124,13 @@ export function parseLeadsPaste(input: string): ParseLeadsResult {
 
     const note = get("note") || null;
     const club = get("club") || null;
-    const birth_year = parseBirthYearInput(get("birth_year"));
+    // Drop an out-of-range year rather than failing the whole row on the
+    // server's birth_year (1990–2030) validation.
+    const parsedYear = parseBirthYearInput(get("birth_year"));
+    const birth_year =
+      parsedYear !== null && parsedYear >= 1990 && parsedYear <= 2030
+        ? parsedYear
+        : null;
     const is_from_haifa = TRUTHY.has(get("is_from_haifa").toLowerCase());
 
     valid.push({ name, phone, note, club, birth_year, is_from_haifa });

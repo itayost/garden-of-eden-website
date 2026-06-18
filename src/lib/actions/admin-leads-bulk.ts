@@ -107,12 +107,26 @@ export async function createLeadsBulk(
   for (let i = 0; i < payloads.length; i += BATCH_SIZE) {
     const batch = payloads.slice(i, i + BATCH_SIZE);
     const { data, error } = await typedFrom(supabase, "leads").insert(batch).select("id");
-    if (error) {
-      console.error("Bulk leads insert error:", error);
-      errors.push({ index: -1, message: `שגיאה בשמירת קבוצה (${batch.length} שורות)` });
+    if (!error) {
+      inserted += data?.length ?? 0;
       continue;
     }
-    inserted += data?.length ?? 0;
+
+    // A single bad row (e.g. a duplicate phone that slipped past dedup) fails
+    // the whole atomic chunk — retry row-by-row so the rest still save.
+    console.error("Bulk leads insert error, retrying per-row:", error);
+    for (const payload of batch) {
+      const { data: one, error: rowErr } = await typedFrom(supabase, "leads")
+        .insert(payload)
+        .select("id");
+      if (!rowErr) {
+        inserted += one?.length ?? 0;
+      } else if (rowErr.code === "23505") {
+        skipped++; // unique-violation = duplicate phone
+      } else {
+        errors.push({ index: -1, message: rowErr.message });
+      }
+    }
   }
 
   if (inserted > 0) revalidatePath("/admin/leads");

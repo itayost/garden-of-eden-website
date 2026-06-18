@@ -80,8 +80,8 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" type="button">
-          <Clipboard className="h-4 w-4 ml-2" />
-          הדבקה מ-Sheets
+          <Clipboard className="h-4 w-4 me-2" />
+          הדבקה מגיליון
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl flex flex-col max-h-[85vh]">
@@ -198,7 +198,7 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
           <Button onClick={handleSubmit} disabled={validCount === 0 || submitting}>
             {submitting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                <Loader2 className="h-4 w-4 animate-spin me-2" />
                 מייבא...
               </>
             ) : (
