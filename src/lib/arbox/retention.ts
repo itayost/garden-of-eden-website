@@ -321,6 +321,73 @@ function getAttendanceMonthRanges(
 }
 
 // -------------------------------------------------------
+// Merge: preserve already-ended members across refreshes
+//
+// Arbox's expiring reports only return memberships whose end_date is still in
+// the future, so a plain refresh would drop everyone who already ended this
+// month. Merging the fresh pull into the stored snapshot keeps those members
+// (and their notes, keyed by report_month + phone) while updating/adding the
+// ones Arbox still returns.
+// -------------------------------------------------------
+
+/**
+ * Stable identity for a retention entry: user_id > phone > name+end_date.
+ * The name fallback includes end_date so two different id/phone-less members
+ * who happen to share a name are not collapsed into one (which would silently
+ * drop one of them on merge).
+ */
+function entryIdentity(entry: RetentionEntry): string {
+  if (entry.user_id != null) return `uid:${entry.user_id}`;
+  const phone = normalizePhone(entry.phone);
+  if (phone) return `phone:${phone}`;
+  return `name:${normalizeName(entry.name)}|${entry.end_date}`;
+}
+
+const sortByEndDate = (a: RetentionEntry, b: RetentionEntry) =>
+  b.end_date.localeCompare(a.end_date);
+
+/** Dedup a category by identity (last wins) and sort by end_date descending. */
+function dedupAndSort(
+  entries: readonly RetentionEntry[],
+): readonly RetentionEntry[] {
+  const byId = new Map<string, RetentionEntry>();
+  for (const entry of entries) {
+    byId.set(entryIdentity(entry), entry);
+  }
+  return [...byId.values()].sort(sortByEndDate);
+}
+
+export function mergeRetentionReports(
+  stored: RetentionReportData,
+  fresh: RetentionReportData,
+): RetentionReportData {
+  // Identities present anywhere in the fresh pull. A stored entry that
+  // reappears fresh (possibly in a different category) is replaced by the
+  // fresh one rather than kept in both places.
+  const freshIds = new Set<string>();
+  for (const category of ["monthly", "pro", "training_card"] as const) {
+    for (const entry of fresh[category] ?? []) {
+      freshIds.add(entryIdentity(entry));
+    }
+  }
+
+  const mergeCategory = (key: CategoryKey): readonly RetentionEntry[] => {
+    // Defensive `?? []`: a stored row written by an older shape (or hand-edited)
+    // could be missing a category key; never throw on a stale snapshot.
+    const keptStored = (stored[key] ?? []).filter(
+      (entry) => !freshIds.has(entryIdentity(entry)),
+    );
+    return dedupAndSort([...keptStored, ...(fresh[key] ?? [])]);
+  };
+
+  return {
+    monthly: mergeCategory("monthly"),
+    pro: mergeCategory("pro"),
+    training_card: mergeCategory("training_card"),
+  };
+}
+
+// -------------------------------------------------------
 // Main report builder
 // -------------------------------------------------------
 
@@ -384,9 +451,6 @@ export async function buildRetentionReport(
   }
 
   // Sort each category by end_date descending
-  const sortByEndDate = (a: RetentionEntry, b: RetentionEntry) =>
-    b.end_date.localeCompare(a.end_date);
-
   return {
     monthly: [...grouped.monthly].sort(sortByEndDate),
     pro: [...grouped.pro].sort(sortByEndDate),
