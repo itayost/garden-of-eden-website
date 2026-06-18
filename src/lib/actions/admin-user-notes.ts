@@ -51,7 +51,10 @@ export async function getTraineeNotes(
       "complaints_trainee_ids, complaints_details, complaints_per_trainee, " +
       "insufficient_attention_trainee_ids, insufficient_attention_details, insufficient_attention_per_trainee, " +
       "pro_candidates_trainee_ids, pro_candidates_details, pro_candidates_per_trainee, " +
-      "has_social_skills, social_skills_trainee_ids, social_skills_details, social_skills_per_trainee"
+      "has_social_skills, social_skills_trainee_ids, social_skills_details, social_skills_per_trainee, " +
+      "homework_trainee_ids, homework_details, homework_per_trainee, " +
+      "video_feedback_trainee_ids, video_feedback_details, video_feedback_per_trainee, " +
+      "praise_trainee_ids, praise_details, praise_per_trainee"
     )
     .or(
       `new_trainees_ids.cs.{${traineeId}},` +
@@ -64,7 +67,10 @@ export async function getTraineeNotes(
       `complaints_trainee_ids.cs.{${traineeId}},` +
       `insufficient_attention_trainee_ids.cs.{${traineeId}},` +
       `pro_candidates_trainee_ids.cs.{${traineeId}},` +
-      `social_skills_trainee_ids.cs.{${traineeId}}`
+      `social_skills_trainee_ids.cs.{${traineeId}},` +
+      `homework_trainee_ids.cs.{${traineeId}},` +
+      `video_feedback_trainee_ids.cs.{${traineeId}},` +
+      `praise_trainee_ids.cs.{${traineeId}}`
     )
     .order("report_date", { ascending: false });
 

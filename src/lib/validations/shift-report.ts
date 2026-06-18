@@ -95,6 +95,22 @@ export const shiftReportSchema = z.object({
   social_skills_details: optionalText,
   social_skills_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
 
+  // Step: Communication with trainees & parents
+  has_homework: z.boolean(),
+  homework_trainee_ids: z.array(z.string()),
+  homework_details: optionalText,
+  homework_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
+
+  has_video_feedback: z.boolean(),
+  video_feedback_trainee_ids: z.array(z.string()),
+  video_feedback_details: optionalText,
+  video_feedback_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
+
+  has_praise: z.boolean(),
+  praise_trainee_ids: z.array(z.string()),
+  praise_details: optionalText,
+  praise_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
+
   // Step 4: Parents & Visitors
   has_parent_seeking_staff: z.boolean(),
   parent_seeking_details: optionalText,
@@ -161,6 +177,18 @@ export const DEFAULT_SHIFT_REPORT: ShiftReportFormData = {
   social_skills_trainee_ids: [],
   social_skills_details: "",
   social_skills_per_trainee: {},
+  has_homework: false,
+  homework_trainee_ids: [],
+  homework_details: "",
+  homework_per_trainee: {},
+  has_video_feedback: false,
+  video_feedback_trainee_ids: [],
+  video_feedback_details: "",
+  video_feedback_per_trainee: {},
+  has_praise: false,
+  praise_trainee_ids: [],
+  praise_details: "",
+  praise_per_trainee: {},
   has_parent_seeking_staff: false,
   parent_seeking_details: "",
   has_external_visitors: false,

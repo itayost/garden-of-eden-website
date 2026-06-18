@@ -41,6 +41,15 @@ export type ShiftReportForNotes = Pick<
   | "social_skills_trainee_ids"
   | "social_skills_details"
   | "social_skills_per_trainee"
+  | "homework_trainee_ids"
+  | "homework_details"
+  | "homework_per_trainee"
+  | "video_feedback_trainee_ids"
+  | "video_feedback_details"
+  | "video_feedback_per_trainee"
+  | "praise_trainee_ids"
+  | "praise_details"
+  | "praise_per_trainee"
 >;
 
 /** Note category types that link trainees via UUID arrays + per-trainee JSONB */
@@ -55,7 +64,10 @@ export type NoteCategoryType =
   | "complaints"
   | "insufficient_attention"
   | "pro_candidates"
-  | "social_skills";
+  | "social_skills"
+  | "homework"
+  | "video_feedback"
+  | "praise";
 
 /** Hebrew labels for each category */
 export const NOTE_CATEGORY_LABELS: Record<NoteCategoryType, string> = {
@@ -70,6 +82,9 @@ export const NOTE_CATEGORY_LABELS: Record<NoteCategoryType, string> = {
   insufficient_attention: "חוסר תשומת לב",
   pro_candidates: "מועמד למקצוענות",
   social_skills: "כישורים חברתיים",
+  homework: "שיעורי בית",
+  video_feedback: "פידבק וידאו להורים",
+  praise: "פרגון",
 };
 
 /** Visual variant for each category */
@@ -85,6 +100,9 @@ export const NOTE_CATEGORY_VARIANT: Record<NoteCategoryType, "destructive" | "wa
   insufficient_attention: "warning",
   pro_candidates: "success",
   social_skills: "info",
+  homework: "info",
+  video_feedback: "success",
+  praise: "success",
 };
 
 /** A single note extracted for a trainee from a shift report */
@@ -124,6 +142,9 @@ export const CATEGORY_COLUMNS: ReadonlyArray<{
   { type: "insufficient_attention", traineeIdsKey: "insufficient_attention_trainee_ids", detailsKey: "insufficient_attention_details", perTraineeKey: "insufficient_attention_per_trainee", hasCategories: false },
   { type: "pro_candidates", traineeIdsKey: "pro_candidates_trainee_ids", detailsKey: "pro_candidates_details", perTraineeKey: "pro_candidates_per_trainee", hasCategories: false },
   { type: "social_skills", traineeIdsKey: "social_skills_trainee_ids", detailsKey: "social_skills_details", perTraineeKey: "social_skills_per_trainee", hasCategories: false },
+  { type: "homework", traineeIdsKey: "homework_trainee_ids", detailsKey: "homework_details", perTraineeKey: "homework_per_trainee", hasCategories: false },
+  { type: "video_feedback", traineeIdsKey: "video_feedback_trainee_ids", detailsKey: "video_feedback_details", perTraineeKey: "video_feedback_per_trainee", hasCategories: false },
+  { type: "praise", traineeIdsKey: "praise_trainee_ids", detailsKey: "praise_details", perTraineeKey: "praise_per_trainee", hasCategories: false },
 ];
 
 type PerTraineeJsonb = Record<string, { details?: string; categories?: string[] }> | null | undefined;

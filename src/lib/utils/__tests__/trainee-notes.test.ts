@@ -41,6 +41,15 @@ function makeReport(
     social_skills_trainee_ids: [],
     social_skills_details: null,
     social_skills_per_trainee: null,
+    homework_trainee_ids: [],
+    homework_details: null,
+    homework_per_trainee: null,
+    video_feedback_trainee_ids: [],
+    video_feedback_details: null,
+    video_feedback_per_trainee: null,
+    praise_trainee_ids: [],
+    praise_details: null,
+    praise_per_trainee: null,
     ...overrides,
   };
 }

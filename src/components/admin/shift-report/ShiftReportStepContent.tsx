@@ -32,6 +32,7 @@ export const SHIFT_REPORT_STEPS = [
   { key: "positives", title: "הישגים ורווחה" },
   { key: "parents", title: "הורים ומבקרים" },
   { key: "facility", title: "מתקן" },
+  { key: "communication", title: "תקשורת עם מתאמנים והורים" },
 ];
 
 interface StepProps {
@@ -371,6 +372,50 @@ const FacilityStep = memo(function FacilityStep({
   );
 });
 
+const CommunicationStep = memo(function CommunicationStep({
+  form,
+  trainees,
+}: Omit<StepProps, "trainerName">) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>תקשורת עם מתאמנים והורים</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-8">
+        <PerTraineeDetailsSection
+          form={form}
+          trainees={trainees}
+          label="לאיזה שחקנים שלחת הודעה לשיעורי בית? (שחקן אחד מכל שעת אימון)"
+          boolField="has_homework"
+          traineeIdsField="homework_trainee_ids"
+          perTraineeField="homework_per_trainee"
+          detailsPlaceholder="איזה נושא/תרגיל נשלח לשחקן"
+        />
+
+        <PerTraineeDetailsSection
+          form={form}
+          trainees={trainees}
+          label="לאיזה הורים של שחקנים שלחת צילום וידאו של התרגיל כפידבק חיובי? (צילום אחד בכל שעה)"
+          boolField="has_video_feedback"
+          traineeIdsField="video_feedback_trainee_ids"
+          perTraineeField="video_feedback_per_trainee"
+          detailsPlaceholder="איזה תרגיל ביצע השחקן"
+        />
+
+        <PerTraineeDetailsSection
+          form={form}
+          trainees={trainees}
+          label="לאיזה מתאמנים שלחת הודעת פרגון על אופי/התנהלות/התמדה? (הודעה אחת בכל שעת אימון)"
+          boolField="has_praise"
+          traineeIdsField="praise_trainee_ids"
+          perTraineeField="praise_per_trainee"
+          detailsPlaceholder="תוכן הפרגון שנשלח למתאמן"
+        />
+      </CardContent>
+    </Card>
+  );
+});
+
 interface ShiftReportStepContentProps {
   step: number;
   form: UseFormReturn<ShiftReportFormData>;
@@ -395,6 +440,8 @@ export function ShiftReportStepContent({
       return <ParentsVisitorsStep form={form} />;
     case 4:
       return <FacilityStep form={form} />;
+    case 5:
+      return <CommunicationStep form={form} trainees={trainees} />;
     default:
       return null;
   }

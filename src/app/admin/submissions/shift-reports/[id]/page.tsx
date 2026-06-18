@@ -22,6 +22,7 @@ import {
   Building,
   Pencil,
   Target,
+  MessageSquare,
 } from "lucide-react";
 import type { TrainerShiftReport } from "@/types/database";
 
@@ -573,6 +574,44 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Step 6: Communication with trainees & parents */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MessageSquare className="h-5 w-5" />
+              תקשורת עם מתאמנים והורים
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <PerTraineeCategoriesSection
+              label="הודעת שיעורי בית"
+              isYes={report.has_homework}
+              perTrainee={report.homework_per_trainee}
+              legacyTraineeIds={report.homework_trainee_ids}
+              legacyDetails={report.homework_details}
+              traineeMap={traineeMap}
+            />
+            <Separator />
+            <PerTraineeCategoriesSection
+              label="פידבק וידאו להורים"
+              isYes={report.has_video_feedback}
+              perTrainee={report.video_feedback_per_trainee}
+              legacyTraineeIds={report.video_feedback_trainee_ids}
+              legacyDetails={report.video_feedback_details}
+              traineeMap={traineeMap}
+            />
+            <Separator />
+            <PerTraineeCategoriesSection
+              label="פרגון אופי/התנהלות/התמדה"
+              isYes={report.has_praise}
+              perTrainee={report.praise_per_trainee}
+              legacyTraineeIds={report.praise_trainee_ids}
+              legacyDetails={report.praise_details}
+              traineeMap={traineeMap}
+            />
           </CardContent>
         </Card>
       </div>

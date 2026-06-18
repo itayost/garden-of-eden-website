@@ -46,7 +46,10 @@ export type PerTraineeField =
   | "complaints_per_trainee"
   | "insufficient_attention_per_trainee"
   | "pro_candidates_per_trainee"
-  | "social_skills_per_trainee";
+  | "social_skills_per_trainee"
+  | "homework_per_trainee"
+  | "video_feedback_per_trainee"
+  | "praise_per_trainee";
 
 export type TraineeIdsField =
   | "achievements_trainee_ids"
@@ -59,7 +62,10 @@ export type TraineeIdsField =
   | "complaints_trainee_ids"
   | "insufficient_attention_trainee_ids"
   | "pro_candidates_trainee_ids"
-  | "social_skills_trainee_ids";
+  | "social_skills_trainee_ids"
+  | "homework_trainee_ids"
+  | "video_feedback_trainee_ids"
+  | "praise_trainee_ids";
 
 export type BoolField =
   | "has_achievements"
@@ -72,7 +78,10 @@ export type BoolField =
   | "has_complaints"
   | "has_insufficient_attention"
   | "has_pro_candidates"
-  | "has_social_skills";
+  | "has_social_skills"
+  | "has_homework"
+  | "has_video_feedback"
+  | "has_praise";
 
 interface PerTraineeEntry {
   details?: string;
