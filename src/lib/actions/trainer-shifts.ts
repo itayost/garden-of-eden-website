@@ -332,6 +332,12 @@ export async function adminEditShiftAction(data: {
 
   if (!existing) return { error: "משמרת לא נמצאה" };
 
+  // other_purpose_minutes is intentionally NOT re-clamped here when the shift
+  // duration changes. Read-time clamping in splitShiftMinutes keeps the
+  // displayed training/other split correct. Re-clamping was rejected because
+  // clamping to 0 would require also nulling the category to satisfy the paired
+  // DB CHECK constraint, adding risk to a critical action for a display-safe
+  // edge case.
   const { error: updateError } = await supabase
     .from("trainer_shifts")
     .update({

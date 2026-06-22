@@ -342,6 +342,11 @@ export function TrainerShiftsView({
                         <span>{summary.shiftCount} משמרות</span>
                         <span className="font-mono">{formatDuration(summary.totalMinutes)}</span>
                       </div>
+                      {summary.otherMinutes > 0 && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          אימון {formatDuration(summary.trainingMinutes)} · אחר {formatDuration(summary.otherMinutes)}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {isAdmin && summary.flaggedCount > 0 && (
@@ -510,6 +515,11 @@ export function TrainerShiftsView({
                         <TableCell>{summary.shiftCount}</TableCell>
                         <TableCell className="font-mono">
                           {formatDuration(summary.totalMinutes)}
+                          {summary.otherMinutes > 0 && (
+                            <p className="mt-0.5 text-xs text-muted-foreground font-normal">
+                              אימון {formatDuration(summary.trainingMinutes)} · אחר {formatDuration(summary.otherMinutes)}
+                            </p>
+                          )}
                         </TableCell>
                         {isAdmin && (
                           <TableCell>
