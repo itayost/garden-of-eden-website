@@ -71,6 +71,11 @@ describe("validateOtherPurpose", () => {
     expect(validateOtherPurpose(-0.5, null, 240)).toMatchObject({ ok: false });
   });
 
+  it("rejects a negative integer instead of silently clearing", () => {
+    // A negative integer with a category must not be coerced into a clear.
+    expect(validateOtherPurpose(-1, "תזונה", 240)).toMatchObject({ ok: false });
+  });
+
   it("rejects NaN minutes", () => {
     expect(validateOtherPurpose(Number.NaN, "תזונה", 240)).toMatchObject({ ok: false });
   });

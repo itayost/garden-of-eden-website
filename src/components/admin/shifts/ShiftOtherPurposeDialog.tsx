@@ -70,20 +70,22 @@ export function ShiftOtherPurposeDialog({
     }
 
     setLoading(true);
-    const result = await setShiftOtherPurposeAction({
-      shiftId: shift.id,
-      minutes: parsedMinutes,
-      category: isClear ? null : category,
-    });
-    setLoading(false);
-
-    if (result.error) {
-      toast.error(result.error);
-      return;
+    try {
+      const result = await setShiftOtherPurposeAction({
+        shiftId: shift.id,
+        minutes: parsedMinutes,
+        category: isClear ? null : category,
+      });
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("עודכן");
+      onOpenChange(false);
+      router.refresh();
+    } finally {
+      setLoading(false);
     }
-    toast.success("עודכן");
-    onOpenChange(false);
-    router.refresh();
   };
 
   return (

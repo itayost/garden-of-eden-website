@@ -40,19 +40,19 @@ export type OtherPurposeValidation =
   | { ok: true; minutes: number; category: ShiftOtherPurposeCategory | null }
   | { ok: false; error: string };
 
-/** Validate an other-purpose entry. Non-integer input (including NaN) is
- * rejected outright. An integer minutes <= 0 means "clear" (0 + null).
- * Otherwise minutes must be a positive integer within the shift duration and
- * the category must be one of the presets. */
+/** Validate an other-purpose entry. Non-integer input (including NaN) and
+ * negative minutes are rejected outright. An integer minutes of exactly 0 means
+ * "clear" (0 + null). Otherwise minutes must be a positive integer within the
+ * shift duration and the category must be one of the presets. */
 export function validateOtherPurpose(
   minutes: number,
   category: string | null,
   shiftDurationMinutes: number,
 ): OtherPurposeValidation {
-  if (!Number.isInteger(minutes)) {
+  if (!Number.isInteger(minutes) || minutes < 0) {
     return { ok: false, error: "משך זמן לא תקין" };
   }
-  if (minutes <= 0) {
+  if (minutes === 0) {
     return { ok: true, minutes: 0, category: null };
   }
   if (

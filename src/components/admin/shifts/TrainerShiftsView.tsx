@@ -77,12 +77,6 @@ const HEBREW_MONTHS = [
   "דצמבר",
 ];
 
-function calcDurationMinutes(shift: TrainerShift): number {
-  const start = new Date(shift.start_time);
-  const end = shift.end_time ? new Date(shift.end_time) : new Date();
-  return (end.getTime() - start.getTime()) / (1000 * 60);
-}
-
 function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = Math.round(minutes % 60);
@@ -387,12 +381,12 @@ export function TrainerShiftsView({
                               {shift.end_time ? formatTime(shift.end_time) : "פעילה"}
                             </span>
                             <span className="font-mono">
-                              {shift.end_time ? formatDuration(calcDurationMinutes(shift)) : "-"}
+                              {shift.end_time ? formatDuration(splitShiftMinutes(shift).grossMinutes) : "-"}
                             </span>
                           </div>
                           {shift.end_time && shift.other_purpose_minutes > 0 && (
                             <div className="text-xs text-purple-700">
-                              אחר: {shift.other_purpose_minutes} ד׳ ·{" "}
+                              אחר: {splitShiftMinutes(shift).otherMinutes} ד׳ ·{" "}
                               {shift.other_purpose_category}
                             </div>
                           )}
@@ -558,7 +552,7 @@ export function TrainerShiftsView({
                             </TableCell>
                             <TableCell className="font-mono text-sm">
                               {shift.end_time
-                                ? formatDuration(calcDurationMinutes(shift))
+                                ? formatDuration(splitShiftMinutes(shift).grossMinutes)
                                 : "-"}
                               {shift.auto_ended && (
                                 <Badge
@@ -576,12 +570,12 @@ export function TrainerShiftsView({
                                   לבדיקה
                                 </Badge>
                               )}
-                              {shift.other_purpose_minutes > 0 && (
+                              {shift.end_time && shift.other_purpose_minutes > 0 && (
                                 <Badge
                                   variant="outline"
                                   className="ms-2 text-xs text-purple-700"
                                 >
-                                  אחר: {shift.other_purpose_minutes} ד׳ ·{" "}
+                                  אחר: {splitShiftMinutes(shift).otherMinutes} ד׳ ·{" "}
                                   {shift.other_purpose_category}
                                 </Badge>
                               )}
