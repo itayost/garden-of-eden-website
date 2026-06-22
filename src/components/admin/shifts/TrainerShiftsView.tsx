@@ -38,6 +38,9 @@ import {
   type ShiftFormTrainer,
 } from "@/components/admin/shifts/ShiftFormDialog";
 import { EditShiftRequestDialog } from "@/components/admin/shifts/EditShiftRequestDialog";
+import { ShiftOtherPurposeDialog } from "@/components/admin/shifts/ShiftOtherPurposeDialog";
+import { splitShiftMinutes } from "@/lib/utils/shift-other-purpose";
+import { Activity } from "lucide-react";
 import type { TrainerShift } from "@/types/database";
 
 interface TrainerShiftsViewProps {
@@ -52,6 +55,8 @@ interface TrainerSummary {
   trainerId: string;
   trainerName: string;
   totalMinutes: number;
+  trainingMinutes: number;
+  otherMinutes: number;
   shiftCount: number;
   flaggedCount: number;
   shifts: TrainerShift[];
@@ -105,10 +110,17 @@ function aggregateByTrainer(shifts: TrainerShift[]): TrainerSummary[] {
 
   for (const shift of shifts) {
     const existing = map.get(shift.trainer_id);
-    const duration = calcDurationMinutes(shift);
+    const split = splitShiftMinutes({
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      other_purpose_minutes: shift.other_purpose_minutes,
+    });
+    const duration = split.grossMinutes;
 
     if (existing) {
       existing.totalMinutes += duration;
+      existing.trainingMinutes += split.trainingMinutes;
+      existing.otherMinutes += split.otherMinutes;
       existing.shiftCount += 1;
       if (shift.flagged_for_review) existing.flaggedCount += 1;
       existing.shifts.push(shift);
@@ -117,6 +129,8 @@ function aggregateByTrainer(shifts: TrainerShift[]): TrainerSummary[] {
         trainerId: shift.trainer_id,
         trainerName: shift.trainer_name,
         totalMinutes: duration,
+        trainingMinutes: split.trainingMinutes,
+        otherMinutes: split.otherMinutes,
         shiftCount: 1,
         flaggedCount: shift.flagged_for_review ? 1 : 0,
         shifts: [shift],
@@ -145,6 +159,8 @@ export function TrainerShiftsView({
   const [editRequestShift, setEditRequestShift] = useState<TrainerShift | null>(
     null
   );
+  const [otherPurposeShift, setOtherPurposeShift] =
+    useState<TrainerShift | null>(null);
 
   const allSummaries = aggregateByTrainer(shifts);
 
@@ -230,6 +246,23 @@ export function TrainerShiftsView({
                 <p className="text-sm text-muted-foreground">סה&quot;כ שעות</p>
                 <p className="text-2xl font-bold">
                   {formatDuration(totalHours)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-purple-500 rounded-xl p-3">
+                <Activity className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">מטרות אחרות</p>
+                <p className="text-2xl font-bold">
+                  {formatDuration(
+                    summaries.reduce((sum, s) => sum + s.otherMinutes, 0),
+                  )}
                 </p>
               </div>
             </div>
@@ -352,6 +385,12 @@ export function TrainerShiftsView({
                               {shift.end_time ? formatDuration(calcDurationMinutes(shift)) : "-"}
                             </span>
                           </div>
+                          {shift.end_time && shift.other_purpose_minutes > 0 && (
+                            <div className="text-xs text-purple-700">
+                              אחר: {shift.other_purpose_minutes} ד׳ ·{" "}
+                              {shift.other_purpose_category}
+                            </div>
+                          )}
                           {isAdmin && (
                             <div className="flex items-center gap-2">
                               {shift.flagged_for_review && (
@@ -379,6 +418,16 @@ export function TrainerShiftsView({
                                 <Pencil className="h-3 w-3" />
                                 ערוך
                               </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7"
+                                onClick={() => setOtherPurposeShift(shift)}
+                                disabled={!shift.end_time}
+                              >
+                                <Activity className="h-3 w-3" />
+                                זמן אחר
+                              </Button>
                               <DeleteConfirmDialog
                                 title="מחיקת משמרת"
                                 description="האם אתה בטוח שברצונך למחוק משמרת זו? פעולה זו אינה הפיכה."
@@ -399,7 +448,7 @@ export function TrainerShiftsView({
                             </div>
                           )}
                           {!isAdmin && shift.end_time && (
-                            <div>
+                            <div className="flex items-center gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -408,6 +457,15 @@ export function TrainerShiftsView({
                               >
                                 <Pencil className="h-3 w-3" />
                                 בקש שינוי
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7"
+                                onClick={() => setOtherPurposeShift(shift)}
+                              >
+                                <Activity className="h-3 w-3" />
+                                זמן אחר
                               </Button>
                             </div>
                           )}
@@ -508,6 +566,15 @@ export function TrainerShiftsView({
                                   לבדיקה
                                 </Badge>
                               )}
+                              {shift.other_purpose_minutes > 0 && (
+                                <Badge
+                                  variant="outline"
+                                  className="ms-2 text-xs text-purple-700"
+                                >
+                                  אחר: {shift.other_purpose_minutes} ד׳ ·{" "}
+                                  {shift.other_purpose_category}
+                                </Badge>
+                              )}
                             </TableCell>
                             {isAdmin && (
                               <TableCell>
@@ -539,6 +606,17 @@ export function TrainerShiftsView({
                                   >
                                     <Pencil className="h-3 w-3" />
                                   </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOtherPurposeShift(shift);
+                                    }}
+                                    disabled={!shift.end_time}
+                                  >
+                                    <Activity className="h-3 w-3" />
+                                  </Button>
                                   <DeleteConfirmDialog
                                     title="מחיקת משמרת"
                                     description="האם אתה בטוח שברצונך למחוק משמרת זו? פעולה זו אינה הפיכה."
@@ -561,18 +639,32 @@ export function TrainerShiftsView({
                             )}
                             <TableCell>
                               {!isAdmin && shift.end_time && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-xs h-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditRequestShift(shift);
-                                  }}
-                                >
-                                  <Pencil className="h-3 w-3 me-1" />
-                                  בקש שינוי
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs h-7"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditRequestShift(shift);
+                                    }}
+                                  >
+                                    <Pencil className="h-3 w-3 me-1" />
+                                    בקש שינוי
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs h-7"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOtherPurposeShift(shift);
+                                    }}
+                                  >
+                                    <Activity className="h-3 w-3 me-1" />
+                                    זמן אחר
+                                  </Button>
+                                </div>
                               )}
                             </TableCell>
                           </TableRow>
@@ -614,6 +706,17 @@ export function TrainerShiftsView({
             if (!open) setEditRequestShift(null);
           }}
           shift={editRequestShift}
+        />
+      )}
+
+      {otherPurposeShift && (
+        <ShiftOtherPurposeDialog
+          key={otherPurposeShift.id}
+          open={!!otherPurposeShift}
+          onOpenChange={(open) => {
+            if (!open) setOtherPurposeShift(null);
+          }}
+          shift={otherPurposeShift}
         />
       )}
     </div>
