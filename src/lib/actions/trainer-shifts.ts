@@ -8,6 +8,7 @@ import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
 import { isValidUUID } from "@/lib/validations/common";
 import { resolveTimestamp } from "@/lib/utils/resolve-timestamp";
 import { MAX_SHIFT_HOURS } from "@/lib/constants/shifts";
+import { validateOtherPurpose } from "@/lib/utils/shift-other-purpose";
 
 type ActionResult =
   | { error: string; success?: never }
@@ -342,6 +343,63 @@ export async function adminEditShiftAction(data: {
   if (updateError) {
     console.error("Admin edit shift error:", updateError);
     return { error: "שגיאה בעדכון משמרת" };
+  }
+
+  revalidatePath("/admin/shifts");
+  return { success: true };
+}
+
+export async function setShiftOtherPurposeAction(input: {
+  shiftId: string;
+  minutes: number;
+  category: string | null;
+}): Promise<ActionResult> {
+  if (!isValidUUID(input.shiftId)) return { error: "מזהה משמרת לא תקין" };
+
+  const result = await verifyAdminOrTrainer();
+  if (result.error) return { error: result.error };
+  const user = result.user!;
+  const isAdmin = result.profile!.role === "admin";
+
+  const supabase = await createClient();
+
+  const { data: shift } = await supabase
+    .from("trainer_shifts")
+    .select("id, trainer_id, start_time, end_time")
+    .eq("id", input.shiftId)
+    .maybeSingle();
+
+  if (!shift) return { error: "משמרת לא נמצאה" };
+  if (!isAdmin && shift.trainer_id !== user.id) {
+    return { error: "אין הרשאה לערוך משמרת זו" };
+  }
+  if (!shift.end_time) {
+    return { error: "לא ניתן לעדכן זמן למשמרת פעילה" };
+  }
+
+  const durationMinutes = Math.round(
+    (new Date(shift.end_time).getTime() - new Date(shift.start_time).getTime()) /
+      60000,
+  );
+
+  const validated = validateOtherPurpose(
+    input.minutes,
+    input.category,
+    durationMinutes,
+  );
+  if (!validated.ok) return { error: validated.error };
+
+  const { error: updateError } = await supabase
+    .from("trainer_shifts")
+    .update({
+      other_purpose_minutes: validated.minutes,
+      other_purpose_category: validated.category,
+    })
+    .eq("id", input.shiftId);
+
+  if (updateError) {
+    console.error("Set shift other purpose error:", updateError);
+    return { error: "שגיאה בעדכון" };
   }
 
   revalidatePath("/admin/shifts");
