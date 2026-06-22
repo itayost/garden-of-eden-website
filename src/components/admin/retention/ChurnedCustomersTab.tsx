@@ -16,13 +16,19 @@ import {
   type ChurnedCustomer,
 } from "@/lib/actions/admin-churned-customers";
 import type { NoteColor } from "@/lib/validations/churned-customers";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
 interface ChurnedCustomersTabProps {
   readonly rows: readonly ChurnedCustomer[];
   readonly setRows: Dispatch<SetStateAction<readonly ChurnedCustomer[]>>;
+  readonly trainers: TrainerOption[];
 }
 
-export function ChurnedCustomersTab({ rows, setRows }: ChurnedCustomersTabProps) {
+export function ChurnedCustomersTab({
+  rows,
+  setRows,
+  trainers,
+}: ChurnedCustomersTabProps) {
   const [name, setName] = useState("");
   const [endDate, setEndDate] = useState("");
   const [note, setNote] = useState("");
@@ -66,6 +72,20 @@ export function ChurnedCustomersTab({ rows, setRows }: ChurnedCustomersTabProps)
       setRows((prev) => prev.map((r) => (r.id === id ? result.data! : r)));
       toast.success("עודכן");
       return { error: null };
+    },
+    [setRows],
+  );
+
+  const handleAssignTrainer = useCallback(
+    async (id: string, trainerId: string | null) => {
+      const result = await updateChurnedCustomer(id, {
+        assignedTrainerId: trainerId,
+      });
+      if (result.error || !result.data) {
+        toast.error(result.error ?? "שגיאה בשיוך מאמן");
+        return;
+      }
+      setRows((prev) => prev.map((r) => (r.id === id ? result.data! : r)));
     },
     [setRows],
   );
@@ -132,6 +152,8 @@ export function ChurnedCustomersTab({ rows, setRows }: ChurnedCustomersTabProps)
                 <th className="p-2 text-start">שם</th>
                 <th className="p-2 text-start">תאריך סיום</th>
                 <th className="p-2 text-start">הערות</th>
+                <th className="p-2 text-start">מאמן משוייך</th>
+                <th className="p-2 text-start">תאריך עדכון אחרון</th>
                 <th className="p-2 text-start">פעולות</th>
               </tr>
             </thead>
@@ -140,7 +162,9 @@ export function ChurnedCustomersTab({ rows, setRows }: ChurnedCustomersTabProps)
                 <ChurnedCustomerRow
                   key={row.id}
                   row={row}
+                  trainers={trainers}
                   onUpdate={handleUpdate}
+                  onAssignTrainer={handleAssignTrainer}
                   onDelete={handleDelete}
                 />
               ))}

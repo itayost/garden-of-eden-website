@@ -29,11 +29,18 @@ const noteSchema = z
 
 const noteColorSchema = z.enum(NOTE_COLORS).optional().default("none");
 
+const trainerIdSchema = z
+  .string()
+  .refine(isValidUUID, { message: "מזהה מאמן לא תקין" })
+  .nullable()
+  .optional();
+
 export const createChurnedCustomerSchema = z.object({
   name: nameSchema,
   endDate: dateSchema,
   note: noteSchema,
   noteColor: noteColorSchema,
+  assignedTrainerId: trainerIdSchema,
 });
 
 export type CreateChurnedCustomerInput = z.infer<
@@ -45,6 +52,7 @@ export const updateChurnedCustomerSchema = z.object({
   endDate: dateSchema.optional(),
   note: z.string().max(2000).optional(),
   noteColor: z.enum(NOTE_COLORS).optional(),
+  assignedTrainerId: trainerIdSchema,
 });
 
 export type UpdateChurnedCustomerInput = z.infer<

@@ -74,6 +74,7 @@ interface RetentionTableProps {
     entry: RetentionEntry,
     note: string,
     noteColor: NoteColor,
+    assignedTrainerId: string | null,
   ) => Promise<void>;
 }
 
@@ -218,6 +219,7 @@ export function RetentionTable({
                               entry,
                               existingNote,
                               existingColor,
+                              existingNoteRecord?.assigned_trainer_id ?? null,
                             )
                           }
                         />

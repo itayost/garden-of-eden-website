@@ -119,12 +119,18 @@ export function RetentionPageClient({
     : null;
 
   const handleMoveToChurned = useCallback(
-    async (entry: RetentionEntry, note: string, noteColor: NoteColor) => {
+    async (
+      entry: RetentionEntry,
+      note: string,
+      noteColor: NoteColor,
+      assignedTrainerId: string | null,
+    ) => {
       const result = await createChurnedCustomer({
         name: entry.name,
         endDate: entry.end_date,
         note,
         noteColor,
+        assignedTrainerId,
       });
       if (result.error || !result.data) {
         toast.error(result.error ?? "שגיאה בהעברה");
@@ -392,7 +398,11 @@ export function RetentionPageClient({
               </TabsContent>
             ))}
             <TabsContent value="churned" className="mt-4">
-              <ChurnedCustomersTab rows={churned} setRows={setChurned} />
+              <ChurnedCustomersTab
+                rows={churned}
+                setRows={setChurned}
+                trainers={trainers}
+              />
             </TabsContent>
           </>
         )}

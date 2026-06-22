@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
 import { ChurnedColorPicker } from "./ChurnedColorPicker";
+import { TrainerAssignmentSelect } from "@/components/admin/leads/TrainerAssignmentSelect";
 import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
-import { formatDateShort } from "@/lib/utils/date";
+import { formatDateShort, formatRelativeTime } from "@/lib/utils/date";
 import type { ChurnedCustomer } from "@/lib/actions/admin-churned-customers";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import {
   NOTE_COLOR_BG,
   type NoteColor,
@@ -17,16 +19,23 @@ type DeleteResult = { error: string } | { success: true };
 
 interface ChurnedCustomerRowProps {
   readonly row: ChurnedCustomer;
+  readonly trainers: TrainerOption[];
   readonly onUpdate: (
     id: string,
     patch: { name?: string; endDate?: string; note?: string; noteColor?: NoteColor },
   ) => Promise<{ error: string | null }>;
+  readonly onAssignTrainer: (
+    id: string,
+    trainerId: string | null,
+  ) => Promise<void>;
   readonly onDelete: (id: string) => Promise<DeleteResult>;
 }
 
 function ChurnedCustomerRowInner({
   row,
+  trainers,
   onUpdate,
+  onAssignTrainer,
   onDelete,
 }: ChurnedCustomerRowProps) {
   const [editing, setEditing] = useState(false);
@@ -55,6 +64,23 @@ function ChurnedCustomerRowInner({
     setEditing(false);
   };
 
+  const trainerCell = (
+    <td className="p-2">
+      <TrainerAssignmentSelect
+        trainers={trainers}
+        value={row.assigned_trainer_id}
+        onChange={(trainerId) => onAssignTrainer(row.id, trainerId)}
+        triggerClassName="w-40"
+      />
+    </td>
+  );
+
+  const updatedAtCell = (
+    <td className="p-2 whitespace-nowrap text-muted-foreground">
+      {formatRelativeTime(row.updated_at)}
+    </td>
+  );
+
   if (editing) {
     return (
       <tr className="border-b">
@@ -74,6 +100,8 @@ function ChurnedCustomerRowInner({
             <ChurnedColorPicker value={noteColor} onChange={setNoteColor} />
           </div>
         </td>
+        {trainerCell}
+        {updatedAtCell}
         <td className="p-2">
           <div className="flex items-center gap-1">
             <Button
@@ -105,6 +133,8 @@ function ChurnedCustomerRowInner({
       <td className="p-2">{row.name}</td>
       <td className="p-2 whitespace-nowrap">{formatDateShort(row.end_date)}</td>
       <td className={`p-2 ${NOTE_COLOR_BG[row.note_color]}`}>{row.note}</td>
+      {trainerCell}
+      {updatedAtCell}
       <td className="p-2">
         <div className="flex items-center gap-1">
           <Button

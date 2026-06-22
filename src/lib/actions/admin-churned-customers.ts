@@ -20,6 +20,7 @@ export interface ChurnedCustomer {
   readonly end_date: string;
   readonly note: string;
   readonly note_color: NoteColor;
+  readonly assigned_trainer_id: string | null;
   readonly author_id: string;
   readonly created_at: string;
   readonly updated_at: string;
@@ -38,7 +39,7 @@ type ActionResult<T> = ActionOk<T> | { data: null; error: string };
 
 const REVALIDATE_PATH = "/admin/retention";
 const CHURNED_COLUMNS =
-  "id, name, end_date, note, note_color, author_id, created_at, updated_at";
+  "id, name, end_date, note, note_color, assigned_trainer_id, author_id, created_at, updated_at";
 const LIST_LIMIT = 5000;
 
 export async function listChurnedCustomers(): Promise<
@@ -72,6 +73,7 @@ export async function createChurnedCustomer(
       end_date: parsed.data.endDate,
       note: parsed.data.note,
       note_color: parsed.data.noteColor,
+      assigned_trainer_id: parsed.data.assignedTrainerId ?? null,
       author_id: user!.id,
     })
     .select(CHURNED_COLUMNS)
@@ -160,7 +162,7 @@ export async function updateChurnedCustomer(
   const supabase = await createClient();
 
   const { data: existing } = await typedFrom(supabase, "churned_customers")
-    .select("author_id")
+    .select(CHURNED_COLUMNS)
     .eq("id", parsedId.data)
     .maybeSingle();
   if (!existing) return { data: null, error: "רשומה לא נמצאה" };
@@ -171,13 +173,19 @@ export async function updateChurnedCustomer(
     return { data: null, error: "אין הרשאה לערוך רשומה זו" };
   }
 
-  const updateRow: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
-  };
+  // updated_at is set by the set_churned_customers_updated_at trigger.
+  const updateRow: Record<string, unknown> = {};
   if (parsedPatch.data.name !== undefined) updateRow.name = parsedPatch.data.name;
   if (parsedPatch.data.endDate !== undefined) updateRow.end_date = parsedPatch.data.endDate;
   if (parsedPatch.data.note !== undefined) updateRow.note = parsedPatch.data.note;
   if (parsedPatch.data.noteColor !== undefined) updateRow.note_color = parsedPatch.data.noteColor;
+  if (parsedPatch.data.assignedTrainerId !== undefined)
+    updateRow.assigned_trainer_id = parsedPatch.data.assignedTrainerId;
+
+  // No-op patch (every field undefined): skip the write, return the row as-is.
+  if (Object.keys(updateRow).length === 0) {
+    return { data: existing as unknown as ChurnedCustomer, error: null };
+  }
 
   const { data, error: dbError } = await typedFrom(supabase, "churned_customers")
     .update(updateRow)
