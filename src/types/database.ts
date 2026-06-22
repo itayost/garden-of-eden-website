@@ -1137,6 +1137,8 @@ export interface Database {
           end_time: string | null;
           auto_ended: boolean;
           flagged_for_review: boolean;
+          other_purpose_minutes: number;
+          other_purpose_category: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1148,6 +1150,8 @@ export interface Database {
           end_time?: string | null;
           auto_ended?: boolean;
           flagged_for_review?: boolean;
+          other_purpose_minutes?: number;
+          other_purpose_category?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1159,6 +1163,8 @@ export interface Database {
           end_time?: string | null;
           auto_ended?: boolean;
           flagged_for_review?: boolean;
+          other_purpose_minutes?: number;
+          other_purpose_category?: string | null;
           created_at?: string;
           updated_at?: string;
         };
