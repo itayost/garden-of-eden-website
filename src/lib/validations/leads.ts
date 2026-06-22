@@ -129,6 +129,7 @@ export const bulkLeadRowSchema = z.object({
   club: z.string().max(100, "שם מועדון ארוך מדי").nullable(),
   birth_year: birthYearSchema,
   is_from_haifa: z.boolean(),
+  additional_info: z.string().max(2000, "מידע נוסף ארוך מדי").nullable(),
 });
 
 export type BulkLeadRow = z.infer<typeof bulkLeadRowSchema>;

@@ -100,6 +100,7 @@ export async function createLeadsBulk(
       note: row.note,
       club: row.club,
       birth_year: row.birth_year,
+      additional_info: row.additional_info,
     });
   }
 

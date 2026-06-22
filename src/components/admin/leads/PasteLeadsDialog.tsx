@@ -90,8 +90,10 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
         </DialogHeader>
         <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            העתק מהגיליון כולל שורת כותרת. עמודות מזוהות לפי שם הכותרת בכל סדר:{" "}
-            <code>שם</code> (חובה), <code>טלפון</code>, <code>הערה</code>,{" "}
+            הדבק ישירות בלי כותרת בסדר: <code>שם</code> · <code>טלפון</code> ·{" "}
+            <code>מידע נוסף</code> (עמודה לכל שדה, שורה לכל ליד). אפשר גם להדביק עם
+            שורת כותרת — אז העמודות מזוהות לפי השם בכל סדר: <code>שם</code> (חובה),{" "}
+            <code>טלפון</code>, <code>מידע נוסף</code>, <code>הערה</code>,{" "}
             <code>מועדון</code>, <code>שנתון</code>, <code>חיפה</code>.
           </p>
 
@@ -155,7 +157,9 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={8}
-            placeholder={"שם\tטלפון\nדני כהן\t0541234567\nנועה לוי\t0509876543"}
+            placeholder={
+              "דני כהן\t0541234567\tמתעניין בקבוצת בוקר\nנועה לוי\t0509876543"
+            }
             dir="auto"
           />
           {text && (
@@ -170,6 +174,14 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
                   {parsed.valid.slice(0, 50).map((row, i) => (
                     <li key={`ok-${i}`} className="text-green-800">
                       {row.name} — <code>{row.phone ?? "ללא טלפון"}</code>
+                      {row.additional_info && (
+                        <span className="text-green-700">
+                          {" · "}
+                          {row.additional_info.length > 40
+                            ? row.additional_info.slice(0, 40) + "…"
+                            : row.additional_info}
+                        </span>
+                      )}
                     </li>
                   ))}
                   {parsed.valid.length > 50 && (
