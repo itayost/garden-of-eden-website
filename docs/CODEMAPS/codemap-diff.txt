@@ -1,0 +1,54 @@
+Codemap Update Summary
+Generated: 2026-06-22
+Token Budget: ~4500 total
+Files scanned: 545 src .ts/.tsx · 66 migrations (was 442 files at 2026-03-22)
+
+UPDATES SINCE 2026-05-26 (last codemap regen)
+=============================================
+
+NEW DATABASE TABLES / COLUMNS
+- lead_tabs (dynamic named lead tabs; slug/name/color/position/is_default)
+- leads: phone now nullable (phoneless leads), + source(paid|organic),
+  club, birth_year, additional_info, assigned_trainer_id, tab_id
+- churned_customers: + assigned_trainer_id + auto updated_at trigger
+- retention_notes: + assigned_trainer_id + auto updated_at trigger (note default '')
+- retention_reports (monthly Arbox snapshot, merge-on-refresh, past-month freeze)
+- trainer_shifts: + other_purpose_minutes, other_purpose_category (paired CHECK) + auto updated_at
+- trainer_shift_reports: + homework / video_feedback / praise per-trainee JSONB
+- shift_change_requests (trainer edit-request -> admin approve/reject; approve RPC)
+- trainee_communication_log (per-trainee communication history)
+- nutrition_measurements (per-visit body data)
+- trainee_meal_plans: two plan types (workout-day + rest-day PDFs); legacy pdf_* deprecated
+- avatars bucket: now allows application/pdf
+
+NEW SERVER ACTIONS
+- admin-lead-tabs.ts, admin-leads-bulk.ts (paste-from-Sheets importer)
+- admin-churned-customers.ts; admin-retention.ts (trainer assign, freeze, merge)
+- shift-change-requests.ts; setShiftOtherPurposeAction (in trainer-shifts.ts)
+- trainee-communication-log.ts
+
+NEW API / INTEGRATIONS
+- POST /api/webhooks/leads now supports tab_slug routing
+- Arbox reports: read renamed full_name field; retention report cron continues
+
+NEW UI COMPONENTS
+- leads: LeadsTabs, LeadTabsManager, LeadTabFormDialog, LeadTabDeleteDialog,
+  LeadTabBadge, PasteLeadsDialog, TrainerAssignmentSelect
+- retention: ChurnedCustomersTab, ChurnedCustomerRow, ChurnedColorPicker,
+  MoveToChurnedButton, PasteChurnedDialog
+- shifts: ShiftOtherPurposeDialog, EditShiftRequestDialog, ApproveRequestDialog,
+  RejectRequestDialog, RetroShiftRequestDialog, MyShiftRequestsList,
+  ShiftRequestsAdminPanel, ConnectionBanner, FailedSyncsBanner
+- nutrition: MeasurementForm, MeasurementsCard, MeasurementsTable, MealPlanPdfUpload
+- users: CommunicationHistoryCard
+
+CODEMAP FILES UPDATED
+- architecture.md   (+ "New since 2026-05-26" section)
+- backend.md        (20 API routes; actions regrouped by domain)
+- frontend.md       (page tree + component hierarchy + 13 feature modules)
+- data.md           (full schema by domain; 66-migration history)
+- dependencies.md   (services, npm groups, shared libs, env vars)
+- INDEX.md          (counts + navigation refreshed)
+
+STALENESS
+- All six files regenerated 2026-06-22 from live code. No files >90 days stale.
