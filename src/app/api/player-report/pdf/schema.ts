@@ -43,13 +43,15 @@ export const playerReportPdfBodySchema = z.object({
   }),
   assessments: z.array(playerAssessmentSchema),
   stats: z.object({
-    overall_rating: z.number(),
-    pace: z.number(),
-    shooting: z.number(),
-    passing: z.number(),
-    dribbling: z.number(),
-    defending: z.number(),
-    physical: z.number(),
+    // Ratings come from player_rating_snapshots and are null when a trainee has
+    // no snapshot yet (neutral ratings). The HTML builder renders these as "—".
+    overall_rating: z.number().nullable(),
+    pace: z.number().nullable(),
+    shooting: z.number().nullable(),
+    passing: z.number().nullable(),
+    dribbling: z.number().nullable(),
+    defending: z.number().nullable(),
+    physical: z.number().nullable(),
     card_type: z.string().nullable(),
   }).nullable(),
   attendance: z.object({

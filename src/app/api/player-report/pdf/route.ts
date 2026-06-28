@@ -51,6 +51,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const parsed = playerReportPdfBodySchema.safeParse(bodyRaw);
   if (!parsed.success) {
+    console.error("[player-report/pdf] invalid body", parsed.error.flatten());
     return NextResponse.json({ error: "נתונים לא תקינים" }, { status: 400 });
   }
 
