@@ -57,14 +57,23 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     resolvedTabId = defaultTab.id as string;
   }
 
-  // Check phone uniqueness
+  // Check phone uniqueness. The check is global (across all tabs), so surface
+  // where the existing lead lives — otherwise the admin can't find it by
+  // searching the current tab.
   const { data: existing } = await typedFrom(supabase, "leads")
-    .select("id")
+    .select("id, name, tab:lead_tabs!leads_tab_id_fkey(name)")
     .eq("phone", phone)
     .maybeSingle();
 
   if (existing) {
-    return { error: "מספר טלפון כבר קיים במערכת" };
+    const existingName = (existing as { name?: string | null }).name;
+    const existingTab = (existing as { tab?: { name?: string | null } | null }).tab?.name;
+    const details = [existingName, existingTab].filter(Boolean).join(" · ");
+    return {
+      error: details
+        ? `מספר הטלפון כבר קיים במערכת (${details})`
+        : "מספר הטלפון כבר קיים במערכת",
+    };
   }
 
   const nullIfEmpty = (v: string | null | undefined) => (v ? v : null);

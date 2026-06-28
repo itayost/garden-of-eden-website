@@ -27,6 +27,7 @@ import { LeadDetailSheet } from "./LeadDetailSheet";
 import { LeadCreateDialog } from "./LeadCreateDialog";
 import { TablePagination } from "@/components/admin/TablePagination";
 import { LEAD_UNASSIGNED_VALUE, type Lead, type LeadStatus } from "@/types/leads";
+import { leadPhoneSearchFragment } from "@/lib/validations/leads";
 import type { LeadTab } from "@/types/lead-tabs";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
@@ -82,11 +83,13 @@ export function LeadDataTable({
     return data.filter((lead) => {
       if (globalFilter) {
         const s = globalFilter.toLowerCase();
-        if (
-          !lead.name.toLowerCase().includes(s) &&
-          !(lead.phone ?? "").includes(globalFilter)
-        )
-          return false;
+        // Phones are stored as 972xxxxxxxxx; match a digits-only fragment of the
+        // typed number (e.g. "050-1234567" -> "501234567") against the stored value.
+        const phoneFragment = leadPhoneSearchFragment(globalFilter);
+        const matchesPhone = phoneFragment
+          ? (lead.phone ?? "").includes(phoneFragment)
+          : (lead.phone ?? "").includes(globalFilter);
+        if (!lead.name.toLowerCase().includes(s) && !matchesPhone) return false;
       }
       if (statusFilter && lead.status !== statusFilter) return false;
       if (haifaFilter && !lead.is_from_haifa) return false;

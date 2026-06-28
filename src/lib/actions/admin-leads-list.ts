@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
+import { leadPhoneSearchFragment } from "@/lib/validations/leads";
 import {
   LEAD_SELECT_WITH_RELATIONS,
   LEAD_STATUSES,
@@ -73,7 +74,11 @@ export async function getLeadsAction(
     // Sanitize search input: escape PostgREST special chars to prevent filter injection
     const sanitized = search.replace(/[%_\\()"',.*]/g, "");
     if (sanitized) {
-      query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%`);
+      // Phones are stored as 972xxxxxxxxx, so match a digits-only fragment of the
+      // typed number (e.g. "050-1234567" -> "501234567") against the stored value.
+      const phoneFragment = leadPhoneSearchFragment(sanitized);
+      const phoneTerm = phoneFragment || sanitized;
+      query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${phoneTerm}%`);
     }
   }
   if (status) query = query.eq("status", status);

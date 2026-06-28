@@ -14,8 +14,8 @@ type ActionResult<T> =
   | { error: string };
 
 /**
- * List trainers available for lead assignment.
- * Returns active, non-deleted trainer profiles ordered by name.
+ * List staff available for lead assignment.
+ * Returns active, non-deleted trainer and admin profiles ordered by name.
  */
 export const listTrainersForAssignmentAction = cache(
   async (): Promise<ActionResult<TrainerOption[]>> => {
@@ -26,7 +26,7 @@ export const listTrainersForAssignmentAction = cache(
     const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name")
-      .eq("role", "trainer")
+      .in("role", ["trainer", "admin"])
       .eq("is_active", true)
       .is("deleted_at", null)
       .order("full_name", { ascending: true });

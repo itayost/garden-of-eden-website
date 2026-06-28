@@ -18,6 +18,18 @@ export function normalizeLeadPhone(phone: string): string | null {
 }
 
 /**
+ * Build a digits-only fragment for matching a typed phone number against the
+ * stored 972xxxxxxxxx format. Drops a single leading 0 so a locally typed 05x
+ * number matches the stored 972 prefix (e.g. "050-123" -> "50123"). Returns ""
+ * when the term contains no digits.
+ */
+export function leadPhoneSearchFragment(term: string): string {
+  const digits = term.replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.startsWith("0") ? digits.slice(1) : digits;
+}
+
+/**
  * Parse a birth-year input value from a form field. Returns null for empty,
  * null, undefined, or non-finite values so RHF's setValueAs can be reused
  * across the create and edit forms.
