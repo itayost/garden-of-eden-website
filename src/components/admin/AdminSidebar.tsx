@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { isActivePath } from "@/lib/utils/active-path";
 import {
+  BookOpen,
   Calendar,
   ClipboardCheck,
   Clock,
@@ -62,6 +63,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/upcoming-games", label: "משחקים קרובים", icon: Calendar },
       { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: true },
+      { href: "/admin/book", label: "ספר פיתוח", icon: BookOpen },
     ],
   },
   {
