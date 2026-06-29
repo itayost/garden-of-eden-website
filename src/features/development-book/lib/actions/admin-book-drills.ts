@@ -435,6 +435,8 @@ export async function saveFailureSteps(
       }
     }
 
+    revalidatePath("/admin/book");
+    revalidatePath("/dashboard/book");
     return { success: true };
   } catch (err) {
     console.error("saveFailureSteps error:", err);
@@ -523,6 +525,8 @@ export async function savePhases(
       }
     }
 
+    revalidatePath("/admin/book");
+    revalidatePath("/dashboard/book");
     return { success: true };
   } catch (err) {
     console.error("savePhases error:", err);
@@ -583,6 +587,8 @@ export async function saveMetrics(
       }
     }
 
+    revalidatePath("/admin/book");
+    revalidatePath("/dashboard/book");
     return { success: true };
   } catch (err) {
     console.error("saveMetrics error:", err);
