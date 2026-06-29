@@ -52,6 +52,11 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
   const validCount = parsed.valid.length;
   const errorCount = parsed.errors.length;
 
+  const handleOpenChange = (next: boolean) => {
+    if (next) setTabId(activeTabId); // default to the tab in view on each open
+    setOpen(next);
+  };
+
   const handleSubmit = async () => {
     if (validCount === 0) return;
     setSubmitting(true);
@@ -77,7 +82,7 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" type="button">
           <Clipboard className="h-4 w-4 me-2" />
