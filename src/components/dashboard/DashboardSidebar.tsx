@@ -12,6 +12,7 @@ import {
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { isActivePath } from "@/lib/utils/active-path";
 import {
+  BookOpen,
   FileText,
   Home,
   Target,
@@ -38,11 +39,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
+  { href: "/dashboard/book", label: "ספר פיתוח", icon: BookOpen },
   { href: "/dashboard/profile", label: "פרופיל", icon: UserCog },
 ];
 
 export const PAGE_TITLES: Record<string, string> = {
   ...Object.fromEntries(NAV_ITEMS.map((item) => [item.href, item.label])),
+  "/dashboard/book/parents": "להורים",
   "/dashboard/forms/next-game": "המשחק הבא שלי",
   "/dashboard/forms/nutrition": "שאלון תזונה",
   "/dashboard/forms/post-workout": "שאלון אחרי אימון",

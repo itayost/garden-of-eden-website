@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BookOpen,
   Home,
   Target,
   FileText,
@@ -26,6 +27,7 @@ const mainItems: BottomNavItem[] = [
 const moreItems = [
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
+  { href: "/dashboard/book", label: "ספר פיתוח", icon: BookOpen },
   { href: "/dashboard/profile", label: "פרופיל", icon: UserCog },
 ];
 
