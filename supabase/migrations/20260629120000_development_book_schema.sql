@@ -121,7 +121,7 @@ CREATE TABLE book_drill_progress (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   drill_id UUID NOT NULL REFERENCES book_drills(id) ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'done',
+  status TEXT NOT NULL DEFAULT 'done' CHECK (status IN ('done')),
   completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, drill_id)
 );

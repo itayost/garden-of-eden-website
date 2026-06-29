@@ -81,8 +81,9 @@ export async function toggleDrillDone(
       await grantBadge(supabase, userId, "book_ten_drills");
     }
 
-    // Category complete: check if every drill in this drill's parameter's category is done
+    // Category complete: check if every drill across ALL parameters in the drill's category is done
     try {
+      // 1. Look up the drill's parameter_id
       const { data: drillRow } = await typedFrom(supabase, "book_drills")
         .select("parameter_id")
         .eq("id", drillId)
@@ -91,29 +92,50 @@ export async function toggleDrillDone(
       if (drillRow?.parameter_id) {
         const parameterId: string = drillRow.parameter_id;
 
-        // Get all drills belonging to the same parameter (category scope)
-        const { data: categoryDrills } = await typedFrom(supabase, "book_drills")
-          .select("id")
-          .eq("parameter_id", parameterId);
+        // 2. Look up that parameter's category_id
+        const { data: paramRow } = await typedFrom(supabase, "book_parameters")
+          .select("category_id")
+          .eq("id", parameterId)
+          .maybeSingle();
 
-        if (categoryDrills && categoryDrills.length > 0) {
-          const categoryDrillIds: string[] = categoryDrills.map(
-            (d: { id: string }) => d.id
-          );
-          const { data: categoryDone } = await typedFrom(supabase, "book_drill_progress")
-            .select("drill_id")
-            .eq("user_id", userId)
-            .in("drill_id", categoryDrillIds);
+        if (paramRow?.category_id) {
+          const categoryId: string = paramRow.category_id;
 
-          const categoryDoneIds = new Set(
-            (categoryDone ?? []).map((r: { drill_id: string }) => r.drill_id)
-          );
-          const allCategoryDone = categoryDrillIds.every((id) =>
-            categoryDoneIds.has(id)
+          // 3. Gather all parameter ids in that category
+          const { data: categoryParams } = await typedFrom(supabase, "book_parameters")
+            .select("id")
+            .eq("category_id", categoryId);
+
+          const categoryParamIds: string[] = (categoryParams ?? []).map(
+            (p: { id: string }) => p.id
           );
 
-          if (allCategoryDone) {
-            await grantBadge(supabase, userId, "book_category_complete");
+          if (categoryParamIds.length > 0) {
+            // 4. Count all drills across those parameters
+            const { data: categoryDrills } = await typedFrom(supabase, "book_drills")
+              .select("id")
+              .in("parameter_id", categoryParamIds);
+
+            const categoryTotal: number = categoryDrills?.length ?? 0;
+
+            if (categoryTotal > 0) {
+              const categoryDrillIds: string[] = (categoryDrills ?? []).map(
+                (d: { id: string }) => d.id
+              );
+
+              // 5. Count how many of those drills the user has done
+              const { data: categoryDoneRows } = await typedFrom(supabase, "book_drill_progress")
+                .select("drill_id")
+                .eq("user_id", userId)
+                .in("drill_id", categoryDrillIds);
+
+              const categoryDoneCount: number = categoryDoneRows?.length ?? 0;
+
+              // 6. Award badge only when every drill in the full category is done
+              if (categoryDoneCount === categoryTotal) {
+                await grantBadge(supabase, userId, "book_category_complete");
+              }
+            }
           }
         }
       }
