@@ -97,7 +97,7 @@ export default async function AdminLeadsPage({ searchParams }: PageProps) {
 
   const trainers =
     "data" in trainersRes && trainersRes.data ? trainersRes.data : [];
-  const canManage = profile.role === "admin";
+  const canManage = profile.role === "admin" || profile.role === "trainer";
 
   return (
     <div className="space-y-8">

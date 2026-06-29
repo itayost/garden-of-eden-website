@@ -4,7 +4,7 @@ import { cache } from "react";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import {
   leadTabCreateSchema,
@@ -90,7 +90,7 @@ async function ensureSlugUnique(
 export async function createLeadTabAction(
   input: LeadTabCreateInput,
 ): Promise<ActionResult<LeadTab>> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const parsed = leadTabCreateSchema.safeParse(input);
@@ -143,7 +143,7 @@ export async function createLeadTabAction(
 export async function updateLeadTabAction(
   input: LeadTabUpdateInput,
 ): Promise<ActionResult<LeadTab>> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const parsed = leadTabUpdateSchema.safeParse(input);
@@ -202,7 +202,7 @@ export async function updateLeadTabAction(
 export async function reorderLeadTabsAction(
   input: LeadTabReorderInput,
 ): Promise<VoidResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const parsed = leadTabReorderSchema.safeParse(input);
@@ -242,7 +242,7 @@ export async function reorderLeadTabsAction(
 export async function deleteLeadTabAction(
   input: LeadTabDeleteInput,
 ): Promise<VoidResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const parsed = leadTabDeleteSchema.safeParse(input);
