@@ -1,0 +1,410 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { RepeatableRows } from "./RepeatableRows";
+import { PositionGroupPicker } from "./PositionGroupPicker";
+import type { PositionSelection } from "./PositionGroupPicker";
+import {
+  updateParameter,
+  saveParameterDrills,
+  saveParameterAgeRows,
+} from "@/features/development-book/lib/actions/admin-book-parameters";
+import type { AdminParameterForEdit } from "@/features/development-book/lib/actions/admin-book-parameters";
+import type { BookDrill, BookAgeRow } from "@/features/development-book/lib/types";
+
+// ---------------------------------------------------------------------------
+// Row shapes for RepeatableRows
+// ---------------------------------------------------------------------------
+
+type AgeGroup = "U10-12" | "U13-14" | "U15-16" | "U17+";
+
+interface DrillRow extends Record<string, unknown> {
+  id?: string;
+  name_en: string;
+  name_he: string;
+  muscle_he: string;
+  sets_he: string;
+  how_he: string;
+  why_he: string;
+  connect_he: string;
+}
+
+interface AgeRow extends Record<string, unknown> {
+  id?: string;
+  age_group: AgeGroup;
+  what_he: string;
+  metric_value_he: string;
+  recovery_he: string;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function drillToRow(drill: BookDrill): DrillRow {
+  return {
+    id: drill.id,
+    name_en: drill.nameEn ?? "",
+    name_he: drill.nameHe ?? "",
+    muscle_he: drill.muscleHe ?? "",
+    sets_he: drill.setsHe ?? "",
+    how_he: drill.howHe ?? "",
+    why_he: drill.whyHe ?? "",
+    connect_he: drill.connectHe ?? "",
+  };
+}
+
+function ageRowToRow(row: BookAgeRow): AgeRow {
+  return {
+    id: row.id,
+    age_group: row.ageGroup,
+    what_he: row.whatHe ?? "",
+    metric_value_he: row.metricValueHe ?? "",
+    recovery_he: row.recoveryHe ?? "",
+  };
+}
+
+function newDrillRow(): DrillRow {
+  return {
+    name_en: "",
+    name_he: "",
+    muscle_he: "",
+    sets_he: "",
+    how_he: "",
+    why_he: "",
+    connect_he: "",
+  };
+}
+
+function newAgeRow(): AgeRow {
+  return {
+    age_group: "U10-12" as AgeGroup,
+    what_he: "",
+    metric_value_he: "",
+    recovery_he: "",
+  };
+}
+
+const DRILL_COLUMNS = [
+  { key: "name_en" as const, labelHe: "שם (אנגלית)" },
+  { key: "name_he" as const, labelHe: "שם (עברית)" },
+  { key: "muscle_he" as const, labelHe: "שריר" },
+  { key: "sets_he" as const, labelHe: "סטים" },
+  { key: "how_he" as const, labelHe: "איך", type: "textarea" as const },
+  { key: "why_he" as const, labelHe: "למה", type: "textarea" as const },
+  { key: "connect_he" as const, labelHe: "חיבור", type: "textarea" as const },
+];
+
+const AGE_ROW_COLUMNS = [
+  { key: "age_group" as const, labelHe: "קבוצת גיל" },
+  { key: "what_he" as const, labelHe: "מה", type: "textarea" as const },
+  { key: "metric_value_he" as const, labelHe: "ערך מדד" },
+  { key: "recovery_he" as const, labelHe: "התאוששות", type: "textarea" as const },
+];
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+interface ParameterFormProps {
+  parameter: AdminParameterForEdit;
+}
+
+export function ParameterForm({ parameter }: ParameterFormProps) {
+  // Base fields
+  const [nameHe, setNameHe] = useState(parameter.nameHe);
+  const [number, setNumber] = useState(
+    parameter.number !== null ? String(parameter.number) : ""
+  );
+  const [subtitleHe, setSubtitleHe] = useState(parameter.subtitleHe ?? "");
+  const [ageMetricLabel, setAgeMetricLabel] = useState(
+    parameter.ageMetricLabel ?? ""
+  );
+  const [reportTextHe, setReportTextHe] = useState(
+    parameter.reportTextHe ?? ""
+  );
+  const [reportHighlightHe, setReportHighlightHe] = useState(
+    parameter.reportHighlightHe ?? ""
+  );
+  const [verbalTextHe, setVerbalTextHe] = useState(
+    parameter.verbalTextHe ?? ""
+  );
+  const [verbalTipHe, setVerbalTipHe] = useState(parameter.verbalTipHe ?? "");
+
+  // Positions
+  const [positionSelection, setPositionSelection] = useState<PositionSelection>(
+    {
+      isAllPositions: parameter.isAllPositions,
+      positions: parameter.positions,
+    }
+  );
+
+  // Drills
+  const [drillRows, setDrillRows] = useState<DrillRow[]>(
+    parameter.drills.map(drillToRow)
+  );
+
+  // Age rows
+  const [ageRows, setAgeRows] = useState<AgeRow[]>(
+    parameter.ageRows.map(ageRowToRow)
+  );
+
+  const [isPendingBase, startBaseTransition] = useTransition();
+  const [isPendingDrills, startDrillsTransition] = useTransition();
+  const [isPendingAgeRows, startAgeRowsTransition] = useTransition();
+
+  // ---------------------------------------------------------------------------
+  // Save handlers
+  // ---------------------------------------------------------------------------
+
+  function handleSaveBase() {
+    startBaseTransition(async () => {
+      const result = await updateParameter(parameter.id, {
+        name_he: nameHe,
+        number: number !== "" ? parseInt(number, 10) : null,
+        subtitle_he: subtitleHe || null,
+        age_metric_label: ageMetricLabel || null,
+        report_text_he: reportTextHe || null,
+        report_highlight_he: reportHighlightHe || null,
+        verbal_text_he: verbalTextHe || null,
+        verbal_tip_he: verbalTipHe || null,
+        is_all_positions: positionSelection.isAllPositions,
+        positions: positionSelection.positions,
+      });
+
+      if ("success" in result) {
+        toast.success("הפרמטר עודכן בהצלחה");
+      } else {
+        toast.error(result.error ?? "שגיאה בעדכון פרמטר");
+      }
+    });
+  }
+
+  function handleSaveDrills() {
+    startDrillsTransition(async () => {
+      const result = await saveParameterDrills(parameter.id, drillRows);
+
+      if ("success" in result) {
+        toast.success("התרגילים נשמרו בהצלחה");
+      } else {
+        toast.error(result.error ?? "שגיאה בשמירת תרגילים");
+      }
+    });
+  }
+
+  function handleSaveAgeRows() {
+    startAgeRowsTransition(async () => {
+      const result = await saveParameterAgeRows(parameter.id, ageRows);
+
+      if ("success" in result) {
+        toast.success("שורות הגיל נשמרו בהצלחה");
+      } else {
+        toast.error(result.error ?? "שגיאה בשמירת שורות גיל");
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
+  return (
+    <div className="space-y-8" dir="rtl">
+      {/* ------------------------------------------------------------------ */}
+      {/* Base fields card                                                     */}
+      {/* ------------------------------------------------------------------ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>פרטי פרמטר</CardTitle>
+          <CardDescription>
+            שם, מספר, כותרת משנה, עמדות וטקסטים
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="name_he">שם הפרמטר (עברית)</Label>
+                <Input
+                  id="name_he"
+                  value={nameHe}
+                  onChange={(e) => setNameHe(e.target.value)}
+                  placeholder="שם הפרמטר"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="number">מספר</Label>
+                <Input
+                  id="number"
+                  type="number"
+                  value={number}
+                  onChange={(e) => setNumber(e.target.value)}
+                  placeholder="מספר סידורי"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="subtitle_he">כותרת משנה</Label>
+              <Input
+                id="subtitle_he"
+                value={subtitleHe}
+                onChange={(e) => setSubtitleHe(e.target.value)}
+                placeholder="כותרת משנה קצרה"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="age_metric_label">תווית מדד גיל</Label>
+              <Input
+                id="age_metric_label"
+                value={ageMetricLabel}
+                onChange={(e) => setAgeMetricLabel(e.target.value)}
+                placeholder='למשל: "שניות", "ס"מ"'
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>עמדות</Label>
+              <PositionGroupPicker
+                value={positionSelection}
+                onChange={setPositionSelection}
+                disabled={isPendingBase}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="report_text_he">טקסט דוח (הורים)</Label>
+              <Textarea
+                id="report_text_he"
+                value={reportTextHe}
+                onChange={(e) => setReportTextHe(e.target.value)}
+                rows={3}
+                placeholder="טקסט הסבר להורים"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="report_highlight_he">הדגשת דוח</Label>
+              <Input
+                id="report_highlight_he"
+                value={reportHighlightHe}
+                onChange={(e) => setReportHighlightHe(e.target.value)}
+                placeholder="משפט קצר להדגשה בדוח"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="verbal_text_he">טקסט ורבלי</Label>
+              <Textarea
+                id="verbal_text_he"
+                value={verbalTextHe}
+                onChange={(e) => setVerbalTextHe(e.target.value)}
+                rows={3}
+                placeholder="הסבר ורבלי לשחקן"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="verbal_tip_he">טיפ ורבלי</Label>
+              <Input
+                id="verbal_tip_he"
+                value={verbalTipHe}
+                onChange={(e) => setVerbalTipHe(e.target.value)}
+                placeholder="טיפ קצר לשחקן"
+              />
+            </div>
+
+            <div className="flex justify-start pt-2">
+              <Button
+                type="button"
+                onClick={handleSaveBase}
+                disabled={isPendingBase}
+              >
+                {isPendingBase ? "שומר..." : "שמור פרטי פרמטר"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Drills card                                                          */}
+      {/* ------------------------------------------------------------------ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>תרגילים</CardTitle>
+          <CardDescription>
+            תרגילים המשויכים לפרמטר זה. שורות עם מזהה קיים יעודכנו; שורות
+            חדשות יתווספו; שורות שהוסרו יימחקו.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <RepeatableRows<DrillRow>
+              rows={drillRows}
+              columns={DRILL_COLUMNS}
+              onChange={setDrillRows}
+              newRow={newDrillRow}
+            />
+
+            <div className="flex justify-start pt-2">
+              <Button
+                type="button"
+                onClick={handleSaveDrills}
+                disabled={isPendingDrills}
+              >
+                {isPendingDrills ? "שומר..." : "שמור תרגילים"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Age rows card                                                        */}
+      {/* ------------------------------------------------------------------ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>שורות גיל</CardTitle>
+          <CardDescription>
+            נתונים לפי קבוצת גיל (U10-12, U13-14, U15-16, U17+)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <RepeatableRows<AgeRow>
+              rows={ageRows}
+              columns={AGE_ROW_COLUMNS}
+              onChange={setAgeRows}
+              newRow={newAgeRow}
+            />
+
+            <div className="flex justify-start pt-2">
+              <Button
+                type="button"
+                onClick={handleSaveAgeRows}
+                disabled={isPendingAgeRows}
+              >
+                {isPendingAgeRows ? "שומר..." : "שמור שורות גיל"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
