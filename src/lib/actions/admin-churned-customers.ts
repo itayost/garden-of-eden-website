@@ -150,7 +150,7 @@ export async function updateChurnedCustomer(
   id: string,
   patch: UpdateChurnedCustomerInput,
 ): Promise<ActionResult<ChurnedCustomer>> {
-  const { error: authError, user, profile } = await verifyAdminOrTrainer();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { data: null, error: authError };
 
   const parsedId = churnedIdSchema.safeParse(id);
@@ -167,11 +167,7 @@ export async function updateChurnedCustomer(
     .maybeSingle();
   if (!existing) return { data: null, error: "רשומה לא נמצאה" };
 
-  const isAdmin = profile!.role === "admin";
-  const isAuthor = existing.author_id === user!.id;
-  if (!isAdmin && !isAuthor) {
-    return { data: null, error: "אין הרשאה לערוך רשומה זו" };
-  }
+  // All trainers (and admins) may edit any churned row — no author restriction.
 
   // updated_at is set by the set_churned_customers_updated_at trigger.
   const updateRow: Record<string, unknown> = {};
@@ -205,7 +201,7 @@ export async function updateChurnedCustomer(
 export async function deleteChurnedCustomer(
   id: string,
 ): Promise<{ success: true } | { error: string }> {
-  const { error: authError, user, profile } = await verifyAdminOrTrainer();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const parsedId = churnedIdSchema.safeParse(id);
@@ -213,16 +209,12 @@ export async function deleteChurnedCustomer(
 
   const supabase = await createClient();
   const { data: existing } = await typedFrom(supabase, "churned_customers")
-    .select("author_id")
+    .select("id")
     .eq("id", parsedId.data)
     .maybeSingle();
   if (!existing) return { error: "רשומה לא נמצאה" };
 
-  const isAdmin = profile!.role === "admin";
-  const isAuthor = existing.author_id === user!.id;
-  if (!isAdmin && !isAuthor) {
-    return { error: "אין הרשאה למחוק רשומה זו" };
-  }
+  // All trainers (and admins) may delete any churned row — no author restriction.
 
   const { error: dbError } = await typedFrom(supabase, "churned_customers")
     .delete()
