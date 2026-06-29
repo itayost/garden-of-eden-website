@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { BookDrill, DrillProgressMap } from "@/features/development-book/lib/types";
-import { DrillDoneToggle } from "./DrillDoneToggle";
+import { DrillDoneToggle } from "@/features/development-book/components/trainee/DrillDoneToggle";
 
 interface DrillRowProps {
   drill: BookDrill;

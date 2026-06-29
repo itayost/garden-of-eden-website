@@ -44,9 +44,12 @@ export async function toggleDrillDone(
 
   if (existing) {
     // Un-mark: delete the row
-    await typedFrom(supabase, "book_drill_progress")
+    const { error: deleteError } = await typedFrom(supabase, "book_drill_progress")
       .delete()
       .eq("id", existing.id);
+    if (deleteError) {
+      return { success: false, done: true, error: "ביטול הסימון נכשל" };
+    }
     return { success: true, done: false };
   }
 
