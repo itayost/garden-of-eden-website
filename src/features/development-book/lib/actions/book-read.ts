@@ -11,7 +11,6 @@ import type {
   BookDrill,
   BookAgeRow,
   BookDrillCard,
-  BookDrill as BookDrillType,
   CanonicalPosition,
   DrillProgressMap,
   AgeGroup,
@@ -328,7 +327,7 @@ export async function getBookTree(
 
 export async function getDrillCard(
   drillId: string
-): Promise<{ drill: BookDrillType; card: BookDrillCard | null } | null> {
+): Promise<{ drill: BookDrill; card: BookDrillCard | null } | null> {
   if (!isValidUUID(drillId)) return null;
 
   const supabase = await createClient();
@@ -355,15 +354,15 @@ export async function getDrillCard(
 
   // Load card children in parallel
   const [stepsResult, phasesResult, metricsResult] = await Promise.all([
-    typedFrom(supabase, "book_card_failure_steps")
+    typedFrom(supabase, "book_drill_card_failure_steps")
       .select("*")
       .eq("card_id", rawCard.id)
       .order("order_index") as Promise<{ data: RawFailureStep[] | null }>,
-    typedFrom(supabase, "book_card_phases")
+    typedFrom(supabase, "book_drill_card_phases")
       .select("*")
       .eq("card_id", rawCard.id)
       .order("order_index") as Promise<{ data: RawCardPhase[] | null }>,
-    typedFrom(supabase, "book_card_metrics")
+    typedFrom(supabase, "book_drill_card_metrics")
       .select("*")
       .eq("card_id", rawCard.id)
       .order("order_index") as Promise<{ data: RawCardMetric[] | null }>,
@@ -376,7 +375,7 @@ export async function getDrillCard(
   const rawPhasePoints: RawCardPhasePoint[] =
     phaseIds.length > 0
       ? (
-          (await typedFrom(supabase, "book_card_phase_points")
+          (await typedFrom(supabase, "book_drill_card_phase_points")
             .select("*")
             .in("phase_id", phaseIds)
             .order("order_index")) as { data: RawCardPhasePoint[] | null }
