@@ -18,7 +18,7 @@ export const parameterBaseSchema = z.object({
 export type ParameterBaseInput = z.infer<typeof parameterBaseSchema>;
 
 export const drillRowSchema = z.object({
-  id: z.string().optional(),
+  id: z.string().uuid().optional(),
   name_en: z.string().max(200).optional().nullable(),
   name_he: z.string().max(200).optional().nullable(),
   muscle_he: z.string().max(200).optional().nullable(),
@@ -33,7 +33,7 @@ export type DrillRowInput = z.infer<typeof drillRowSchema>;
 export const drillsInputSchema = z.array(drillRowSchema);
 
 export const ageRowInputSchema = z.object({
-  id: z.string().optional(),
+  id: z.string().uuid().optional(),
   age_group: z.enum(AGE_GROUPS),
   what_he: z.string().max(500).optional().nullable(),
   metric_value_he: z.string().max(200).optional().nullable(),
