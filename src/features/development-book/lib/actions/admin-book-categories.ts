@@ -95,6 +95,9 @@ function mapParameter(raw: RawAdminParameter): AdminBookParameter {
 // ---------------------------------------------------------------------------
 
 export async function listBookAdminTree(): Promise<AdminBookCategory[]> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return [];
+
   const adminClient = createAdminClient();
 
   const [catsResult, paramsResult] = await Promise.all([
@@ -340,8 +343,8 @@ export async function createParameter(
 
     const orderIndex = (maxOrder?.order_index ?? 0) + 1;
 
-    // Generate unique slug using timestamp
-    const slug = `parameter-${Date.now()}`;
+    // Generate unique slug using timestamp and random suffix
+    const slug = `parameter-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
     const { data: created, error: insertError } = (await typedFrom(
       adminClient,
