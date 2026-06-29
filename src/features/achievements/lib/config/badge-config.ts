@@ -191,6 +191,44 @@ export const BADGE_CONFIGS: Record<AchievementBadgeType, BadgeConfig> = {
     rarity: "rare",
     points: 125,
   },
+
+  // Book badges
+  book_first_drill: {
+    type: "book_first_drill",
+    nameHe: "צעד ראשון",
+    descriptionHe: "סיימת תרגיל ראשון בספר הפיתוח",
+    emoji: "📖",
+    category: "book",
+    rarity: "common",
+    points: 10,
+  },
+  book_ten_drills: {
+    type: "book_ten_drills",
+    nameHe: "לומד מסור",
+    descriptionHe: "סיימת 10 תרגילים בספר הפיתוח",
+    emoji: "📚",
+    category: "book",
+    rarity: "uncommon",
+    points: 50,
+  },
+  book_category_complete: {
+    type: "book_category_complete",
+    nameHe: "מומחה קטגוריה",
+    descriptionHe: "סיימת את כל התרגילים בקטגוריה אחת",
+    emoji: "🎓",
+    category: "book",
+    rarity: "rare",
+    points: 100,
+  },
+  book_all_drills: {
+    type: "book_all_drills",
+    nameHe: "שלם בספר",
+    descriptionHe: "סיימת את כל התרגילים בספר הפיתוח!",
+    emoji: "🏆",
+    category: "book",
+    rarity: "legendary",
+    points: 500,
+  },
 };
 
 /**
@@ -203,6 +241,7 @@ export const CATEGORY_LABELS: Record<BadgeCategory, string> = {
   improvements: "שיפורים",
   streaks: "רצפים",
   goals: "יעדים",
+  book: "ספר פיתוח",
 };
 
 /**

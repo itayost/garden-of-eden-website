@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { BookDrill, DrillProgressMap } from "@/features/development-book/lib/types";
+import { DrillDoneToggle } from "./DrillDoneToggle";
 
 interface DrillRowProps {
   drill: BookDrill;
@@ -56,9 +57,7 @@ function DrillRow({ drill, done }: DrillRowProps) {
           )}
         </div>
 
-        {/* DrillDoneToggle slot - Task 14
-            Accept optional `done` prop here when wiring. */}
-        <div aria-hidden="true" className="shrink-0 w-5 h-5 rounded-full border-2 border-muted mt-0.5 opacity-40" />
+        <DrillDoneToggle drillId={drill.id} initialDone={done} />
       </div>
     </li>
   );

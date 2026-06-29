@@ -1391,4 +1391,8 @@ export type AchievementBadgeType =
   | "streak_30_days"
   | "streak_100_days"
   | "first_goal_achieved"
-  | "five_goals_achieved";
+  | "five_goals_achieved"
+  | "book_first_drill"
+  | "book_ten_drills"
+  | "book_category_complete"
+  | "book_all_drills";

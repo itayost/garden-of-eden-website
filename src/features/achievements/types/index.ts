@@ -13,7 +13,8 @@ export type BadgeCategory =
   | "assessments"
   | "improvements"
   | "streaks"
-  | "goals";
+  | "goals"
+  | "book";
 
 /** Badge rarity level */
 export type BadgeRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
