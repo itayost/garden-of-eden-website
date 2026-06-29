@@ -16,6 +16,7 @@ import {
   Home,
   Target,
   Trophy,
+  UserCog,
   Utensils,
   Video,
   type LucideIcon,
@@ -37,6 +38,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
+  { href: "/dashboard/profile", label: "פרופיל", icon: UserCog },
 ];
 
 export const PAGE_TITLES: Record<string, string> = {

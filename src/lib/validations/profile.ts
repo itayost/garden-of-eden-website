@@ -56,6 +56,23 @@ export const onboardingSchema = z.object({
 
 export type OnboardingData = z.infer<typeof onboardingSchema>;
 
+// Self-service profile edit (trainee updates own birthdate + position).
+// Name is intentionally excluded — it is not self-editable.
+export const profileSelfUpdateSchema = z.object({
+  birthdate: z
+    .string()
+    .min(1, "נא להזין תאריך לידה")
+    .refine((date) => {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return false;
+      const age = (Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+      return age >= 5 && age <= 100;
+    }, "תאריך לידה לא תקין (גיל 5-100)"),
+  position: z.enum(POSITIONS).optional().nullable(),
+});
+
+export type ProfileSelfUpdateData = z.infer<typeof profileSelfUpdateSchema>;
+
 // Image validation helper
 export function validateImage(file: File): { valid: boolean; error?: string } {
   if (file.size > MAX_FILE_SIZE) {

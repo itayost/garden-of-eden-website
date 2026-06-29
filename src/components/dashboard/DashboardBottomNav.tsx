@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Video,
   Utensils,
+  UserCog,
 } from "lucide-react";
 import { BottomNav, type BottomNavItem } from "@/components/ui/bottom-nav";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -25,6 +26,7 @@ const mainItems: BottomNavItem[] = [
 const moreItems = [
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
+  { href: "/dashboard/profile", label: "פרופיל", icon: UserCog },
 ];
 
 export function DashboardBottomNav() {
