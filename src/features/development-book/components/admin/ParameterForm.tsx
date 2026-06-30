@@ -203,7 +203,9 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
     parameter.ageRows.map(ageRowToRow)
   );
 
-  const [isPendingBase, startBaseTransition] = useTransition();
+  const [isPendingIdentity, startIdentityTransition] = useTransition();
+  const [isPendingParents, startParentsTransition] = useTransition();
+  const [isPendingVerbal, startVerbalTransition] = useTransition();
   const [isPendingDrills, startDrillsTransition] = useTransition();
   const [isPendingAgeRows, startAgeRowsTransition] = useTransition();
 
@@ -228,7 +230,7 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
   }
 
   function handleSaveIdentity() {
-    startBaseTransition(async () => {
+    startIdentityTransition(async () => {
       const result = await updateParameter(parameter.id, buildBaseInput());
       if ("success" in result) {
         toast.success("זיהוי עודכן בהצלחה");
@@ -239,7 +241,7 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
   }
 
   function handleSaveParents() {
-    startBaseTransition(async () => {
+    startParentsTransition(async () => {
       const result = await updateParameter(parameter.id, buildBaseInput());
       if ("success" in result) {
         toast.success("תוכן להורים עודכן בהצלחה");
@@ -250,7 +252,7 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
   }
 
   function handleSaveVerbal() {
-    startBaseTransition(async () => {
+    startVerbalTransition(async () => {
       const result = await updateParameter(parameter.id, buildBaseInput());
       if ("success" in result) {
         toast.success("תוכן בעל פה עודכן בהצלחה");
@@ -273,6 +275,13 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
 
   function handleSaveAgeRows() {
     startAgeRowsTransition(async () => {
+      // The age-metric label lives on book_parameters, so persist it alongside
+      // the age rows from this section.
+      const baseResult = await updateParameter(parameter.id, buildBaseInput());
+      if (!("success" in baseResult)) {
+        toast.error(baseResult.error ?? "שגיאה בשמירת תווית מדד גיל");
+        return;
+      }
       const result = await saveParameterAgeRows(parameter.id, ageRows);
       if ("success" in result) {
         toast.success("שורות הגיל נשמרו בהצלחה");
@@ -294,7 +303,7 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>זיהוי</CardTitle>
-          <CardDescription>שם, מספר, כותרת משנה, תווית מדד גיל ועמדות</CardDescription>
+          <CardDescription>שם, מספר, כותרת משנה ועמדות</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-5">
@@ -331,22 +340,12 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="age_metric_label">תווית מדד גיל</Label>
-              <Input
-                id="age_metric_label"
-                value={ageMetricLabel}
-                onChange={(e) => setAgeMetricLabel(e.target.value)}
-                placeholder='למשל: "שניות", "ס"מ"'
-              />
-            </div>
-
             <div className="space-y-2">
               <Label>עמדות</Label>
               <PositionGroupPicker
                 value={positionSelection}
                 onChange={setPositionSelection}
-                disabled={isPendingBase}
+                disabled={isPendingIdentity}
               />
             </div>
 
@@ -354,9 +353,9 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
               <Button
                 type="button"
                 onClick={handleSaveIdentity}
-                disabled={isPendingBase}
+                disabled={isPendingIdentity}
               >
-                {isPendingBase ? "שומר..." : "שמור זיהוי"}
+                {isPendingIdentity ? "שומר..." : "שמור זיהוי"}
               </Button>
             </div>
           </div>
@@ -403,11 +402,21 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
         <CardHeader>
           <CardTitle>לפי גיל</CardTitle>
           <CardDescription>
-            נתונים לפי קבוצת גיל (U10-12, U13-14, U15-16, U17+)
+            תווית מדד הגיל ונתונים לפי קבוצת גיל (U10-12, U13-14, U15-16, U17+)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="age_metric_label">תווית מדד גיל</Label>
+              <Input
+                id="age_metric_label"
+                value={ageMetricLabel}
+                onChange={(e) => setAgeMetricLabel(e.target.value)}
+                placeholder='למשל: "שניות", "ס"מ"'
+              />
+            </div>
+
             <RepeatableRows<AgeRow>
               rows={ageRows}
               columns={AGE_ROW_COLUMNS}
@@ -463,9 +472,9 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
               <Button
                 type="button"
                 onClick={handleSaveParents}
-                disabled={isPendingBase}
+                disabled={isPendingParents}
               >
-                {isPendingBase ? "שומר..." : "שמור להורים"}
+                {isPendingParents ? "שומר..." : "שמור להורים"}
               </Button>
             </div>
           </div>
@@ -507,9 +516,9 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
               <Button
                 type="button"
                 onClick={handleSaveVerbal}
-                disabled={isPendingBase}
+                disabled={isPendingVerbal}
               >
-                {isPendingBase ? "שומר..." : "שמור בעל פה"}
+                {isPendingVerbal ? "שומר..." : "שמור בעל פה"}
               </Button>
             </div>
           </div>

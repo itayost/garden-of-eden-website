@@ -82,7 +82,7 @@ export function RepeatableRows<T extends Record<string, unknown>>({
 
       {rows.map((row, index) => (
         <div
-          key={index}
+          key={(row as { id?: string }).id ?? index}
           className="grid gap-2 items-start"
           style={{
             gridTemplateColumns: `repeat(${columns.length}, 1fr) auto`,

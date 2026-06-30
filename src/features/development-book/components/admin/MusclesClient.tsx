@@ -180,7 +180,7 @@ export function MusclesClient({ initialMuscles }: MusclesClientProps) {
                 </Button>
                 <DeleteConfirmDialog
                   title={`מחיקת שריר: ${muscle.nameHe}`}
-                  description="פעולה זו תמחק את השריר לצמיתות."
+                  description="פעולה זו תמחק את השריר לצמיתות ותסיר אותו מכל התרגילים המשויכים אליו."
                   successMessage="שריר נמחק"
                   errorMessage="שגיאה במחיקת שריר"
                   onDelete={() => deleteMuscle(muscle.id)}
