@@ -37,9 +37,9 @@ export function ProgramGrid({ rows, weeks, onRowsChange }: ProgramGridProps) {
     if (idx < 0) return;
     const newIdx = idx + direction;
     if (newIdx < 0 || newIdx >= rows.length) return;
-    const next = [...rows];
-    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
-    onRowsChange(next);
+    onRowsChange(
+      rows.map((r, i) => (i === idx ? rows[newIdx] : i === newIdx ? rows[idx] : r))
+    );
   };
 
   const removeRow = (rowKey: string) => {

@@ -16,6 +16,13 @@ describe("resizeRowCells", () => {
     expect(out.map((c) => c.week)).toEqual([1, 2]);
     expect(out).toHaveLength(2);
   });
+  it("places cells by their week field regardless of input order", () => {
+    // Cells arriving out of order (e.g. unordered DB rows) must land in the
+    // slot matching their own `week`, not their array position.
+    const out = resizeRowCells([cell(2, "6"), cell(1, "8")], 2);
+    expect(out.map((c) => c.week)).toEqual([1, 2]);
+    expect(out.map((c) => c.repsHe)).toEqual(["8", "6"]);
+  });
 });
 
 describe("copyCellAcrossWeeks", () => {

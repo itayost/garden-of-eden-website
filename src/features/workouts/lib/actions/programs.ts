@@ -419,7 +419,8 @@ export async function getProgramForEdit(id: string): Promise<ProgramGrid | null>
         "workout_program_cells"
       )
         .select("id, program_exercise_id, week_number, sets, reps_he, load_he, notes_he")
-        .in("program_exercise_id", exerciseIds)) as {
+        .in("program_exercise_id", exerciseIds)
+        .order("week_number")) as {
         data: RawProgramCell[] | null;
         error: unknown;
       };

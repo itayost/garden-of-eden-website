@@ -102,7 +102,11 @@ export async function listExercises(
   }
 
   if (filters.search) {
-    const term = filters.search.trim();
+    // Strip characters that would break the PostgREST `.or()` filter grammar
+    // (`,` separates clauses, `()` groups) or act as LIKE wildcards (`%` `_`),
+    // so a search like "chest (cable)" can't corrupt the query into a parse
+    // error that silently returns zero rows.
+    const term = filters.search.replace(/[,()%_*\\]/g, " ").trim();
     if (term) {
       query = query.or(
         `name_he.ilike.%${term}%,name_en.ilike.%${term}%,equipment.ilike.%${term}%`

@@ -65,9 +65,12 @@ export function ProgramBuilder({ programId, initialGrid }: ProgramBuilderProps) 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, startSave] = useTransition();
 
-  // When weeks changes: resize every row's cells immutably
+  // When weeks changes: resize every row's cells immutably.
   const handleWeeksChange = (newWeeks: number) => {
-    const clamped = Math.max(1, Math.min(52, newWeeks));
+    // Ignore empty/invalid input (e.g. the field momentarily cleared mid-edit,
+    // which yields 0) so it can't silently truncate every row's later-week cells.
+    if (!Number.isFinite(newWeeks) || newWeeks < 1) return;
+    const clamped = Math.min(52, Math.trunc(newWeeks));
     setMeta((prev) => ({ ...prev, weeks: clamped }));
     setRows((prev) =>
       prev.map((row) => ({

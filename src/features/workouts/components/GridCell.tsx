@@ -18,12 +18,16 @@ export function GridCell({ cell, onChange }: GridCellProps) {
       <Input
         type="number"
         min={0}
+        step={1}
         placeholder="סטים"
         aria-label="מספר סטים"
         value={cell.sets ?? ""}
         onChange={(e) => {
           const val = e.target.value;
-          update({ sets: val === "" ? null : Number(val) });
+          // sets is an integer column; keep whole numbers only (a decimal would
+          // fail the z.number().int() validation on save).
+          const parsed = Number.parseInt(val, 10);
+          update({ sets: val === "" || Number.isNaN(parsed) ? null : parsed });
         }}
         className="h-7 text-xs px-1 text-center"
         dir="ltr"

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useTransition, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,8 +43,6 @@ const ALL_SUB_CATEGORIES_OPTION = { value: "__all__", label: "כל תת-קטגו
 // ---------------------------------------------------------------------------
 
 export function ExerciseTable() {
-  const router = useRouter();
-
   // Filter & pagination state
   const [mainCategory, setMainCategory] = useState<string>("");
   const [subCategory, setSubCategory] = useState<string>("");
@@ -147,7 +143,6 @@ export function ExerciseTable() {
 
   const handleFormSaved = () => {
     setFormOpen(false);
-    router.refresh();
     load();
   };
 
@@ -219,7 +214,6 @@ export function ExerciseTable() {
                   exercise={exercise}
                   onEdit={openEdit}
                   onDeleted={() => {
-                    router.refresh();
                     load();
                   }}
                 />

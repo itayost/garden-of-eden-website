@@ -5,9 +5,14 @@ export function emptyCell(week: number): ProgramCell {
 }
 
 export function resizeRowCells(cells: ProgramCell[], weeks: number): ProgramCell[] {
+  // Place each cell into the slot matching its own `week`, not its array index,
+  // so the result is correct regardless of input order (e.g. DB rows that come
+  // back unordered). Missing weeks are filled with empty cells.
+  const byWeek = new Map(cells.map((c) => [c.week, c]));
   return Array.from({ length: weeks }, (_, i) => {
-    const existing = cells[i];
-    return existing ? { ...existing, week: i + 1 } : emptyCell(i + 1);
+    const week = i + 1;
+    const existing = byWeek.get(week);
+    return existing ? { ...existing, week } : emptyCell(week);
   });
 }
 
