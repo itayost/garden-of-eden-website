@@ -528,8 +528,12 @@ export async function saveProgram(
       })),
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: gridError } = await (adminClient as any).rpc("save_workout_program_grid", {
+    // The RPC function is not in the generated Supabase types; cast to a minimal
+    // typed shape (no `any`) to call it.
+    const rpcClient = adminClient as unknown as {
+      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+    };
+    const { error: gridError } = await rpcClient.rpc("save_workout_program_grid", {
       p_program_id: id,
       p_rows: rowsJson,
     });
