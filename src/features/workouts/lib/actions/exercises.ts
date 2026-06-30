@@ -10,6 +10,7 @@ import type { ExerciseInput } from "@/lib/validations/workout-exercise";
 import type { WorkoutExercise, ExerciseFilters } from "@/features/workouts/lib/types";
 
 export type { ExerciseInput } from "@/lib/validations/workout-exercise";
+import { deriveSubCategories } from "@/features/workouts/lib/grid-utils";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -219,6 +220,42 @@ export async function updateExercise(
     console.error("updateExercise error:", err);
     return { error: "שגיאה בעדכון תרגיל" };
   }
+}
+
+// ---------------------------------------------------------------------------
+// listSubCategories
+// ---------------------------------------------------------------------------
+
+export async function listSubCategories(mainCategory?: string): Promise<string[]> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return [];
+
+  const adminClient = createAdminClient();
+
+  let query = typedFrom(adminClient, "workout_exercises")
+    .select("main_category, sub_category")
+    .not("sub_category", "is", null);
+
+  if (mainCategory) {
+    query = query.eq("main_category", mainCategory);
+  }
+
+  const { data, error } = (await query) as {
+    data: Pick<RawWorkoutExercise, "main_category" | "sub_category">[] | null;
+    error: unknown;
+  };
+
+  if (error) {
+    console.error("listSubCategories query error:", error);
+    return [];
+  }
+
+  const mapped = (data ?? []).map((r) => ({
+    mainCategory: r.main_category,
+    subCategory: r.sub_category,
+  }));
+
+  return deriveSubCategories(mapped, mainCategory);
 }
 
 // ---------------------------------------------------------------------------

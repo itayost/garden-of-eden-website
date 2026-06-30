@@ -25,9 +25,9 @@ import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import { ExerciseForm } from "@/features/workouts/components/ExerciseForm";
 import {
   listExercises,
+  listSubCategories,
   deleteExercise,
 } from "@/features/workouts/lib/actions";
-import { deriveSubCategories } from "@/features/workouts/lib/grid-utils";
 import { MAIN_CATEGORIES } from "@/features/workouts/lib/types";
 import type { WorkoutExercise } from "@/features/workouts/lib/types";
 
@@ -57,6 +57,7 @@ export function ExerciseTable() {
   const [rows, setRows] = useState<WorkoutExercise[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [loading, startTransition] = useTransition();
+  const [subCategories, setSubCategories] = useState<string[]>([]);
 
   // Dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -85,6 +86,17 @@ export function ExerciseTable() {
     load();
   }, [load]);
 
+  // Load sub-categories from the full corpus whenever main category changes
+  useEffect(() => {
+    let cancelled = false;
+    listSubCategories(mainCategory || undefined).then((result) => {
+      if (!cancelled) setSubCategories(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mainCategory]);
+
   // ---------------------------------------------------------------------------
   // Filter change handlers — reset to page 0
   // ---------------------------------------------------------------------------
@@ -106,15 +118,12 @@ export function ExerciseTable() {
   };
 
   // ---------------------------------------------------------------------------
-  // Sub-categories derived from current rows (or all if no main cat filter)
+  // Sub-categories loaded from the full corpus via listSubCategories
   // ---------------------------------------------------------------------------
 
   const subCategoryOptions = [
     ALL_SUB_CATEGORIES_OPTION,
-    ...deriveSubCategories(rows, mainCategory || undefined).map((s) => ({
-      value: s,
-      label: s,
-    })),
+    ...subCategories.map((s) => ({ value: s, label: s })),
   ];
 
   const mainCategoryOptions = [
