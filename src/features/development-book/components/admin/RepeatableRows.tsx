@@ -1,15 +1,17 @@
 "use client";
 
+import React from "react";
 import { ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-type ColumnDef<T> = {
+export type ColumnDef<T> = {
   key: keyof T;
   labelHe: string;
   type?: "text" | "textarea" | "checkbox";
+  render?: (row: T, onChange: (value: unknown) => void) => React.ReactNode;
 };
 
 type RepeatableRowsProps<T extends Record<string, unknown>> = {
@@ -89,6 +91,14 @@ export function RepeatableRows<T extends Record<string, unknown>>({
           {columns.map((col) => {
             const value = row[col.key];
             const type = col.type ?? "text";
+
+            if (col.render) {
+              return (
+                <div key={String(col.key)}>
+                  {col.render(row, (v) => handleCellChange(index, col.key, v))}
+                </div>
+              );
+            }
 
             if (type === "checkbox") {
               return (

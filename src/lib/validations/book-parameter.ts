@@ -26,6 +26,7 @@ export const drillRowSchema = z.object({
   how_he: z.string().max(1000).optional().nullable(),
   why_he: z.string().max(1000).optional().nullable(),
   connect_he: z.string().max(1000).optional().nullable(),
+  muscle_ids: z.array(z.string().uuid()).optional().default([]),
 });
 
 export type DrillRowInput = z.infer<typeof drillRowSchema>;

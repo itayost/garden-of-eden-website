@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { RepeatableRows } from "./RepeatableRows";
+import type { ColumnDef } from "./RepeatableRows";
 import { PositionGroupPicker } from "./PositionGroupPicker";
 import type { PositionSelection } from "./PositionGroupPicker";
 import {
@@ -22,7 +23,7 @@ import {
   saveParameterAgeRows,
 } from "@/features/development-book/lib/actions/admin-book-parameters";
 import type { AdminParameterForEdit } from "@/features/development-book/lib/actions/admin-book-parameters";
-import type { BookDrill, BookAgeRow } from "@/features/development-book/lib/types";
+import type { BookDrill, BookAgeRow, BookMuscle } from "@/features/development-book/lib/types";
 
 // ---------------------------------------------------------------------------
 // Row shapes for RepeatableRows
@@ -34,11 +35,12 @@ interface DrillRow extends Record<string, unknown> {
   id?: string;
   name_en: string;
   name_he: string;
-  muscle_he: string;
+  muscle_he: string; // kept for persistence — not shown in the editable grid
   sets_he: string;
   how_he: string;
   why_he: string;
   connect_he: string;
+  muscle_ids: string[];
 }
 
 interface AgeRow extends Record<string, unknown> {
@@ -63,6 +65,7 @@ function drillToRow(drill: BookDrill): DrillRow {
     how_he: drill.howHe ?? "",
     why_he: drill.whyHe ?? "",
     connect_he: drill.connectHe ?? "",
+    muscle_ids: drill.muscleIds ?? [],
   };
 }
 
@@ -85,6 +88,7 @@ function newDrillRow(): DrillRow {
     how_he: "",
     why_he: "",
     connect_he: "",
+    muscle_ids: [],
   };
 }
 
@@ -97,15 +101,52 @@ function newAgeRow(): AgeRow {
   };
 }
 
-const DRILL_COLUMNS = [
-  { key: "name_en" as const, labelHe: "שם (אנגלית)" },
-  { key: "name_he" as const, labelHe: "שם (עברית)" },
-  { key: "muscle_he" as const, labelHe: "שריר" },
-  { key: "sets_he" as const, labelHe: "סטים" },
-  { key: "how_he" as const, labelHe: "איך", type: "textarea" as const },
-  { key: "why_he" as const, labelHe: "למה", type: "textarea" as const },
-  { key: "connect_he" as const, labelHe: "חיבור", type: "textarea" as const },
-];
+function buildDrillColumns(allMuscles: BookMuscle[]): ColumnDef<DrillRow>[] {
+  return [
+    { key: "name_en", labelHe: "שם (אנגלית)" },
+    { key: "name_he", labelHe: "שם (עברית)" },
+    { key: "sets_he", labelHe: "סטים" },
+    { key: "how_he", labelHe: "איך", type: "textarea" },
+    { key: "why_he", labelHe: "למה", type: "textarea" },
+    { key: "connect_he", labelHe: "חיבור", type: "textarea" },
+    {
+      key: "muscle_ids",
+      labelHe: "שרירים",
+      render: (row, onChange) => {
+        const selected = Array.isArray(row.muscle_ids) ? (row.muscle_ids as string[]) : [];
+        return (
+          <div className="flex flex-col gap-1 min-w-[120px]">
+            {allMuscles.map((muscle) => {
+              const checked = selected.includes(muscle.id);
+              return (
+                <label
+                  key={muscle.id}
+                  className="flex items-center gap-1.5 text-sm cursor-pointer select-none"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      const next = checked
+                        ? selected.filter((id) => id !== muscle.id)
+                        : [...selected, muscle.id];
+                      onChange(next);
+                    }}
+                    className="size-3.5 accent-primary cursor-pointer"
+                  />
+                  <span>{muscle.nameHe}</span>
+                  {muscle.emoji && (
+                    <span aria-hidden="true">{muscle.emoji}</span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        );
+      },
+    },
+  ];
+}
 
 const AGE_ROW_COLUMNS = [
   { key: "age_group" as const, labelHe: "קבוצת גיל" },
@@ -120,9 +161,10 @@ const AGE_ROW_COLUMNS = [
 
 interface ParameterFormProps {
   parameter: AdminParameterForEdit;
+  allMuscles: BookMuscle[];
 }
 
-export function ParameterForm({ parameter }: ParameterFormProps) {
+export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
   // Base fields
   const [nameHe, setNameHe] = useState(parameter.nameHe);
   const [number, setNumber] = useState(
@@ -336,7 +378,7 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
           <div className="space-y-4">
             <RepeatableRows<DrillRow>
               rows={drillRows}
-              columns={DRILL_COLUMNS}
+              columns={buildDrillColumns(allMuscles)}
               onChange={setDrillRows}
               newRow={newDrillRow}
             />

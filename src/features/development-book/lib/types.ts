@@ -5,7 +5,7 @@ export type CanonicalPosition =
 export interface BookCategory { id: string; slug: string; nameHe: string; icon: string | null; orderIndex: number; }
 export interface BookAgeRow { id: string; ageGroup: AgeGroup; whatHe: string | null; metricValueHe: string | null; recoveryHe: string | null; orderIndex: number; }
 export interface BookMuscle { id: string; nameHe: string; emoji: string | null; }
-export interface BookDrill { id: string; parameterId: string; slug: string; nameEn: string | null; nameHe: string | null; muscleHe: string | null; muscles: BookMuscle[]; setsHe: string | null; howHe: string | null; whyHe: string | null; connectHe: string | null; orderIndex: number; }
+export interface BookDrill { id: string; parameterId: string; slug: string; nameEn: string | null; nameHe: string | null; muscleHe: string | null; muscles: BookMuscle[]; muscleIds: string[]; setsHe: string | null; howHe: string | null; whyHe: string | null; connectHe: string | null; orderIndex: number; }
 export interface FailureStep { id: string; textHe: string; isFinal: boolean; orderIndex: number; }
 export interface CardPhasePoint { id: string; textHe: string; orderIndex: number; }
 export interface CardPhase { id: string; number: number | null; nameHe: string; subtitleHe: string | null; drillNoteHe: string | null; orderIndex: number; points: CardPhasePoint[]; }

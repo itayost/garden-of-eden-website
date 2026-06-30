@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { getParameterForEdit } from "@/features/development-book/lib/actions/admin-book-parameters";
+import { listMuscles } from "@/features/development-book/lib/actions/admin-book-muscles";
 import { ParameterForm } from "@/features/development-book/components/admin/ParameterForm";
 
 interface PageProps {
@@ -15,7 +16,10 @@ export const metadata: Metadata = {
 
 export default async function AdminParameterEditPage({ params }: PageProps) {
   const { id } = await params;
-  const parameter = await getParameterForEdit(id);
+  const [parameter, allMuscles] = await Promise.all([
+    getParameterForEdit(id),
+    listMuscles(),
+  ]);
 
   if (!parameter) {
     notFound();
@@ -42,7 +46,7 @@ export default async function AdminParameterEditPage({ params }: PageProps) {
 
       {/* key={id} forces remount when navigating between different parameters,
           preventing stale edit state (project gotcha: useState(prop) only runs on mount) */}
-      <ParameterForm key={id} parameter={parameter} />
+      <ParameterForm key={id} parameter={parameter} allMuscles={allMuscles} />
     </div>
   );
 }

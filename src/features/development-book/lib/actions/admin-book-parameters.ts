@@ -72,6 +72,11 @@ interface RawDrill {
   order_index: number;
 }
 
+interface RawDrillMuscle {
+  drill_id: string;
+  muscle_id: string;
+}
+
 interface RawAgeRow {
   id: string;
   parameter_id: string;
@@ -95,7 +100,7 @@ export interface AdminParameterForEdit extends BookParameter {
 // Mappers
 // ---------------------------------------------------------------------------
 
-function mapDrill(row: RawDrill): BookDrill {
+function mapDrill(row: RawDrill, muscleIds: string[] = []): BookDrill {
   return {
     id: row.id,
     parameterId: row.parameter_id,
@@ -104,6 +109,7 @@ function mapDrill(row: RawDrill): BookDrill {
     nameHe: row.name_he,
     muscleHe: row.muscle_he,
     muscles: [],
+    muscleIds,
     setsHe: row.sets_he,
     howHe: row.how_he,
     whyHe: row.why_he,
@@ -180,7 +186,28 @@ export async function getParameterForEdit(
     (p) => p.position as CanonicalPosition
   );
 
-  const drills = ((drillResult as { data: RawDrill[] | null }).data ?? []).map(mapDrill);
+  const rawDrills = (drillResult as { data: RawDrill[] | null }).data ?? [];
+
+  // Load muscle links for all drills of this parameter
+  const drillIds = rawDrills.map((d) => d.id);
+  let drillMuscleRows: RawDrillMuscle[] = [];
+  if (drillIds.length > 0) {
+    const { data: dmData } = (await typedFrom(adminClient, "book_drill_muscles")
+      .select("drill_id, muscle_id")
+      .in("drill_id", drillIds)) as {
+      data: RawDrillMuscle[] | null;
+      error: unknown;
+    };
+    drillMuscleRows = dmData ?? [];
+  }
+
+  // Group muscle_id by drill_id
+  const muscleIdsByDrill = drillMuscleRows.reduce<Record<string, string[]>>((acc, row) => {
+    const existing = acc[row.drill_id] ?? [];
+    return { ...acc, [row.drill_id]: [...existing, row.muscle_id] };
+  }, {});
+
+  const drills = rawDrills.map((row) => mapDrill(row, muscleIdsByDrill[row.id] ?? []));
   const ageRows = ((ageResult as { data: RawAgeRow[] | null }).data ?? []).map(mapAgeRow);
 
   return {
@@ -338,13 +365,14 @@ export async function saveParameterDrills(
       }
     }
 
-    // Update existing drills and insert new ones
+    // Update existing drills and insert new ones, then replace muscle links
     for (let i = 0; i < validated.data.length; i++) {
       const row = validated.data[i];
       const orderIndex = i;
+      let drillId: string;
 
       if (row.id && existingIds.has(row.id)) {
-        // UPDATE existing drill by id
+        // UPDATE existing drill by id — preserve muscle_he from row state
         const { error: updateError } = await typedFrom(adminClient, "book_drills")
           .update({
             name_en: row.name_en ?? null,
@@ -362,11 +390,13 @@ export async function saveParameterDrills(
           console.error("saveParameterDrills update error:", updateError);
           return { error: "שגיאה בעדכון תרגיל" };
         }
+
+        drillId = row.id;
       } else {
         // INSERT new drill with unique slug
         const slug = `drill-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
-        const { error: insertError } = await typedFrom(adminClient, "book_drills")
+        const { data: inserted, error: insertError } = (await typedFrom(adminClient, "book_drills")
           .insert({
             parameter_id: parameterId,
             slug,
@@ -378,11 +408,41 @@ export async function saveParameterDrills(
             why_he: row.why_he ?? null,
             connect_he: row.connect_he ?? null,
             order_index: orderIndex,
-          });
+          })
+          .select("id")
+          .single()) as { data: { id: string } | null; error: unknown };
 
-        if (insertError) {
+        if (insertError || !inserted) {
           console.error("saveParameterDrills insert error:", insertError);
           return { error: "שגיאה בהוספת תרגיל" };
+        }
+
+        drillId = inserted.id;
+      }
+
+      // Replace muscle links for this drill
+      const { error: deleteMusclesError } = await typedFrom(adminClient, "book_drill_muscles")
+        .delete()
+        .eq("drill_id", drillId);
+
+      if (deleteMusclesError) {
+        console.error("saveParameterDrills delete muscles error:", deleteMusclesError);
+        return { error: "שגיאה בעדכון שרירים לתרגיל" };
+      }
+
+      const muscleIds = row.muscle_ids ?? [];
+      if (muscleIds.length > 0) {
+        const muscleRows = muscleIds.map((muscleId) => ({
+          drill_id: drillId,
+          muscle_id: muscleId,
+        }));
+
+        const { error: insertMusclesError } = await typedFrom(adminClient, "book_drill_muscles")
+          .insert(muscleRows);
+
+        if (insertMusclesError) {
+          console.error("saveParameterDrills insert muscles error:", insertMusclesError);
+          return { error: "שגיאה בהוספת שרירים לתרגיל" };
         }
       }
     }

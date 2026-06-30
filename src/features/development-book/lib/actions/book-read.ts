@@ -154,6 +154,7 @@ function mapDrill(row: RawDrill, muscles: BookMuscle[] = []): BookDrill {
     nameHe: row.name_he,
     muscleHe: row.muscle_he,
     muscles,
+    muscleIds: muscles.map((m) => m.id),
     setsHe: row.sets_he,
     howHe: row.how_he,
     whyHe: row.why_he,
