@@ -123,14 +123,11 @@ export interface TraineeReportNotes {
   readonly notes: readonly TraineeNote[];
 }
 
-/** Mapping from category type to legacy + per-trainee JSONB columns */
-export const CATEGORY_COLUMNS: ReadonlyArray<{
-  type: NoteCategoryType;
-  traineeIdsKey: keyof ShiftReportForNotes;
-  detailsKey: keyof ShiftReportForNotes;
-  perTraineeKey: keyof ShiftReportForNotes;
-  hasCategories: boolean;
-}> = [
+/** Mapping from category type to legacy + per-trainee JSONB columns.
+ * Declared `as const satisfies` so the literal column-name values are preserved
+ * for the completeness guard in trainee-notes.test.ts, while still being checked
+ * against the expected shape. */
+export const CATEGORY_COLUMNS = [
   { type: "new_trainee", traineeIdsKey: "new_trainees_ids", detailsKey: "new_trainees_details", perTraineeKey: "new_trainees_per_trainee", hasCategories: false },
   { type: "discipline", traineeIdsKey: "discipline_trainee_ids", detailsKey: "discipline_details", perTraineeKey: "discipline_per_trainee", hasCategories: false },
   { type: "injuries", traineeIdsKey: "injuries_trainee_ids", detailsKey: "injuries_details", perTraineeKey: "injuries_per_trainee", hasCategories: false },
@@ -145,7 +142,13 @@ export const CATEGORY_COLUMNS: ReadonlyArray<{
   { type: "homework", traineeIdsKey: "homework_trainee_ids", detailsKey: "homework_details", perTraineeKey: "homework_per_trainee", hasCategories: false },
   { type: "video_feedback", traineeIdsKey: "video_feedback_trainee_ids", detailsKey: "video_feedback_details", perTraineeKey: "video_feedback_per_trainee", hasCategories: false },
   { type: "praise", traineeIdsKey: "praise_trainee_ids", detailsKey: "praise_details", perTraineeKey: "praise_per_trainee", hasCategories: false },
-];
+] as const satisfies ReadonlyArray<{
+  type: NoteCategoryType;
+  traineeIdsKey: keyof ShiftReportForNotes;
+  detailsKey: keyof ShiftReportForNotes;
+  perTraineeKey: keyof ShiftReportForNotes;
+  hasCategories: boolean;
+}>;
 
 type PerTraineeJsonb = Record<string, { details?: string; categories?: string[] }> | null | undefined;
 

@@ -1,8 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/utils/uuid";
+import { CATEGORY_COLUMNS } from "@/lib/utils/trainee-notes";
 import {
   Card,
   CardContent,
@@ -223,53 +225,30 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
     notFound();
   }
 
-  // Collect all trainee IDs from the report (legacy id arrays + per-trainee JSONB keys)
+  // Collect all trainee IDs referenced anywhere in the report. Driven off the shared
+  // CATEGORY_COLUMNS source of truth (legacy id arrays + per-trainee JSONB keys) so it
+  // can never drift out of sync when a new category is added.
   const allTraineeIds = new Set<string>();
-  const traineeFields = [
-    report.new_trainees_ids,
-    report.discipline_trainee_ids,
-    report.injuries_trainee_ids,
-    report.limitations_trainee_ids,
-    report.worked_on_trainee_ids,
-    report.achievements_trainee_ids,
-    report.mental_state_trainee_ids,
-    report.complaints_trainee_ids,
-    report.insufficient_attention_trainee_ids,
-    report.pro_candidates_trainee_ids,
-    report.social_skills_trainee_ids,
-  ];
-  for (const ids of traineeFields) {
+  for (const col of CATEGORY_COLUMNS) {
+    const ids = report[col.traineeIdsKey] as string[] | null | undefined;
     if (ids) {
-      for (const tid of ids) {
-        allTraineeIds.add(tid);
-      }
+      for (const tid of ids) allTraineeIds.add(tid);
     }
-  }
-  const perTraineeJsonbFields = [
-    report.new_trainees_per_trainee,
-    report.discipline_per_trainee,
-    report.injuries_per_trainee,
-    report.limitations_per_trainee,
-    report.worked_on_per_trainee,
-    report.achievements_per_trainee,
-    report.mental_state_per_trainee,
-    report.complaints_per_trainee,
-    report.insufficient_attention_per_trainee,
-    report.pro_candidates_per_trainee,
-    report.social_skills_per_trainee,
-  ] as (Record<string, unknown> | null)[];
-  for (const perTrainee of perTraineeJsonbFields) {
+    const perTrainee = report[col.perTraineeKey] as Record<string, unknown> | null;
     if (perTrainee) {
-      for (const tid of Object.keys(perTrainee)) {
-        allTraineeIds.add(tid);
-      }
+      for (const tid of Object.keys(perTrainee)) allTraineeIds.add(tid);
     }
   }
 
-  // Fetch trainee names
+  // Resolve trainee names with the service-role client. The page is reachable by both
+  // admins and trainers, but RLS lets trainers read only their own profile — so a
+  // session-bound query would return no trainee names for a trainer. The admin client
+  // reads only id + full_name for trainees already referenced in a report the user is
+  // authorized to view.
   const traineeMap = new Map<string, string>();
   if (allTraineeIds.size > 0) {
-    const { data: trainees } = (await supabase
+    const adminClient = createAdminClient();
+    const { data: trainees } = (await adminClient
       .from("profiles")
       .select("id, full_name")
       .in("id", Array.from(allTraineeIds))) as unknown as {

@@ -290,7 +290,10 @@ export async function resolveTraineeNamesForExport(
 
   if (allIds.size === 0) return {};
 
-  const supabase = await createClient();
+  // Service-role client: trainers (gated above by verifyAdminOrTrainer) cannot read
+  // trainee profiles under RLS, so a session client would yield no names for them.
+  // Reads only id + full_name for trainees referenced in the authorized reports.
+  const supabase = createAdminClient();
   const { data: trainees } = (await supabase
     .from("profiles")
     .select("id, full_name")

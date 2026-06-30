@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { extractTraineeNotes, type ShiftReportForNotes } from "../trainee-notes";
+import {
+  extractTraineeNotes,
+  CATEGORY_COLUMNS,
+  type ShiftReportForNotes,
+} from "../trainee-notes";
+import type { TrainerShiftReport } from "@/types/database";
+
+// ---------------------------------------------------------------------------
+// Compile-time completeness guard.
+// Every `*_per_trainee` column on TrainerShiftReport must be registered in
+// CATEGORY_COLUMNS. If a future migration adds a per-trainee category column and
+// it is NOT added here, `Uncovered` stops being `never` and this file fails
+// `tsc --noEmit`. This is the exact drift that made trainee names render as raw
+// UUID fragments on the shift-report detail page.
+// ---------------------------------------------------------------------------
+type PerTraineeColumns = Extract<keyof TrainerShiftReport, `${string}_per_trainee`>;
+type CoveredPerTrainee = (typeof CATEGORY_COLUMNS)[number]["perTraineeKey"];
+type Uncovered = Exclude<PerTraineeColumns, CoveredPerTrainee>;
+const _assertAllCategoriesCovered: Uncovered extends never ? true : never = true;
+void _assertAllCategoriesCovered;
 
 // Helper to create a minimal shift report with defaults
 function makeReport(
@@ -274,5 +293,22 @@ describe("extractTraineeNotes", () => {
     const reportsCopy = [...reports];
     extractTraineeNotes(reports, TRAINEE_A);
     expect(reports).toEqual(reportsCopy);
+  });
+});
+
+describe("CATEGORY_COLUMNS integrity", () => {
+  it("has unique category types and per-trainee keys", () => {
+    const types = CATEGORY_COLUMNS.map((c) => c.type);
+    const perTraineeKeys = CATEGORY_COLUMNS.map((c) => c.perTraineeKey);
+    expect(new Set(types).size).toBe(CATEGORY_COLUMNS.length);
+    expect(new Set(perTraineeKeys).size).toBe(CATEGORY_COLUMNS.length);
+  });
+
+  it("uses consistent column-name suffixes for each entry", () => {
+    for (const col of CATEGORY_COLUMNS) {
+      expect(col.perTraineeKey.endsWith("_per_trainee")).toBe(true);
+      expect(col.traineeIdsKey.endsWith("_ids")).toBe(true);
+      expect(col.detailsKey.endsWith("_details")).toBe(true);
+    }
   });
 });
