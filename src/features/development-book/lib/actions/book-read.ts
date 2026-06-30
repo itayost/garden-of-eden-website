@@ -9,6 +9,7 @@ import type {
   BookCategoryWithParameters,
   BookParameterWithChildren,
   BookDrill,
+  BookMuscle,
   BookAgeRow,
   BookDrillCard,
   CanonicalPosition,
@@ -79,6 +80,17 @@ interface RawDrillProgress {
   drill_id: string;
 }
 
+interface RawMuscle {
+  id: string;
+  name_he: string;
+  emoji: string | null;
+}
+
+interface RawDrillMuscleLink {
+  drill_id: string;
+  muscle_id: string;
+}
+
 interface RawDrillCard {
   id: string;
   drill_id: string;
@@ -125,7 +137,15 @@ interface RawCardMetric {
 
 // --- Mappers: snake_case → camelCase ---
 
-function mapDrill(row: RawDrill): BookDrill {
+function mapMuscle(row: RawMuscle): BookMuscle {
+  return {
+    id: row.id,
+    nameHe: row.name_he,
+    emoji: row.emoji,
+  };
+}
+
+function mapDrill(row: RawDrill, muscles: BookMuscle[] = []): BookDrill {
   return {
     id: row.id,
     parameterId: row.parameter_id,
@@ -133,6 +153,7 @@ function mapDrill(row: RawDrill): BookDrill {
     nameEn: row.name_en,
     nameHe: row.name_he,
     muscleHe: row.muscle_he,
+    muscles,
     setsHe: row.sets_he,
     howHe: row.how_he,
     whyHe: row.why_he,
@@ -216,7 +237,7 @@ export async function getBookTree(
   const position = (profile?.position as string | null) ?? null;
   const ageGroup = deriveAgeGroup(profile?.birthdate ?? null);
 
-  const [catsResult, paramsResult, positionsResult, drillsResult, ageRowsResult, progressResult] =
+  const [catsResult, paramsResult, positionsResult, drillsResult, ageRowsResult, progressResult, musclesResult, drillMuscleLinksResult] =
     await Promise.all([
       typedFrom(supabase, "book_categories").select("*").order("order_index") as Promise<{
         data: RawCategory[] | null;
@@ -238,6 +259,12 @@ export async function getBookTree(
             .select("drill_id")
             .eq("user_id", user.id) as Promise<{ data: RawDrillProgress[] | null }>)
         : Promise.resolve({ data: [] as RawDrillProgress[] }),
+      typedFrom(supabase, "book_muscles").select("id, name_he, emoji") as Promise<{
+        data: RawMuscle[] | null;
+      }>,
+      typedFrom(supabase, "book_drill_muscles").select("drill_id, muscle_id") as Promise<{
+        data: RawDrillMuscleLink[] | null;
+      }>,
     ]);
 
   const rawCategories: RawCategory[] = catsResult.data ?? [];
@@ -246,6 +273,23 @@ export async function getBookTree(
   const rawDrills: RawDrill[] = drillsResult.data ?? [];
   const rawAgeRows: RawAgeRow[] = ageRowsResult.data ?? [];
   const rawProgress: RawDrillProgress[] = progressResult.data ?? [];
+  const rawMuscles: RawMuscle[] = musclesResult.data ?? [];
+  const rawDrillMuscleLinks: RawDrillMuscleLink[] = drillMuscleLinksResult.data ?? [];
+
+  // Build muscle lookup map by id
+  const muscleById = rawMuscles.reduce<Map<string, BookMuscle>>((acc, row) => {
+    acc.set(row.id, mapMuscle(row));
+    return acc;
+  }, new Map());
+
+  // Build muscles-per-drill map
+  const musclesByDrill = rawDrillMuscleLinks.reduce<Map<string, BookMuscle[]>>((acc, link) => {
+    const muscle = muscleById.get(link.muscle_id);
+    if (!muscle) return acc;
+    const existing = acc.get(link.drill_id) ?? [];
+    acc.set(link.drill_id, [...existing, muscle]);
+    return acc;
+  }, new Map());
 
   // Build doneMap
   const doneMap: DrillProgressMap = Object.fromEntries(
@@ -264,7 +308,7 @@ export async function getBookTree(
   // Group drills by parameter_id (already ordered by order_index from DB)
   const drillsByParam = rawDrills.reduce<Record<string, BookDrill[]>>((acc, row) => {
     const existing = acc[row.parameter_id] ?? [];
-    return { ...acc, [row.parameter_id]: [...existing, mapDrill(row)] };
+    return { ...acc, [row.parameter_id]: [...existing, mapDrill(row, musclesByDrill.get(row.id) ?? [])] };
   }, {});
 
   // Group age rows by parameter_id (already ordered from DB)
@@ -340,7 +384,29 @@ export async function getDrillCard(
 
   if (!rawDrill) return null;
 
-  const drill = mapDrill(rawDrill);
+  // Load muscles for this drill
+  const [muscleLinksResult, allMusclesResult] = await Promise.all([
+    typedFrom(supabase, "book_drill_muscles")
+      .select("drill_id, muscle_id")
+      .eq("drill_id", drillId) as Promise<{ data: RawDrillMuscleLink[] | null }>,
+    typedFrom(supabase, "book_muscles")
+      .select("id, name_he, emoji") as Promise<{ data: RawMuscle[] | null }>,
+  ]);
+
+  const rawMusclesForDrill: RawMuscle[] = allMusclesResult.data ?? [];
+  const rawMuscleLinks: RawDrillMuscleLink[] = muscleLinksResult.data ?? [];
+
+  const muscleByIdForDrill = rawMusclesForDrill.reduce<Map<string, BookMuscle>>((acc, row) => {
+    acc.set(row.id, mapMuscle(row));
+    return acc;
+  }, new Map());
+
+  const drillMuscles: BookMuscle[] = rawMuscleLinks.reduce<BookMuscle[]>((acc, link) => {
+    const muscle = muscleByIdForDrill.get(link.muscle_id);
+    return muscle ? [...acc, muscle] : acc;
+  }, []);
+
+  const drill = mapDrill(rawDrill, drillMuscles);
 
   // Load card
   const { data: rawCard } = (await typedFrom(supabase, "book_drill_cards")

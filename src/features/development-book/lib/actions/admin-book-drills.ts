@@ -114,6 +114,7 @@ function mapDrill(row: RawDrill): BookDrill {
     nameEn: row.name_en,
     nameHe: row.name_he,
     muscleHe: row.muscle_he,
+    muscles: [],
     setsHe: row.sets_he,
     howHe: row.how_he,
     whyHe: row.why_he,

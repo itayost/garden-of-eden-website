@@ -29,11 +29,20 @@ function DrillRow({ drill, done }: DrillRowProps) {
 
           {/* Badges */}
           <div className="flex flex-wrap gap-1.5 mt-1.5">
-            {drill.muscleHe && (
-              <span className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary">
-                {drill.muscleHe}
-              </span>
-            )}
+            {drill.muscles.length > 0
+              ? drill.muscles.map((m) => (
+                  <span
+                    key={m.id}
+                    className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary"
+                  >
+                    {m.emoji ? `${m.emoji} ${m.nameHe}` : m.nameHe}
+                  </span>
+                ))
+              : drill.muscleHe && (
+                  <span className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary">
+                    {drill.muscleHe}
+                  </span>
+                )}
             {drill.setsHe && (
               <span className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-yellow-400/10 text-yellow-600 dark:text-yellow-400">
                 {drill.setsHe}

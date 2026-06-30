@@ -270,13 +270,22 @@ function BasicDrillView({ drill }: BasicDrillViewProps) {
         <h1 className="text-2xl font-black text-foreground leading-tight">
           {drill.nameHe ?? drill.nameEn ?? "תרגיל"}
         </h1>
-        {(drill.muscleHe || drill.setsHe) && (
+        {(drill.muscles.length > 0 || drill.muscleHe || drill.setsHe) && (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {drill.muscleHe && (
-              <span className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary">
-                {drill.muscleHe}
-              </span>
-            )}
+            {drill.muscles.length > 0
+              ? drill.muscles.map((m) => (
+                  <span
+                    key={m.id}
+                    className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary"
+                  >
+                    {m.emoji ? `${m.emoji} ${m.nameHe}` : m.nameHe}
+                  </span>
+                ))
+              : drill.muscleHe && (
+                  <span className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary">
+                    {drill.muscleHe}
+                  </span>
+                )}
             {drill.setsHe && (
               <span className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-amber-400/10 text-amber-600 dark:text-amber-400">
                 {drill.setsHe}
