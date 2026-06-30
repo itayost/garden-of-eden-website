@@ -274,7 +274,7 @@ export async function duplicateProgram(id: string): Promise<ActionResult> {
       return { error: "שגיאה ביצירת עותק תוכנית" };
     }
 
-    // Re-insert exercises and their cells
+    // Re-insert exercises and their cells; clean up copy program on any failure
     for (const exercise of exercises) {
       const { data: newExercise, error: newExerciseError } = (await typedFrom(
         adminClient,
@@ -291,6 +291,7 @@ export async function duplicateProgram(id: string): Promise<ActionResult> {
 
       if (newExerciseError || !newExercise) {
         console.error("duplicateProgram exercise insert error:", newExerciseError);
+        await typedFrom(adminClient, "workout_programs").delete().eq("id", newProgram.id);
         return { error: "שגיאה בשכפול תרגיל" };
       }
 
@@ -315,6 +316,7 @@ export async function duplicateProgram(id: string): Promise<ActionResult> {
 
         if (cellsInsertError) {
           console.error("duplicateProgram cells insert error:", cellsInsertError);
+          await typedFrom(adminClient, "workout_programs").delete().eq("id", newProgram.id);
           return { error: "שגיאה בשכפול תאי תרגיל" };
         }
       }
@@ -512,61 +514,29 @@ export async function saveProgram(
       return { error: "שגיאה בעדכון פרטי תוכנית" };
     }
 
-    // (b) REPLACE the grid — delete all exercises for this program (cascade drops cells)
-    const { error: deleteExercisesError } = await typedFrom(
-      adminClient,
-      "workout_program_exercises"
-    )
-      .delete()
-      .eq("program_id", id);
+    // (b) REPLACE the grid atomically via a plpgsql RPC (single implicit transaction)
+    const rowsJson = validatedRows.data.map((row, i) => ({
+      exercise_id: row.exercise_id,
+      order_index: i,
+      notes_he: row.notes_he ?? null,
+      cells: (row.cells ?? []).map((cl) => ({
+        week: cl.week,
+        sets: cl.sets,
+        reps_he: cl.reps_he,
+        load_he: cl.load_he,
+        notes_he: cl.notes_he,
+      })),
+    }));
 
-    if (deleteExercisesError) {
-      console.error("saveProgram delete exercises error:", deleteExercisesError);
-      return { error: "שגיאה במחיקת תרגילים ישנים" };
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: gridError } = await (adminClient as any).rpc("save_workout_program_grid", {
+      p_program_id: id,
+      p_rows: rowsJson,
+    });
 
-    // Re-insert each row and its cells in order
-    for (let orderIndex = 0; orderIndex < validatedRows.data.length; orderIndex++) {
-      const row = validatedRows.data[orderIndex];
-
-      const { data: newExercise, error: exerciseInsertError } = (await typedFrom(
-        adminClient,
-        "workout_program_exercises"
-      )
-        .insert({
-          program_id: id,
-          exercise_id: row.exercise_id,
-          order_index: orderIndex,
-          notes_he: row.notes_he ?? null,
-        })
-        .select("id")
-        .single()) as { data: { id: string } | null; error: unknown };
-
-      if (exerciseInsertError || !newExercise) {
-        console.error("saveProgram exercise insert error:", exerciseInsertError);
-        return { error: "שגיאה בשמירת תרגיל" };
-      }
-
-      if (row.cells.length > 0) {
-        const cellsToInsert = row.cells.map((cell) => ({
-          program_exercise_id: newExercise.id,
-          week_number: cell.week,
-          sets: cell.sets ?? null,
-          reps_he: cell.reps_he,
-          load_he: cell.load_he,
-          notes_he: cell.notes_he,
-        }));
-
-        const { error: cellsInsertError } = await typedFrom(
-          adminClient,
-          "workout_program_cells"
-        ).insert(cellsToInsert);
-
-        if (cellsInsertError) {
-          console.error("saveProgram cells insert error:", cellsInsertError);
-          return { error: "שגיאה בשמירת תאי תרגיל" };
-        }
-      }
+    if (gridError) {
+      console.error("save_workout_program_grid failed:", gridError);
+      return { error: "שמירת התוכנית נכשלה" };
     }
 
     revalidatePath(REVALIDATE_LIST);

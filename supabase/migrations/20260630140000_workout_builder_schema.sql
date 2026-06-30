@@ -49,6 +49,40 @@ CREATE TABLE workout_program_cells (
 );
 CREATE INDEX idx_workout_program_cells_pe ON workout_program_cells(program_exercise_id, week_number);
 
+-- Atomic grid replace: deletes the program's exercises (cascading cells) and
+-- re-inserts the full grid from JSONB in a single transaction.
+CREATE OR REPLACE FUNCTION save_workout_program_grid(p_program_id UUID, p_rows JSONB)
+RETURNS VOID AS $$
+DECLARE
+  r JSONB;
+  c JSONB;
+  v_pe_id UUID;
+  v_idx INT := 0;
+BEGIN
+  DELETE FROM workout_program_exercises WHERE program_id = p_program_id;
+  FOR r IN SELECT * FROM jsonb_array_elements(p_rows)
+  LOOP
+    INSERT INTO workout_program_exercises (program_id, exercise_id, order_index, notes_he)
+    VALUES (p_program_id, (r->>'exercise_id')::UUID, v_idx, NULLIF(r->>'notes_he', ''))
+    RETURNING id INTO v_pe_id;
+
+    FOR c IN SELECT * FROM jsonb_array_elements(COALESCE(r->'cells', '[]'::jsonb))
+    LOOP
+      INSERT INTO workout_program_cells (program_exercise_id, week_number, sets, reps_he, load_he, notes_he)
+      VALUES (
+        v_pe_id,
+        (c->>'week')::INT,
+        NULLIF(c->>'sets','')::INT,
+        NULLIF(c->>'reps_he',''),
+        NULLIF(c->>'load_he',''),
+        NULLIF(c->>'notes_he','')
+      );
+    END LOOP;
+    v_idx := v_idx + 1;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
 -- RLS policies for admin + trainer access (read AND write)
 
 ALTER TABLE workout_exercises ENABLE ROW LEVEL SECURITY;
