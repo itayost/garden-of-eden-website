@@ -20,6 +20,15 @@ const PAGE_SIZE = 20;
 const REVALIDATE_PATH = "/admin/workouts/exercises";
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const emptyToNull = (v: string | null | undefined): string | null => {
+  const t = (v ?? "").trim();
+  return t.length > 0 ? t : null;
+};
+
+// ---------------------------------------------------------------------------
 // Action result type
 // ---------------------------------------------------------------------------
 
@@ -149,12 +158,12 @@ export async function createExercise(input: ExerciseInput): Promise<ActionResult
     )
       .insert({
         main_category: validated.data.main_category,
-        sub_category: validated.data.sub_category ?? null,
-        name_he: validated.data.name_he ?? null,
-        name_en: validated.data.name_en ?? null,
-        equipment: validated.data.equipment ?? null,
-        cues_he: validated.data.cues_he ?? null,
-        goal_he: validated.data.goal_he ?? null,
+        sub_category: emptyToNull(validated.data.sub_category),
+        name_he: emptyToNull(validated.data.name_he),
+        name_en: emptyToNull(validated.data.name_en),
+        equipment: emptyToNull(validated.data.equipment),
+        cues_he: emptyToNull(validated.data.cues_he),
+        goal_he: emptyToNull(validated.data.goal_he),
         order_index: orderIndex,
       })
       .select("id")
@@ -200,12 +209,12 @@ export async function updateExercise(
     const { error: updateError } = await typedFrom(adminClient, "workout_exercises")
       .update({
         main_category: validated.data.main_category,
-        sub_category: validated.data.sub_category ?? null,
-        name_he: validated.data.name_he ?? null,
-        name_en: validated.data.name_en ?? null,
-        equipment: validated.data.equipment ?? null,
-        cues_he: validated.data.cues_he ?? null,
-        goal_he: validated.data.goal_he ?? null,
+        sub_category: emptyToNull(validated.data.sub_category),
+        name_he: emptyToNull(validated.data.name_he),
+        name_en: emptyToNull(validated.data.name_en),
+        equipment: emptyToNull(validated.data.equipment),
+        cues_he: emptyToNull(validated.data.cues_he),
+        goal_he: emptyToNull(validated.data.goal_he),
       })
       .eq("id", id);
 

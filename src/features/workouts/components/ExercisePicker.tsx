@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition, useRef } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,9 +40,6 @@ export function ExercisePicker({ open, onClose, onAdd }: ExercisePickerProps) {
   const [loadingExercises, startLoadExercises] = useTransition();
   const [loadingSubCats, startLoadSubCats] = useTransition();
 
-  // Track previous open state so we can react when dialog first opens
-  const prevOpenRef = useRef(false);
-
   // Load sub-categories whenever mainCategory or open changes
   useEffect(() => {
     if (!open) return;
@@ -68,17 +65,6 @@ export function ExercisePicker({ open, onClose, onAdd }: ExercisePickerProps) {
       setTotal(result.total);
     });
   }, [mainCategory, subCategory, search, page, open]);
-
-  // When the dialog transitions from closed to open, reset state via a
-  // key-based remount pattern applied to internal controlled values.
-  // We store the "open generation" as a key for child inputs.
-  useEffect(() => {
-    if (open && !prevOpenRef.current) {
-      prevOpenRef.current = true;
-    } else if (!open) {
-      prevOpenRef.current = false;
-    }
-  }, [open]);
 
   const handleOpenChange = (v: boolean) => {
     if (!v) {
