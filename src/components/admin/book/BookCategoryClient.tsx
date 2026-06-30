@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Pencil, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { Plus, Pencil, ChevronUp, ChevronDown, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ import {
   reorderCategory,
   createParameter,
 } from "@/features/development-book/lib/actions/admin-book-categories";
+import { deleteParameter } from "@/features/development-book/lib/actions";
 import type {
   AdminBookCategory,
   CategoryInput,
@@ -326,10 +327,10 @@ export function BookCategoryClient({ initialCategories }: BookCategoryClientProp
                 ) : (
                   <ul className="space-y-1">
                     {cat.parameters.map((param) => (
-                      <li key={param.id}>
+                      <li key={param.id} className="flex items-center gap-2">
                         <a
                           href={`/admin/book/parameters/${param.id}`}
-                          className="flex items-center gap-2 text-sm hover:underline text-primary"
+                          className="flex items-center gap-2 text-sm hover:underline text-primary flex-1 min-w-0"
                         >
                           {param.number !== null && (
                             <span className="text-xs text-muted-foreground w-5 shrink-0 text-start">
@@ -337,10 +338,25 @@ export function BookCategoryClient({ initialCategories }: BookCategoryClientProp
                             </span>
                           )}
                           <span>{param.nameHe}</span>
-                          <span className="text-xs text-muted-foreground" dir="ltr">
-                            ({param.slug})
-                          </span>
                         </a>
+                        <DeleteConfirmDialog
+                          title={`מחיקת פרמטר: ${param.nameHe}`}
+                          description="פעולה זו תמחק את הפרמטר לצמיתות, כולל כל התרגילים ושורות הגיל המשויכות אליו."
+                          successMessage="פרמטר נמחק"
+                          errorMessage="שגיאה במחיקת פרמטר"
+                          onDelete={() => deleteParameter(param.id)}
+                          onSuccess={refresh}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0 text-destructive hover:text-destructive"
+                              aria-label="מחק פרמטר"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          }
+                        />
                       </li>
                     ))}
                   </ul>

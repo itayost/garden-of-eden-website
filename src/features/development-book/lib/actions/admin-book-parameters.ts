@@ -397,6 +397,36 @@ export async function saveParameterDrills(
 }
 
 // ---------------------------------------------------------------------------
+// deleteParameter
+// ---------------------------------------------------------------------------
+
+export async function deleteParameter(id: string): Promise<ActionResult> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+
+  if (!isValidUUID(id)) return { error: "מזהה פרמטר לא תקין" };
+
+  const adminClient = createAdminClient();
+
+  try {
+    const { error: deleteError } = await typedFrom(adminClient, "book_parameters")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("deleteParameter error:", deleteError);
+      return { error: "שגיאה במחיקת פרמטר" };
+    }
+
+    revalidatePath("/admin/book");
+    return { success: true };
+  } catch (err) {
+    console.error("deleteParameter error:", err);
+    return { error: "שגיאה במחיקת פרמטר" };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // saveParameterAgeRows — delete-all + insert submitted set
 // ---------------------------------------------------------------------------
 
