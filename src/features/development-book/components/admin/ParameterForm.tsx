@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { RepeatableRows } from "./RepeatableRows";
 import type { ColumnDef } from "./RepeatableRows";
+import { MuscleMultiSelect } from "./MuscleMultiSelect";
 import { PositionGroupPicker } from "./PositionGroupPicker";
 import type { PositionSelection } from "./PositionGroupPicker";
 import {
@@ -113,35 +114,15 @@ function buildDrillColumns(allMuscles: BookMuscle[]): ColumnDef<DrillRow>[] {
       key: "muscle_ids",
       labelHe: "שרירים",
       render: (row, onChange) => {
-        const selected = Array.isArray(row.muscle_ids) ? (row.muscle_ids as string[]) : [];
+        const selected = Array.isArray(row.muscle_ids)
+          ? (row.muscle_ids as string[])
+          : [];
         return (
-          <div className="flex flex-col gap-1 min-w-[120px]">
-            {allMuscles.map((muscle) => {
-              const checked = selected.includes(muscle.id);
-              return (
-                <label
-                  key={muscle.id}
-                  className="flex items-center gap-1.5 text-sm cursor-pointer select-none"
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      const next = checked
-                        ? selected.filter((id) => id !== muscle.id)
-                        : [...selected, muscle.id];
-                      onChange(next);
-                    }}
-                    className="size-3.5 accent-primary cursor-pointer"
-                  />
-                  <span>{muscle.nameHe}</span>
-                  {muscle.emoji && (
-                    <span aria-hidden="true">{muscle.emoji}</span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
+          <MuscleMultiSelect
+            muscles={allMuscles}
+            selected={selected}
+            onChange={(ids) => onChange(ids)}
+          />
         );
       },
     },
