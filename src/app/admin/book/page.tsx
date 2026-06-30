@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { BookOpen } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Dumbbell } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -7,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { listBookAdminTree } from "@/features/development-book/lib/actions/admin-book-categories";
 import { BookCategoryClient } from "@/components/admin/book/BookCategoryClient";
 
@@ -19,11 +21,19 @@ export default async function AdminBookPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">ספר פיתוח שחקן</h1>
-        <p className="text-muted-foreground">
-          ניהול קטגוריות ופרמטרים של ספר הפיתוח
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">ספר פיתוח שחקן</h1>
+          <p className="text-muted-foreground">
+            ניהול קטגוריות ופרמטרים של ספר הפיתוח
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/admin/book/muscles">
+            <Dumbbell className="h-4 w-4 ms-2" />
+            ניהול שרירים
+          </Link>
+        </Button>
       </div>
 
       <Card>
