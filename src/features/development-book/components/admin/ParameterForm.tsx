@@ -169,25 +169,51 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
   // Save handlers
   // ---------------------------------------------------------------------------
 
-  function handleSaveBase() {
-    startBaseTransition(async () => {
-      const result = await updateParameter(parameter.id, {
-        name_he: nameHe,
-        number: number !== "" ? parseInt(number, 10) : null,
-        subtitle_he: subtitleHe || null,
-        age_metric_label: ageMetricLabel || null,
-        report_text_he: reportTextHe || null,
-        report_highlight_he: reportHighlightHe || null,
-        verbal_text_he: verbalTextHe || null,
-        verbal_tip_he: verbalTipHe || null,
-        is_all_positions: positionSelection.isAllPositions,
-        positions: positionSelection.positions,
-      });
+  // Builds the full base input from current state — used by all three base sections.
+  function buildBaseInput() {
+    return {
+      name_he: nameHe,
+      number: number !== "" ? parseInt(number, 10) : null,
+      subtitle_he: subtitleHe || null,
+      age_metric_label: ageMetricLabel || null,
+      report_text_he: reportTextHe || null,
+      report_highlight_he: reportHighlightHe || null,
+      verbal_text_he: verbalTextHe || null,
+      verbal_tip_he: verbalTipHe || null,
+      is_all_positions: positionSelection.isAllPositions,
+      positions: positionSelection.positions,
+    };
+  }
 
+  function handleSaveIdentity() {
+    startBaseTransition(async () => {
+      const result = await updateParameter(parameter.id, buildBaseInput());
       if ("success" in result) {
-        toast.success("הפרמטר עודכן בהצלחה");
+        toast.success("זיהוי עודכן בהצלחה");
       } else {
-        toast.error(result.error ?? "שגיאה בעדכון פרמטר");
+        toast.error(result.error ?? "שגיאה בעדכון זיהוי");
+      }
+    });
+  }
+
+  function handleSaveParents() {
+    startBaseTransition(async () => {
+      const result = await updateParameter(parameter.id, buildBaseInput());
+      if ("success" in result) {
+        toast.success("תוכן להורים עודכן בהצלחה");
+      } else {
+        toast.error(result.error ?? "שגיאה בעדכון תוכן להורים");
+      }
+    });
+  }
+
+  function handleSaveVerbal() {
+    startBaseTransition(async () => {
+      const result = await updateParameter(parameter.id, buildBaseInput());
+      if ("success" in result) {
+        toast.success("תוכן בעל פה עודכן בהצלחה");
+      } else {
+        toast.error(result.error ?? "שגיאה בעדכון תוכן בעל פה");
       }
     });
   }
@@ -195,7 +221,6 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
   function handleSaveDrills() {
     startDrillsTransition(async () => {
       const result = await saveParameterDrills(parameter.id, drillRows);
-
       if ("success" in result) {
         toast.success("התרגילים נשמרו בהצלחה");
       } else {
@@ -207,7 +232,6 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
   function handleSaveAgeRows() {
     startAgeRowsTransition(async () => {
       const result = await saveParameterAgeRows(parameter.id, ageRows);
-
       if ("success" in result) {
         toast.success("שורות הגיל נשמרו בהצלחה");
       } else {
@@ -223,14 +247,12 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
   return (
     <div className="space-y-8" dir="rtl">
       {/* ------------------------------------------------------------------ */}
-      {/* Base fields card                                                     */}
+      {/* 1. זיהוי                                                             */}
       {/* ------------------------------------------------------------------ */}
       <Card>
         <CardHeader>
-          <CardTitle>פרטי פרמטר</CardTitle>
-          <CardDescription>
-            שם, מספר, כותרת משנה, עמדות וטקסטים
-          </CardDescription>
+          <CardTitle>זיהוי</CardTitle>
+          <CardDescription>שם, מספר, כותרת משנה, תווית מדד גיל ועמדות</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-5">
@@ -286,55 +308,13 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="report_text_he">טקסט דוח (הורים)</Label>
-              <Textarea
-                id="report_text_he"
-                value={reportTextHe}
-                onChange={(e) => setReportTextHe(e.target.value)}
-                rows={3}
-                placeholder="טקסט הסבר להורים"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="report_highlight_he">הדגשת דוח</Label>
-              <Input
-                id="report_highlight_he"
-                value={reportHighlightHe}
-                onChange={(e) => setReportHighlightHe(e.target.value)}
-                placeholder="משפט קצר להדגשה בדוח"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="verbal_text_he">טקסט ורבלי</Label>
-              <Textarea
-                id="verbal_text_he"
-                value={verbalTextHe}
-                onChange={(e) => setVerbalTextHe(e.target.value)}
-                rows={3}
-                placeholder="הסבר ורבלי לשחקן"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="verbal_tip_he">טיפ ורבלי</Label>
-              <Input
-                id="verbal_tip_he"
-                value={verbalTipHe}
-                onChange={(e) => setVerbalTipHe(e.target.value)}
-                placeholder="טיפ קצר לשחקן"
-              />
-            </div>
-
             <div className="flex justify-start pt-2">
               <Button
                 type="button"
-                onClick={handleSaveBase}
+                onClick={handleSaveIdentity}
                 disabled={isPendingBase}
               >
-                {isPendingBase ? "שומר..." : "שמור פרטי פרמטר"}
+                {isPendingBase ? "שומר..." : "שמור זיהוי"}
               </Button>
             </div>
           </div>
@@ -342,7 +322,7 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
       </Card>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Drills card                                                          */}
+      {/* 2. תרגילים                                                           */}
       {/* ------------------------------------------------------------------ */}
       <Card>
         <CardHeader>
@@ -375,11 +355,11 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
       </Card>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Age rows card                                                        */}
+      {/* 3. לפי גיל                                                           */}
       {/* ------------------------------------------------------------------ */}
       <Card>
         <CardHeader>
-          <CardTitle>שורות גיל</CardTitle>
+          <CardTitle>לפי גיל</CardTitle>
           <CardDescription>
             נתונים לפי קבוצת גיל (U10-12, U13-14, U15-16, U17+)
           </CardDescription>
@@ -399,7 +379,95 @@ export function ParameterForm({ parameter }: ParameterFormProps) {
                 onClick={handleSaveAgeRows}
                 disabled={isPendingAgeRows}
               >
-                {isPendingAgeRows ? "שומר..." : "שמור שורות גיל"}
+                {isPendingAgeRows ? "שומר..." : "שמור לפי גיל"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* 4. להורים                                                            */}
+      {/* ------------------------------------------------------------------ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>להורים</CardTitle>
+          <CardDescription>טקסטים המוצגים בדוח ההורים</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="report_text_he">טקסט דוח</Label>
+              <Textarea
+                id="report_text_he"
+                value={reportTextHe}
+                onChange={(e) => setReportTextHe(e.target.value)}
+                rows={3}
+                placeholder="טקסט הסבר להורים"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="report_highlight_he">הדגשת דוח</Label>
+              <Input
+                id="report_highlight_he"
+                value={reportHighlightHe}
+                onChange={(e) => setReportHighlightHe(e.target.value)}
+                placeholder="משפט קצר להדגשה בדוח"
+              />
+            </div>
+
+            <div className="flex justify-start pt-2">
+              <Button
+                type="button"
+                onClick={handleSaveParents}
+                disabled={isPendingBase}
+              >
+                {isPendingBase ? "שומר..." : "שמור להורים"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* 5. בעל פה                                                            */}
+      {/* ------------------------------------------------------------------ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>בעל פה</CardTitle>
+          <CardDescription>הסבר וטיפ ורבליים לשחקן</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="verbal_text_he">טקסט ורבלי</Label>
+              <Textarea
+                id="verbal_text_he"
+                value={verbalTextHe}
+                onChange={(e) => setVerbalTextHe(e.target.value)}
+                rows={3}
+                placeholder="הסבר ורבלי לשחקן"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="verbal_tip_he">טיפ ורבלי</Label>
+              <Input
+                id="verbal_tip_he"
+                value={verbalTipHe}
+                onChange={(e) => setVerbalTipHe(e.target.value)}
+                placeholder="טיפ קצר לשחקן"
+              />
+            </div>
+
+            <div className="flex justify-start pt-2">
+              <Button
+                type="button"
+                onClick={handleSaveVerbal}
+                disabled={isPendingBase}
+              >
+                {isPendingBase ? "שומר..." : "שמור בעל פה"}
               </Button>
             </div>
           </div>
