@@ -39,6 +39,20 @@ async function main() {
     if (r.error) throw new Error(r.error.message);
   }
 
+  // Supabase caps a select at ~1000 rows by default; a truncated base read would
+  // silently misclassify drills as cardless, so surface it loudly.
+  const ROW_CAP = 1000;
+  for (const [name, res] of [
+    ["book_drills", drillsRes],
+    ["book_drill_cards", cardsRes],
+    ["book_parameters", paramsRes],
+    ["book_categories", catsRes],
+  ] as const) {
+    if ((res.data ?? []).length >= ROW_CAP) {
+      console.error(`WARNING: ${name} returned >= ${ROW_CAP} rows and may be truncated; paginate before trusting this export.`);
+    }
+  }
+
   const hasCard = new Set<string>((cardsRes.data ?? []).map((c: { drill_id: string }) => c.drill_id));
   const catById = new Map<string, string | null>(
     (catsRes.data ?? []).map((c: { id: string; name_he: string | null }) => [c.id, c.name_he])
