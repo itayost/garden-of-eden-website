@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Pencil, Loader2, Trash2 } from "lucide-react";
@@ -116,6 +116,13 @@ export function MusclesClient({ initialMuscles }: MusclesClientProps) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [editMuscle, setEditMuscle] = useState<BookMuscle | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filteredMuscles = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return initialMuscles;
+    return initialMuscles.filter((m) => m.nameHe.toLowerCase().includes(term));
+  }, [initialMuscles, search]);
 
   const refresh = () => {
     router.refresh();
@@ -132,6 +139,12 @@ export function MusclesClient({ initialMuscles }: MusclesClientProps) {
           שריר חדש
         </Button>
       </div>
+
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="חיפוש שריר..."
+      />
 
       <MuscleDialog
         open={addOpen}
@@ -153,9 +166,13 @@ export function MusclesClient({ initialMuscles }: MusclesClientProps) {
         <div className="text-center py-12 text-muted-foreground">
           אין שרירים עדיין. לחץ &ldquo;שריר חדש&rdquo; כדי להתחיל.
         </div>
+      ) : filteredMuscles.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          לא נמצאו שרירים התואמים לחיפוש.
+        </div>
       ) : (
         <div className="border rounded-lg divide-y">
-          {initialMuscles.map((muscle) => (
+          {filteredMuscles.map((muscle) => (
             <div
               key={muscle.id}
               className="flex items-center justify-between gap-4 px-4 py-3"

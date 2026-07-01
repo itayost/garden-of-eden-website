@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Pencil, ChevronUp, ChevronDown, Loader2, Trash2 } from "lucide-react";
@@ -263,8 +263,22 @@ interface BookCategoryClientProps {
 
 export function BookCategoryClient({ initialCategories }: BookCategoryClientProps) {
   const router = useRouter();
-  const [categories, setCategories] = useState(initialCategories);
+  const categories = initialCategories;
   const [addOpen, setAddOpen] = useState(false);
+  const [paramSearch, setParamSearch] = useState("");
+
+  const filteredCategories = useMemo(() => {
+    const term = paramSearch.trim().toLowerCase();
+    if (!term) return categories;
+    return categories
+      .map((cat) => ({
+        ...cat,
+        parameters: cat.parameters.filter((p) =>
+          p.nameHe.toLowerCase().includes(term)
+        ),
+      }))
+      .filter((cat) => cat.parameters.length > 0);
+  }, [categories, paramSearch]);
 
   const refresh = () => {
     router.refresh();
@@ -282,6 +296,12 @@ export function BookCategoryClient({ initialCategories }: BookCategoryClientProp
         </Button>
       </div>
 
+      <Input
+        value={paramSearch}
+        onChange={(e) => setParamSearch(e.target.value)}
+        placeholder="חיפוש פרמטר..."
+      />
+
       <CategoryDialog
         open={addOpen}
         onClose={() => setAddOpen(false)}
@@ -292,9 +312,13 @@ export function BookCategoryClient({ initialCategories }: BookCategoryClientProp
         <div className="text-center py-12 text-muted-foreground">
           אין קטגוריות עדיין. לחץ &quot;קטגוריה חדשה&quot; כדי להתחיל.
         </div>
+      ) : filteredCategories.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          לא נמצאו פרמטרים התואמים לחיפוש.
+        </div>
       ) : (
         <div className="space-y-4">
-          {categories.map((cat, idx) => (
+          {filteredCategories.map((cat, idx) => (
             <div
               key={cat.id}
               className="border rounded-lg p-4 space-y-3"
@@ -315,7 +339,7 @@ export function BookCategoryClient({ initialCategories }: BookCategoryClientProp
                 <CategoryActions
                   category={cat}
                   isFirst={idx === 0}
-                  isLast={idx === categories.length - 1}
+                  isLast={idx === filteredCategories.length - 1}
                   onRefresh={refresh}
                 />
               </div>
@@ -361,9 +385,11 @@ export function BookCategoryClient({ initialCategories }: BookCategoryClientProp
                     ))}
                   </ul>
                 )}
-                <div className="pt-1">
-                  <AddParameterButton categoryId={cat.id} />
-                </div>
+                {!paramSearch && (
+                  <div className="pt-1">
+                    <AddParameterButton categoryId={cat.id} />
+                  </div>
+                )}
               </div>
             </div>
           ))}

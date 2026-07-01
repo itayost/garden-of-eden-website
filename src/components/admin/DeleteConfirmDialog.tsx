@@ -73,7 +73,7 @@ export function DeleteConfirmDialog({
       <AlertDialogTrigger asChild>
         {trigger || (
           <Button variant="destructive" disabled={disabled}>
-            <Trash2 className="h-4 w-4 ml-2" />
+            <Trash2 className="h-4 w-4 me-2" />
             {confirmLabel}
           </Button>
         )}
@@ -97,7 +97,7 @@ export function DeleteConfirmDialog({
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
                 {loadingLabel}
               </>
             ) : (
