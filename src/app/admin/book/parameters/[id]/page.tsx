@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight } from "lucide-react";
 import { getParameterForEdit } from "@/features/development-book/lib/actions/admin-book-parameters";
 import { listMuscles } from "@/features/development-book/lib/actions/admin-book-muscles";
 import { ParameterForm } from "@/features/development-book/components/admin/ParameterForm";
@@ -28,13 +26,6 @@ export default async function AdminParameterEditPage({ params }: PageProps) {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <Link
-          href="/admin/book"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
-        >
-          <ArrowRight className="h-4 w-4" />
-          חזרה לספר
-        </Link>
         <h1 className="text-3xl font-bold mb-2">
           עריכת פרמטר: {parameter.nameHe}
         </h1>

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -137,6 +139,28 @@ const AGE_ROW_COLUMNS = [
 ];
 
 // ---------------------------------------------------------------------------
+// Snapshot helpers for dirty tracking
+// ---------------------------------------------------------------------------
+
+interface SnapshotState {
+  nameHe: string;
+  number: string;
+  subtitleHe: string;
+  ageMetricLabel: string;
+  reportTextHe: string;
+  reportHighlightHe: string;
+  verbalTextHe: string;
+  verbalTipHe: string;
+  positionSelection: PositionSelection;
+  drillRows: DrillRow[];
+  ageRows: AgeRow[];
+}
+
+function buildSnapshot(state: SnapshotState): string {
+  return JSON.stringify(state);
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -146,6 +170,8 @@ interface ParameterFormProps {
 }
 
 export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
+  const router = useRouter();
+
   // Base fields
   const [nameHe, setNameHe] = useState(parameter.nameHe);
   const [number, setNumber] = useState(
@@ -184,17 +210,80 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
     parameter.ageRows.map(ageRowToRow)
   );
 
-  const [isPendingIdentity, startIdentityTransition] = useTransition();
-  const [isPendingParents, startParentsTransition] = useTransition();
-  const [isPendingVerbal, startVerbalTransition] = useTransition();
-  const [isPendingDrills, startDrillsTransition] = useTransition();
-  const [isPendingAgeRows, startAgeRowsTransition] = useTransition();
+  // Single transition for the unified save
+  const [isSaving, startSaveTransition] = useTransition();
 
   // ---------------------------------------------------------------------------
-  // Save handlers
+  // Dirty tracking
   // ---------------------------------------------------------------------------
 
-  // Builds the full base input from current state — used by all three base sections.
+  // Lazily compute the initial snapshot once at mount — avoids ref-during-render lint error.
+  const [savedSnapshot, setSavedSnapshot] = useState<string>(() =>
+    buildSnapshot({
+      nameHe: parameter.nameHe,
+      number: parameter.number !== null ? String(parameter.number) : "",
+      subtitleHe: parameter.subtitleHe ?? "",
+      ageMetricLabel: parameter.ageMetricLabel ?? "",
+      reportTextHe: parameter.reportTextHe ?? "",
+      reportHighlightHe: parameter.reportHighlightHe ?? "",
+      verbalTextHe: parameter.verbalTextHe ?? "",
+      verbalTipHe: parameter.verbalTipHe ?? "",
+      positionSelection: {
+        isAllPositions: parameter.isAllPositions,
+        positions: parameter.positions,
+      },
+      drillRows: parameter.drills.map(drillToRow),
+      ageRows: parameter.ageRows.map(ageRowToRow),
+    })
+  );
+
+  const currentSnapshot = buildSnapshot({
+    nameHe,
+    number,
+    subtitleHe,
+    ageMetricLabel,
+    reportTextHe,
+    reportHighlightHe,
+    verbalTextHe,
+    verbalTipHe,
+    positionSelection,
+    drillRows,
+    ageRows,
+  });
+
+  const isDirty = currentSnapshot !== savedSnapshot;
+
+  // Leave guard — browser native beforeunload
+  useEffect(() => {
+    if (!isDirty) return;
+
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty]);
+
+  // ---------------------------------------------------------------------------
+  // Back navigation with dirty guard
+  // ---------------------------------------------------------------------------
+
+  const handleBack = useCallback(() => {
+    if (isDirty) {
+      const confirmed = window.confirm("יש שינויים שלא נשמרו. לעזוב בכל זאת?");
+      if (!confirmed) return;
+    }
+    router.push("/admin/book");
+  }, [isDirty, router]);
+
+  // ---------------------------------------------------------------------------
+  // Build base input
+  // ---------------------------------------------------------------------------
+
   function buildBaseInput() {
     return {
       name_he: nameHe,
@@ -210,65 +299,74 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
     };
   }
 
-  function handleSaveIdentity() {
-    startIdentityTransition(async () => {
-      const result = await updateParameter(parameter.id, buildBaseInput());
-      if ("success" in result) {
-        toast.success("זיהוי עודכן בהצלחה");
-      } else {
-        toast.error(result.error ?? "שגיאה בעדכון זיהוי");
-      }
-    });
-  }
+  // ---------------------------------------------------------------------------
+  // Unified save handler
+  // ---------------------------------------------------------------------------
 
-  function handleSaveParents() {
-    startParentsTransition(async () => {
-      const result = await updateParameter(parameter.id, buildBaseInput());
-      if ("success" in result) {
-        toast.success("תוכן להורים עודכן בהצלחה");
-      } else {
-        toast.error(result.error ?? "שגיאה בעדכון תוכן להורים");
-      }
-    });
-  }
-
-  function handleSaveVerbal() {
-    startVerbalTransition(async () => {
-      const result = await updateParameter(parameter.id, buildBaseInput());
-      if ("success" in result) {
-        toast.success("תוכן בעל פה עודכן בהצלחה");
-      } else {
-        toast.error(result.error ?? "שגיאה בעדכון תוכן בעל פה");
-      }
-    });
-  }
-
-  function handleSaveDrills() {
-    startDrillsTransition(async () => {
-      const result = await saveParameterDrills(parameter.id, drillRows);
-      if ("success" in result) {
-        toast.success("התרגילים נשמרו בהצלחה");
-      } else {
-        toast.error(result.error ?? "שגיאה בשמירת תרגילים");
-      }
-    });
-  }
-
-  function handleSaveAgeRows() {
-    startAgeRowsTransition(async () => {
-      // The age-metric label lives on book_parameters, so persist it alongside
-      // the age rows from this section.
+  function handleSaveAll() {
+    startSaveTransition(async () => {
+      // Step 1 — base fields
       const baseResult = await updateParameter(parameter.id, buildBaseInput());
       if (!("success" in baseResult)) {
-        toast.error(baseResult.error ?? "שגיאה בשמירת תווית מדד גיל");
+        toast.error(baseResult.error ?? "שגיאה בשמירת פרטי הפרמטר");
         return;
       }
-      const result = await saveParameterAgeRows(parameter.id, ageRows);
-      if ("success" in result) {
-        toast.success("שורות הגיל נשמרו בהצלחה");
-      } else {
-        toast.error(result.error ?? "שגיאה בשמירת שורות גיל");
+
+      // Step 2 — drills (with blank-row validation)
+      const cleanedDrills = drillRows.filter((row) => {
+        const textFields = [
+          row.name_en,
+          row.name_he,
+          row.sets_he,
+          row.how_he,
+          row.why_he,
+          row.connect_he,
+        ];
+        const hasText = textFields.some((f) => f.trim() !== "");
+        const hasMuscles = row.muscle_ids.length > 0;
+        return hasText || hasMuscles;
+      });
+
+      const invalidDrill = cleanedDrills.find(
+        (row) => row.name_he.trim() === "" && row.name_en.trim() === ""
+      );
+      if (invalidDrill) {
+        toast.error("יש למלא שם (עברית או אנגלית) לכל תרגיל");
+        return;
       }
+
+      const drillsResult = await saveParameterDrills(parameter.id, cleanedDrills);
+      if (!("success" in drillsResult)) {
+        toast.error(drillsResult.error ?? "שגיאה בשמירת התרגילים");
+        return;
+      }
+
+      // Step 3 — age rows
+      const ageResult = await saveParameterAgeRows(parameter.id, ageRows);
+      if (!("success" in ageResult)) {
+        toast.error(ageResult.error ?? "שגיאה בשמירת שורות הגיל");
+        return;
+      }
+
+      // All succeeded — sync drill rows to cleaned set, update snapshot
+      setDrillRows(cleanedDrills);
+      setSavedSnapshot(
+        buildSnapshot({
+          nameHe,
+          number,
+          subtitleHe,
+          ageMetricLabel,
+          reportTextHe,
+          reportHighlightHe,
+          verbalTextHe,
+          verbalTipHe,
+          positionSelection,
+          drillRows: cleanedDrills,
+          ageRows,
+        })
+      );
+
+      toast.success("הפרמטר נשמר בהצלחה");
     });
   }
 
@@ -278,6 +376,16 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
 
   return (
     <div className="space-y-8" dir="rtl">
+      {/* Back link */}
+      <button
+        type="button"
+        onClick={handleBack}
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowRight className="h-4 w-4" />
+        חזרה לספר
+      </button>
+
       {/* ------------------------------------------------------------------ */}
       {/* 1. זיהוי                                                             */}
       {/* ------------------------------------------------------------------ */}
@@ -326,18 +434,8 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
               <PositionGroupPicker
                 value={positionSelection}
                 onChange={setPositionSelection}
-                disabled={isPendingIdentity}
+                disabled={isSaving}
               />
-            </div>
-
-            <div className="flex justify-start pt-2">
-              <Button
-                type="button"
-                onClick={handleSaveIdentity}
-                disabled={isPendingIdentity}
-              >
-                {isPendingIdentity ? "שומר..." : "שמור זיהוי"}
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -355,24 +453,12 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <RepeatableRows<DrillRow>
-              rows={drillRows}
-              columns={buildDrillColumns(allMuscles)}
-              onChange={setDrillRows}
-              newRow={newDrillRow}
-            />
-
-            <div className="flex justify-start pt-2">
-              <Button
-                type="button"
-                onClick={handleSaveDrills}
-                disabled={isPendingDrills}
-              >
-                {isPendingDrills ? "שומר..." : "שמור תרגילים"}
-              </Button>
-            </div>
-          </div>
+          <RepeatableRows<DrillRow>
+            rows={drillRows}
+            columns={buildDrillColumns(allMuscles)}
+            onChange={setDrillRows}
+            newRow={newDrillRow}
+          />
         </CardContent>
       </Card>
 
@@ -404,16 +490,6 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
               onChange={setAgeRows}
               newRow={newAgeRow}
             />
-
-            <div className="flex justify-start pt-2">
-              <Button
-                type="button"
-                onClick={handleSaveAgeRows}
-                disabled={isPendingAgeRows}
-              >
-                {isPendingAgeRows ? "שומר..." : "שמור לפי גיל"}
-              </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -447,16 +523,6 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
                 onChange={(e) => setReportHighlightHe(e.target.value)}
                 placeholder="משפט קצר להדגשה בדוח"
               />
-            </div>
-
-            <div className="flex justify-start pt-2">
-              <Button
-                type="button"
-                onClick={handleSaveParents}
-                disabled={isPendingParents}
-              >
-                {isPendingParents ? "שומר..." : "שמור להורים"}
-              </Button>
             </div>
           </div>
         </CardContent>
@@ -492,19 +558,27 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
                 placeholder="טיפ קצר לשחקן"
               />
             </div>
-
-            <div className="flex justify-start pt-2">
-              <Button
-                type="button"
-                onClick={handleSaveVerbal}
-                disabled={isPendingVerbal}
-              >
-                {isPendingVerbal ? "שומר..." : "שמור בעל פה"}
-              </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Sticky bottom save bar                                               */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background/95 px-4 py-3 backdrop-blur-sm">
+        {isDirty ? (
+          <span className="text-sm text-amber-600">שינויים לא נשמרו</span>
+        ) : (
+          <span />
+        )}
+        <Button
+          type="button"
+          onClick={handleSaveAll}
+          disabled={isSaving}
+        >
+          {isSaving ? "שומר..." : "שמור הכל"}
+        </Button>
+      </div>
     </div>
   );
 }
