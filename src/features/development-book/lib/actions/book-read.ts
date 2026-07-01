@@ -372,7 +372,7 @@ export async function getBookTree(
 
 export async function getDrillCard(
   drillId: string
-): Promise<{ drill: BookDrill; card: BookDrillCard | null } | null> {
+): Promise<{ drill: BookDrill; card: BookDrillCard | null; isDone: boolean } | null> {
   if (!isValidUUID(drillId)) return null;
 
   const supabase = await createClient();
@@ -385,14 +385,26 @@ export async function getDrillCard(
 
   if (!rawDrill) return null;
 
-  // Load muscles for this drill
-  const [muscleLinksResult, allMusclesResult] = await Promise.all([
+  // Load muscles and current user's progress for this drill in parallel
+  const { data: auth } = await supabase.auth.getUser();
+  const user = auth.user;
+
+  const [muscleLinksResult, allMusclesResult, progressResult] = await Promise.all([
     typedFrom(supabase, "book_drill_muscles")
       .select("drill_id, muscle_id")
       .eq("drill_id", drillId) as Promise<{ data: RawDrillMuscleLink[] | null }>,
     typedFrom(supabase, "book_muscles")
       .select("id, name_he, emoji") as Promise<{ data: RawMuscle[] | null }>,
+    user
+      ? (typedFrom(supabase, "book_drill_progress")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("drill_id", drillId)
+          .maybeSingle() as Promise<{ data: { id: string } | null }>)
+      : Promise.resolve({ data: null }),
   ]);
+
+  const isDone = progressResult.data !== null;
 
   const rawMusclesForDrill: RawMuscle[] = allMusclesResult.data ?? [];
   const rawMuscleLinks: RawDrillMuscleLink[] = muscleLinksResult.data ?? [];
@@ -416,7 +428,7 @@ export async function getDrillCard(
     .maybeSingle()) as { data: RawDrillCard | null };
 
   if (!rawCard) {
-    return { drill, card: null };
+    return { drill, card: null, isDone };
   }
 
   // Load card children in parallel
@@ -474,5 +486,5 @@ export async function getDrillCard(
     metrics,
   };
 
-  return { drill, card };
+  return { drill, card, isDone };
 }

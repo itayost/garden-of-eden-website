@@ -23,7 +23,7 @@ export default async function DrillCardPage({ params }: DrillCardPageProps) {
 
   return (
     <div className="max-w-2xl mx-auto pb-16">
-      <DrillCard drill={result.drill} card={result.card} />
+      <DrillCard drill={result.drill} card={result.card} isDone={result.isDone} />
     </div>
   );
 }

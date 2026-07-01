@@ -7,6 +7,7 @@ import type {
   CardMetric,
   FailureStep,
 } from "@/features/development-book/lib/types";
+import { DrillDoneToggle } from "@/features/development-book/components/trainee/DrillDoneToggle";
 
 // --- Failure Chain ---
 
@@ -161,9 +162,10 @@ function MetricsTable({ metrics }: MetricsTableProps) {
 interface PremiumCardProps {
   drill: BookDrill;
   card: BookDrillCard;
+  isDone: boolean;
 }
 
-function PremiumCard({ drill, card }: PremiumCardProps) {
+function PremiumCard({ drill, card, isDone }: PremiumCardProps) {
   return (
     <article className="space-y-6" dir="rtl">
       {/* Back nav */}
@@ -183,9 +185,14 @@ function PremiumCard({ drill, card }: PremiumCardProps) {
             {card.situationLabelHe}
           </p>
         )}
-        <h1 className="text-2xl font-black text-foreground leading-tight">
-          {drill.nameHe ?? drill.nameEn ?? "תרגיל"}
-        </h1>
+        <div className="flex items-start gap-3">
+          <h1 className="text-2xl font-black text-foreground leading-tight flex-1">
+            {drill.nameHe ?? drill.nameEn ?? "תרגיל"}
+          </h1>
+          <div className="shrink-0 pt-1">
+            <DrillDoneToggle drillId={drill.id} initialDone={isDone} />
+          </div>
+        </div>
         {card.subtitleHe && (
           <p className="text-sm text-muted-foreground leading-relaxed">{card.subtitleHe}</p>
         )}
@@ -250,9 +257,10 @@ function PremiumCard({ drill, card }: PremiumCardProps) {
 
 interface BasicDrillViewProps {
   drill: BookDrill;
+  isDone: boolean;
 }
 
-function BasicDrillView({ drill }: BasicDrillViewProps) {
+function BasicDrillView({ drill, isDone }: BasicDrillViewProps) {
   return (
     <article className="space-y-5" dir="rtl">
       {/* Back nav */}
@@ -267,9 +275,14 @@ function BasicDrillView({ drill }: BasicDrillViewProps) {
 
       {/* Header */}
       <header className="space-y-1">
-        <h1 className="text-2xl font-black text-foreground leading-tight">
-          {drill.nameHe ?? drill.nameEn ?? "תרגיל"}
-        </h1>
+        <div className="flex items-start gap-3">
+          <h1 className="text-2xl font-black text-foreground leading-tight flex-1">
+            {drill.nameHe ?? drill.nameEn ?? "תרגיל"}
+          </h1>
+          <div className="shrink-0 pt-1">
+            <DrillDoneToggle drillId={drill.id} initialDone={isDone} />
+          </div>
+        </div>
         {(drill.muscles.length > 0 || drill.muscleHe || drill.setsHe) && (
           <div className="flex flex-wrap gap-1.5 pt-1">
             {drill.muscles.length > 0
@@ -338,11 +351,12 @@ function BasicDrillView({ drill }: BasicDrillViewProps) {
 interface DrillCardProps {
   drill: BookDrill;
   card: BookDrillCard | null;
+  isDone: boolean;
 }
 
-export function DrillCard({ drill, card }: DrillCardProps) {
+export function DrillCard({ drill, card, isDone }: DrillCardProps) {
   if (card !== null) {
-    return <PremiumCard drill={drill} card={card} />;
+    return <PremiumCard drill={drill} card={card} isDone={isDone} />;
   }
-  return <BasicDrillView drill={drill} />;
+  return <BasicDrillView drill={drill} isDone={isDone} />;
 }

@@ -12,20 +12,25 @@ function DrillRow({ drill, done }: DrillRowProps) {
   return (
     <li
       className={cn(
-        "rounded-xl border border-border bg-card/50 p-4",
+        "relative rounded-xl border border-border bg-card/50 p-4",
         "border-s-2 border-s-primary",
         done && "opacity-75"
       )}
     >
+      {/* Full-card navigation link sits behind interactive elements */}
+      <Link
+        href={`/dashboard/book/drills/${drill.id}`}
+        className="absolute inset-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+        aria-label={drill.nameHe ?? drill.nameEn ?? "תרגיל"}
+        tabIndex={-1}
+      />
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {/* Drill name links to the premium card route (built in a later task) */}
-          <Link
-            href={`/dashboard/book/drills/${drill.id}`}
-            className="font-bold text-sm text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
-          >
+          {/* Drill name — readable, pointer-events delegated to overlay link */}
+          <p className="font-bold text-sm text-foreground">
             {drill.nameHe ?? drill.nameEn ?? "תרגיל"}
-          </Link>
+          </p>
 
           {/* Badges */}
           <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -66,7 +71,10 @@ function DrillRow({ drill, done }: DrillRowProps) {
           )}
         </div>
 
-        <DrillDoneToggle drillId={drill.id} initialDone={done} />
+        {/* Toggle sits above the overlay link via relative + z-10 */}
+        <div className="relative z-10 shrink-0">
+          <DrillDoneToggle drillId={drill.id} initialDone={done} />
+        </div>
       </div>
     </li>
   );

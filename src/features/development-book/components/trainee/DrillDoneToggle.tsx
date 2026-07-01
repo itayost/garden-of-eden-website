@@ -46,19 +46,27 @@ export function DrillDoneToggle({ drillId, initialDone }: DrillDoneToggleProps) 
       aria-pressed={done}
       aria-label={done ? "בטל סימון תרגיל כהושלם" : "סמן תרגיל כהושלם"}
       className={cn(
-        "shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center",
-        "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-        done
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-muted bg-transparent text-transparent hover:border-primary/60",
+        "flex items-center justify-center min-w-11 min-h-11",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         isPending && "opacity-50 cursor-not-allowed"
       )}
     >
-      {done ? (
-        <Check className="w-3.5 h-3.5" strokeWidth={3} aria-hidden="true" />
-      ) : (
-        <Circle className="w-3 h-3 opacity-0" aria-hidden="true" />
-      )}
+      <span
+        className={cn(
+          "w-6 h-6 rounded-full border-2 flex items-center justify-center",
+          "transition-colors duration-150",
+          done
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-muted bg-transparent text-transparent hover:border-primary/60"
+        )}
+        aria-hidden="true"
+      >
+        {done ? (
+          <Check className="w-3.5 h-3.5" strokeWidth={3} aria-hidden="true" />
+        ) : (
+          <Circle className="w-3 h-3 opacity-0" aria-hidden="true" />
+        )}
+      </span>
     </button>
   );
 }
