@@ -12,11 +12,13 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DrillsPanel } from "./DrillsPanel";
 import { AgePanel } from "./AgePanel";
 import { ParentsPanel } from "./ParentsPanel";
 import { VerbalPanel } from "./VerbalPanel";
+import { countDoneInParameter } from "@/features/development-book/lib/progress-utils";
 import type {
   BookParameterWithChildren,
   AgeGroup,
@@ -34,6 +36,8 @@ export function ParameterAccordionCard({
   traineeAgeGroup,
   doneMap,
 }: ParameterAccordionCardProps) {
+  const { done: paramDone, total: paramTotal } = countDoneInParameter(parameter, doneMap);
+
   return (
     <AccordionItem
       value={parameter.id}
@@ -61,7 +65,7 @@ export function ParameterAccordionCard({
 
           {/* Name + meta */}
           <div className="min-w-0 flex-1">
-            <p className="font-bold text-base leading-tight text-foreground truncate">
+            <p className="font-bold text-base leading-tight text-foreground line-clamp-2">
               {parameter.nameHe}
             </p>
             {(parameter.subtitleHe || parameter.positions.length > 0) && (
@@ -93,6 +97,22 @@ export function ParameterAccordionCard({
               </div>
             )}
           </div>
+
+          {/* Per-parameter drill progress badge */}
+          {paramTotal > 0 && (
+            <span
+              className={cn(
+                "shrink-0 inline-flex items-center gap-1",
+                "rounded-md border px-2 py-1 text-[10px] font-bold tracking-wide",
+                paramDone === paramTotal
+                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-600 dark:text-emerald-400"
+                  : "border-border bg-muted/50 text-muted-foreground"
+              )}
+            >
+              <Check className="h-3 w-3 shrink-0" />
+              {paramDone}/{paramTotal}
+            </span>
+          )}
         </div>
       </AccordionTrigger>
 

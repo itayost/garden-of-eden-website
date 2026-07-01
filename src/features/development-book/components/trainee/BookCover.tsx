@@ -1,20 +1,49 @@
+import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AgeGroup, BookCategoryWithParameters } from "@/features/development-book/lib/types";
+import { Progress } from "@/components/ui/progress";
+import { countDoneInParameter } from "@/features/development-book/lib/progress-utils";
+import type {
+  AgeGroup,
+  BookCategoryWithParameters,
+  DrillProgressMap,
+} from "@/features/development-book/lib/types";
 
 interface BookCoverProps {
   categories: BookCategoryWithParameters[];
   ageGroup: AgeGroup | null;
   position: string | null;
   showAll: boolean;
+  doneMap: DrillProgressMap;
 }
 
-export function BookCover({ categories, ageGroup, position, showAll }: BookCoverProps) {
-  const totalParameters = categories.reduce((sum, cat) => sum + cat.parameters.length, 0);
+export function BookCover({
+  categories,
+  ageGroup,
+  position,
+  showAll,
+  doneMap,
+}: BookCoverProps) {
+  const totalParameters = categories.reduce(
+    (sum, cat) => sum + cat.parameters.length,
+    0
+  );
   const totalDrills = categories.reduce(
     (sum, cat) =>
       sum + cat.parameters.reduce((pSum, param) => pSum + param.drills.length, 0),
     0
+  );
+
+  // Aggregate progress across all parameters in all categories
+  const { doneDrills } = categories.reduce(
+    (acc, cat) => {
+      for (const param of cat.parameters) {
+        const counts = countDoneInParameter(param, doneMap);
+        acc.doneDrills += counts.done;
+      }
+      return acc;
+    },
+    { doneDrills: 0 }
   );
 
   return (
@@ -84,8 +113,18 @@ export function BookCover({ categories, ageGroup, position, showAll }: BookCover
           </div>
         </div>
 
-        {/* Context chips */}
-        <div className="flex flex-wrap gap-2 pt-1">
+        {/* Progress block */}
+        {totalDrills > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-xs font-semibold text-muted-foreground">
+              {doneDrills}/{totalDrills} תרגילים הושלמו
+            </p>
+            <Progress value={doneDrills} max={totalDrills} className="h-2" />
+          </div>
+        )}
+
+        {/* Context chips + parents CTA row */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           {ageGroup && (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-semibold text-primary">
               <BookOpen className="h-3 w-3 shrink-0" />
@@ -102,6 +141,19 @@ export function BookCover({ categories, ageGroup, position, showAll }: BookCover
               כל התכנים
             </span>
           )}
+
+          {/* Parents CTA */}
+          <Link
+            href="/dashboard/book/parents"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full",
+              "bg-sky-500/10 border border-sky-400/30 px-3 py-1",
+              "text-xs font-semibold text-sky-600 dark:text-sky-400",
+              "hover:bg-sky-500/20 transition-colors"
+            )}
+          >
+            תוכן להורים
+          </Link>
         </div>
       </div>
     </div>

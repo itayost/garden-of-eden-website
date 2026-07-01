@@ -10,6 +10,7 @@ import {
   FileText,
   Trophy,
   MoreHorizontal,
+  Users,
   Video,
   Utensils,
   UserCog,
@@ -28,6 +29,7 @@ const moreItems = [
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
   { href: "/dashboard/book", label: "ספר פיתוח", icon: BookOpen },
+  { href: "/dashboard/book/parents", label: "להורים", icon: Users },
   { href: "/dashboard/profile", label: "פרופיל", icon: UserCog },
 ];
 

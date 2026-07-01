@@ -34,6 +34,7 @@ export default async function BookPage({ searchParams }: BookPageProps) {
         ageGroup={ageGroup}
         position={position}
         showAll={showAll}
+        doneMap={doneMap}
       />
 
       {/* Top controls */}

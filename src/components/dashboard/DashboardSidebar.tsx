@@ -18,6 +18,7 @@ import {
   Target,
   Trophy,
   UserCog,
+  Users,
   Utensils,
   Video,
   type LucideIcon,
@@ -40,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video },
   { href: "/dashboard/book", label: "ספר פיתוח", icon: BookOpen },
+  { href: "/dashboard/book/parents", label: "להורים", icon: Users },
   { href: "/dashboard/profile", label: "פרופיל", icon: UserCog },
 ];
 
