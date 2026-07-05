@@ -30,7 +30,7 @@ export default async function AdminCreateVideoPage() {
     .eq("id", user.id)
     .single()) as { data: { role: string } | null };
 
-  if (profile?.role !== "admin") {
+  if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");
   }
 
@@ -39,7 +39,7 @@ export default async function AdminCreateVideoPage() {
       {/* Back button */}
       <Button variant="ghost" asChild>
         <Link href="/admin/videos">
-          <ArrowRight className="h-4 w-4 ml-2" />
+          <ArrowRight className="h-4 w-4 me-2" />
           חזרה לרשימת סרטונים
         </Link>
       </Button>
