@@ -36,7 +36,7 @@ export default async function AdminVideosPage() {
     .eq("id", currentUser.id)
     .single()) as { data: { role: string } | null };
 
-  if (currentProfile?.role !== "admin") {
+  if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/admin");
   }
 

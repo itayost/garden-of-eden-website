@@ -63,7 +63,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "משחק ואימון",
     items: [
       { href: "/admin/upcoming-games", label: "משחקים קרובים", icon: Calendar },
-      { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: true },
+      { href: "/admin/videos", label: "סרטונים", icon: Video },
       { href: "/admin/book", label: "ספר פיתוח", icon: BookOpen },
       { href: "/admin/workouts/exercises", label: "תרגילים ותוכניות", icon: Dumbbell },
     ],

@@ -35,7 +35,7 @@ const moreItems = [
   { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, adminOnly: false },
   { href: "/admin/nutrition", label: "תזונה", icon: Utensils, adminOnly: false },
   { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw, adminOnly: false },
-  { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: true },
+  { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: false },
 ];
 
 interface AdminBottomNavProps {

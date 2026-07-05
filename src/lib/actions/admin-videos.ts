@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { videoSchema, type VideoInput } from "@/lib/validations/video";
-import { verifyAdmin } from "@/lib/actions/shared";
+import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 
 type ActionResult =
@@ -13,15 +13,15 @@ type ActionResult =
 /**
  * Create a new workout video
  *
- * - Verifies admin authentication
+ * - Verifies admin or trainer authentication
  * - Validates input with videoSchema
  * - Auto-calculates order_index if not provided
  * - Inserts to workout_videos table
  * - Revalidates admin videos page
  */
 export async function createVideoAction(input: VideoInput): Promise<ActionResult> {
-  // 1. Verify admin
-  const { error: authError } = await verifyAdmin();
+  // 1. Verify admin or trainer
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   // 2. Validate input
@@ -86,7 +86,7 @@ export async function createVideoAction(input: VideoInput): Promise<ActionResult
 /**
  * Update an existing workout video
  *
- * - Verifies admin authentication
+ * - Verifies admin or trainer authentication
  * - Validates videoId format
  * - Validates input with videoSchema
  * - Updates workout_videos where id matches
@@ -96,8 +96,8 @@ export async function updateVideoAction(
   videoId: string,
   input: VideoInput
 ): Promise<ActionResult> {
-  // 1. Verify admin
-  const { error: authError } = await verifyAdmin();
+  // 1. Verify admin or trainer
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   // 2. Validate videoId format
@@ -152,15 +152,15 @@ export async function updateVideoAction(
 /**
  * Delete a workout video (hard delete)
  *
- * - Verifies admin authentication
+ * - Verifies admin or trainer authentication
  * - Validates videoId format
  * - Hard deletes from workout_videos
  * - Note: video_progress entries will cascade delete
  * - Revalidates admin videos page
  */
 export async function deleteVideoAction(videoId: string): Promise<ActionResult> {
-  // 1. Verify admin
-  const { error: authError } = await verifyAdmin();
+  // 1. Verify admin or trainer
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   // 2. Validate videoId format
