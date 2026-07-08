@@ -16,42 +16,43 @@ import {
 import { derivePageTitles, type NavItem, type NavSection } from "@/lib/navigation/types";
 
 export const ADMIN_NAV_SECTIONS: NavSection[] = [
+  // sidebar order = section/array order; mobile bar/sheet order = mobileOrder.
   {
     label: "ראשי",
     items: [
-      { href: "/admin", label: "דשבורד", icon: LayoutDashboard, exact: true, mobilePrimary: true },
+      { href: "/admin", label: "דשבורד", icon: LayoutDashboard, exact: true, mobilePrimary: true, mobileOrder: 1 },
     ],
   },
   {
     label: "שחקנים",
     items: [
-      { href: "/admin/users", label: "משתמשים", icon: Users, mobilePrimary: true },
-      { href: "/admin/assessments", label: "מבדקים", icon: Target, mobilePrimary: true },
-      { href: "/admin/nutrition", label: "תזונה", icon: Utensils },
-      { href: "/admin/submissions", label: "שאלונים", icon: FileText, mobilePrimary: true },
+      { href: "/admin/users", label: "משתמשים", icon: Users, mobilePrimary: true, mobileOrder: 2 },
+      { href: "/admin/assessments", label: "מבדקים", icon: Target, mobilePrimary: true, mobileOrder: 3 },
+      { href: "/admin/nutrition", label: "תזונה", icon: Utensils, mobileOrder: 5 },
+      { href: "/admin/submissions", label: "שאלונים", icon: FileText, mobilePrimary: true, mobileOrder: 4 },
     ],
   },
   {
     label: "משחק ואימון",
     items: [
-      { href: "/admin/upcoming-games", label: "משחקים קרובים", icon: Calendar },
-      { href: "/admin/videos", label: "סרטונים", icon: Video },
-      { href: "/admin/book", label: "ספר פיתוח", icon: BookOpen },
-      { href: "/admin/workouts/exercises", label: "תרגילים ותוכניות", icon: Dumbbell },
+      { href: "/admin/upcoming-games", label: "משחקים קרובים", icon: Calendar, mobileOrder: 2 },
+      { href: "/admin/videos", label: "סרטונים", icon: Video, mobileOrder: 7 },
+      { href: "/admin/book", label: "ספר פיתוח", icon: BookOpen, mobileOrder: 8 },
+      { href: "/admin/workouts/exercises", label: "תרגילים ותוכניות", icon: Dumbbell, mobileOrder: 9 },
     ],
   },
   {
     label: "תפעול",
     items: [
-      { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck },
-      { href: "/admin/shifts", label: "שעות עבודה", icon: Clock },
+      { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, mobileOrder: 3 },
+      { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, mobileOrder: 4 },
     ],
   },
   {
     label: "שיווק ולקוחות",
     items: [
-      { href: "/admin/leads", label: "לידים", icon: UserPlus },
-      { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw },
+      { href: "/admin/leads", label: "לידים", icon: UserPlus, mobileOrder: 1 },
+      { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw, mobileOrder: 6 },
     ],
   },
 ];

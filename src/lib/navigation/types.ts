@@ -7,6 +7,9 @@ export type NavItem = {
   exact?: boolean;
   adminOnly?: boolean;
   mobilePrimary?: boolean;
+  // Order within the mobile bottom-nav bar / "עוד" sheet (independent of the
+  // sidebar's list order, so both surfaces read one config yet keep their own order).
+  mobileOrder?: number;
 };
 
 export type NavSection = {
@@ -19,9 +22,12 @@ export function splitBottomNav(
   isAdmin: boolean,
 ): { main: NavItem[]; more: NavItem[] } {
   const visible = items.filter((i) => !i.adminOnly || isAdmin);
+  const byMobileOrder = (a: NavItem, b: NavItem) =>
+    (a.mobileOrder ?? Number.MAX_SAFE_INTEGER) -
+    (b.mobileOrder ?? Number.MAX_SAFE_INTEGER);
   return {
-    main: visible.filter((i) => i.mobilePrimary),
-    more: visible.filter((i) => !i.mobilePrimary),
+    main: visible.filter((i) => i.mobilePrimary).sort(byMobileOrder),
+    more: visible.filter((i) => !i.mobilePrimary).sort(byMobileOrder),
   };
 }
 
