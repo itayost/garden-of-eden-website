@@ -16,6 +16,8 @@ import {
   UserPlus,
   RefreshCw,
   Calendar,
+  BookOpen,
+  Dumbbell,
 } from "lucide-react";
 import { BottomNav, type BottomNavItem } from "@/components/ui/bottom-nav";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -36,6 +38,8 @@ const moreItems = [
   { href: "/admin/nutrition", label: "תזונה", icon: Utensils, adminOnly: false },
   { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw, adminOnly: false },
   { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: false },
+  { href: "/admin/book", label: "ספר פיתוח", icon: BookOpen, adminOnly: false },
+  { href: "/admin/workouts/exercises", label: "תרגילים ותוכניות", icon: Dumbbell, adminOnly: false },
 ];
 
 interface AdminBottomNavProps {
