@@ -3,10 +3,8 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
-import {
-  DashboardSidebar,
-  PAGE_TITLES,
-} from "@/components/dashboard/DashboardSidebar";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { DASHBOARD_PAGE_TITLES } from "@/lib/navigation/dashboard-nav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingTourProvider } from "@/features/onboarding-tour";
@@ -51,7 +49,7 @@ export default async function DashboardLayout({
         <AppTopBar
           user={user}
           profile={profile}
-          titles={PAGE_TITLES}
+          titles={DASHBOARD_PAGE_TITLES}
           fallbackTitle="ראשי"
         />
         <main className="container mx-auto px-4 pt-6 pb-20 md:pb-8">

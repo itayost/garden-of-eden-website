@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminSidebar, PAGE_TITLES } from "@/components/admin/AdminSidebar";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { ADMIN_PAGE_TITLES } from "@/lib/navigation/admin-nav";
 import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -39,7 +40,7 @@ export default async function AdminLayout({
         <AppTopBar
           user={user}
           profile={profile}
-          titles={PAGE_TITLES}
+          titles={ADMIN_PAGE_TITLES}
           fallbackTitle="ניהול"
         />
         <main className="container mx-auto px-4 pt-6 pb-20 md:pb-8">

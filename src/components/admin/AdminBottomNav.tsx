@@ -3,44 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Users,
-  Target,
-  FileText,
-  MoreHorizontal,
-  Video,
-  Utensils,
-  ClipboardCheck,
-  Clock,
-  UserPlus,
-  RefreshCw,
-  Calendar,
-  BookOpen,
-  Dumbbell,
-} from "lucide-react";
-import { BottomNav, type BottomNavItem } from "@/components/ui/bottom-nav";
+import { MoreHorizontal } from "lucide-react";
+import { BottomNav } from "@/components/ui/bottom-nav";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-
-const mainItems: BottomNavItem[] = [
-  { href: "/admin", label: "דשבורד", icon: LayoutDashboard, exact: true },
-  { href: "/admin/users", label: "משתמשים", icon: Users },
-  { href: "/admin/assessments", label: "מבדקים", icon: Target },
-  { href: "/admin/submissions", label: "שאלונים", icon: FileText },
-];
-
-const moreItems = [
-  { href: "/admin/leads", label: "לידים", icon: UserPlus, adminOnly: false },
-  { href: "/admin/upcoming-games", label: "משחקים קרובים", icon: Calendar, adminOnly: false },
-  { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, adminOnly: false },
-  { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, adminOnly: false },
-  { href: "/admin/nutrition", label: "תזונה", icon: Utensils, adminOnly: false },
-  { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw, adminOnly: false },
-  { href: "/admin/videos", label: "סרטונים", icon: Video, adminOnly: false },
-  { href: "/admin/book", label: "ספר פיתוח", icon: BookOpen, adminOnly: false },
-  { href: "/admin/workouts/exercises", label: "תרגילים ותוכניות", icon: Dumbbell, adminOnly: false },
-];
+import { isActivePath } from "@/lib/utils/active-path";
+import { ADMIN_NAV_FLAT } from "@/lib/navigation/admin-nav";
+import { splitBottomNav } from "@/lib/navigation/types";
 
 interface AdminBottomNavProps {
   isAdmin?: boolean;
@@ -50,12 +19,13 @@ export function AdminBottomNav({ isAdmin = false }: AdminBottomNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const visibleMoreItems = moreItems.filter(
-    (item) => !item.adminOnly || isAdmin
+  const { main: mainItems, more: visibleMoreItems } = splitBottomNav(
+    ADMIN_NAV_FLAT,
+    isAdmin
   );
 
-  const moreActive = visibleMoreItems.some(
-    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  const moreActive = visibleMoreItems.some((item) =>
+    isActivePath(pathname, item.href, item.exact)
   );
 
   return (
@@ -78,9 +48,7 @@ export function AdminBottomNav({ isAdmin = false }: AdminBottomNavProps) {
             <SheetTitle className="sr-only">תפריט נוסף</SheetTitle>
             <nav className="flex flex-col gap-1 pt-2">
               {visibleMoreItems.map((item) => {
-                const active =
-                  pathname === item.href ||
-                  pathname.startsWith(item.href + "/");
+                const active = isActivePath(pathname, item.href, item.exact);
                 return (
                   <Link
                     key={item.href}

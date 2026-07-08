@@ -11,51 +11,9 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { isActivePath } from "@/lib/utils/active-path";
-import {
-  BookOpen,
-  FileText,
-  Home,
-  Target,
-  Trophy,
-  UserCog,
-  Users,
-  Utensils,
-  Video,
-  type LucideIcon,
-} from "lucide-react";
+import { DASHBOARD_NAV } from "@/lib/navigation/dashboard-nav";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  exact?: boolean;
-};
-
-export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "ראשי", icon: Home, exact: true },
-  { href: "/dashboard/assessments", label: "מבדקים", icon: Target },
-  { href: "/dashboard/rankings", label: "דירוג", icon: Trophy },
-  { href: "/dashboard/forms", label: "שאלונים", icon: FileText },
-  { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils },
-  { href: "/dashboard/videos", label: "סרטונים", icon: Video },
-  { href: "/dashboard/book", label: "ספר פיתוח", icon: BookOpen },
-  { href: "/dashboard/book/parents", label: "להורים", icon: Users },
-  { href: "/dashboard/profile", label: "פרופיל", icon: UserCog },
-];
-
-export const PAGE_TITLES: Record<string, string> = {
-  ...Object.fromEntries(NAV_ITEMS.map((item) => [item.href, item.label])),
-  "/dashboard/book/parents": "להורים",
-  "/dashboard/forms/next-game": "המשחק הבא שלי",
-  "/dashboard/forms/nutrition": "שאלון תזונה",
-  "/dashboard/forms/post-workout": "שאלון אחרי אימון",
-  "/dashboard/forms/pre-workout": "שאלון לפני אימון",
-  "/dashboard/forms/mental": "שאלון מנטלי",
-  "/dashboard/settings": "הגדרות",
-  "/dashboard/settings/security": "אבטחה",
-};
 
 type DashboardSidebarProps = {
   user: User;
@@ -73,7 +31,7 @@ export function DashboardSidebar({ user, profile }: DashboardSidebarProps) {
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
-            {NAV_ITEMS.map((item) => {
+            {DASHBOARD_NAV.map((item) => {
               const active = isActivePath(pathname, item.href, item.exact);
               return (
                 <SidebarMenuItem key={item.href}>
