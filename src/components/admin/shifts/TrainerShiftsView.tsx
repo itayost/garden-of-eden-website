@@ -375,21 +375,23 @@ export function TrainerShiftsView({
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-start justify-between gap-2 text-sm">
                             <span>
                               {formatTime(shift.start_time)} -{" "}
                               {shift.end_time ? formatTime(shift.end_time) : "פעילה"}
                             </span>
-                            <span className="font-mono">
-                              {shift.end_time ? formatDuration(splitShiftMinutes(shift).grossMinutes) : "-"}
-                            </span>
-                          </div>
-                          {shift.end_time && shift.other_purpose_minutes > 0 && (
-                            <div className="text-xs text-purple-700">
-                              אחר: {splitShiftMinutes(shift).otherMinutes} ד׳ ·{" "}
-                              {shift.other_purpose_category}
+                            <div className="flex flex-wrap items-center justify-end gap-1.5">
+                              <span className="font-mono">
+                                {shift.end_time ? formatDuration(splitShiftMinutes(shift).trainingMinutes) : "-"}
+                              </span>
+                              {shift.end_time && shift.other_purpose_minutes > 0 && (
+                                <Badge variant="outline" className="text-xs text-purple-700">
+                                  אחר: {splitShiftMinutes(shift).otherMinutes} ד׳ ·{" "}
+                                  {shift.other_purpose_category}
+                                </Badge>
+                              )}
                             </div>
-                          )}
+                          </div>
                           {isAdmin && (
                             <div className="flex items-center gap-2">
                               {shift.flagged_for_review && (
@@ -552,7 +554,7 @@ export function TrainerShiftsView({
                             </TableCell>
                             <TableCell className="font-mono text-sm">
                               {shift.end_time
-                                ? formatDuration(splitShiftMinutes(shift).grossMinutes)
+                                ? formatDuration(splitShiftMinutes(shift).trainingMinutes)
                                 : "-"}
                               {shift.auto_ended && (
                                 <Badge
