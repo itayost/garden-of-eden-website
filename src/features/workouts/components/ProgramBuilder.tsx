@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Loader2, Save } from "lucide-react";
+import { ArrowRight, Plus, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +72,16 @@ export function ProgramBuilder({ programId, initialGrid }: ProgramBuilderProps) 
     // which yields 0) so it can't silently truncate every row's later-week cells.
     if (!Number.isFinite(newWeeks) || newWeeks < 1) return;
     const clamped = Math.min(52, Math.trunc(newWeeks));
+
+    // Shrinking the week count truncates every row's later-week cells —
+    // confirm with the user before discarding that data.
+    if (clamped < meta.weeks) {
+      const confirmed = window.confirm(
+        "הורדת מספר השבועות תמחק את הנתונים בשבועות שמעבר. להמשיך?"
+      );
+      if (!confirmed) return;
+    }
+
     setMeta((prev) => ({ ...prev, weeks: clamped }));
     setRows((prev) =>
       prev.map((row) => ({
@@ -128,6 +139,14 @@ export function ProgramBuilder({ programId, initialGrid }: ProgramBuilderProps) 
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/admin/workouts/programs"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowRight className="h-4 w-4" />
+        חזרה לתוכניות
+      </Link>
+
       {/* Meta editor */}
       <Card>
         <CardHeader>

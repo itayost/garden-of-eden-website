@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GridCell } from "@/features/workouts/components/GridCell";
 import { copyCellAcrossWeeks } from "@/features/workouts/lib/grid-utils";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { ProgramExerciseRow, ProgramCell } from "@/features/workouts/lib/types";
 
 interface ProgramGridProps {
@@ -14,6 +15,7 @@ interface ProgramGridProps {
 }
 
 export function ProgramGrid({ rows, weeks, onRowsChange }: ProgramGridProps) {
+  const isMobile = useIsMobile();
   const weekNumbers = Array.from({ length: weeks }, (_, i) => i + 1);
 
   const updateRow = (rowKey: string, patch: Partial<ProgramExerciseRow>) => {
@@ -59,6 +61,98 @@ export function ProgramGrid({ rows, weeks, onRowsChange }: ProgramGridProps) {
     return (
       <div className="border rounded-lg p-8 text-center text-muted-foreground text-sm">
         אין תרגילים בתוכנית. לחץ &quot;הוסף תרגיל&quot; כדי להתחיל.
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-3">
+        {rows.map((row, rowIdx) => (
+          <div key={row.key} className="border rounded-lg p-3 bg-background">
+            {/* Card header: exercise name + row actions */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 space-y-1.5">
+                <p className="font-medium text-sm leading-tight">
+                  {row.exerciseName}
+                </p>
+                <Input
+                  placeholder="הערות תרגיל"
+                  aria-label="הערות תרגיל"
+                  value={row.notesHe}
+                  onChange={(e) =>
+                    updateRow(row.key, { notesHe: e.target.value })
+                  }
+                  className="h-8 text-xs px-2"
+                />
+              </div>
+
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => moveRow(row.key, -1)}
+                  disabled={rowIdx === 0}
+                  aria-label="הזז למעלה"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => moveRow(row.key, 1)}
+                  disabled={rowIdx === rows.length - 1}
+                  aria-label="הזז למטה"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => copyWeekOne(row.key)}
+                  title="העתק שבוע 1 לכולם"
+                  aria-label="העתק שבוע 1 לכולם"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={() => removeRow(row.key)}
+                  aria-label="הסר תרגיל"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Weeks list */}
+            <div className="mt-3 flex flex-col gap-2">
+              {weekNumbers.map((w, weekIdx) => {
+                const cell = row.cells[weekIdx];
+                if (!cell) return null;
+                return (
+                  <div
+                    key={w}
+                    className="rounded-md border border-dashed p-2"
+                  >
+                    <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+                      שבוע {w}
+                    </p>
+                    <GridCell
+                      cell={cell}
+                      onChange={(updated) => updateCell(row.key, weekIdx, updated)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
