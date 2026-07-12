@@ -179,8 +179,30 @@ export async function cancelShiftChangeRequestAction(
   return { success: true };
 }
 
+/**
+ * The subset of a request a trainer is allowed to see. Decision fields
+ * (decision_note, decided_by, decided_at, applied_shift_id) are excluded so an
+ * admin's verdict and its reasoning never reach the trainer's browser.
+ */
+export type MyShiftChangeRequest = Pick<
+  ShiftChangeRequest,
+  | "id"
+  | "request_type"
+  | "target_shift_id"
+  | "original_start_time"
+  | "original_end_time"
+  | "requested_start_time"
+  | "requested_end_time"
+  | "reason"
+  | "status"
+  | "created_at"
+>;
+
+const MY_REQUEST_COLUMNS =
+  "id, request_type, target_shift_id, original_start_time, original_end_time, requested_start_time, requested_end_time, reason, status, created_at";
+
 export async function getMyShiftChangeRequestsAction(): Promise<
-  ActionResult<ShiftChangeRequest[]>
+  ActionResult<MyShiftChangeRequest[]>
 > {
   const auth = await verifyAdminOrTrainer();
   if (auth.error) return { error: auth.error };
@@ -188,9 +210,12 @@ export async function getMyShiftChangeRequestsAction(): Promise<
 
   const supabase = await createClient();
 
+  // Pending only: once an admin decides, the request drops out of the
+  // trainer's view entirely. RLS enforces the same rule server-side.
   const { data, error } = await typedFrom(supabase, REQUESTS_TABLE)
-    .select("*")
+    .select(MY_REQUEST_COLUMNS)
     .eq("trainer_id", user.id)
+    .eq("status", "pending")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -199,7 +224,7 @@ export async function getMyShiftChangeRequestsAction(): Promise<
     return { error: "שגיאה בטעינת הבקשות" };
   }
 
-  return { success: true, data: (data ?? []) as ShiftChangeRequest[] };
+  return { success: true, data: (data ?? []) as MyShiftChangeRequest[] };
 }
 
 // =====================================================

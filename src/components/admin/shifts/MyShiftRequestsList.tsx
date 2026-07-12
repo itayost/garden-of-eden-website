@@ -7,16 +7,18 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cancelShiftChangeRequestAction } from "@/lib/actions/shift-change-requests";
+import {
+  cancelShiftChangeRequestAction,
+  type MyShiftChangeRequest,
+} from "@/lib/actions/shift-change-requests";
 import { RetroShiftRequestDialog } from "@/components/admin/shifts/RetroShiftRequestDialog";
 import {
   SHIFT_REQUEST_STATUS_LABELS,
   SHIFT_REQUEST_STATUS_VARIANTS,
 } from "@/components/admin/shifts/shift-request-status";
-import type { ShiftChangeRequest } from "@/types/database";
 
 interface MyShiftRequestsListProps {
-  requests: ShiftChangeRequest[];
+  requests: MyShiftChangeRequest[];
 }
 
 const DATE_FMT = new Intl.DateTimeFormat("he-IL", {
@@ -88,7 +90,7 @@ export function MyShiftRequestsList({ requests }: MyShiftRequestsListProps) {
         {expanded && (
           <CardContent>
             {requests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">לא נשלחו בקשות עד כה</p>
+              <p className="text-sm text-muted-foreground">אין בקשות ממתינות</p>
             ) : (
               <div className="space-y-2">
                 {requests.map((r) => (
@@ -115,11 +117,6 @@ export function MyShiftRequestsList({ requests }: MyShiftRequestsListProps) {
                       {r.reason && (
                         <p className="text-xs text-muted-foreground">
                           סיבה: {r.reason}
-                        </p>
-                      )}
-                      {r.decision_note && (
-                        <p className="text-xs text-muted-foreground">
-                          הערת מנהל: {r.decision_note}
                         </p>
                       )}
                     </div>

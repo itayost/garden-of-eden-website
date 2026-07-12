@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
-import type { TrainerShift, ShiftChangeRequest } from "@/types/database";
+import type { TrainerShift } from "@/types/database";
 import type { FailedShiftSync } from "@/lib/actions/trainer-shifts";
 import {
   getMyShiftChangeRequestsAction,
   getShiftChangeRequestsAction,
+  type MyShiftChangeRequest,
   type ShiftChangeRequestWithPreview,
 } from "@/lib/actions/shift-change-requests";
 import { TrainerShiftsView } from "@/components/admin/shifts/TrainerShiftsView";
@@ -115,7 +116,7 @@ export default async function AdminShiftsPage({
 
   const failedSyncs: FailedShiftSync[] = syncsResult.data ?? [];
 
-  let myRequests: ShiftChangeRequest[] = [];
+  let myRequests: MyShiftChangeRequest[] = [];
   let adminRequests: ShiftChangeRequestWithPreview[] = [];
   let pendingCount = 0;
 
