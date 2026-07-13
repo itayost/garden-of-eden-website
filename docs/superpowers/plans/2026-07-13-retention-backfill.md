@@ -842,11 +842,18 @@ Open `/admin/retention` in the browser, select each backfilled month, and confir
 
 `retention_notes` joins on `(report_month, trainee_phone)` where the phone is the raw Arbox string. The backfill writes raw phones through `toExpiringEntry`, so existing notes should be untouched. This step is what proves it.
 
-- [ ] **Step 8: Commit the backups**
+- [ ] **Step 8: Leave the backups on disk, out of git**
+
+Do **not** commit `scripts/backups/`. Each file contains every member's name and
+phone number, so committing them would put a paying client's PII in git history
+permanently, where deleting the file later does not remove it.
+
+The directory is gitignored. The rollback files live on disk, which is all that
+rollback needs. Confirm:
 
 ```bash
-git add -A scripts/backups/
-git commit -m "chore(retention): capture pre-backfill snapshot backups"
+git check-ignore scripts/backups/ && echo "ignored, good"
+git status --short scripts/backups/   # must print nothing
 ```
 
 ---

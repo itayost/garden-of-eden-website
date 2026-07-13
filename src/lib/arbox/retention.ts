@@ -43,7 +43,9 @@ export function getCategoryForMembershipType(
 ): CategoryKey | null {
   if (!typeName) return null;
   if (typeName.includes("פרו")) return "pro";
-  if (typeName === "כרטיסייה") return "training_card";
+  // Contains-match, not equality: Arbox also issues named cards such as
+  // "כרטיסיית 10 כניסות", which an exact match silently dropped from every report.
+  if (typeName.includes("כרטיסיי")) return "training_card";
   if (typeName.includes("מתקדמים")) return "monthly";
   return null;
 }
@@ -98,7 +100,7 @@ async function fetchReportPage<T>(
   return json.data ?? [];
 }
 
-async function fetchAllPages<T>(
+export async function fetchAllPages<T>(
   reportName: string,
   fromDate: string,
   toDate: string,
@@ -109,12 +111,21 @@ async function fetchAllPages<T>(
 
   const all: T[] = [];
   let page = 1;
+  let lastPageWasFull = false;
 
   while (page <= ARBOX_MAX_PAGES) {
     const entries = await fetchReportPage<T>(reportName, fromDate, toDate, page);
     all.push(...entries);
-    if (entries.length < ARBOX_PAGE_LIMIT) break;
+    lastPageWasFull = entries.length >= ARBOX_PAGE_LIMIT;
+    if (!lastPageWasFull) break;
     page++;
+  }
+
+  if (lastPageWasFull) {
+    console.warn(
+      `[Arbox] ${reportName} ${fromDate}..${toDate} hit ARBOX_MAX_PAGES (${ARBOX_MAX_PAGES}) with a full last page. ` +
+        `Results are truncated at ${ARBOX_MAX_PAGES * ARBOX_PAGE_LIMIT} rows; some rows for this range were not fetched.`,
+    );
   }
 
   return all;
@@ -128,7 +139,7 @@ async function fetchAllPages<T>(
 // whole report.
 // -------------------------------------------------------
 
-type RawArboxRow = Record<string, unknown>;
+export type RawArboxRow = Record<string, unknown>;
 
 function str(value: unknown): string | null {
   if (value == null) return null;
@@ -153,7 +164,7 @@ function arboxName(row: RawArboxRow): string {
   return composed;
 }
 
-function toExpiringEntry(row: RawArboxRow): ExpiringMembershipEntry {
+export function toExpiringEntry(row: RawArboxRow): ExpiringMembershipEntry {
   return {
     user_id: num(row.user_id),
     name: arboxName(row),
@@ -302,7 +313,7 @@ export function formatDateYMD(date: Date): string {
  * Get 4 individual month ranges: current month + 3 previous months
  * (respects Arbox 31-day API limit per request).
  */
-function getAttendanceMonthRanges(
+export function getAttendanceMonthRanges(
   reportMonth: string,
 ): readonly { from: string; to: string }[] {
   const d = new Date(reportMonth + "T00:00:00");
@@ -336,7 +347,7 @@ function getAttendanceMonthRanges(
  * who happen to share a name are not collapsed into one (which would silently
  * drop one of them on merge).
  */
-function entryIdentity(entry: RetentionEntry): string {
+export function entryIdentity(entry: RetentionEntry): string {
   if (entry.user_id != null) return `uid:${entry.user_id}`;
   const phone = normalizePhone(entry.phone);
   if (phone) return `phone:${phone}`;
@@ -388,6 +399,111 @@ export function mergeRetentionReports(
 }
 
 // -------------------------------------------------------
+// Report-month filtering + entry -> RetentionReportData builder
+//
+// Arbox's expiringSessionsReport (and its backward-looking twin,
+// expiredSessionsReport) do not honour the fromDate/toDate range they are
+// given: a query for month M's window can return cards whose end_date falls
+// well outside M (verified in production: a June-window query returned cards
+// with end_date running into September). Every row must therefore be
+// filtered by its own end_date rather than trusted to already be in range.
+//
+// This builder is shared by the nightly current-month build
+// (buildRetentionReport, below) and the historical backfill script
+// (scripts/backfill-retention-expired.ts) so both paths apply the same
+// end_date filter and category routing.
+// -------------------------------------------------------
+
+export function isEndDateInMonth(
+  endDate: string | null,
+  reportMonth: string,
+): boolean {
+  if (!endDate) return false;
+  return endDate.slice(0, 7) === reportMonth.slice(0, 7);
+}
+
+export interface DroppedRow {
+  readonly name: string;
+  readonly membership_type_name: string | null;
+  readonly end_date: string;
+}
+
+export interface BackfillBuildResult {
+  readonly data: RetentionReportData;
+  readonly dropped: readonly DroppedRow[];
+}
+
+/**
+ * Turn a set of expiring/expired-report rows into a RetentionReportData for
+ * one month.
+ *
+ * Rows whose end_date does not fall inside reportMonth are excluded (see
+ * isEndDateInMonth above) - this is what keeps out-of-range rows from
+ * Arbox's session reports out of the wrong month's snapshot. A row with a
+ * null end_date is excluded too: a membership with no end date cannot be
+ * attributed to any month.
+ *
+ * Cancelled memberships arrive as ordinary rows and are kept: they were paying
+ * members who left in that month, so they are retention-relevant. ending_reason
+ * is deliberately not consulted.
+ *
+ * Rows whose membership type the category mapper does not recognise are
+ * collected in `dropped` rather than silently discarded, so the true scope of
+ * the unmapped-type problem becomes visible.
+ */
+export function buildReportFromEntries(
+  reportMonth: string,
+  entries: readonly ExpiringMembershipEntry[],
+  bookingIndex: BookingIndex,
+  monthKeys: readonly string[],
+): BackfillBuildResult {
+  const monthly: RetentionEntry[] = [];
+  const pro: RetentionEntry[] = [];
+  const trainingCard: RetentionEntry[] = [];
+  const dropped: DroppedRow[] = [];
+
+  const bucket: Record<CategoryKey, RetentionEntry[]> = {
+    monthly,
+    pro,
+    training_card: trainingCard,
+  };
+
+  for (const member of entries) {
+    if (!isEndDateInMonth(member.end_date, reportMonth)) continue;
+
+    const category = getCategoryForMembershipType(member.membership_type_name);
+    if (!category) {
+      dropped.push({
+        name: member.name,
+        membership_type_name: member.membership_type_name,
+        end_date: member.end_date ?? "",
+      });
+      continue;
+    }
+
+    bucket[category].push({
+      user_id: member.user_id,
+      name: member.name,
+      phone: member.phone,
+      end_date: member.end_date ?? "",
+      membership_type_name: member.membership_type_name,
+      attendance: lookupAttendance(
+        member.user_id,
+        member.phone,
+        member.name,
+        bookingIndex,
+        monthKeys,
+      ),
+    });
+  }
+
+  return {
+    data: { monthly, pro, training_card: trainingCard },
+    dropped,
+  };
+}
+
+// -------------------------------------------------------
 // Main report builder
 // -------------------------------------------------------
 
@@ -416,44 +532,26 @@ export async function buildRetentionReport(
 
   const monthKeys = getAttendanceMonthKeys(reportMonth);
 
-  // Group by category
-  const grouped: Record<CategoryKey, RetentionEntry[]> = {
-    monthly: [],
-    pro: [],
-    training_card: [],
-  };
+  // expiringSessionsReport does not honour fromDate/toDate (see the builder's
+  // doc comment above), so every row is filtered by its own end_date rather
+  // than trusted to already be scoped to reportMonth.
+  const { data, dropped } = buildReportFromEntries(
+    reportMonth,
+    allExpiring,
+    bookingIndex,
+    monthKeys,
+  );
 
-  for (const member of allExpiring) {
-    const category = getCategoryForMembershipType(member.membership_type_name);
-    if (!category) {
-      console.warn(
-        `[Retention] Skipping unknown membership type: "${member.membership_type_name}" for ${member.name}`,
-      );
-      continue;
-    }
-
-    const attendance = lookupAttendance(
-      member.user_id,
-      member.phone,
-      member.name,
-      bookingIndex,
-      monthKeys,
+  for (const row of dropped) {
+    console.warn(
+      `[Retention] Skipping unknown membership type: "${row.membership_type_name}" for ${row.name}`,
     );
-
-    grouped[category].push({
-      user_id: member.user_id,
-      name: member.name,
-      phone: member.phone,
-      end_date: member.end_date ?? "",
-      membership_type_name: member.membership_type_name,
-      attendance,
-    });
   }
 
   // Sort each category by end_date descending
   return {
-    monthly: [...grouped.monthly].sort(sortByEndDate),
-    pro: [...grouped.pro].sort(sortByEndDate),
-    training_card: [...grouped.training_card].sort(sortByEndDate),
+    monthly: [...data.monthly].sort(sortByEndDate),
+    pro: [...data.pro].sort(sortByEndDate),
+    training_card: [...data.training_card].sort(sortByEndDate),
   };
 }
