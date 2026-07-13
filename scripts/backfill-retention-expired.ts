@@ -16,6 +16,13 @@
  * It cannot go through persistRetentionReport(), which throws on past months by
  * design, so it writes the table directly with the admin client.
  *
+ * Two phases, so an --apply run is all-or-nothing across months:
+ *   PHASE 1 (always runs): read, fetch, build, merge, and validate every month.
+ *     No writes happen here. A throw in any month aborts before anything is
+ *     written, for any month.
+ *   PHASE 2 (only under --apply, only if phase 1 passed for every month):
+ *     write the backup file and upsert, one month at a time.
+ *
  * Usage:
  *   npx tsx scripts/backfill-retention-expired.ts            # dry run
  *   npx tsx scripts/backfill-retention-expired.ts --apply    # write
@@ -42,6 +49,8 @@ import {
   type RetentionEntry,
   type RetentionReportData,
 } from "../src/lib/arbox/retention";
+import { normalizePhone } from "../src/lib/arbox/normalize-phone";
+import { ARBOX_MAX_PAGES, ARBOX_PAGE_LIMIT } from "../src/lib/arbox/constants";
 
 const ALL_MONTHS = ["2026-03-01", "2026-04-01", "2026-05-01", "2026-06-01"];
 
@@ -103,12 +112,57 @@ function earliestEndDate(data: RetentionReportData): string {
   return ends[0] ?? "-";
 }
 
-async function backfillMonth(
+/** Which fallback of entryIdentity (uid > phone > name) actually matched. */
+function identityScheme(entry: RetentionEntry): "uid" | "phone" | "name" {
+  if (entry.user_id != null) return "uid";
+  if (normalizePhone(entry.phone)) return "phone";
+  return "name";
+}
+
+/**
+ * Identities that appear more than once within a single category of `data`.
+ * dedupAndSort operates per category (not across the whole snapshot), so this
+ * mirrors exactly what it would collapse. Returned as `"category:identity(xN)"`
+ * strings for direct use in an error message.
+ */
+function findDuplicateIdentities(data: RetentionReportData): readonly string[] {
+  const dupes: string[] = [];
+  for (const category of ["monthly", "pro", "training_card"] as const) {
+    const counts = new Map<string, number>();
+    for (const entry of data[category] ?? []) {
+      const id = entryIdentity(entry);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    for (const [id, count] of counts) {
+      if (count > 1) dupes.push(`${category}:${id}(x${count})`);
+    }
+  }
+  return dupes;
+}
+
+type StoredRow = { report_month: string; data: RetentionReportData; created_at?: string } | null;
+
+interface MonthPlan {
+  readonly reportMonth: string;
+  readonly rawRow: StoredRow;
+  readonly rowExisted: boolean;
+  readonly createdAt: string | null;
+  readonly stored: RetentionReportData;
+  readonly merged: RetentionReportData;
+  readonly addedEntries: readonly RetentionEntry[];
+  readonly dropped: readonly DroppedRow[];
+}
+
+/**
+ * PHASE 1 for one month: read the stored snapshot, pull Arbox data, build the
+ * backfill, merge, and run every invariant check. Pure read + compute — no
+ * writes. Throws (aborting the whole run before any month is written) if
+ * anything looks unsafe.
+ */
+async function prepareMonth(
   supabase: ReturnType<typeof getAdminClient>,
   reportMonth: string,
-  backupDir: string,
-  stamp: string,
-): Promise<readonly DroppedRow[]> {
+): Promise<MonthPlan> {
   console.log(`\n${"=".repeat(60)}\n${reportMonth}\n${"=".repeat(60)}`);
 
   // 1) Read the stored snapshot.
@@ -122,30 +176,16 @@ async function backfillMonth(
     throw new Error(`read ${reportMonth} failed: ${readErr.message}`);
   }
 
-  const stored = ((row as { data?: RetentionReportData } | null)?.data ??
-    EMPTY) as RetentionReportData;
-  const createdAt = (row as { created_at?: string } | null)?.created_at ?? null;
+  const rawRow = row as StoredRow;
+  const stored = (rawRow?.data ?? EMPTY) as RetentionReportData;
+  const createdAt = rawRow?.created_at ?? null;
+  const rowExisted = rawRow != null;
 
   console.log(
     `stored: n=${total(stored)}  earliest_end=${earliestEndDate(stored)}`,
   );
 
-  // 2) Back the row up before touching anything. If no row exists yet, the
-  // backup file holds `null` — restoring that is not a rollback (it would
-  // not delete the row an upsert is about to insert), so the rollback
-  // instructions differ below.
-  const rowExisted = row != null;
-  const backupPath = path.join(
-    backupDir,
-    `retention-backfill-${reportMonth}-${stamp}.json`,
-  );
-  fs.writeFileSync(backupPath, JSON.stringify(row ?? null, null, 2));
-  console.log(`backup: ${backupPath}`);
-  const rollbackInstructions = rowExisted
-    ? `Rollback: ${backupPath}`
-    : `Rollback: DELETE FROM retention_reports WHERE report_month = '${reportMonth}'`;
-
-  // 3) Pull both expired reports for the month. Serialized: Arbox rate-limits.
+  // 2) Pull both expired reports for the month. Serialized: Arbox rate-limits.
   const to = lastDayOf(reportMonth);
   const memberships = await fetchExpiredMemberships(reportMonth, to);
   await pause();
@@ -157,16 +197,27 @@ async function backfillMonth(
     `arbox: memberships=${memberships.length} sessions=${sessions.length} (before end_date filter)`,
   );
 
-  // 4) Attendance for the report month plus the three before it.
+  // 3) Attendance for the report month plus the three before it. A truncated
+  // pull would freeze UNDERSTATED attendance into history that the nightly
+  // cron can never correct, so refuse to build from an incomplete pull rather
+  // than warn and continue.
   const bookings: BookingEntry[] = [];
   for (const { from, to: rangeTo } of getAttendanceMonthRanges(reportMonth)) {
     const chunk = await fetchBookingsReport(from, rangeTo);
+    const truncationCap = ARBOX_MAX_PAGES * ARBOX_PAGE_LIMIT;
+    if (chunk.length >= truncationCap) {
+      throw new Error(
+        `${reportMonth}: bookingsReport ${from}..${rangeTo} returned ${chunk.length} rows, ` +
+          `hitting the ARBOX_MAX_PAGES x ARBOX_PAGE_LIMIT cap (${truncationCap}). ` +
+          `Attendance for this range is truncated. Refusing to freeze understated attendance into history.`,
+      );
+    }
     bookings.push(...chunk);
     await pause();
   }
   const bookingIndex = buildBookingIndex(bookings);
 
-  // 5) Build.
+  // 4) Build.
   const { data: backfill, dropped } = buildBackfillFromExpired(
     reportMonth,
     expired,
@@ -175,7 +226,7 @@ async function backfillMonth(
   );
   console.log(`built:  n=${total(backfill)} (end_date inside ${reportMonth.slice(0, 7)})`);
 
-  // 6) Merge, ADDITIVELY.
+  // 5) Merge, ADDITIVELY.
   //
   // mergeRetentionReports(stored, fresh) lets `fresh` win on an identity
   // collision. We want the EXISTING snapshot to win, so it goes in the `fresh`
@@ -183,14 +234,16 @@ async function backfillMonth(
   // contribute members that are genuinely absent. Do not swap these.
   const merged = mergeRetentionReports(backfill, stored);
 
-  // Prove the merge is additive rather than counting a net delta. dedupAndSort
-  // collapses same-identity entries within a category, so if the STORED
-  // snapshot itself already contains a same-identity duplicate (reachable via
-  // buildRetentionReport(), which does not dedupe, or a verbatim-upserted
-  // restore), the merge can silently drop one of them. A net count would miss
-  // (or misreport) that: -2 falls through the `!== 0` write gate and writes a
-  // smaller snapshot; +4 masks a hidden -1. Compare identity SETS instead and
-  // refuse to write anything that would remove a stored entry.
+  // Identity-SET check. Cheap, and left in place, but it is NOT the proof of
+  // safety below — do not delete the count invariant believing this covers
+  // it. dedupAndSort dedupes mergeCategory's input by identity, and every
+  // identity in `stored` is part of that input (via the `fresh` slot above),
+  // so every stored identity is UNCONDITIONALLY present in `merged`: this set
+  // difference can never be non-empty. It cannot detect a stored snapshot
+  // that already contains two entries sharing one identity within a
+  // category — dedupAndSort collapses those into one, the identity SET is
+  // unchanged (it was already in the set once), and this check stays silent
+  // while a real member is dropped from history.
   const storedIds = new Set(allEntries(stored).map(entryIdentity));
   const mergedIds = new Set(allEntries(merged).map(entryIdentity));
   const removed = [...storedIds].filter((id) => !mergedIds.has(id));
@@ -204,17 +257,47 @@ async function backfillMonth(
     (e) => !storedIds.has(entryIdentity(e)),
   );
 
+  // Count invariant. THIS is the real proof of safety: it catches loss of
+  // MULTIPLICITY, not just loss of set membership. If `stored` contains two
+  // entries with the same entryIdentity in one category (reachable —
+  // buildRetentionReport() never dedupes, the pre-merge-fix cron wrote its
+  // raw output verbatim, and restore-may-retention.ts upserted a blob
+  // verbatim), dedupAndSort silently collapses them into one inside
+  // mergeCategory. The identity set is unaffected, so the check above stays
+  // silent, but `merged` ends up with one fewer entry than it should.
+  const expectedMerged = total(stored) + addedEntries.length;
+  if (total(merged) !== expectedMerged) {
+    const dupes = findDuplicateIdentities(stored);
+    throw new Error(
+      `${reportMonth}: merge would COLLAPSE duplicate entries in the stored snapshot ` +
+        `(stored=${total(stored)} added=${addedEntries.length} merged=${total(merged)}, ` +
+        `expected merged=${expectedMerged}). ` +
+        `Duplicate identities: ${dupes.join(", ") || "(none found — investigate)"}. Refusing to write.`,
+    );
+  }
+
   console.log(
     `merged: n=${total(merged)}  earliest_end=${earliestEndDate(merged)}  ADDED=${addedEntries.length}`,
   );
 
   if (addedEntries.length > 0) {
     console.log("added members:");
+    const schemeCounts = { uid: 0, phone: 0, name: 0 };
     for (const e of addedEntries) {
+      const scheme = identityScheme(e);
+      schemeCounts[scheme]++;
       console.log(
-        `  ${e.end_date}  ${e.name}  (${e.membership_type_name ?? "-"})`,
+        `  ${e.end_date}  ${e.name}  (${e.membership_type_name ?? "-"})  [${scheme}]`,
       );
     }
+    // A month where added entries are mostly phone/name (instead of uid) is
+    // the signature of the expired* reports carrying the member id under a
+    // different key than the expiring* reports the stored snapshot was built
+    // from — which would add an already-present member again under a
+    // different identity.
+    console.log(
+      `identity schemes for added: uid=${schemeCounts.uid} phone=${schemeCounts.phone} name=${schemeCounts.name}`,
+    );
   }
 
   if (dropped.length > 0) {
@@ -224,24 +307,53 @@ async function backfillMonth(
     }
   }
 
-  // 7) Write.
-  if (!APPLY) {
+  if (addedEntries.length === 0) {
+    console.log("nothing to add");
+  } else if (!APPLY) {
     console.log("dry run, no write");
-    return dropped;
   }
 
+  return { reportMonth, rawRow, rowExisted, createdAt, stored, merged, addedEntries, dropped };
+}
+
+/**
+ * PHASE 2 for one month: write the backup file, then upsert. Only called
+ * after every month has passed PHASE 1's invariant checks.
+ */
+async function writeMonth(
+  supabase: ReturnType<typeof getAdminClient>,
+  plan: MonthPlan,
+  backupDir: string,
+  stamp: string,
+): Promise<void> {
+  const { reportMonth, addedEntries } = plan;
+
   if (addedEntries.length === 0) {
-    console.log("nothing to add, skipping write");
-    return dropped;
+    console.log(`${reportMonth}: nothing to add, skipping write`);
+    return;
   }
+
+  // Back the row up before touching anything. If no row exists yet, the
+  // backup file holds `null` — restoring that is not a rollback (it would
+  // not delete the row an upsert is about to insert), so the rollback
+  // instructions differ below.
+  const backupPath = path.join(
+    backupDir,
+    `retention-backfill-${reportMonth}-${stamp}.json`,
+  );
+  fs.writeFileSync(backupPath, JSON.stringify(plan.rawRow ?? null, null, 2));
+  console.log(`backup: ${backupPath}`);
+  const rollbackInstructions = plan.rowExisted
+    ? `Rollback: ${backupPath}`
+    : `Rollback: DELETE FROM retention_reports WHERE report_month = '${reportMonth}'`;
 
   const upsertRow: Record<string, unknown> = {
     report_month: reportMonth,
-    data: merged as unknown as Record<string, unknown>,
+    data: plan.merged as unknown as Record<string, unknown>,
   };
   // Preserve the original snapshot timestamp so the row still reads as that
   // month's snapshot rather than as something built today.
-  if (createdAt) upsertRow.created_at = createdAt;
+  if (plan.createdAt) upsertRow.created_at = plan.createdAt;
 
   const { error: upErr } = await supabase
     .from("retention_reports")
@@ -250,7 +362,6 @@ async function backfillMonth(
   if (upErr) throw new Error(`upsert ${reportMonth} failed: ${upErr.message}`);
 
   console.log(`WROTE ${reportMonth}. ${rollbackInstructions}`);
-  return dropped;
 }
 
 async function main(): Promise<void> {
@@ -266,13 +377,16 @@ async function main(): Promise<void> {
 
   console.log(APPLY ? "MODE: APPLY (will write)" : "MODE: DRY RUN");
 
-  const allDropped: DroppedRow[] = [];
+  // PHASE 1: fetch + build + merge + validate every month. No writes. A throw
+  // in any month aborts here, before anything has been written for any
+  // month.
+  const plans: MonthPlan[] = [];
   for (const month of MONTHS) {
-    const dropped = await backfillMonth(supabase, month, backupDir, stamp);
-    allDropped.push(...dropped);
+    plans.push(await prepareMonth(supabase, month));
   }
 
   console.log(`\n${"=".repeat(60)}\nUNMAPPED MEMBERSHIP TYPES ACROSS ALL MONTHS\n${"=".repeat(60)}`);
+  const allDropped = plans.flatMap((p) => p.dropped);
   const byType = new Map<string, number>();
   for (const d of allDropped) {
     const key = d.membership_type_name ?? "(null)";
@@ -291,6 +405,13 @@ async function main(): Promise<void> {
 
   if (!APPLY) {
     console.log("\nDry run complete. Re-run with --apply to write.");
+    return;
+  }
+
+  // PHASE 2: every month passed PHASE 1, so write them all.
+  console.log(`\n${"=".repeat(60)}\nWRITING\n${"=".repeat(60)}`);
+  for (const plan of plans) {
+    await writeMonth(supabase, plan, backupDir, stamp);
   }
 }
 
