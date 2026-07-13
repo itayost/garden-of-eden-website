@@ -43,7 +43,9 @@ export function getCategoryForMembershipType(
 ): CategoryKey | null {
   if (!typeName) return null;
   if (typeName.includes("פרו")) return "pro";
-  if (typeName === "כרטיסייה") return "training_card";
+  // Contains-match, not equality: Arbox also issues named cards such as
+  // "כרטיסיית 10 כניסות", which an exact match silently dropped from every report.
+  if (typeName.includes("כרטיסיי")) return "training_card";
   if (typeName.includes("מתקדמים")) return "monthly";
   return null;
 }
