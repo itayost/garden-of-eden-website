@@ -109,12 +109,21 @@ export async function fetchAllPages<T>(
 
   const all: T[] = [];
   let page = 1;
+  let lastPageWasFull = false;
 
   while (page <= ARBOX_MAX_PAGES) {
     const entries = await fetchReportPage<T>(reportName, fromDate, toDate, page);
     all.push(...entries);
-    if (entries.length < ARBOX_PAGE_LIMIT) break;
+    lastPageWasFull = entries.length >= ARBOX_PAGE_LIMIT;
+    if (!lastPageWasFull) break;
     page++;
+  }
+
+  if (lastPageWasFull) {
+    console.warn(
+      `[Arbox] ${reportName} ${fromDate}..${toDate} hit ARBOX_MAX_PAGES (${ARBOX_MAX_PAGES}) with a full last page. ` +
+        `Results are truncated at ${ARBOX_MAX_PAGES * ARBOX_PAGE_LIMIT} rows; some rows for this range were not fetched.`,
+    );
   }
 
   return all;
@@ -336,7 +345,7 @@ export function getAttendanceMonthRanges(
  * who happen to share a name are not collapsed into one (which would silently
  * drop one of them on merge).
  */
-function entryIdentity(entry: RetentionEntry): string {
+export function entryIdentity(entry: RetentionEntry): string {
   if (entry.user_id != null) return `uid:${entry.user_id}`;
   const phone = normalizePhone(entry.phone);
   if (phone) return `phone:${phone}`;

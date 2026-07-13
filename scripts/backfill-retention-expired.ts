@@ -33,22 +33,38 @@ import {
 } from "../src/lib/arbox/expired";
 import {
   buildBookingIndex,
+  entryIdentity,
   fetchBookingsReport,
   getAttendanceMonthKeys,
   getAttendanceMonthRanges,
   mergeRetentionReports,
   type BookingEntry,
+  type RetentionEntry,
   type RetentionReportData,
 } from "../src/lib/arbox/retention";
 
 const ALL_MONTHS = ["2026-03-01", "2026-04-01", "2026-05-01", "2026-06-01"];
 
 const APPLY = process.argv.includes("--apply");
-const monthArgIdx = process.argv.indexOf("--month");
-const MONTHS =
-  monthArgIdx !== -1 && process.argv[monthArgIdx + 1]
-    ? [process.argv[monthArgIdx + 1]]
-    : ALL_MONTHS;
+
+/** yyyy-mm-01, matching one of ALL_MONTHS. */
+const MONTH_PATTERN = /^\d{4}-\d{2}-01$/;
+
+function resolveMonths(): readonly string[] {
+  const idx = process.argv.indexOf("--month");
+  if (idx === -1) return ALL_MONTHS;
+
+  const value = process.argv[idx + 1];
+  if (!value || !MONTH_PATTERN.test(value) || !ALL_MONTHS.includes(value)) {
+    throw new Error(
+      `--month must be one of ${ALL_MONTHS.join(", ")} (got ${value ?? "<missing>"}). ` +
+        `Refusing to silently fall back to all months.`,
+    );
+  }
+  return [value];
+}
+
+const MONTHS = resolveMonths();
 
 const EMPTY: RetentionReportData = { monthly: [], pro: [], training_card: [] };
 
@@ -62,14 +78,25 @@ function lastDayOf(reportMonth: string): string {
   return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * Defensive `?? []` on every category, matching mergeRetentionReports: a
+ * stored row written by an older shape (or hand-edited) could be missing a
+ * category key, and this must not throw before the backup is written.
+ */
+function allEntries(data: RetentionReportData): readonly RetentionEntry[] {
+  return [
+    ...(data.monthly ?? []),
+    ...(data.pro ?? []),
+    ...(data.training_card ?? []),
+  ];
+}
+
 function total(data: RetentionReportData): number {
-  return (
-    data.monthly.length + data.pro.length + data.training_card.length
-  );
+  return allEntries(data).length;
 }
 
 function earliestEndDate(data: RetentionReportData): string {
-  const ends = [...data.monthly, ...data.pro, ...data.training_card]
+  const ends = allEntries(data)
     .map((e) => e.end_date)
     .filter(Boolean)
     .sort();
@@ -103,13 +130,20 @@ async function backfillMonth(
     `stored: n=${total(stored)}  earliest_end=${earliestEndDate(stored)}`,
   );
 
-  // 2) Back the row up before touching anything.
+  // 2) Back the row up before touching anything. If no row exists yet, the
+  // backup file holds `null` — restoring that is not a rollback (it would
+  // not delete the row an upsert is about to insert), so the rollback
+  // instructions differ below.
+  const rowExisted = row != null;
   const backupPath = path.join(
     backupDir,
     `retention-backfill-${reportMonth}-${stamp}.json`,
   );
   fs.writeFileSync(backupPath, JSON.stringify(row ?? null, null, 2));
   console.log(`backup: ${backupPath}`);
+  const rollbackInstructions = rowExisted
+    ? `Rollback: ${backupPath}`
+    : `Rollback: DELETE FROM retention_reports WHERE report_month = '${reportMonth}'`;
 
   // 3) Pull both expired reports for the month. Serialized: Arbox rate-limits.
   const to = lastDayOf(reportMonth);
@@ -149,24 +183,34 @@ async function backfillMonth(
   // contribute members that are genuinely absent. Do not swap these.
   const merged = mergeRetentionReports(backfill, stored);
 
-  const added = total(merged) - total(stored);
-  console.log(
-    `merged: n=${total(merged)}  earliest_end=${earliestEndDate(merged)}  ADDED=${added}`,
+  // Prove the merge is additive rather than counting a net delta. dedupAndSort
+  // collapses same-identity entries within a category, so if the STORED
+  // snapshot itself already contains a same-identity duplicate (reachable via
+  // buildRetentionReport(), which does not dedupe, or a verbatim-upserted
+  // restore), the merge can silently drop one of them. A net count would miss
+  // (or misreport) that: -2 falls through the `!== 0` write gate and writes a
+  // smaller snapshot; +4 masks a hidden -1. Compare identity SETS instead and
+  // refuse to write anything that would remove a stored entry.
+  const storedIds = new Set(allEntries(stored).map(entryIdentity));
+  const mergedIds = new Set(allEntries(merged).map(entryIdentity));
+  const removed = [...storedIds].filter((id) => !mergedIds.has(id));
+  if (removed.length > 0) {
+    throw new Error(
+      `${reportMonth}: merge would REMOVE ${removed.length} stored entries (${removed.join(", ")}). ` +
+        `Refusing to write. This means the stored snapshot contains duplicate identities.`,
+    );
+  }
+  const addedEntries = allEntries(merged).filter(
+    (e) => !storedIds.has(entryIdentity(e)),
   );
 
-  if (added > 0) {
-    const storedNames = new Set(
-      [...stored.monthly, ...stored.pro, ...stored.training_card].map(
-        (e) => `${e.name}|${e.end_date}`,
-      ),
-    );
-    const newOnes = [
-      ...merged.monthly,
-      ...merged.pro,
-      ...merged.training_card,
-    ].filter((e) => !storedNames.has(`${e.name}|${e.end_date}`));
+  console.log(
+    `merged: n=${total(merged)}  earliest_end=${earliestEndDate(merged)}  ADDED=${addedEntries.length}`,
+  );
+
+  if (addedEntries.length > 0) {
     console.log("added members:");
-    for (const e of newOnes) {
+    for (const e of addedEntries) {
       console.log(
         `  ${e.end_date}  ${e.name}  (${e.membership_type_name ?? "-"})`,
       );
@@ -186,7 +230,7 @@ async function backfillMonth(
     return dropped;
   }
 
-  if (added === 0) {
+  if (addedEntries.length === 0) {
     console.log("nothing to add, skipping write");
     return dropped;
   }
@@ -205,7 +249,7 @@ async function backfillMonth(
 
   if (upErr) throw new Error(`upsert ${reportMonth} failed: ${upErr.message}`);
 
-  console.log(`WROTE ${reportMonth}. Rollback: ${backupPath}`);
+  console.log(`WROTE ${reportMonth}. ${rollbackInstructions}`);
   return dropped;
 }
 
@@ -251,6 +295,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error("backfill failed:", err.message);
+  console.error("backfill failed:", err);
   process.exit(1);
 });
