@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   isEndDateInMonth,
   buildBackfillFromExpired,
+  windowRange,
+  expiredRowKey,
 } from "../expired";
 import { buildBookingIndex, type ExpiringMembershipEntry } from "../retention";
 
@@ -138,5 +140,53 @@ describe("buildBackfillFromExpired", () => {
 
     expect(result.data).toEqual({ monthly: [], pro: [], training_card: [] });
     expect(result.dropped).toHaveLength(0);
+  });
+});
+
+describe("windowRange", () => {
+  it("returns the leap-year-safe last day of February for a non-leap year", () => {
+    expect(windowRange("2026-02")).toEqual({
+      from: "2026-02-01",
+      to: "2026-02-28",
+    });
+  });
+
+  it("returns the last day of a 30-day month", () => {
+    expect(windowRange("2026-04")).toEqual({
+      from: "2026-04-01",
+      to: "2026-04-30",
+    });
+  });
+});
+
+describe("expiredRowKey", () => {
+  it("distinguishes two different cards held by the same member", () => {
+    const cardOne = expired({
+      user_id: 42,
+      end_date: "2026-04-25",
+      membership_type_name: "כרטיסייה",
+    });
+    const cardTwo = expired({
+      user_id: 42,
+      end_date: "2026-06-15",
+      membership_type_name: "כרטיסייה",
+    });
+
+    expect(expiredRowKey(cardOne)).not.toBe(expiredRowKey(cardTwo));
+  });
+
+  it("produces the same key for the identical row returned by two different windows", () => {
+    const fromAprilWindow = expired({
+      user_id: 7,
+      end_date: "2026-04-25",
+      membership_type_name: "כרטיסייה",
+    });
+    const fromMayWindow = expired({
+      user_id: 7,
+      end_date: "2026-04-25",
+      membership_type_name: "כרטיסייה",
+    });
+
+    expect(expiredRowKey(fromAprilWindow)).toBe(expiredRowKey(fromMayWindow));
   });
 });

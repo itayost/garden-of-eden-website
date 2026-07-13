@@ -12,14 +12,25 @@
  * twins. Verified to include members who expired and then RENEWED
  * (client_status: active), so the reconstruction is not biased toward churn.
  *
+ * expiredSessionsReport does NOT honour its fromDate/toDate range: querying
+ * month M's window does not return every card whose end_date falls in M —
+ * some rows only surface when a NEIGHBOURING month's window is queried, and
+ * filtering can't recover a row the API never returned for a narrow query.
+ * A single wide query isn't possible either (Arbox 400s past ~31 days). So
+ * fetchAllExpiredEntries() fetches each report exactly ONCE across a series
+ * of overlapping monthly windows, unions + dedupes the rows, and every
+ * target month buckets its own rows out of that same union. Do not go back
+ * to querying per target month — that reproduces the under-collection bug.
+ *
  * ADDITIVE ONLY. Existing entries always win. This script can only add members.
  * It cannot go through persistRetentionReport(), which throws on past months by
  * design, so it writes the table directly with the admin client.
  *
  * Two phases, so an --apply run is all-or-nothing across months:
- *   PHASE 1 (always runs): read, fetch, build, merge, and validate every month.
- *     No writes happen here. A throw in any month aborts before anything is
- *     written, for any month.
+ *   PHASE 1 (always runs): fetch the expired-entry union once, then read,
+ *     build, merge, and validate every month against it. No writes happen
+ *     here. A throw in any month aborts before anything is written, for any
+ *     month.
  *   PHASE 2 (only under --apply, only if phase 1 passed for every month):
  *     write the backup file and upsert, one month at a time.
  *
@@ -34,8 +45,8 @@ import * as path from "path";
 import { loadEnvLocal, getAdminClient } from "./import-utils";
 import {
   buildBackfillFromExpired,
-  fetchExpiredMemberships,
-  fetchExpiredSessions,
+  EXPIRED_FETCH_WINDOWS,
+  fetchAllExpiredEntries,
   type DroppedRow,
 } from "../src/lib/arbox/expired";
 import {
@@ -46,6 +57,7 @@ import {
   getAttendanceMonthRanges,
   mergeRetentionReports,
   type BookingEntry,
+  type ExpiringMembershipEntry,
   type RetentionEntry,
   type RetentionReportData,
 } from "../src/lib/arbox/retention";
@@ -79,13 +91,7 @@ const EMPTY: RetentionReportData = { monthly: [], pro: [], training_card: [] };
 
 /** Arbox rate-limits per key. Space the calls out. */
 const PAUSE_MS = 1500;
-const pause = () => new Promise((r) => setTimeout(r, PAUSE_MS));
-
-function lastDayOf(reportMonth: string): string {
-  const d = new Date(reportMonth + "T00:00:00");
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
-}
+const pause = (): Promise<void> => new Promise((r) => setTimeout(r, PAUSE_MS));
 
 /**
  * Defensive `?? []` on every category, matching mergeRetentionReports: a
@@ -154,14 +160,15 @@ interface MonthPlan {
 }
 
 /**
- * PHASE 1 for one month: read the stored snapshot, pull Arbox data, build the
- * backfill, merge, and run every invariant check. Pure read + compute — no
- * writes. Throws (aborting the whole run before any month is written) if
- * anything looks unsafe.
+ * PHASE 1 for one month: read the stored snapshot, build the backfill from
+ * the already-fetched expired-entry union, merge, and run every invariant
+ * check. Pure read + compute — no writes. Throws (aborting the whole run
+ * before any month is written) if anything looks unsafe.
  */
 async function prepareMonth(
   supabase: ReturnType<typeof getAdminClient>,
   reportMonth: string,
+  expired: readonly ExpiringMembershipEntry[],
 ): Promise<MonthPlan> {
   console.log(`\n${"=".repeat(60)}\n${reportMonth}\n${"=".repeat(60)}`);
 
@@ -185,19 +192,7 @@ async function prepareMonth(
     `stored: n=${total(stored)}  earliest_end=${earliestEndDate(stored)}`,
   );
 
-  // 2) Pull both expired reports for the month. Serialized: Arbox rate-limits.
-  const to = lastDayOf(reportMonth);
-  const memberships = await fetchExpiredMemberships(reportMonth, to);
-  await pause();
-  const sessions = await fetchExpiredSessions(reportMonth, to);
-  await pause();
-
-  const expired = [...memberships, ...sessions];
-  console.log(
-    `arbox: memberships=${memberships.length} sessions=${sessions.length} (before end_date filter)`,
-  );
-
-  // 3) Attendance for the report month plus the three before it. A truncated
+  // 2) Attendance for the report month plus the three before it. A truncated
   // pull would freeze UNDERSTATED attendance into history that the nightly
   // cron can never correct, so refuse to build from an incomplete pull rather
   // than warn and continue.
@@ -217,7 +212,8 @@ async function prepareMonth(
   }
   const bookingIndex = buildBookingIndex(bookings);
 
-  // 4) Build.
+  // 3) Build, bucketing the pre-fetched expired-entry union into this month
+  // via isEndDateInMonth (buildBackfillFromExpired does the bucketing).
   const { data: backfill, dropped } = buildBackfillFromExpired(
     reportMonth,
     expired,
@@ -226,7 +222,7 @@ async function prepareMonth(
   );
   console.log(`built:  n=${total(backfill)} (end_date inside ${reportMonth.slice(0, 7)})`);
 
-  // 5) Merge, ADDITIVELY.
+  // 4) Merge, ADDITIVELY.
   //
   // mergeRetentionReports(stored, fresh) lets `fresh` win on an identity
   // collision. We want the EXISTING snapshot to win, so it goes in the `fresh`
@@ -377,12 +373,24 @@ async function main(): Promise<void> {
 
   console.log(APPLY ? "MODE: APPLY (will write)" : "MODE: DRY RUN");
 
-  // PHASE 1: fetch + build + merge + validate every month. No writes. A throw
-  // in any month aborts here, before anything has been written for any
-  // month.
+  // Fetch expiredMembershipsReport + expiredSessionsReport exactly ONCE,
+  // across overlapping monthly windows, and union+dedupe the result. Do NOT
+  // re-fetch per target month: expiredSessionsReport does not honour
+  // fromDate/toDate, so a narrow per-month query under-collects rows whose
+  // end_date falls in that month but which only surface in a neighbouring
+  // month's window. Each target month buckets its own rows out of this same
+  // union via isEndDateInMonth inside buildBackfillFromExpired.
+  const expired = await fetchAllExpiredEntries(pause);
+  console.log(
+    `arbox: fetched ${expired.length} unique expired rows across ${EXPIRED_FETCH_WINDOWS.length} windows`,
+  );
+
+  // PHASE 1: build + merge + validate every month from the shared expired-
+  // entry union. No writes. A throw in any month aborts here, before
+  // anything has been written for any month.
   const plans: MonthPlan[] = [];
   for (const month of MONTHS) {
-    plans.push(await prepareMonth(supabase, month));
+    plans.push(await prepareMonth(supabase, month, expired));
   }
 
   console.log(`\n${"=".repeat(60)}\nUNMAPPED MEMBERSHIP TYPES ACROSS ALL MONTHS\n${"=".repeat(60)}`);
