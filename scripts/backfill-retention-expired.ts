@@ -44,7 +44,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { loadEnvLocal, getAdminClient } from "./import-utils";
 import {
-  buildBackfillFromExpired,
+  buildReportFromEntries,
   EXPIRED_FETCH_WINDOWS,
   fetchAllExpiredEntries,
   type DroppedRow,
@@ -213,8 +213,8 @@ async function prepareMonth(
   const bookingIndex = buildBookingIndex(bookings);
 
   // 3) Build, bucketing the pre-fetched expired-entry union into this month
-  // via isEndDateInMonth (buildBackfillFromExpired does the bucketing).
-  const { data: backfill, dropped } = buildBackfillFromExpired(
+  // via isEndDateInMonth (buildReportFromEntries does the bucketing).
+  const { data: backfill, dropped } = buildReportFromEntries(
     reportMonth,
     expired,
     bookingIndex,
@@ -379,7 +379,7 @@ async function main(): Promise<void> {
   // fromDate/toDate, so a narrow per-month query under-collects rows whose
   // end_date falls in that month but which only surface in a neighbouring
   // month's window. Each target month buckets its own rows out of this same
-  // union via isEndDateInMonth inside buildBackfillFromExpired.
+  // union via isEndDateInMonth inside buildReportFromEntries.
   const expired = await fetchAllExpiredEntries(pause);
   console.log(
     `arbox: fetched ${expired.length} unique expired rows across ${EXPIRED_FETCH_WINDOWS.length} windows`,

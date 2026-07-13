@@ -1,13 +1,18 @@
 import {
   fetchAllPages,
-  getCategoryForMembershipType,
-  lookupAttendance,
   toExpiringEntry,
-  type BookingIndex,
   type ExpiringMembershipEntry,
   type RawArboxRow,
-  type RetentionEntry,
-  type RetentionReportData,
+} from "./retention";
+
+// buildReportFromEntries and its supporting types now live in retention.ts
+// (it is shared by buildRetentionReport, the nightly current-month build).
+// Re-exported here so existing importers of this module keep working.
+export {
+  isEndDateInMonth,
+  buildReportFromEntries,
+  type DroppedRow,
+  type BackfillBuildResult,
 } from "./retention";
 
 // -------------------------------------------------------
@@ -49,8 +54,8 @@ export async function fetchExpiredSessions(
 // The fix is to fetch every report exactly once across a series of
 // overlapping monthly windows spanning the whole backfill range, union and
 // deduplicate the rows, and only then bucket by end_date per target month
-// (buildBackfillFromExpired already does that bucketing via
-// isEndDateInMonth). Re-querying per target month would reproduce the bug.
+// (buildReportFromEntries already does that bucketing via isEndDateInMonth).
+// Re-querying per target month would reproduce the bug.
 // -------------------------------------------------------
 
 /** Calendar months to fetch expired* reports across (Arbox rejects ranges
@@ -95,7 +100,7 @@ export function expiredRowKey(e: ExpiringMembershipEntry): string {
  * Fetch expiredMembershipsReport + expiredSessionsReport exactly once each,
  * across every window in EXPIRED_FETCH_WINDOWS, and return the deduplicated
  * union. Callers bucket the result per target month themselves (e.g. via
- * buildBackfillFromExpired) — do not re-query per target month, that
+ * buildReportFromEntries) — do not re-query per target month, that
  * reproduces the under-collection bug this function exists to fix.
  *
  * `pause` is awaited after EVERY API call; Arbox rate-limits per key.
@@ -119,95 +124,4 @@ export async function fetchAllExpiredEntries(
   }
 
   return [...byKey.values()];
-}
-
-// -------------------------------------------------------
-// Pure builder
-// -------------------------------------------------------
-
-/**
- * expiredSessionsReport does not honour the requested range: a 2026-06-01..17
- * query returns rows with end_date running into August. Filter here rather than
- * trusting the API.
- */
-export function isEndDateInMonth(
-  endDate: string | null,
-  reportMonth: string,
-): boolean {
-  if (!endDate) return false;
-  return endDate.slice(0, 7) === reportMonth.slice(0, 7);
-}
-
-export interface DroppedRow {
-  readonly name: string;
-  readonly membership_type_name: string | null;
-  readonly end_date: string;
-}
-
-export interface BackfillBuildResult {
-  readonly data: RetentionReportData;
-  readonly dropped: readonly DroppedRow[];
-}
-
-/**
- * Turn expired-report rows into a RetentionReportData for one month.
- *
- * Cancelled memberships arrive as ordinary rows and are kept: they were paying
- * members who left in that month, so they are retention-relevant. ending_reason
- * is deliberately not consulted.
- *
- * Rows whose membership type the category mapper does not recognise are
- * collected in `dropped` rather than silently discarded, so the true scope of
- * the unmapped-type problem becomes visible.
- */
-export function buildBackfillFromExpired(
-  reportMonth: string,
-  expired: readonly ExpiringMembershipEntry[],
-  bookingIndex: BookingIndex,
-  monthKeys: readonly string[],
-): BackfillBuildResult {
-  const monthly: RetentionEntry[] = [];
-  const pro: RetentionEntry[] = [];
-  const trainingCard: RetentionEntry[] = [];
-  const dropped: DroppedRow[] = [];
-
-  const bucket: Record<keyof RetentionReportData, RetentionEntry[]> = {
-    monthly,
-    pro,
-    training_card: trainingCard,
-  };
-
-  for (const member of expired) {
-    if (!isEndDateInMonth(member.end_date, reportMonth)) continue;
-
-    const category = getCategoryForMembershipType(member.membership_type_name);
-    if (!category) {
-      dropped.push({
-        name: member.name,
-        membership_type_name: member.membership_type_name,
-        end_date: member.end_date ?? "",
-      });
-      continue;
-    }
-
-    bucket[category].push({
-      user_id: member.user_id,
-      name: member.name,
-      phone: member.phone,
-      end_date: member.end_date ?? "",
-      membership_type_name: member.membership_type_name,
-      attendance: lookupAttendance(
-        member.user_id,
-        member.phone,
-        member.name,
-        bookingIndex,
-        monthKeys,
-      ),
-    });
-  }
-
-  return {
-    data: { monthly, pro, training_card: trainingCard },
-    dropped,
-  };
 }

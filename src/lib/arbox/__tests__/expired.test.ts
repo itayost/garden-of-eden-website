@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   isEndDateInMonth,
-  buildBackfillFromExpired,
+  buildReportFromEntries,
   windowRange,
   expiredRowKey,
 } from "../expired";
@@ -41,9 +41,9 @@ describe("isEndDateInMonth", () => {
   });
 });
 
-describe("buildBackfillFromExpired", () => {
+describe("buildReportFromEntries (via expired.ts re-export)", () => {
   it("drops rows whose end_date falls outside the report month", () => {
-    const result = buildBackfillFromExpired(
+    const result = buildReportFromEntries(
       "2026-06-01",
       [
         expired({ name: "בפנים", end_date: "2026-06-05" }),
@@ -58,7 +58,7 @@ describe("buildBackfillFromExpired", () => {
   });
 
   it("routes each membership type to its category", () => {
-    const result = buildBackfillFromExpired(
+    const result = buildReportFromEntries(
       "2026-06-01",
       [
         expired({ name: "א", membership_type_name: "מנוי מתקדמים חודש" }),
@@ -76,7 +76,7 @@ describe("buildBackfillFromExpired", () => {
   });
 
   it("records unmapped membership types instead of silently dropping them", () => {
-    const result = buildBackfillFromExpired(
+    const result = buildReportFromEntries(
       "2026-06-01",
       [
         expired({
@@ -103,7 +103,7 @@ describe("buildBackfillFromExpired", () => {
   });
 
   it("keeps cancelled memberships, which arrive as ordinary rows", () => {
-    const result = buildBackfillFromExpired(
+    const result = buildReportFromEntries(
       "2026-06-01",
       [expired({ name: "מבוטל", end_date: "2026-06-02" })],
       EMPTY_INDEX,
@@ -120,7 +120,7 @@ describe("buildBackfillFromExpired", () => {
       { user_id: 1, name: "רץ", phone: null, date: "2026-05-02", check_in: "Yes" },
     ]);
 
-    const result = buildBackfillFromExpired(
+    const result = buildReportFromEntries(
       "2026-06-01",
       [expired({ user_id: 1, name: "רץ", end_date: "2026-06-10" })],
       index,
@@ -131,7 +131,7 @@ describe("buildBackfillFromExpired", () => {
   });
 
   it("returns an empty report when nothing falls in the month", () => {
-    const result = buildBackfillFromExpired(
+    const result = buildReportFromEntries(
       "2026-06-01",
       [expired({ end_date: "2026-09-01" })],
       EMPTY_INDEX,
@@ -140,6 +140,63 @@ describe("buildBackfillFromExpired", () => {
 
     expect(result.data).toEqual({ monthly: [], pro: [], training_card: [] });
     expect(result.dropped).toHaveLength(0);
+  });
+
+  // Regression test for the live bug: expiringSessionsReport does not honour
+  // its fromDate/toDate range and can return cards whose end_date falls
+  // months outside the requested window (verified in production: a June
+  // query returned cards with end_date running into September). Before this
+  // fix, buildRetentionReport grouped every returned row with no end_date
+  // check, so a row like this one leaked into the wrong month's snapshot.
+  it("excludes an entry whose end_date is in a different month from reportMonth (out-of-range API row)", () => {
+    const result = buildReportFromEntries(
+      "2026-06-01",
+      [expired({ name: "מחוץ לטווח", end_date: "2026-09-06" })],
+      EMPTY_INDEX,
+      JUNE_KEYS,
+    );
+
+    expect(result.data.monthly).toHaveLength(0);
+    expect(result.data.pro).toHaveLength(0);
+    expect(result.data.training_card).toHaveLength(0);
+    expect(result.dropped).toHaveLength(0);
+  });
+
+  // A membership with no end date cannot be attributed to any month, so it
+  // must be excluded rather than defaulting end_date to "" and keeping it.
+  it("excludes an entry whose end_date is null", () => {
+    const result = buildReportFromEntries(
+      "2026-06-01",
+      [expired({ name: "ללא תאריך", end_date: null })],
+      EMPTY_INDEX,
+      JUNE_KEYS,
+    );
+
+    expect(result.data.monthly).toHaveLength(0);
+    expect(result.data.pro).toHaveLength(0);
+    expect(result.data.training_card).toHaveLength(0);
+  });
+
+  it("includes an entry whose end_date is the first day of the report month (no off-by-one)", () => {
+    const result = buildReportFromEntries(
+      "2026-06-01",
+      [expired({ name: "יום ראשון", end_date: "2026-06-01" })],
+      EMPTY_INDEX,
+      JUNE_KEYS,
+    );
+
+    expect(result.data.monthly.map((e) => e.name)).toEqual(["יום ראשון"]);
+  });
+
+  it("includes an entry whose end_date is the last day of the report month (no off-by-one)", () => {
+    const result = buildReportFromEntries(
+      "2026-06-01",
+      [expired({ name: "יום אחרון", end_date: "2026-06-30" })],
+      EMPTY_INDEX,
+      JUNE_KEYS,
+    );
+
+    expect(result.data.monthly.map((e) => e.name)).toEqual(["יום אחרון"]);
   });
 });
 
