@@ -98,7 +98,7 @@ async function fetchReportPage<T>(
   return json.data ?? [];
 }
 
-async function fetchAllPages<T>(
+export async function fetchAllPages<T>(
   reportName: string,
   fromDate: string,
   toDate: string,
@@ -128,7 +128,7 @@ async function fetchAllPages<T>(
 // whole report.
 // -------------------------------------------------------
 
-type RawArboxRow = Record<string, unknown>;
+export type RawArboxRow = Record<string, unknown>;
 
 function str(value: unknown): string | null {
   if (value == null) return null;
@@ -153,7 +153,7 @@ function arboxName(row: RawArboxRow): string {
   return composed;
 }
 
-function toExpiringEntry(row: RawArboxRow): ExpiringMembershipEntry {
+export function toExpiringEntry(row: RawArboxRow): ExpiringMembershipEntry {
   return {
     user_id: num(row.user_id),
     name: arboxName(row),
@@ -302,7 +302,7 @@ export function formatDateYMD(date: Date): string {
  * Get 4 individual month ranges: current month + 3 previous months
  * (respects Arbox 31-day API limit per request).
  */
-function getAttendanceMonthRanges(
+export function getAttendanceMonthRanges(
   reportMonth: string,
 ): readonly { from: string; to: string }[] {
   const d = new Date(reportMonth + "T00:00:00");
