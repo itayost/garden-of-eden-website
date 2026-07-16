@@ -367,6 +367,11 @@ export function TrainerShiftsView({
                               {formatDate(shift.start_time)}
                             </span>
                             <div className="flex items-center gap-1.5">
+                              {shift.shift_period === "morning" && (
+                                <Badge variant="outline" className="text-xs text-amber-700">
+                                  בוקר
+                                </Badge>
+                              )}
                               {shift.auto_ended && (
                                 <Badge variant="outline" className="text-xs">אוטומטי</Badge>
                               )}
@@ -551,6 +556,14 @@ export function TrainerShiftsView({
                               {shift.end_time
                                 ? formatTime(shift.end_time)
                                 : "פעילה"}
+                              {shift.shift_period === "morning" && (
+                                <Badge
+                                  variant="outline"
+                                  className="ms-2 text-xs text-amber-700"
+                                >
+                                  בוקר
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="font-mono text-sm">
                               {shift.end_time

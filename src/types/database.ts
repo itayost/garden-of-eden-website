@@ -10,6 +10,7 @@ export type UserRole = "trainee" | "trainer" | "admin";
 export type NutritionAppointmentStatus = 'not_scheduled' | 'scheduled' | 'completed';
 export type ShiftChangeRequestType = "edit" | "retro_add";
 export type ShiftChangeRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+export type ShiftPeriodValue = "morning" | "regular";
 
 export interface Database {
   // Required for proper Supabase client type inference
@@ -1135,6 +1136,7 @@ export interface Database {
           trainer_name: string;
           start_time: string;
           end_time: string | null;
+          shift_period: ShiftPeriodValue;
           auto_ended: boolean;
           flagged_for_review: boolean;
           other_purpose_minutes: number;
@@ -1148,6 +1150,7 @@ export interface Database {
           trainer_name: string;
           start_time?: string;
           end_time?: string | null;
+          shift_period?: ShiftPeriodValue;
           auto_ended?: boolean;
           flagged_for_review?: boolean;
           other_purpose_minutes?: number;
@@ -1161,6 +1164,7 @@ export interface Database {
           trainer_name?: string;
           start_time?: string;
           end_time?: string | null;
+          shift_period?: ShiftPeriodValue;
           auto_ended?: boolean;
           flagged_for_review?: boolean;
           other_purpose_minutes?: number;
@@ -1271,6 +1275,7 @@ export interface Database {
           original_end_time: string | null;
           requested_start_time: string;
           requested_end_time: string;
+          shift_period: ShiftPeriodValue;
           reason: string | null;
           status: ShiftChangeRequestStatus;
           decided_by: string | null;
@@ -1290,6 +1295,7 @@ export interface Database {
           original_end_time?: string | null;
           requested_start_time: string;
           requested_end_time: string;
+          shift_period?: ShiftPeriodValue;
           reason?: string | null;
           status?: ShiftChangeRequestStatus;
           decided_by?: string | null;
@@ -1329,6 +1335,7 @@ export interface Database {
     };
     Enums: {
       user_role: UserRole;
+      shift_period: ShiftPeriodValue;
       shift_change_request_type: ShiftChangeRequestType;
       shift_change_request_status: ShiftChangeRequestStatus;
     };

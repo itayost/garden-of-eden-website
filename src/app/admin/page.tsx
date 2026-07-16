@@ -30,7 +30,7 @@ export default async function AdminDashboardPage() {
   // Check for active shift (for trainers/admins)
   const { data: activeShift } = user
     ? await typedFrom(supabase, "trainer_shifts")
-        .select("id, start_time")
+        .select("id, start_time, shift_period")
         .eq("trainer_id", user.id)
         .is("end_time", null)
         .maybeSingle()

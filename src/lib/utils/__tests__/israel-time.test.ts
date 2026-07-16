@@ -3,6 +3,9 @@ import {
   getIsraelTime,
   isSaturdayInIsrael,
   getAutoClockoutHour,
+  israelMinutesOfDay,
+  inferShiftPeriod,
+  isWithinMorningWindow,
 } from "../israel-time";
 import type { IsraelTime } from "../israel-time";
 
@@ -96,6 +99,88 @@ describe("isSaturdayInIsrael", () => {
     // 2026-02-13 (Friday) 22:30 UTC = 2026-02-14 (Saturday) 00:30 Israel
     vi.setSystemTime(new Date("2026-02-13T22:30:00Z"));
     expect(isSaturdayInIsrael()).toBe(true);
+  });
+});
+
+// Israel runs UTC+2 in winter (IST) and UTC+3 in summer (IDT). These fixtures
+// pin real UTC instants to known Israel wall-clock times on both sides of the
+// 2026 DST boundary (DST starts 2026-03-27), so the helpers are exercised
+// against real timezone math rather than a fixed offset.
+const SUMMER_0759_IL = new Date("2026-07-15T04:59:00Z");
+const SUMMER_0800_IL = new Date("2026-07-15T05:00:00Z");
+const SUMMER_0930_IL = new Date("2026-07-15T06:30:00Z");
+const SUMMER_1059_IL = new Date("2026-07-15T07:59:00Z");
+const SUMMER_1100_IL = new Date("2026-07-15T08:00:00Z");
+const SUMMER_1600_IL = new Date("2026-07-15T13:00:00Z");
+const WINTER_0800_IL = new Date("2026-01-15T06:00:00Z");
+const WINTER_1100_IL = new Date("2026-01-15T09:00:00Z");
+
+describe("israelMinutesOfDay", () => {
+  it("converts Israel wall-clock time to minutes since midnight", () => {
+    expect(israelMinutesOfDay(SUMMER_0800_IL)).toBe(8 * 60);
+    expect(israelMinutesOfDay(SUMMER_0930_IL)).toBe(9 * 60 + 30);
+  });
+
+  it("uses the winter offset for a winter date", () => {
+    expect(israelMinutesOfDay(WINTER_0800_IL)).toBe(8 * 60);
+  });
+});
+
+describe("inferShiftPeriod", () => {
+  it("classifies 08:00 Israel time as morning (inclusive lower bound)", () => {
+    expect(inferShiftPeriod(SUMMER_0800_IL)).toBe("morning");
+  });
+
+  it("classifies 07:59 Israel time as regular", () => {
+    expect(inferShiftPeriod(SUMMER_0759_IL)).toBe("regular");
+  });
+
+  it("classifies 10:59 Israel time as morning", () => {
+    expect(inferShiftPeriod(SUMMER_1059_IL)).toBe("morning");
+  });
+
+  it("classifies exactly 11:00 Israel time as regular (exclusive upper bound)", () => {
+    expect(inferShiftPeriod(SUMMER_1100_IL)).toBe("regular");
+  });
+
+  it("classifies an afternoon clock-in as regular", () => {
+    expect(inferShiftPeriod(SUMMER_1600_IL)).toBe("regular");
+  });
+
+  it("respects DST: the same UTC instant classifies differently across the boundary", () => {
+    // 05:00Z is 08:00 Israel in summer (UTC+3) but 07:00 Israel in winter (UTC+2).
+    expect(inferShiftPeriod(new Date("2026-07-15T05:00:00Z"))).toBe("morning");
+    expect(inferShiftPeriod(new Date("2026-01-15T05:00:00Z"))).toBe("regular");
+  });
+});
+
+describe("isWithinMorningWindow", () => {
+  it("accepts a span exactly filling 08:00-11:00", () => {
+    expect(isWithinMorningWindow(SUMMER_0800_IL, SUMMER_1100_IL)).toBe(true);
+  });
+
+  it("accepts a span nested inside the window", () => {
+    expect(isWithinMorningWindow(SUMMER_0930_IL, SUMMER_1059_IL)).toBe(true);
+  });
+
+  it("accepts the window on a winter date", () => {
+    expect(isWithinMorningWindow(WINTER_0800_IL, WINTER_1100_IL)).toBe(true);
+  });
+
+  it("rejects a start before 08:00", () => {
+    expect(isWithinMorningWindow(SUMMER_0759_IL, SUMMER_1100_IL)).toBe(false);
+  });
+
+  it("rejects an end after 11:00", () => {
+    expect(isWithinMorningWindow(SUMMER_0800_IL, SUMMER_1600_IL)).toBe(false);
+  });
+
+  it("rejects a span crossing into the next Israel day", () => {
+    // 08:00 on the 15th to 09:00 on the 16th — both inside the window by
+    // clock time, but not the same calendar day.
+    expect(
+      isWithinMorningWindow(SUMMER_0800_IL, new Date("2026-07-16T06:00:00Z"))
+    ).toBe(false);
   });
 });
 

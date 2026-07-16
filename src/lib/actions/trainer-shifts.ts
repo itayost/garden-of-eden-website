@@ -4,10 +4,18 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdmin, verifyAdminOrTrainer } from "./shared/verify-admin";
-import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
+import {
+  inferShiftPeriod,
+  isSaturdayInIsrael,
+  isWithinMorningWindow,
+} from "@/lib/utils/israel-time";
 import { isValidUUID } from "@/lib/validations/common";
 import { resolveTimestamp } from "@/lib/utils/resolve-timestamp";
-import { MAX_SHIFT_HOURS } from "@/lib/constants/shifts";
+import { MAX_SHIFT_HOURS, type ShiftPeriod } from "@/lib/constants/shifts";
+import {
+  MORNING_WINDOW_ERROR,
+  normalizeShiftPeriod,
+} from "@/lib/validations/shift-change-requests";
 import { validateOtherPurpose } from "@/lib/utils/shift-other-purpose";
 
 type ActionResult =
@@ -44,12 +52,15 @@ export async function clockInAction(
   const timestamp = resolveTimestamp(clientTimestamp);
   if ("error" in timestamp) return { error: timestamp.error };
 
+  // Classify from the resolved timestamp, not from now(): a queued offline
+  // clock-in replays later and must be classified by when it happened.
   const { error: insertError } = await supabase
     .from("trainer_shifts")
     .insert({
       trainer_id: user.id,
       trainer_name: profile.full_name || "מאמן",
       start_time: timestamp.value,
+      shift_period: inferShiftPeriod(new Date(timestamp.value)),
     });
 
   if (insertError) {
@@ -234,6 +245,7 @@ export async function adminCreateShiftAction(data: {
   trainerId: string;
   startTime: string;
   endTime: string;
+  shiftPeriod?: ShiftPeriod;
 }): Promise<ActionResult> {
   if (!isValidUUID(data.trainerId)) return { error: "מזהה מאמן לא תקין" };
 
@@ -252,6 +264,11 @@ export async function adminCreateShiftAction(data: {
   const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
   if (durationHours > MAX_SHIFT_HOURS) {
     return { error: `משמרת לא יכולה להיות ארוכה יותר מ-${MAX_SHIFT_HOURS} שעות` };
+  }
+
+  const shiftPeriod = normalizeShiftPeriod(data.shiftPeriod);
+  if (shiftPeriod === "morning" && !isWithinMorningWindow(start, end)) {
+    return { error: MORNING_WINDOW_ERROR };
   }
 
   const supabase = await createClient();
@@ -286,6 +303,7 @@ export async function adminCreateShiftAction(data: {
       trainer_name: profile.full_name || "מאמן",
       start_time: data.startTime,
       end_time: data.endTime,
+      shift_period: shiftPeriod,
     });
 
   if (insertError) {
@@ -301,6 +319,7 @@ export async function adminEditShiftAction(data: {
   shiftId: string;
   startTime: string;
   endTime: string;
+  shiftPeriod?: ShiftPeriod;
 }): Promise<ActionResult> {
   if (!isValidUUID(data.shiftId)) return { error: "מזהה משמרת לא תקין" };
 
@@ -326,11 +345,35 @@ export async function adminEditShiftAction(data: {
   // Verify shift exists
   const { data: existing } = await supabase
     .from("trainer_shifts")
-    .select("id")
+    .select("id, trainer_id, shift_period")
     .eq("id", data.shiftId)
     .maybeSingle();
 
   if (!existing) return { error: "משמרת לא נמצאה" };
+
+  // Falls back to the row's current period so callers that omit it (and rows
+  // predating the column) keep their classification.
+  const shiftPeriod = normalizeShiftPeriod(
+    data.shiftPeriod ?? (existing.shift_period as ShiftPeriod | undefined)
+  );
+  if (shiftPeriod === "morning" && !isWithinMorningWindow(start, end)) {
+    return { error: MORNING_WINDOW_ERROR };
+  }
+
+  // Overlap check, mirroring adminCreateShiftAction. Two shifts per day make
+  // editing a shift into a collision with the day's other shift a real risk.
+  const { data: overlapping } = await supabase
+    .from("trainer_shifts")
+    .select("id")
+    .eq("trainer_id", existing.trainer_id)
+    .neq("id", data.shiftId)
+    .lt("start_time", data.endTime)
+    .gt("end_time", data.startTime)
+    .limit(1);
+
+  if (overlapping && overlapping.length > 0) {
+    return { error: "קיימת משמרת חופפת לזמנים אלו" };
+  }
 
   // other_purpose_minutes is intentionally NOT re-clamped here when the shift
   // duration changes. Read-time clamping in splitShiftMinutes keeps the
@@ -343,6 +386,7 @@ export async function adminEditShiftAction(data: {
     .update({
       start_time: data.startTime,
       end_time: data.endTime,
+      shift_period: shiftPeriod,
     })
     .eq("id", data.shiftId);
 

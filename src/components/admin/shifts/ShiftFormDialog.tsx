@@ -25,6 +25,13 @@ import {
   adminCreateShiftAction,
   adminEditShiftAction,
 } from "@/lib/actions/trainer-shifts";
+import type { ShiftPeriod } from "@/lib/constants/shifts";
+import {
+  MORNING_END_VALUE,
+  MORNING_START_VALUE,
+  ShiftPeriodSelect,
+  buildShiftRange,
+} from "./ShiftPeriodSelect";
 import type { TrainerShift } from "@/types/database";
 
 export interface ShiftFormTrainer {
@@ -64,6 +71,9 @@ export function ShiftFormDialog({
   const isEdit = !!editShift;
 
   const [trainerId, setTrainerId] = useState(editShift?.trainer_id ?? "");
+  const [shiftPeriod, setShiftPeriod] = useState<ShiftPeriod>(
+    editShift?.shift_period ?? "regular"
+  );
   const [date, setDate] = useState(
     editShift ? toLocalDate(editShift.start_time) : ""
   );
@@ -75,12 +85,23 @@ export function ShiftFormDialog({
   );
   const [loading, setLoading] = useState(false);
 
+  const isMorning = shiftPeriod === "morning";
+
   const resetForm = () => {
     if (!isEdit) {
       setTrainerId("");
+      setShiftPeriod("regular");
       setDate("");
       setStartTime("");
       setEndTime("");
+    }
+  };
+
+  const handlePeriodChange = (next: ShiftPeriod) => {
+    setShiftPeriod(next);
+    if (next === "morning") {
+      setStartTime(MORNING_START_VALUE);
+      setEndTime(MORNING_END_VALUE);
     }
   };
 
@@ -96,13 +117,13 @@ export function ShiftFormDialog({
       return;
     }
 
-    const startDate = new Date(`${date}T${startTime}:00`);
-    const endDate = new Date(`${date}T${endTime}:00`);
-
-    // Handle overnight shifts (e.g. 22:00 → 02:00)
-    if (endDate <= startDate) {
-      endDate.setDate(endDate.getDate() + 1);
-    }
+    // Regular shifts may run overnight (22:00 -> 02:00); morning shifts never do.
+    const { start: startDate, end: endDate } = buildShiftRange(
+      date,
+      startTime,
+      endTime,
+      shiftPeriod
+    );
 
     const startISO = startDate.toISOString();
     const endISO = endDate.toISOString();
@@ -114,11 +135,13 @@ export function ShiftFormDialog({
             shiftId: editShift.id,
             startTime: startISO,
             endTime: endISO,
+            shiftPeriod,
           })
         : await adminCreateShiftAction({
             trainerId,
             startTime: startISO,
             endTime: endISO,
+            shiftPeriod,
           });
 
       if (result.error) {
@@ -181,6 +204,13 @@ export function ShiftFormDialog({
             </div>
           )}
 
+          <ShiftPeriodSelect
+            id="shift-period"
+            value={shiftPeriod}
+            onChange={handlePeriodChange}
+            disabled={loading}
+          />
+
           <div className="space-y-2">
             <Label htmlFor="shift-date">תאריך *</Label>
             <Input
@@ -201,6 +231,8 @@ export function ShiftFormDialog({
                 dir="ltr"
                 lang="he-IL"
                 step={60}
+                min={isMorning ? MORNING_START_VALUE : undefined}
+                max={isMorning ? MORNING_END_VALUE : undefined}
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
@@ -213,6 +245,8 @@ export function ShiftFormDialog({
                 dir="ltr"
                 lang="he-IL"
                 step={60}
+                min={isMorning ? MORNING_START_VALUE : undefined}
+                max={isMorning ? MORNING_END_VALUE : undefined}
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
