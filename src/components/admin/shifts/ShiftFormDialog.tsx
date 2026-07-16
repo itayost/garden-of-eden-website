@@ -31,6 +31,7 @@ import {
   MORNING_START_VALUE,
   ShiftPeriodSelect,
   buildShiftRange,
+  isFridayDateString,
 } from "./ShiftPeriodSelect";
 import type { TrainerShift } from "@/types/database";
 
@@ -102,6 +103,14 @@ export function ShiftFormDialog({
     if (next === "morning") {
       setStartTime(MORNING_START_VALUE);
       setEndTime(MORNING_END_VALUE);
+    }
+  };
+
+  // Friday has no morning shift; fall back to regular if the date moves there.
+  const handleDateChange = (next: string) => {
+    setDate(next);
+    if (isFridayDateString(next) && shiftPeriod === "morning") {
+      setShiftPeriod("regular");
     }
   };
 
@@ -209,6 +218,7 @@ export function ShiftFormDialog({
             value={shiftPeriod}
             onChange={handlePeriodChange}
             disabled={loading}
+            date={date}
           />
 
           <div className="space-y-2">
@@ -218,7 +228,7 @@ export function ShiftFormDialog({
               type="date"
               dir="ltr"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
             />
           </div>
 
