@@ -1,9 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
+import { inferShiftPeriod, isSaturdayInIsrael } from "@/lib/utils/israel-time";
 import { resolveTimestamp } from "@/lib/utils/resolve-timestamp";
-
-const MAX_SHIFT_HOURS = 12;
+import { MAX_SHIFT_HOURS } from "@/lib/constants/shifts";
 
 interface SyncAction {
   type: "clock_in" | "clock_out";
@@ -97,12 +96,15 @@ export async function POST(request: Request) {
         continue;
       }
 
+      // Classify from the resolved timestamp: these actions were queued
+      // offline and are replaying now, so now() is the wrong clock to use.
       const { error: insertError } = await supabase
         .from("trainer_shifts")
         .insert({
           trainer_id: user.id,
           trainer_name: (profile.full_name as string) || "מאמן",
           start_time: timestamp.value,
+          shift_period: inferShiftPeriod(new Date(timestamp.value)),
         });
 
       if (insertError) {

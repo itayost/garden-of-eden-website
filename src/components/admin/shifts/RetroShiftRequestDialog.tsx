@@ -16,6 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { submitShiftChangeRequestAction } from "@/lib/actions/shift-change-requests";
+import type { ShiftPeriod } from "@/lib/constants/shifts";
+import {
+  MORNING_END_VALUE,
+  MORNING_START_VALUE,
+  ShiftPeriodSelect,
+  buildShiftRange,
+} from "./ShiftPeriodSelect";
 
 interface RetroShiftRequestDialogProps {
   open: boolean;
@@ -27,17 +34,34 @@ export function RetroShiftRequestDialog({
   onOpenChange,
 }: RetroShiftRequestDialogProps) {
   const router = useRouter();
+  const [shiftPeriod, setShiftPeriod] = useState<ShiftPeriod>("regular");
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isMorning = shiftPeriod === "morning";
+
   const reset = () => {
+    setShiftPeriod("regular");
     setDate("");
     setStartTime("");
     setEndTime("");
     setReason("");
+  };
+
+  // Switching to a morning shift prefills the window bounds; switching back
+  // clears them rather than leaving morning hours on a regular shift.
+  const handlePeriodChange = (next: ShiftPeriod) => {
+    setShiftPeriod(next);
+    if (next === "morning") {
+      setStartTime(MORNING_START_VALUE);
+      setEndTime(MORNING_END_VALUE);
+    } else {
+      setStartTime("");
+      setEndTime("");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,17 +72,18 @@ export function RetroShiftRequestDialog({
       return;
     }
 
-    const startDate = new Date(`${date}T${startTime}:00`);
-    const endDate = new Date(`${date}T${endTime}:00`);
-
-    if (endDate <= startDate) {
-      endDate.setDate(endDate.getDate() + 1);
-    }
+    const { start: startDate, end: endDate } = buildShiftRange(
+      date,
+      startTime,
+      endTime,
+      shiftPeriod
+    );
 
     setLoading(true);
     try {
       const result = await submitShiftChangeRequestAction({
         type: "retro_add",
+        shift_period: shiftPeriod,
         requested_start_time: startDate.toISOString(),
         requested_end_time: endDate.toISOString(),
         reason: reason.trim() || undefined,
@@ -95,6 +120,13 @@ export function RetroShiftRequestDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <ShiftPeriodSelect
+            id="retro-period"
+            value={shiftPeriod}
+            onChange={handlePeriodChange}
+            disabled={loading}
+          />
+
           <div className="space-y-2">
             <Label htmlFor="retro-date">תאריך *</Label>
             <Input
@@ -115,6 +147,8 @@ export function RetroShiftRequestDialog({
                 dir="ltr"
                 lang="he-IL"
                 step={60}
+                min={isMorning ? MORNING_START_VALUE : undefined}
+                max={isMorning ? MORNING_END_VALUE : undefined}
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
@@ -127,6 +161,8 @@ export function RetroShiftRequestDialog({
                 dir="ltr"
                 lang="he-IL"
                 step={60}
+                min={isMorning ? MORNING_START_VALUE : undefined}
+                max={isMorning ? MORNING_END_VALUE : undefined}
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />

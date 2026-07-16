@@ -13,6 +13,7 @@ import {
   checkAndAutoEndShiftAction,
 } from "@/lib/actions/trainer-shifts";
 import { isSaturdayInIsrael } from "@/lib/utils/israel-time";
+import type { ShiftPeriod } from "@/lib/constants/shifts";
 import {
   enqueueShiftAction,
   getAllQueuedActions,
@@ -25,7 +26,13 @@ import { useShiftQueueSync } from "@/hooks/use-shift-queue-sync";
 import { ConnectionBanner } from "./ConnectionBanner";
 
 interface ShiftStatusCardProps {
-  initialShift: { id: string; start_time: string } | null;
+  // shift_period is absent on optimistic pending shifts: the period is
+  // inferred server-side, so it only appears once the insert round-trips.
+  initialShift: {
+    id: string;
+    start_time: string;
+    shift_period?: ShiftPeriod;
+  } | null;
 }
 
 function formatElapsed(startTime: string): string {
@@ -256,6 +263,11 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
                           ? "ממתין לסנכרון"
                           : "במשמרת"}
                     </Badge>
+                    {activeShift.shift_period === "morning" && (
+                      <Badge variant="outline" className="text-amber-700">
+                        בוקר
+                      </Badge>
+                    )}
                     {isNear12Hours && (
                       <Badge variant="destructive" className="gap-1">
                         <AlertTriangle className="h-3 w-3" />

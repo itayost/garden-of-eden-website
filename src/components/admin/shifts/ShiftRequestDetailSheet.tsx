@@ -15,6 +15,8 @@ import {
   SHIFT_REQUEST_STATUS_LABELS,
   SHIFT_REQUEST_STATUS_VARIANTS,
 } from "@/components/admin/shifts/shift-request-status";
+import { SHIFT_PERIOD_LABELS } from "@/lib/constants/shifts";
+import { normalizeShiftPeriod } from "@/lib/validations/shift-change-requests";
 import type { ShiftChangeRequestWithPreview } from "@/lib/actions/shift-change-requests";
 
 interface ShiftRequestDetailSheetProps {
@@ -66,6 +68,11 @@ export function ShiftRequestDetailSheet({
             <Badge variant={SHIFT_REQUEST_STATUS_VARIANTS[request.status]}>
               {SHIFT_REQUEST_STATUS_LABELS[request.status]}
             </Badge>
+            {request.shift_period === "morning" && (
+              <Badge variant="outline" className="text-amber-700">
+                בוקר
+              </Badge>
+            )}
             <span className="text-sm text-muted-foreground">
               נשלחה {formatDateTime(request.created_at)}
             </span>
@@ -74,6 +81,13 @@ export function ShiftRequestDetailSheet({
           <div>
             <h3 className="text-sm font-semibold mb-2">מאמן</h3>
             <p className="text-sm">{request.trainer_name}</p>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold mb-2">סוג משמרת</h3>
+            <p className="text-sm">
+              {SHIFT_PERIOD_LABELS[normalizeShiftPeriod(request.shift_period)]}
+            </p>
           </div>
 
           {isEdit && (

@@ -172,7 +172,17 @@ export function ShiftRequestsAdminPanel({
                       <TableCell className="font-medium">
                         {r.trainer_name}
                       </TableCell>
-                      <TableCell>{SHIFT_REQUEST_TYPE_LABELS[r.request_type]}</TableCell>
+                      <TableCell>
+                        {SHIFT_REQUEST_TYPE_LABELS[r.request_type]}
+                        {r.shift_period === "morning" && (
+                          <Badge
+                            variant="outline"
+                            className="ms-1 text-xs text-amber-700"
+                          >
+                            בוקר
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>{formatDate(r.requested_start_time)}</TableCell>
                       <TableCell className="font-mono text-sm">
                         {formatTime(r.requested_start_time)}–
@@ -239,7 +249,8 @@ export function ShiftRequestsAdminPanel({
                     </Badge>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {SHIFT_REQUEST_TYPE_LABELS[r.request_type]} ·{" "}
+                    {SHIFT_REQUEST_TYPE_LABELS[r.request_type]}
+                    {r.shift_period === "morning" && " (בוקר)"} ·{" "}
                     {formatDate(r.requested_start_time)} ·{" "}
                     {formatTime(r.requested_start_time)}–
                     {formatTime(r.requested_end_time)}

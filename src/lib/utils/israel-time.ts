@@ -1,3 +1,9 @@
+import {
+  MORNING_SHIFT_END_HOUR,
+  MORNING_SHIFT_START_HOUR,
+  type ShiftPeriod,
+} from "@/lib/constants/shifts";
+
 const ISRAEL_TZ = "Asia/Jerusalem";
 
 export interface IsraelTime {
@@ -72,6 +78,41 @@ const ISRAEL_DAY_FORMATTER = new Intl.DateTimeFormat("en-CA", {
 export function israelDateStr(value: string | Date): string {
   const d = typeof value === "string" ? new Date(value) : value;
   return ISRAEL_DAY_FORMATTER.format(d);
+}
+
+/**
+ * Minutes elapsed since midnight in Israel time. 08:30 -> 510.
+ */
+export function israelMinutesOfDay(date: Date): number {
+  const { hour, minute } = getIsraelTime(date);
+  return hour * 60 + minute;
+}
+
+const MORNING_START_MINUTES = MORNING_SHIFT_START_HOUR * 60;
+const MORNING_END_MINUTES = MORNING_SHIFT_END_HOUR * 60;
+
+/**
+ * Classifies a clock-in moment as a morning or regular shift.
+ * Morning is the half-open window [08:00, 11:00) Israel time — a clock-in at
+ * exactly 11:00 is a regular shift, since no morning shift could remain.
+ */
+export function inferShiftPeriod(date: Date = new Date()): ShiftPeriod {
+  const minutes = israelMinutesOfDay(date);
+  return minutes >= MORNING_START_MINUTES && minutes < MORNING_END_MINUTES
+    ? "morning"
+    : "regular";
+}
+
+/**
+ * Returns true if the span falls entirely inside the morning window
+ * (08:00-11:00 Israel time) on a single Israel calendar day.
+ */
+export function isWithinMorningWindow(start: Date, end: Date): boolean {
+  if (israelDateStr(start) !== israelDateStr(end)) return false;
+  return (
+    israelMinutesOfDay(start) >= MORNING_START_MINUTES &&
+    israelMinutesOfDay(end) <= MORNING_END_MINUTES
+  );
 }
 
 /**

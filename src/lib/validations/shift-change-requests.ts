@@ -1,10 +1,17 @@
 import { isValidUUID } from "./common";
-import { MAX_SHIFT_HOURS } from "@/lib/constants/shifts";
+import {
+  MAX_SHIFT_HOURS,
+  MORNING_SHIFT_END_HOUR,
+  MORNING_SHIFT_START_HOUR,
+  type ShiftPeriod,
+} from "@/lib/constants/shifts";
+import { isWithinMorningWindow } from "@/lib/utils/israel-time";
 
 export type ShiftChangeRequestInput =
   | {
       type: "retro_add";
       target_shift_id?: string;
+      shift_period?: ShiftPeriod;
       requested_start_time: string;
       requested_end_time: string;
       reason?: string;
@@ -12,10 +19,20 @@ export type ShiftChangeRequestInput =
   | {
       type: "edit";
       target_shift_id: string;
+      shift_period?: ShiftPeriod;
       requested_start_time: string;
       requested_end_time: string;
       reason?: string;
     };
+
+/** Rows predate the shift_period column, and older clients may omit it. */
+export function normalizeShiftPeriod(value: ShiftPeriod | undefined): ShiftPeriod {
+  return value === "morning" ? "morning" : "regular";
+}
+
+export const MORNING_WINDOW_ERROR = `משמרת בוקר חייבת להיות בין ${String(
+  MORNING_SHIFT_START_HOUR
+).padStart(2, "0")}:00 ל-${String(MORNING_SHIFT_END_HOUR).padStart(2, "0")}:00`;
 
 export type ValidationResult =
   | { valid: true }
@@ -54,6 +71,12 @@ export function validateShiftChangeRequestInput(
     return { valid: false, error: "שעת סיום חייבת להיות בעבר" };
   }
 
+  if (normalizeShiftPeriod(input.shift_period) === "morning") {
+    if (!isWithinMorningWindow(start, end)) {
+      return { valid: false, error: MORNING_WINDOW_ERROR };
+    }
+  }
+
   if (input.type === "edit") {
     if (!input.target_shift_id || !isValidUUID(input.target_shift_id)) {
       return { valid: false, error: "מזהה משמרת לעריכה אינו תקין" };
@@ -77,6 +100,7 @@ export type RequestForResolve = {
   target_shift_id: string | null;
   requested_start_time: string;
   requested_end_time: string;
+  shift_period: ShiftPeriod;
 };
 
 export type ShiftForResolve = {
@@ -84,6 +108,7 @@ export type ShiftForResolve = {
   trainer_id: string;
   start_time: string;
   end_time: string | null;
+  shift_period: ShiftPeriod;
 };
 
 export type ApprovalMode =
@@ -105,11 +130,18 @@ export function resolveApprovalMode(
     return { mode: "edit", resolvedShiftId: targetShift.id };
   }
 
-  if (sameDayShifts.length === 0) {
+  // Scope by period: a day legitimately holds one morning and one regular
+  // shift. Without this filter a morning retro_add would resolve to
+  // retro_merge against the day's regular shift and overwrite its times.
+  const samePeriod = sameDayShifts.filter(
+    (s) => s.shift_period === request.shift_period
+  );
+
+  if (samePeriod.length === 0) {
     return { mode: "retro_insert", resolvedShiftId: null };
   }
-  if (sameDayShifts.length === 1) {
-    return { mode: "retro_merge", resolvedShiftId: sameDayShifts[0].id };
+  if (samePeriod.length === 1) {
+    return { mode: "retro_merge", resolvedShiftId: samePeriod[0].id };
   }
   return { error: "MULTI_MATCH" };
 }
@@ -166,10 +198,15 @@ export function formatRequestSummary(request: {
   request_type: "edit" | "retro_add";
   requested_start_time: string;
   requested_end_time: string;
+  shift_period?: ShiftPeriod;
 }): string {
   const verb = request.request_type === "retro_add" ? "הוספת משמרת" : "עריכת משמרת";
+  // "הוספת משמרת בוקר 14/03 08:00–11:00" — the verb already carries "משמרת",
+  // so morning only appends the qualifier.
+  const qualifier =
+    normalizeShiftPeriod(request.shift_period) === "morning" ? " בוקר" : "";
   const date = formatDate(request.requested_start_time);
   const start = formatTime(request.requested_start_time);
   const end = formatTime(request.requested_end_time);
-  return `${verb} ${date} ${start}–${end}`;
+  return `${verb}${qualifier} ${date} ${start}–${end}`;
 }

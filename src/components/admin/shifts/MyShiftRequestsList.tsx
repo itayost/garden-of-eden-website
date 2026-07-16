@@ -107,6 +107,7 @@ export function MyShiftRequestsList({ requests }: MyShiftRequestsListProps) {
                           {r.request_type === "retro_add"
                             ? "הוספת משמרת"
                             : "עריכת משמרת"}
+                          {r.shift_period === "morning" && " בוקר"}
                         </span>
                         <span className="text-sm text-muted-foreground">
                           {formatDate(r.requested_start_time)} ·{" "}

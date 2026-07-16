@@ -16,6 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { submitShiftChangeRequestAction } from "@/lib/actions/shift-change-requests";
+import type { ShiftPeriod } from "@/lib/constants/shifts";
+import {
+  MORNING_END_VALUE,
+  MORNING_START_VALUE,
+  ShiftPeriodSelect,
+  buildShiftRange,
+} from "./ShiftPeriodSelect";
 import type { TrainerShift } from "@/types/database";
 
 interface EditShiftRequestDialogProps {
@@ -45,6 +52,9 @@ export function EditShiftRequestDialog({
   shift,
 }: EditShiftRequestDialogProps) {
   const router = useRouter();
+  const [shiftPeriod, setShiftPeriod] = useState<ShiftPeriod>(
+    shift.shift_period ?? "regular"
+  );
   const [date, setDate] = useState(toLocalDate(shift.start_time));
   const [startTime, setStartTime] = useState(toLocalTime(shift.start_time));
   const [endTime, setEndTime] = useState(
@@ -53,12 +63,25 @@ export function EditShiftRequestDialog({
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isMorning = shiftPeriod === "morning";
+
   useEffect(() => {
+    setShiftPeriod(shift.shift_period ?? "regular");
     setDate(toLocalDate(shift.start_time));
     setStartTime(toLocalTime(shift.start_time));
     setEndTime(shift.end_time ? toLocalTime(shift.end_time) : "");
     setReason("");
-  }, [shift.id, shift.start_time, shift.end_time]);
+  }, [shift.id, shift.start_time, shift.end_time, shift.shift_period]);
+
+  // Reclassifying to morning prefills the window bounds. Switching back keeps
+  // the current times — unlike the retro dialog, they came from a real shift.
+  const handlePeriodChange = (next: ShiftPeriod) => {
+    setShiftPeriod(next);
+    if (next === "morning") {
+      setStartTime(MORNING_START_VALUE);
+      setEndTime(MORNING_END_VALUE);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,17 +90,19 @@ export function EditShiftRequestDialog({
       return;
     }
 
-    const startDate = new Date(`${date}T${startTime}:00`);
-    const endDate = new Date(`${date}T${endTime}:00`);
-    if (endDate <= startDate) {
-      endDate.setDate(endDate.getDate() + 1);
-    }
+    const { start: startDate, end: endDate } = buildShiftRange(
+      date,
+      startTime,
+      endTime,
+      shiftPeriod
+    );
 
     setLoading(true);
     try {
       const result = await submitShiftChangeRequestAction({
         type: "edit",
         target_shift_id: shift.id,
+        shift_period: shiftPeriod,
         requested_start_time: startDate.toISOString(),
         requested_end_time: endDate.toISOString(),
         reason: reason.trim() || undefined,
@@ -107,6 +132,13 @@ export function EditShiftRequestDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <ShiftPeriodSelect
+            id="edit-period"
+            value={shiftPeriod}
+            onChange={handlePeriodChange}
+            disabled={loading}
+          />
+
           <div className="space-y-2">
             <Label htmlFor="edit-date">תאריך *</Label>
             <Input
@@ -127,6 +159,8 @@ export function EditShiftRequestDialog({
                 dir="ltr"
                 lang="he-IL"
                 step={60}
+                min={isMorning ? MORNING_START_VALUE : undefined}
+                max={isMorning ? MORNING_END_VALUE : undefined}
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
@@ -139,6 +173,8 @@ export function EditShiftRequestDialog({
                 dir="ltr"
                 lang="he-IL"
                 step={60}
+                min={isMorning ? MORNING_START_VALUE : undefined}
+                max={isMorning ? MORNING_END_VALUE : undefined}
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />

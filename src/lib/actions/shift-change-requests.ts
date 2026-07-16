@@ -7,8 +7,10 @@ import { verifyAdmin, verifyAdminOrTrainer } from "./shared/verify-admin";
 import { isValidUUID } from "@/lib/validations/common";
 import {
   validateShiftChangeRequestInput,
+  normalizeShiftPeriod,
   type ShiftChangeRequestInput,
 } from "@/lib/validations/shift-change-requests";
+import { SHIFT_PERIOD_LABELS } from "@/lib/constants/shifts";
 import { israelDateStr } from "@/lib/utils/israel-time";
 import type {
   ShiftChangeRequest,
@@ -40,6 +42,8 @@ export async function submitShiftChangeRequestAction(
 
   const validation = validateShiftChangeRequestInput(input);
   if (!validation.valid) return { error: validation.error };
+
+  const shiftPeriod = normalizeShiftPeriod(input.shift_period);
 
   const supabase = await createClient();
 
@@ -79,11 +83,14 @@ export async function submitShiftChangeRequestAction(
     const windowMs = 26 * 60 * 60 * 1000;
     const requestedDay = israelDateStr(input.requested_start_time);
 
+    // Scoped by period: a trainer may have one pending morning request and one
+    // pending regular request for the same day.
     const { data: existing } = await typedFrom(supabase, REQUESTS_TABLE)
       .select("id, requested_start_time")
       .eq("trainer_id", user.id)
       .eq("request_type", "retro_add")
       .eq("status", "pending")
+      .eq("shift_period", shiftPeriod)
       .gte("requested_start_time", new Date(reqStartMs - windowMs).toISOString())
       .lte("requested_start_time", new Date(reqStartMs + windowMs).toISOString());
 
@@ -91,7 +98,9 @@ export async function submitShiftChangeRequestAction(
       (row) => israelDateStr(row.requested_start_time) === requestedDay
     );
     if (conflict) {
-      return { error: "כבר קיימת בקשת הוספת משמרת ממתינה לתאריך זה" };
+      return {
+        error: `כבר קיימת בקשת הוספת ${SHIFT_PERIOD_LABELS[shiftPeriod]} ממתינה לתאריך זה`,
+      };
     }
   }
 
@@ -107,6 +116,7 @@ export async function submitShiftChangeRequestAction(
       original_end_time: originalEnd,
       requested_start_time: input.requested_start_time,
       requested_end_time: input.requested_end_time,
+      shift_period: shiftPeriod,
       reason: input.reason ?? null,
       status: "pending",
     })
@@ -131,6 +141,7 @@ export async function submitShiftChangeRequestAction(
       target_shift_id: input.type === "edit" ? input.target_shift_id : null,
       requested_start: input.requested_start_time,
       requested_end: input.requested_end_time,
+      shift_period: shiftPeriod,
       reason: input.reason ?? null,
     },
   });
@@ -193,13 +204,14 @@ export type MyShiftChangeRequest = Pick<
   | "original_end_time"
   | "requested_start_time"
   | "requested_end_time"
+  | "shift_period"
   | "reason"
   | "status"
   | "created_at"
 >;
 
 const MY_REQUEST_COLUMNS =
-  "id, request_type, target_shift_id, original_start_time, original_end_time, requested_start_time, requested_end_time, reason, status, created_at";
+  "id, request_type, target_shift_id, original_start_time, original_end_time, requested_start_time, requested_end_time, shift_period, reason, status, created_at";
 
 export async function getMyShiftChangeRequestsAction(): Promise<
   ActionResult<MyShiftChangeRequest[]>
@@ -282,7 +294,7 @@ export async function getShiftChangeRequestsAction(filter?: {
   const rangeEnd = new Date(Math.max(...requestedTimes) + windowMs).toISOString();
 
   const { data: shifts } = await typedFrom(supabase, SHIFTS_TABLE)
-    .select("id, trainer_id, start_time, end_time")
+    .select("id, trainer_id, start_time, end_time, shift_period")
     .in("trainer_id", trainerIds)
     .gte("start_time", rangeStart)
     .lte("start_time", rangeEnd);
@@ -300,8 +312,13 @@ export async function getShiftChangeRequestsAction(filter?: {
     }
     const requestDay = israelDateStr(r.requested_start_time);
     const trainerShifts = shiftsByTrainer.get(r.trainer_id) ?? [];
+    // Must mirror the RPC's period scoping, or the admin previews a merge
+    // into the day's other-period shift that will never happen.
+    const requestPeriod = normalizeShiftPeriod(r.shift_period);
     const sameDay = trainerShifts.filter(
-      (s) => israelDateStr(s.start_time) === requestDay
+      (s) =>
+        israelDateStr(s.start_time) === requestDay &&
+        normalizeShiftPeriod(s.shift_period) === requestPeriod
     );
     if (sameDay.length === 1) {
       return {
