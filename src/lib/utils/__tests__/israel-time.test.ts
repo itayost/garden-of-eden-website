@@ -6,6 +6,7 @@ import {
   israelMinutesOfDay,
   inferShiftPeriod,
   isWithinMorningWindow,
+  isMorningShiftAllowed,
 } from "../israel-time";
 import type { IsraelTime } from "../israel-time";
 
@@ -151,6 +152,41 @@ describe("inferShiftPeriod", () => {
     // 05:00Z is 08:00 Israel in summer (UTC+3) but 07:00 Israel in winter (UTC+2).
     expect(inferShiftPeriod(new Date("2026-07-15T05:00:00Z"))).toBe("morning");
     expect(inferShiftPeriod(new Date("2026-01-15T05:00:00Z"))).toBe("regular");
+  });
+});
+
+// Friday runs a single 09:00-15:00 shift with no morning/regular split, so a
+// 09:00 Friday clock-in is a full work day, not a morning shift. 2026-07-17
+// is a Friday; 2026-07-16 a Thursday.
+const FRIDAY_0900_IL = new Date("2026-07-17T06:00:00Z");
+const FRIDAY_1000_IL = new Date("2026-07-17T07:00:00Z");
+const THURSDAY_0900_IL = new Date("2026-07-16T06:00:00Z");
+
+describe("isMorningShiftAllowed", () => {
+  it("allows morning shifts Sunday-Thursday", () => {
+    expect(isMorningShiftAllowed(THURSDAY_0900_IL)).toBe(true);
+    expect(isMorningShiftAllowed(SUMMER_0800_IL)).toBe(true); // Wednesday
+  });
+
+  it("does not allow morning shifts on Friday", () => {
+    expect(isMorningShiftAllowed(FRIDAY_0900_IL)).toBe(false);
+  });
+});
+
+describe("inferShiftPeriod on Friday", () => {
+  // Regression: 43 real Friday shifts start between 08:00 and 10:59 and run
+  // well past 11:00 (e.g. 10:00-16:00). Classifying them 'morning' would let
+  // the morning sweep force-end them at 11:00, hours early.
+  it("classifies a 09:00 Friday clock-in as regular, not morning", () => {
+    expect(inferShiftPeriod(FRIDAY_0900_IL)).toBe("regular");
+  });
+
+  it("classifies a 10:00 Friday clock-in as regular, not morning", () => {
+    expect(inferShiftPeriod(FRIDAY_1000_IL)).toBe("regular");
+  });
+
+  it("still classifies the same hour on Thursday as morning", () => {
+    expect(inferShiftPeriod(THURSDAY_0900_IL)).toBe("morning");
   });
 });
 

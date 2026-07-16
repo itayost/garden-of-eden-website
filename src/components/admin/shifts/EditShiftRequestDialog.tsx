@@ -22,6 +22,7 @@ import {
   MORNING_START_VALUE,
   ShiftPeriodSelect,
   buildShiftRange,
+  isFridayDateString,
 } from "./ShiftPeriodSelect";
 import type { TrainerShift } from "@/types/database";
 
@@ -83,6 +84,14 @@ export function EditShiftRequestDialog({
     }
   };
 
+  // Friday has no morning shift; fall back to regular if the date moves there.
+  const handleDateChange = (next: string) => {
+    setDate(next);
+    if (isFridayDateString(next) && shiftPeriod === "morning") {
+      setShiftPeriod("regular");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !startTime || !endTime) {
@@ -137,6 +146,7 @@ export function EditShiftRequestDialog({
             value={shiftPeriod}
             onChange={handlePeriodChange}
             disabled={loading}
+            date={date}
           />
 
           <div className="space-y-2">
@@ -146,7 +156,7 @@ export function EditShiftRequestDialog({
               type="date"
               dir="ltr"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
             />
           </div>
 

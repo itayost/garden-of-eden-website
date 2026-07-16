@@ -22,6 +22,7 @@ import {
   MORNING_START_VALUE,
   ShiftPeriodSelect,
   buildShiftRange,
+  isFridayDateString,
 } from "./ShiftPeriodSelect";
 
 interface RetroShiftRequestDialogProps {
@@ -61,6 +62,15 @@ export function RetroShiftRequestDialog({
     } else {
       setStartTime("");
       setEndTime("");
+    }
+  };
+
+  // Picking a Friday after choosing morning has to fall back to regular —
+  // Friday has no morning shift.
+  const handleDateChange = (next: string) => {
+    setDate(next);
+    if (isFridayDateString(next) && shiftPeriod === "morning") {
+      handlePeriodChange("regular");
     }
   };
 
@@ -125,6 +135,7 @@ export function RetroShiftRequestDialog({
             value={shiftPeriod}
             onChange={handlePeriodChange}
             disabled={loading}
+            date={date}
           />
 
           <div className="space-y-2">
@@ -134,7 +145,7 @@ export function RetroShiftRequestDialog({
               type="date"
               dir="ltr"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
             />
           </div>
 

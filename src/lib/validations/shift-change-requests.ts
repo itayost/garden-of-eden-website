@@ -5,7 +5,10 @@ import {
   MORNING_SHIFT_START_HOUR,
   type ShiftPeriod,
 } from "@/lib/constants/shifts";
-import { isWithinMorningWindow } from "@/lib/utils/israel-time";
+import {
+  isMorningShiftAllowed,
+  isWithinMorningWindow,
+} from "@/lib/utils/israel-time";
 
 export type ShiftChangeRequestInput =
   | {
@@ -33,6 +36,8 @@ export function normalizeShiftPeriod(value: ShiftPeriod | undefined): ShiftPerio
 export const MORNING_WINDOW_ERROR = `משמרת בוקר חייבת להיות בין ${String(
   MORNING_SHIFT_START_HOUR
 ).padStart(2, "0")}:00 ל-${String(MORNING_SHIFT_END_HOUR).padStart(2, "0")}:00`;
+
+export const MORNING_ON_FRIDAY_ERROR = "אין משמרת בוקר בימי שישי";
 
 export type ValidationResult =
   | { valid: true }
@@ -72,6 +77,9 @@ export function validateShiftChangeRequestInput(
   }
 
   if (normalizeShiftPeriod(input.shift_period) === "morning") {
+    if (!isMorningShiftAllowed(start)) {
+      return { valid: false, error: MORNING_ON_FRIDAY_ERROR };
+    }
     if (!isWithinMorningWindow(start, end)) {
       return { valid: false, error: MORNING_WINDOW_ERROR };
     }

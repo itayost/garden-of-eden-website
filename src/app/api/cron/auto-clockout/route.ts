@@ -15,9 +15,9 @@ import {
  * Runs every 10 minutes and performs two independent sweeps:
  *
  * - Morning sweep: at/after 11:00 Israel time, ends active shifts marked
- *   shift_period = 'morning'. Runs on any day, independent of the day sweep —
- *   a forgotten morning shift must not sit open until the evening cutoff and
- *   land as a ~12-hour shift.
+ *   shift_period = 'morning'. Runs on any day except Friday, independent of
+ *   the day sweep — a forgotten morning shift must not sit open until the
+ *   evening cutoff and land as a ~12-hour shift.
  * - Day sweep: the original whole-day cutoff.
  *     - Saturday: does nothing
  *     - Friday at/after 15:00: ends all active shifts
@@ -30,6 +30,8 @@ import {
 const EXCLUDED_TRAINER_IDS = [
   "15f0cf63-0306-4186-9a7f-51ef21a39117", // עידו ברק
 ];
+
+const FRIDAY = 5;
 
 interface SweepResult {
   ended: number;
@@ -123,7 +125,14 @@ export async function GET(request: NextRequest) {
 
   // Morning sweep — gated only on the morning cutoff, so it still runs on the
   // days and hours the day sweep skips.
-  const morningDue = israelTime.hour >= MORNING_SHIFT_END_HOUR;
+  //
+  // Skipped on Friday: that day is a single ~09:00-15:00 shift with no
+  // morning/regular split, so nothing there should be ended at 11:00. Friday
+  // shifts are never classified 'morning', but a row mislabelled by hand (or
+  // by the brief window before this guard shipped) must fall to the 15:00 day
+  // sweep rather than be force-ended four hours early.
+  const morningDue =
+    israelTime.dayOfWeek !== FRIDAY && israelTime.hour >= MORNING_SHIFT_END_HOUR;
   const morning: SweepResult = morningDue
     ? await endActiveShifts(supabase, "morning", "morning")
     : { ended: 0, attempted: 0 };

@@ -6,6 +6,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdmin, verifyAdminOrTrainer } from "./shared/verify-admin";
 import {
   inferShiftPeriod,
+  isMorningShiftAllowed,
   isSaturdayInIsrael,
   isWithinMorningWindow,
 } from "@/lib/utils/israel-time";
@@ -13,6 +14,7 @@ import { isValidUUID } from "@/lib/validations/common";
 import { resolveTimestamp } from "@/lib/utils/resolve-timestamp";
 import { MAX_SHIFT_HOURS, type ShiftPeriod } from "@/lib/constants/shifts";
 import {
+  MORNING_ON_FRIDAY_ERROR,
   MORNING_WINDOW_ERROR,
   normalizeShiftPeriod,
 } from "@/lib/validations/shift-change-requests";
@@ -267,8 +269,9 @@ export async function adminCreateShiftAction(data: {
   }
 
   const shiftPeriod = normalizeShiftPeriod(data.shiftPeriod);
-  if (shiftPeriod === "morning" && !isWithinMorningWindow(start, end)) {
-    return { error: MORNING_WINDOW_ERROR };
+  if (shiftPeriod === "morning") {
+    if (!isMorningShiftAllowed(start)) return { error: MORNING_ON_FRIDAY_ERROR };
+    if (!isWithinMorningWindow(start, end)) return { error: MORNING_WINDOW_ERROR };
   }
 
   const supabase = await createClient();
@@ -356,8 +359,9 @@ export async function adminEditShiftAction(data: {
   const shiftPeriod = normalizeShiftPeriod(
     data.shiftPeriod ?? (existing.shift_period as ShiftPeriod | undefined)
   );
-  if (shiftPeriod === "morning" && !isWithinMorningWindow(start, end)) {
-    return { error: MORNING_WINDOW_ERROR };
+  if (shiftPeriod === "morning") {
+    if (!isMorningShiftAllowed(start)) return { error: MORNING_ON_FRIDAY_ERROR };
+    if (!isWithinMorningWindow(start, end)) return { error: MORNING_WINDOW_ERROR };
   }
 
   // Overlap check, mirroring adminCreateShiftAction. Two shifts per day make

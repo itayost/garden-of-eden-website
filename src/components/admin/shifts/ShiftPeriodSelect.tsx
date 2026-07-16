@@ -43,11 +43,27 @@ export function buildShiftRange(
   return { start, end };
 }
 
+const FRIDAY = 5;
+
+/**
+ * True when the "YYYY-MM-DD" date string names a Friday. Parsed as a plain
+ * calendar date (no timezone shift) — the form's date field already means an
+ * Israel calendar day.
+ */
+export function isFridayDateString(date: string): boolean {
+  if (!date) return false;
+  const [y, m, d] = date.split("-").map(Number);
+  if (!y || !m || !d) return false;
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay() === FRIDAY;
+}
+
 interface ShiftPeriodSelectProps {
   id?: string;
   value: ShiftPeriod;
   onChange: (period: ShiftPeriod) => void;
   disabled?: boolean;
+  /** The form's selected date; morning is unavailable on Fridays. */
+  date?: string;
 }
 
 export function ShiftPeriodSelect({
@@ -55,7 +71,11 @@ export function ShiftPeriodSelect({
   value,
   onChange,
   disabled,
+  date,
 }: ShiftPeriodSelectProps) {
+  // Friday is a single ~09:00-15:00 shift with no morning/regular split.
+  const morningBlocked = date !== undefined && isFridayDateString(date);
+
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>סוג משמרת *</Label>
@@ -69,16 +89,24 @@ export function ShiftPeriodSelect({
         </SelectTrigger>
         <SelectContent>
           {SHIFT_PERIODS.map((period) => (
-            <SelectItem key={period} value={period}>
+            <SelectItem
+              key={period}
+              value={period}
+              disabled={period === "morning" && morningBlocked}
+            >
               {SHIFT_PERIOD_LABELS[period]}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      {value === "morning" && (
-        <p className="text-xs text-muted-foreground">
-          משמרת בוקר מוגבלת לשעות {MORNING_START_VALUE}-{MORNING_END_VALUE}
-        </p>
+      {morningBlocked ? (
+        <p className="text-xs text-muted-foreground">אין משמרת בוקר בימי שישי</p>
+      ) : (
+        value === "morning" && (
+          <p className="text-xs text-muted-foreground">
+            משמרת בוקר מוגבלת לשעות {MORNING_START_VALUE}-{MORNING_END_VALUE}
+          </p>
+        )
       )}
     </div>
   );

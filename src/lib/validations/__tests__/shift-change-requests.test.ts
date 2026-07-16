@@ -218,6 +218,42 @@ describe("validateShiftChangeRequestInput", () => {
       expect(validateShiftChangeRequestInput(input)).toEqual({ valid: true });
     });
 
+    it("rejects a morning request on a Friday", () => {
+      // 2026-07-10 is a past Friday. Friday is one ~09:00-15:00 shift, no morning.
+      const input: ShiftChangeRequestInput = {
+        type: "retro_add",
+        shift_period: "morning",
+        requested_start_time: "2026-07-10T05:00:00.000Z", // 08:00 IL
+        requested_end_time: "2026-07-10T08:00:00.000Z", // 11:00 IL
+      };
+      const result = validateShiftChangeRequestInput(input);
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.error).toContain("שישי");
+      }
+    });
+
+    it("accepts a regular Friday request spanning 09:00-15:00", () => {
+      const input: ShiftChangeRequestInput = {
+        type: "retro_add",
+        shift_period: "regular",
+        requested_start_time: "2026-07-10T06:00:00.000Z", // 09:00 IL
+        requested_end_time: "2026-07-10T12:00:00.000Z", // 15:00 IL
+      };
+      expect(validateShiftChangeRequestInput(input)).toEqual({ valid: true });
+    });
+
+    it("still accepts a regular Friday request ending after 15:00", () => {
+      // 39 real Friday shifts end after 15:00, so this must not be rejected.
+      const input: ShiftChangeRequestInput = {
+        type: "retro_add",
+        shift_period: "regular",
+        requested_start_time: "2026-07-10T07:00:00.000Z", // 10:00 IL
+        requested_end_time: "2026-07-10T13:00:00.000Z", // 16:00 IL
+      };
+      expect(validateShiftChangeRequestInput(input)).toEqual({ valid: true });
+    });
+
     it("applies the morning window to edit requests too", () => {
       const input: ShiftChangeRequestInput = {
         type: "edit",
