@@ -39,6 +39,7 @@ const plans = [
     ],
     extraFeatures: [],
     highlighted: false,
+    availableSpots: 7,
   },
   {
     name: "תוכנית מתקדמים",
@@ -57,6 +58,7 @@ const plans = [
     ],
     extraFeatures: [],
     highlighted: true,
+    availableSpots: 4,
   },
   {
     name: "תוכנית PRO",
@@ -76,6 +78,7 @@ const plans = [
     ],
     extraFeatures: [],
     highlighted: false,
+    availableSpots: 3,
   },
   {
     name: "פגישת ניתוח וידיאו",
@@ -235,6 +238,14 @@ export function Services() {
 
                 {/* CTA */}
                 <div className="mt-auto pt-4">
+                  {"availableSpots" in plan && plan.availableSpots != null && (
+                    <div className="flex justify-center mb-3">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#CDEA68]/30 text-black text-xs font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#CDEA68] border border-black/20" />
+                        נותרו {plan.availableSpots} מקומות
+                      </span>
+                    </div>
+                  )}
                   {"externalUrl" in plan && plan.externalUrl ? (
                     <a
                       href={plan.externalUrl}
