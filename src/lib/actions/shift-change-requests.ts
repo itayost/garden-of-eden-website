@@ -356,9 +356,15 @@ export async function getPendingShiftChangeRequestsCountAction(): Promise<
   return { success: true, data: { count: count ?? 0 } };
 }
 
+export type ApproveTimesOverride = {
+  start_time: string;
+  end_time: string;
+};
+
 export async function approveShiftChangeRequestAction(
   requestId: string,
-  note?: string
+  note?: string,
+  override?: ApproveTimesOverride
 ): Promise<ActionResult<{ applied_shift_id: string; mode: ApprovalMode }>> {
   const auth = await verifyAdmin();
   if (auth.error) return { error: auth.error };
@@ -382,6 +388,26 @@ export async function approveShiftChangeRequestAction(
 
   const request = requestRow as ShiftChangeRequest;
 
+  // An admin may adjust the times at approval. The override goes through the
+  // same validation as a trainer-submitted request; the RPC re-validates and
+  // applies the effective times atomically.
+  if (override) {
+    const validation = validateShiftChangeRequestInput({
+      type: request.request_type,
+      target_shift_id:
+        request.request_type === "edit"
+          ? (request.target_shift_id ?? undefined)
+          : undefined,
+      shift_period: normalizeShiftPeriod(request.shift_period),
+      requested_start_time: override.start_time,
+      requested_end_time: override.end_time,
+    } as ShiftChangeRequestInput);
+    if (!validation.valid) return { error: validation.error };
+  }
+
+  const effectiveStart = override?.start_time ?? request.requested_start_time;
+  const effectiveEnd = override?.end_time ?? request.requested_end_time;
+
   // RPC isn't in the generated Database types yet, so cast through unknown.
   const { data: rpcData, error: rpcError } = await (
     supabase as unknown as {
@@ -397,6 +423,8 @@ export async function approveShiftChangeRequestAction(
     p_request_id: requestId,
     p_actor_id: user.id,
     p_note: note ?? null,
+    p_override_start: override?.start_time ?? null,
+    p_override_end: override?.end_time ?? null,
   });
 
   if (rpcError) {
@@ -423,17 +451,23 @@ export async function approveShiftChangeRequestAction(
       mode,
       applied_shift_id: appliedShiftId,
       note: note ?? null,
+      admin_override: override
+        ? {
+            requested_start: request.requested_start_time,
+            requested_end: request.requested_end_time,
+          }
+        : null,
     },
     changes: [
       {
         field: "start_time",
         old_value: request.original_start_time,
-        new_value: request.requested_start_time,
+        new_value: effectiveStart,
       },
       {
         field: "end_time",
         old_value: request.original_end_time,
-        new_value: request.requested_end_time,
+        new_value: effectiveEnd,
       },
     ],
   });

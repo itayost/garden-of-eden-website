@@ -284,12 +284,14 @@ export function ShiftRequestsAdminPanel({
       {selected && (
         <>
           <ApproveRequestDialog
+            key={selected.id}
             open={showApprove}
             onOpenChange={(open) => {
               setShowApprove(open);
               if (!open) setSelected(null);
             }}
             requestId={selected.id}
+            request={selected}
             summary={formatRequestSummary(selected)}
             mergeNotice={buildMergeNotice(selected)}
           />
