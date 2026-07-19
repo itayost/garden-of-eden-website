@@ -20,6 +20,23 @@ import {
 export const MORNING_START_VALUE = `${String(MORNING_SHIFT_START_HOUR).padStart(2, "0")}:00`;
 export const MORNING_END_VALUE = `${String(MORNING_SHIFT_END_HOUR).padStart(2, "0")}:00`;
 
+/** ISO timestamp -> "YYYY-MM-DD" in the browser's local timezone, for <input type="date">. */
+export function toLocalDateValue(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** ISO timestamp -> "HH:MM" in the browser's local timezone, for <input type="time">. */
+export function toLocalTimeValue(iso: string): string {
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 /**
  * Builds the start/end timestamps for a shift form.
  *

@@ -23,6 +23,8 @@ import {
   ShiftPeriodSelect,
   buildShiftRange,
   isFridayDateString,
+  toLocalDateValue as toLocalDate,
+  toLocalTimeValue as toLocalTime,
 } from "./ShiftPeriodSelect";
 import type { TrainerShift } from "@/types/database";
 
@@ -30,21 +32,6 @@ interface EditShiftRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shift: TrainerShift;
-}
-
-function toLocalDate(iso: string): string {
-  const d = new Date(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function toLocalTime(iso: string): string {
-  const d = new Date(iso);
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
 }
 
 export function EditShiftRequestDialog({
