@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSafeRedirectUrl } from "@/lib/utils/redirect";
+import { getOtpErrorMessage } from "@/lib/auth/otp-error-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -108,8 +109,7 @@ export default function VerifyPage() {
       window.location.href = redirect;
     } catch (error: unknown) {
       console.error("Verify error:", error);
-      const errorMessage = error instanceof Error ? error.message : "קוד האימות שגוי";
-      toast.error(errorMessage);
+      toast.error(getOtpErrorMessage(error, "קוד האימות שגוי"));
       setOtp(Array(OTP_LENGTH).fill(""));
       inputRefs.current[0]?.focus();
     } finally {
@@ -136,8 +136,7 @@ export default function VerifyPage() {
       toast.success("קוד חדש נשלח");
     } catch (error: unknown) {
       console.error("Resend error:", error);
-      const errorMessage = error instanceof Error ? error.message : "שגיאה בשליחת קוד חדש";
-      toast.error(errorMessage);
+      toast.error(getOtpErrorMessage(error, "שגיאה בשליחת קוד חדש"));
     } finally {
       setResending(false);
     }
