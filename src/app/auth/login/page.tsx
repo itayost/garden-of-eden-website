@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSafeRedirectUrl } from "@/lib/utils/redirect";
+import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import { getOtpErrorMessage } from "@/lib/auth/otp-error-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,24 +21,13 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = getSafeRedirectUrl(searchParams.get("redirect"));
 
-  const formatPhoneNumber = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    if (digits.startsWith("972")) {
-      return digits;
-    }
-    if (digits.startsWith("0")) {
-      return "972" + digits.slice(1);
-    }
-    return digits;
-  };
-
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const formattedPhone = formatPhoneNumber(phone);
+    const e164Phone = normalizePhone(phone);
 
-    if (formattedPhone.length < 10) {
-      toast.error("נא להזין מספר טלפון תקין");
+    if (!e164Phone) {
+      toast.error("נא להזין מספר נייד ישראלי תקין (למשל 0501234567)");
       return;
     }
 
@@ -46,7 +37,7 @@ function LoginForm() {
       const supabase = createClient();
 
       const { error } = await supabase.auth.signInWithOtp({
-        phone: `+${formattedPhone}`,
+        phone: e164Phone,
         options: { shouldCreateUser: false },
       });
 
@@ -54,15 +45,14 @@ function LoginForm() {
         throw error;
       }
 
-      sessionStorage.setItem("verifyPhone", `+${formattedPhone}`);
+      sessionStorage.setItem("verifyPhone", e164Phone);
       sessionStorage.setItem("redirectAfterAuth", redirect);
 
       toast.success("קוד אימות נשלח ב-WhatsApp");
       router.push("/auth/verify");
     } catch (error: unknown) {
       console.error("Login error:", error);
-      const errorMessage = error instanceof Error ? error.message : "שגיאה בשליחת קוד האימות";
-      toast.error(errorMessage);
+      toast.error(getOtpErrorMessage(error));
     } finally {
       setLoading(false);
     }
