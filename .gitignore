@@ -62,3 +62,7 @@ scripts/backups/
 
 # graphify local artifacts (only docs/graph/GRAPH_REPORT.md is committed)
 graphify-out/
+
+# graphify knowledge graph: commit graph.json/GRAPH_REPORT.md, skip local-only artifacts
+graphify-out/cost.json
+graphify-out/cache/
