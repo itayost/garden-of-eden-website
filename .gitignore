@@ -59,3 +59,6 @@ next-env.d.ts
 # Retention/data-repair rollback dumps. Contain member names and phone numbers.
 # Keep on disk for rollback, never in git history.
 scripts/backups/
+
+# graphify local artifacts (only docs/graph/GRAPH_REPORT.md is committed)
+graphify-out/
