@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { NavBadge } from "@/components/ui/nav-badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { isActivePath } from "@/lib/utils/active-path";
 import { ADMIN_NAV_SECTIONS } from "@/lib/navigation/admin-nav";
@@ -68,15 +69,10 @@ export function AdminSidebar({ user, profile, navBadges }: AdminSidebarProps) {
                         >
                           <item.icon className="h-4 w-4" />
                           <span>{item.label}</span>
-                          {badgeCount > 0 && (
-                            <Badge
-                              variant="destructive"
-                              className="ms-auto group-data-[collapsible=icon]:hidden"
-                              aria-label={`${badgeCount} פריטים דורשים תשומת לב`}
-                            >
-                              {badgeCount}
-                            </Badge>
-                          )}
+                          <NavBadge
+                            count={badgeCount}
+                            className="ms-auto group-data-[collapsible=icon]:hidden"
+                          />
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
