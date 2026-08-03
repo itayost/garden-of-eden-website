@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/ui/bottom-nav";
+import { NavBadge, NavBadgeDot } from "@/components/ui/nav-badge";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { isActivePath } from "@/lib/utils/active-path";
@@ -34,20 +34,30 @@ export function AdminBottomNav({
     isActivePath(pathname, item.href, item.exact)
   );
 
+  // Items inside the sheet are invisible until it is opened, so the trigger
+  // carries a dot when any of them needs attention. Without this an admin on a
+  // phone sees a completely unchanged bar while tasks are overdue.
+  const moreHasBadge = visibleMoreItems.some(
+    (item) => (navBadges?.[item.href] ?? 0) > 0
+  );
+
   return (
     <BottomNav
       items={mainItems}
+      badges={navBadges}
       trailing={
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <button
               className={cn(
-                "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
+                "relative flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
                 moreActive ? "text-primary" : "text-muted-foreground"
               )}
+              aria-label={moreHasBadge ? "עוד, יש פריטים הדורשים תשומת לב" : "עוד"}
             >
               <MoreHorizontal className="h-5 w-5" />
               <span className="text-[10px] font-medium leading-none">עוד</span>
+              {moreHasBadge && <NavBadgeDot />}
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-2xl pb-safe">
@@ -70,15 +80,7 @@ export function AdminBottomNav({
                   >
                     <item.icon className="h-5 w-5" />
                     <span className="font-medium">{item.label}</span>
-                    {badgeCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="ms-auto"
-                        aria-label={`${badgeCount} פריטים דורשים תשומת לב`}
-                      >
-                        {badgeCount}
-                      </Badge>
-                    )}
+                    <NavBadge count={badgeCount} className="ms-auto" />
                   </Link>
                 );
               })}

@@ -38,6 +38,8 @@ interface TaskEditDialogProps {
   task: TrainerTask;
   trainers: TrainerOption[];
   trainees: TrainerOption[];
+  /** Today in Israel, ISO YYYY-MM-DD. */
+  today: string;
 }
 
 /**
@@ -53,6 +55,7 @@ export function TaskEditDialog({
   task,
   trainers,
   trainees,
+  today,
 }: TaskEditDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -124,7 +127,18 @@ export function TaskEditDialog({
 
           <div className="space-y-2">
             <Label htmlFor="edit-due-date">תאריך יעד</Label>
-            <Input id="edit-due-date" type="date" {...register("dueDate")} />
+            {/*
+              Same `min` as the create dialog. It is a UI hint, not a rule:
+              backdating stays valid server-side so an admin can record a task
+              that was genuinely due earlier, and the resulting "overdue" state
+              is then correct rather than a bug.
+            */}
+            <Input
+              id="edit-due-date"
+              type="date"
+              min={task.due_date < today ? task.due_date : today}
+              {...register("dueDate")}
+            />
             {errors.dueDate && (
               <p className="text-sm text-destructive">{errors.dueDate.message}</p>
             )}

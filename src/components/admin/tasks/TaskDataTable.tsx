@@ -281,6 +281,7 @@ export function TaskDataTable({
           task={editTarget}
           trainers={trainers}
           trainees={trainees}
+          today={today}
         />
       )}
 

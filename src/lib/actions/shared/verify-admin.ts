@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
 
@@ -24,6 +25,12 @@ export type AdminVerifyResult =
  *
  * @returns AdminVerifyResult with either user data or error
  *
+ * Memoized per request with React `cache()`: a single page render calls this
+ * from the layout, the page and every server action it fans out to, which
+ * otherwise costs an `auth.getUser()` round trip plus a profiles SELECT each
+ * time. The cache is request-scoped, so it can never serve one user's
+ * identity to another.
+ *
  * @example
  * ```ts
  * const { error, user, adminProfile } = await verifyAdmin();
@@ -31,7 +38,7 @@ export type AdminVerifyResult =
  * // user and adminProfile are now guaranteed to exist
  * ```
  */
-export async function verifyAdmin(): Promise<AdminVerifyResult> {
+export const verifyAdmin = cache(async (): Promise<AdminVerifyResult> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -57,7 +64,7 @@ export async function verifyAdmin(): Promise<AdminVerifyResult> {
     user,
     adminProfile: adminProfile as { role: string; full_name: string | null },
   };
-}
+});
 
 /**
  * Trainer verification result (admin or trainer role)
@@ -78,9 +85,11 @@ export type TrainerVerifyResult =
  * Verify current user is authenticated and has admin or trainer role.
  * Used for actions that both admins and trainers can perform.
  *
+ * Memoized per request, for the same reason as verifyAdmin above.
+ *
  * @returns TrainerVerifyResult with either user data or error
  */
-export async function verifyAdminOrTrainer(): Promise<TrainerVerifyResult> {
+export const verifyAdminOrTrainer = cache(async (): Promise<TrainerVerifyResult> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -106,4 +115,4 @@ export async function verifyAdminOrTrainer(): Promise<TrainerVerifyResult> {
     user,
     profile: profile as { role: string; full_name: string | null },
   };
-}
+});
