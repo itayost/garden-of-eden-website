@@ -178,6 +178,20 @@ Startup validation in `src/lib/env.ts` (called via `src/instrumentation.ts`) fai
 - `code-reviewer` — Security (RLS, auth), TypeScript errors, convention violations
 - `security-reviewer` — Deep security audit: RLS gaps, auth verification, service-role exposure, webhook security
 
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `itayost/garden-of-eden-website`, via the `gh` CLI. External PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root, both created lazily. See `docs/agents/domain.md`.
+
 ## Git Workflow
 
 Conventional commits with feature scope: `feat(auth):`, `fix(admin):`, `refactor(nutrition):`. Keep scope to the feature area (auth, admin, mobile, nutrition, shifts, etc.).

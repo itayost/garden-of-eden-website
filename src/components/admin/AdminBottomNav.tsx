@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/ui/bottom-nav";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -13,9 +14,14 @@ import { splitBottomNav } from "@/lib/navigation/types";
 
 interface AdminBottomNavProps {
   isAdmin?: boolean;
+  /** Attention counts keyed by nav href. Zero or missing renders no badge. */
+  navBadges?: Record<string, number>;
 }
 
-export function AdminBottomNav({ isAdmin = false }: AdminBottomNavProps) {
+export function AdminBottomNav({
+  isAdmin = false,
+  navBadges,
+}: AdminBottomNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -49,6 +55,7 @@ export function AdminBottomNav({ isAdmin = false }: AdminBottomNavProps) {
             <nav className="flex flex-col gap-1 pt-2">
               {visibleMoreItems.map((item) => {
                 const active = isActivePath(pathname, item.href, item.exact);
+                const badgeCount = navBadges?.[item.href] ?? 0;
                 return (
                   <Link
                     key={item.href}
@@ -63,6 +70,15 @@ export function AdminBottomNav({ isAdmin = false }: AdminBottomNavProps) {
                   >
                     <item.icon className="h-5 w-5" />
                     <span className="font-medium">{item.label}</span>
+                    {badgeCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="ms-auto"
+                        aria-label={`${badgeCount} פריטים דורשים תשומת לב`}
+                      >
+                        {badgeCount}
+                      </Badge>
+                    )}
                   </Link>
                 );
               })}

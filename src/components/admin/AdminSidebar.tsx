@@ -20,9 +20,11 @@ import type { Profile } from "@/types/database";
 type AdminSidebarProps = {
   user: User;
   profile: Profile | null;
+  /** Attention counts keyed by nav href. Zero or missing renders no badge. */
+  navBadges?: Record<string, number>;
 };
 
-export function AdminSidebar({ user, profile }: AdminSidebarProps) {
+export function AdminSidebar({ user, profile, navBadges }: AdminSidebarProps) {
   const pathname = usePathname();
   const isAdmin = profile?.role === "admin";
 
@@ -52,6 +54,7 @@ export function AdminSidebar({ user, profile }: AdminSidebarProps) {
               <SidebarMenu>
                 {visibleItems.map((item) => {
                   const active = isActivePath(pathname, item.href, item.exact);
+                  const badgeCount = navBadges?.[item.href] ?? 0;
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
@@ -65,6 +68,15 @@ export function AdminSidebar({ user, profile }: AdminSidebarProps) {
                         >
                           <item.icon className="h-4 w-4" />
                           <span>{item.label}</span>
+                          {badgeCount > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="ms-auto group-data-[collapsible=icon]:hidden"
+                              aria-label={`${badgeCount} פריטים דורשים תשומת לב`}
+                            >
+                              {badgeCount}
+                            </Badge>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
