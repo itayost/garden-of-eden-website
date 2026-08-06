@@ -46,7 +46,7 @@ There is no general Trainer-to-Trainee relationship in this academy. Any Trainer
 A unit of operational work an Admin gives to exactly one Trainer, with a due date. Staff work — fixing a net, calling a parent, ordering equipment.
 _Avoid_: Todo, job, assignment, chore
 
-A Task is never training content. Work prescribed *to a Trainee* is a Workout, a Program or a Drill, and those are separate concepts.
+A Task is never training content. Work prescribed _to a Trainee_ is a Workout, a Program or a Drill, and those are separate concepts.
 
 **Linked trainee**:
 A Trainee named on a Task as its subject. Context for staff only — it grants the Trainee nothing and the Trainee never sees the Task.
@@ -65,8 +65,24 @@ The Admin returning a closed Task to open because the work was not actually done
 _Avoid_: Rejecting, declining
 
 **Daily brief**:
-One free-text note per calendar day, written by an Admin and read by all staff. There is exactly one for the whole academy — never one per Trainer or per shift.
+One free-text note per calendar day, written by an Admin and read by all staff. General announcements only — the day's structure lives in the Daily schedule, not here.
 _Avoid_: Announcement, memo, bulletin, notice
+
+**Daily schedule**:
+The structured plan for one calendar day, made of Slots. Admin-authored; the WhatsApp schedule message is generated from it, never the reverse.
+_Avoid_: Timetable, calendar, לו"ז (in code)
+
+**Slot**:
+One group at one hour: (date, hour, Trainer, Focus, location, Roster). Two trainers at the same hour are two Slots.
+_Avoid_: Class, session, lesson
+
+**Focus**:
+The free-text training theme of a Slot, e.g. "זריזות מהירות טכניקה עם כדור".
+_Avoid_: Topic, subject, theme
+
+**Roster**:
+The list of names in a Slot. An entry may link to a Trainee account or be a free-text name that has no account; only linked entries can receive sessions.
+_Avoid_: Attendance — that is who actually showed up; the Roster is who is planned
 
 ### Shifts
 
