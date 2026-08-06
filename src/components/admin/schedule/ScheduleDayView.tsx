@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { formatDate } from "@/lib/utils/date";
 import type { ScheduleSlot } from "@/types/schedule";
+import type { SessionSummary } from "@/types/training-session";
 import { CopyWhatsAppButton } from "./CopyWhatsAppButton";
 import { DuplicateDayButton } from "./DuplicateDayButton";
 import { SlotCard } from "./SlotCard";
@@ -20,6 +21,8 @@ interface ScheduleDayViewProps {
   /** Today in Israel, ISO YYYY-MM-DD. */
   today: string;
   slots: ScheduleSlot[];
+  /** trainee_id -> session summary, for the built/not-built chip indicators. */
+  sessionSummaries: Record<string, SessionSummary>;
   /** Set when loading failed — renders an error state, never a false empty day. */
   loadError: string | null;
   isAdmin: boolean;
@@ -39,6 +42,7 @@ export function ScheduleDayView({
   date,
   today,
   slots,
+  sessionSummaries,
   loadError,
   isAdmin,
   currentUserId,
@@ -147,6 +151,8 @@ export function ScheduleDayView({
                   <SlotCard
                     key={slot.id}
                     slot={slot}
+                    date={date}
+                    sessionSummaries={sessionSummaries}
                     isAdmin={isAdmin}
                     isMine={slot.trainer_id === currentUserId}
                     onEdit={() => openEdit(slot)}

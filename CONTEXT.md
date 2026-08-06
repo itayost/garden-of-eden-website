@@ -81,8 +81,12 @@ The free-text training theme of a Slot, e.g. "זריזות מהירות טכני
 _Avoid_: Topic, subject, theme
 
 **Roster**:
-The list of names in a Slot. An entry may link to a Trainee account or be a free-text name that has no account; only linked entries can receive sessions.
+The list of names in a Slot. An entry may link to a Trainee account or be a free-text name that has no account; only linked entries can receive Training sessions.
 _Avoid_: Attendance — that is who actually showed up; the Roster is who is planned
+
+**Training session**:
+The per-Trainee exercise plan for one calendar day, built by a Trainer from the exercise library. Not a Slot (the group plan) and not a Program (a multi-week template used only as a copy source).
+_Avoid_: Workout (bare), session (bare), assigned program
 
 ### Shifts
 
