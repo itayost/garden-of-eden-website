@@ -24,10 +24,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
+import { cn } from "@/lib/utils";
 import { createSlotAction, updateSlotAction } from "@/lib/actions/daily-schedule";
 import type { ScheduleSlot } from "@/types/schedule";
 
 const NO_TRAINER_VALUE = "__none__";
+
+/** The academy's operating hours, from the real daily schedule. */
+const HOUR_PRESETS = ["15:00", "16:00", "17:00", "18:00", "19:00"];
 
 interface RosterEntry {
   traineeId: string | null;
@@ -70,6 +74,8 @@ export function SlotFormDialog({
       : [],
   );
   const [search, setSearch] = useState("");
+  // Keyboard highlight over the suggestion list; -1 = nothing highlighted.
+  const [highlighted, setHighlighted] = useState(-1);
 
   const suggestions = useMemo(() => {
     const term = search.trim();
@@ -164,6 +170,24 @@ export function SlotFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="slot-time">שעה</Label>
+              {/* The academy's real hours — one tap beats the time picker. */}
+              <div className="flex flex-wrap gap-1">
+                {HOUR_PRESETS.map((hour) => (
+                  <button
+                    key={hour}
+                    type="button"
+                    onClick={() => setStartTime(hour)}
+                    className={cn(
+                      "rounded-full border px-2.5 py-0.5 text-xs tabular-nums transition-colors",
+                      startTime === hour
+                        ? "border-forest bg-forest text-cream"
+                        : "border-border text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    {hour}
+                  </button>
+                ))}
+              </div>
               <Input
                 id="slot-time"
                 type="time"
@@ -226,12 +250,39 @@ export function SlotFormDialog({
                 id="slot-roster-search"
                 value={search}
                 placeholder="חיפוש מתאמן או שם חופשי..."
-                onChange={(event) => setSearch(event.target.value)}
+                role="combobox"
+                aria-expanded={suggestions.length > 0}
+                aria-controls={
+                  suggestions.length > 0 ? "slot-roster-suggestions" : undefined
+                }
+                aria-activedescendant={
+                  highlighted >= 0 && suggestions[highlighted]
+                    ? `roster-option-${suggestions[highlighted].id}`
+                    : undefined
+                }
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setHighlighted(-1);
+                }}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") {
+                  if (event.key === "ArrowDown") {
                     event.preventDefault();
-                    if (suggestions.length === 1) addLinked(suggestions[0]);
-                    else addFreeText();
+                    setHighlighted((h) => Math.min(h + 1, suggestions.length - 1));
+                  } else if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    setHighlighted((h) => Math.max(h - 1, -1));
+                  } else if (event.key === "Enter") {
+                    event.preventDefault();
+                    // A highlighted suggestion wins; otherwise a single match
+                    // is unambiguous; otherwise the text is a free-text name.
+                    if (highlighted >= 0 && suggestions[highlighted]) {
+                      addLinked(suggestions[highlighted]);
+                      setHighlighted(-1);
+                    } else if (suggestions.length === 1) {
+                      addLinked(suggestions[0]);
+                    } else {
+                      addFreeText();
+                    }
                   }
                 }}
               />
@@ -247,14 +298,29 @@ export function SlotFormDialog({
             </div>
 
             {suggestions.length > 0 && (
-              <div className="rounded-md border">
-                {suggestions.map((trainee) => (
+              <div
+                id="slot-roster-suggestions"
+                role="listbox"
+                aria-label="הצעות מתאמנים"
+                className="rounded-md border"
+              >
+                {suggestions.map((trainee, index) => (
                   <button
                     key={trainee.id}
+                    id={`roster-option-${trainee.id}`}
+                    role="option"
+                    aria-selected={index === highlighted}
                     type="button"
                     onClick={() => addLinked(trainee)}
-                    className="block w-full px-3 py-2 text-start text-sm hover:bg-muted"
+                    onMouseEnter={() => setHighlighted(index)}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-3 py-2 text-start text-sm",
+                      index === highlighted ? "bg-muted" : "hover:bg-muted",
+                    )}
                   >
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
+                      {(trainee.full_name ?? "?").slice(0, 1)}
+                    </span>
                     {trainee.full_name ?? "ללא שם"}
                   </button>
                 ))}

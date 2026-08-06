@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getProgramForEdit } from "@/features/workouts/lib/actions";
-import type { WorkoutProgram } from "@/features/workouts/lib/types";
+import type { ProgramGrid, WorkoutProgram } from "@/features/workouts/lib/types";
 import { programWeekToBuilderRows } from "@/lib/utils/session-import";
 import type { SessionBuilderRow } from "@/types/training-session";
 
@@ -34,7 +34,8 @@ interface CopyFromProgramDialogProps {
 
 /**
  * Pulls one week column of a workout program into the builder as a starting
- * point. Programs are copy sources, never assignments.
+ * point. The grid loads on program selection so the trainer SEES the
+ * exercises that will land before confirming — no blind imports.
  */
 export function CopyFromProgramDialog({
   open,
@@ -44,32 +45,45 @@ export function CopyFromProgramDialog({
 }: CopyFromProgramDialogProps) {
   const [programId, setProgramId] = useState<string>("");
   const [week, setWeek] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [grid, setGrid] = useState<ProgramGrid | null>(null);
+  const [loadingGrid, setLoadingGrid] = useState(false);
+  // Guards against a slow earlier fetch landing after a fast later one and
+  // overwriting the preview with the WRONG program's exercises.
+  const requestedIdRef = useRef<string>("");
 
   const selectedProgram = programs.find((program) => program.id === programId);
+  const previewRows = grid ? programWeekToBuilderRows(grid, week) : [];
 
-  const handleImport = async () => {
-    if (!programId) return;
-    setLoading(true);
+  const handleProgramChange = async (value: string) => {
+    setProgramId(value);
+    setWeek(1);
+    setGrid(null);
+    setLoadingGrid(true);
+    requestedIdRef.current = value;
     try {
-      const grid = await getProgramForEdit(programId);
-      if (!grid) {
+      const loaded = await getProgramForEdit(value);
+      // A newer selection superseded this request — drop the response.
+      if (requestedIdRef.current !== value) return;
+      if (!loaded) {
         toast.error("שגיאה בטעינת התוכנית");
         return;
       }
-      const rows = programWeekToBuilderRows(grid, week);
-      if (rows.length === 0) {
-        toast.error("אין תרגילים בתוכנית הזו");
-        return;
-      }
-      onImport(rows);
-      toast.success(`יובאו ${rows.length} תרגילים`);
-      onOpenChange(false);
+      setGrid(loaded);
     } catch {
-      toast.error("שגיאה בייבוא מהתוכנית");
+      if (requestedIdRef.current === value) toast.error("שגיאה בטעינת התוכנית");
     } finally {
-      setLoading(false);
+      if (requestedIdRef.current === value) setLoadingGrid(false);
     }
+  };
+
+  const handleImport = () => {
+    if (previewRows.length === 0) {
+      toast.error("אין תרגילים בתוכנית הזו");
+      return;
+    }
+    onImport(previewRows);
+    toast.success(`יובאו ${previewRows.length} תרגילים`);
+    onOpenChange(false);
   };
 
   return (
@@ -85,13 +99,7 @@ export function CopyFromProgramDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="copy-program">תוכנית</Label>
-            <Select
-              value={programId}
-              onValueChange={(value) => {
-                setProgramId(value);
-                setWeek(1);
-              }}
-            >
+            <Select value={programId} onValueChange={handleProgramChange}>
               <SelectTrigger id="copy-program">
                 <SelectValue placeholder="בחירת תוכנית" />
               </SelectTrigger>
@@ -126,18 +134,56 @@ export function CopyFromProgramDialog({
             </div>
           )}
 
+          {loadingGrid && (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {previewRows.length > 0 && (
+            <div className="max-h-52 space-y-0 overflow-y-auto rounded-md border">
+              {previewRows.map((row, index) => {
+                const targets = [
+                  row.targetSets ? `${row.targetSets} סטים` : null,
+                  row.targetReps || null,
+                  row.targetLoad || null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                  <div
+                    key={row.key}
+                    className="flex items-baseline justify-between gap-2 border-b px-3 py-2 text-sm last:border-b-0"
+                  >
+                    <span className="min-w-0 truncate">
+                      <span className="text-muted-foreground">{index + 1}. </span>
+                      {row.exerciseName}
+                    </span>
+                    {targets && (
+                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                        {targets}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={loading}
+              disabled={loadingGrid}
             >
               ביטול
             </Button>
-            <Button onClick={handleImport} disabled={loading || !programId}>
-              {loading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              ייבוא
+            <Button
+              onClick={handleImport}
+              disabled={loadingGrid || previewRows.length === 0}
+            >
+              ייבוא {previewRows.length > 0 ? `(${previewRows.length})` : ""}
             </Button>
           </div>
         </div>

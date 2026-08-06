@@ -7,7 +7,6 @@ import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
-import { formatDate } from "@/lib/utils/date";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { SessionSummary } from "@/types/training-session";
 import { CopyWhatsAppButton } from "./CopyWhatsAppButton";
@@ -36,6 +35,26 @@ function addDays(date: string, delta: number): string {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + delta);
   return d.toISOString().slice(0, 10);
+}
+
+const HEBREW_WEEKDAYS = [
+  "יום ראשון",
+  "יום שני",
+  "יום שלישי",
+  "יום רביעי",
+  "יום חמישי",
+  "יום שישי",
+  "שבת",
+];
+
+/** An operations tool runs on "יום רביעי", not on an ISO date. */
+function weekdayName(date: string): string {
+  return HEBREW_WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
+}
+
+function shortDate(date: string): string {
+  const [, month, day] = date.split("-");
+  return `${Number(day)}.${Number(month)}`;
 }
 
 export function ScheduleDayView({
@@ -88,9 +107,13 @@ export function ScheduleDayView({
 
           <div className="flex items-center gap-2 px-2">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium">{formatDate(date)}</span>
+            <span className="font-display text-xl">
+              {weekdayName(date)} · {shortDate(date)}
+            </span>
             {date === today && (
-              <span className="text-xs text-muted-foreground">(היום)</span>
+              <span className="rounded-full bg-forest px-2.5 py-0.5 text-[11px] font-medium text-cream">
+                היום
+              </span>
             )}
           </div>
 
@@ -133,17 +156,27 @@ export function ScheduleDayView({
           </CardContent>
         </Card>
       ) : slots.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            אין לוח ליום זה
-            {isAdmin ? " — הוסף סלוט או שכפל מיום קודם." : "."}
+        <Card className="border-2 border-dashed">
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="rounded-full bg-muted p-3">
+              <CalendarDays className="h-6 w-6 text-muted-foreground" />
+            </span>
+            <p className="text-muted-foreground">
+              אין לוח ליום זה{isAdmin ? " — הוסף סלוט או שכפל מיום קודם." : "."}
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        // Timeline rail: the day reads as a spine of hours, slots hanging off
+        // it. RTL-aware — the rail sits on the start side.
+        <div className="ms-1.5 space-y-8 border-s-2 border-border ps-5">
           {byTime.map(([time, group]) => (
-            <section key={time} className="space-y-3">
-              <h2 className="border-b pb-1 text-lg font-semibold tabular-nums">
+            <section key={time} className="relative space-y-3">
+              <span
+                className="absolute -start-[27px] top-2.5 h-3 w-3 rounded-full bg-grass ring-4 ring-background"
+                aria-hidden="true"
+              />
+              <h2 className="font-display text-2xl text-forest tabular-nums">
                 {time}
               </h2>
               <div className="grid gap-3 md:grid-cols-2">

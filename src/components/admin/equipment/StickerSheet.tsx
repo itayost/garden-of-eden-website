@@ -57,27 +57,38 @@ export function StickerSheet({ equipment }: StickerSheetProps) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 print:grid-cols-3 print:gap-2">
+      {/*
+        The sticker is a physical brand artifact — dozens will hang on
+        machines in the studio. Forest frame, wordmark, display-face name,
+        grass-to-gold accent strip.
+      */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 print:grid-cols-3 print:gap-3">
         {equipment.map((item) => (
           <div
             key={item.id}
-            className="flex break-inside-avoid flex-col items-center gap-2 rounded-lg border-2 border-dashed p-4 text-center"
+            className="flex break-inside-avoid flex-col items-center rounded-2xl border-4 border-forest bg-white p-4 text-center [print-color-adjust:exact]"
           >
+            <p className="text-[10px] font-semibold tracking-[0.28em] text-forest">
+              GARDEN OF EDEN
+            </p>
+            <p className="font-display mb-2 mt-1 text-2xl leading-tight text-forest">
+              {item.name_he}
+            </p>
             {dataUrls[item.id] ? (
               // Plain img: QR data URLs gain nothing from next/image.
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={dataUrls[item.id]}
                 alt={`QR עבור ${item.name_he}`}
-                className="h-36 w-36"
+                className="h-32 w-32"
               />
             ) : (
-              <div className="h-36 w-36 animate-pulse rounded bg-muted" />
+              <div className="h-32 w-32 animate-pulse rounded bg-muted" />
             )}
-            <p className="text-lg font-bold">{item.name_he}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="mt-2 text-xs text-stone-600">
               סרקו אחרי התרגיל ורשמו מה עשיתם
             </p>
+            <div className="mt-3 h-1.5 w-full rounded-full bg-gradient-to-l from-grass to-gold" />
           </div>
         ))}
       </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Dumbbell, MapPin, Pencil, Plus, Trash2, User } from "lucide-react";
+import { Check, Dumbbell, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { deleteSlotAction } from "@/lib/actions/daily-schedule";
+import { trainerColor } from "@/lib/utils/trainer-color";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { SessionSummary } from "@/types/training-session";
 
@@ -47,6 +48,7 @@ export function SlotCard({
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const palette = trainerColor(slot.trainer_id);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -68,20 +70,39 @@ export function SlotCard({
 
   return (
     <>
-      <Card className={cn(isMine && "border-primary")}>
-        <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="flex items-center gap-1 font-medium">
-              <User className="h-4 w-4 text-muted-foreground" />
-              {slot.trainer_name ?? "ללא מאמן"}
-            </span>
-            {slot.location_he && (
-              <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" />
-                {slot.location_he}
+      <Card
+        className={cn(
+          "gap-2 overflow-hidden rounded-2xl py-0",
+          isMine && "ring-2 ring-forest/60",
+        )}
+      >
+        <CardHeader
+          className={cn(
+            "flex flex-row items-start justify-between gap-2 space-y-0 px-4 pb-2 pt-3",
+            palette.bg,
+          )}
+        >
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn("h-2.5 w-2.5 rounded-full", palette.dot)} />
+              <span className={cn("text-base font-extrabold", palette.text)}>
+                {slot.trainer_name ?? "ללא מאמן"}
               </span>
+              {slot.location_he && (
+                <span className="flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
+                  <MapPin className="h-3 w-3" />
+                  {slot.location_he}
+                </span>
+              )}
+              {isMine && (
+                <Badge className="bg-forest text-cream hover:bg-forest">שלי</Badge>
+              )}
+            </div>
+            {slot.focus_he && (
+              <p className="mt-0.5 text-xs italic text-muted-foreground">
+                {slot.focus_he}
+              </p>
             )}
-            {isMine && <Badge variant="secondary">שלי</Badge>}
           </div>
 
           {isAdmin && (
@@ -106,7 +127,7 @@ export function SlotCard({
           )}
         </CardHeader>
 
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 px-4 pb-3">
           <div className="flex flex-wrap gap-1.5">
             {slot.trainees.map((trainee) => {
               // Free-text names have no account and cannot receive sessions —
@@ -153,12 +174,6 @@ export function SlotCard({
               );
             })}
           </div>
-          {slot.focus_he && (
-            <p className="text-sm text-muted-foreground">{slot.focus_he}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            לחיצה על מתאמן מקושר בונה או עורכת את האימון שלו להיום.
-          </p>
         </CardContent>
       </Card>
 
