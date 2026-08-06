@@ -70,6 +70,20 @@ function sessionToRows(session: TrainingSession): SessionBuilderRow[] {
   }));
 }
 
+/** "3 סטים · 10 חזרות · 20 ק"ג" from the trainee's log, for the staff view. */
+function formatLog(log: {
+  sets: number | null;
+  reps: number | null;
+  weight_kg: number | null;
+}): string {
+  const parts: string[] = [];
+  if (log.sets) parts.push(`${log.sets} סטים`);
+  if (log.reps) parts.push(`${log.reps} חזרות`);
+  if (log.weight_kg !== null && log.weight_kg !== undefined)
+    parts.push(`${log.weight_kg} ק"ג`);
+  return parts.join(" · ");
+}
+
 export function SessionBuilder({
   traineeId,
   traineeName,
@@ -239,7 +253,22 @@ export function SessionBuilder({
           <p className="text-sm text-muted-foreground">
             {formatDate(date)}
             {session ? ` · נבנה על ידי ${session.built_by_name}` : ""}
+            {session?.completed_at ? " · הושלם" : ""}
           </p>
+          {session && session.exercises.some((e) => (e.logs?.length ?? 0) > 0) && (
+            <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+              {session.exercises
+                .filter((e) => (e.logs?.length ?? 0) > 0)
+                .map((e) => (
+                  <p key={e.id}>
+                    {e.exercise?.name_he ?? e.exercise?.name_en ?? "תרגיל"} —{" "}
+                    <span className="font-medium text-green-700 dark:text-green-400">
+                      {formatLog(e.logs![0])}
+                    </span>
+                  </p>
+                ))}
+            </div>
+          )}
         </div>
         <Button variant="ghost" asChild>
           <Link href={backHref}>

@@ -21,6 +21,11 @@ const TABS: WorkoutsTab[] = [
     href: "/admin/workouts/programs",
     isActive: (pathname) => pathname.startsWith("/admin/workouts/programs"),
   },
+  {
+    label: "ציוד",
+    href: "/admin/workouts/equipment",
+    isActive: (pathname) => pathname.startsWith("/admin/workouts/equipment"),
+  },
 ];
 
 export default function WorkoutsLayout({

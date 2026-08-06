@@ -29,6 +29,7 @@ import { AchievementsCard, AchievementCelebrationClient, enrichAchievement } fro
 import { PaymentStatusHandler } from "@/components/payments/PaymentStatusHandler";
 import { NutritionMeetingBanner } from "@/features/nutrition";
 import { NextGameCard } from "@/components/dashboard/NextGameCard";
+import { TodayWorkoutCard } from "@/components/dashboard/workout/TodayWorkoutCard";
 import { getOwnNextGame } from "@/features/next-game/lib/actions/next-game";
 import { ClipUploadCard } from "@/components/dashboard/ClipUploadCard";
 import { MentalRecordingsCard } from "@/components/dashboard/MentalRecordingsCard";
@@ -228,6 +229,9 @@ export default async function DashboardPage() {
 
       {/* Nutrition Meeting Banner (1 month after registration) */}
       <NutritionMeetingBanner userCreatedAt={profile?.created_at || ""} />
+
+      {/* Today's training session (renders nothing when none was built) */}
+      <TodayWorkoutCard />
 
       {/* Next Game */}
       <NextGameCard

@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Dumbbell,
   FileText,
   Home,
   Target,
@@ -18,6 +19,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { href: "/dashboard/assessments", label: "מבדקים", icon: Target, mobilePrimary: true, mobileOrder: 2 },
   { href: "/dashboard/rankings", label: "דירוג", icon: Trophy, mobilePrimary: true, mobileOrder: 4 },
   { href: "/dashboard/forms", label: "שאלונים", icon: FileText, mobilePrimary: true, mobileOrder: 3 },
+  { href: "/dashboard/workout", label: "האימון שלי", icon: Dumbbell, mobileOrder: 1 },
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils, mobileOrder: 2 },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video, mobileOrder: 1 },
   { href: "/dashboard/book", label: "ספר פיתוח", icon: BookOpen, mobileOrder: 3 },

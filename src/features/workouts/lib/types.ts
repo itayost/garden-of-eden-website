@@ -13,7 +13,10 @@ export interface WorkoutExercise {
   subCategory: string | null;
   nameHe: string | null;
   nameEn: string | null;
+  /** Free-text label, display fallback. */
   equipment: string | null;
+  /** Structured link to the equipment catalog; drives QR scan matching. */
+  equipmentId: string | null;
   cuesHe: string | null;
   goalHe: string | null;
   orderIndex: number;

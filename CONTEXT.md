@@ -88,6 +88,18 @@ _Avoid_: Attendance — that is who actually showed up; the Roster is who is pla
 The per-Trainee exercise plan for one calendar day, built by a Trainer from the exercise library. Not a Slot (the group plan) and not a Program (a multi-week template used only as a copy source).
 _Avoid_: Workout (bare), session (bare), assigned program
 
+**Equipment**:
+A machine or station in the studio, catalogued with a permanent code printed as a QR sticker. Scanning it opens the Trainee's log form for the matching exercise.
+_Avoid_: Machine, device, gear
+
+**Exercise log**:
+What a Trainee actually did on one exercise — sets, reps, weight. One row per exercise, a record that is corrected in place, never deleted. Distinct from the targets a Trainer prescribes.
+_Avoid_: Result, entry, submission
+
+**Completion**:
+The Trainee's own act of finishing a Training session, after every exercise has an Exercise log. Sets the session's completed timestamp; visible to staff on the schedule.
+_Avoid_: Approval (staff play no part in it)
+
 ### Shifts
 
 **Shift**:
