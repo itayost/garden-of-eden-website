@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, Pencil, Trash2, User } from "lucide-react";
+import { Dumbbell, MapPin, Pencil, Plus, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -21,16 +22,28 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { deleteSlotAction } from "@/lib/actions/daily-schedule";
 import type { ScheduleSlot } from "@/types/schedule";
+import type { SessionSummary } from "@/types/training-session";
 
 interface SlotCardProps {
   slot: ScheduleSlot;
+  /** The day being viewed — carried into the session builder link. */
+  date: string;
+  /** trainee_id -> session summary for this day. */
+  sessionSummaries: Record<string, SessionSummary>;
   isAdmin: boolean;
   /** True when the viewing trainer is this slot's trainer — highlighted. */
   isMine: boolean;
   onEdit: () => void;
 }
 
-export function SlotCard({ slot, isAdmin, isMine, onEdit }: SlotCardProps) {
+export function SlotCard({
+  slot,
+  date,
+  sessionSummaries,
+  isAdmin,
+  isMine,
+  onEdit,
+}: SlotCardProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -95,15 +108,50 @@ export function SlotCard({ slot, isAdmin, isMine, onEdit }: SlotCardProps) {
 
         <CardContent className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
-            {slot.trainees.map((trainee) => (
-              <Badge key={trainee.id} variant="outline" className="font-normal">
-                {trainee.trainee_name}
-              </Badge>
-            ))}
+            {slot.trainees.map((trainee) => {
+              // Free-text names have no account and cannot receive sessions —
+              // they stay plain badges.
+              if (!trainee.trainee_id) {
+                return (
+                  <Badge key={trainee.id} variant="outline" className="font-normal">
+                    {trainee.trainee_name}
+                  </Badge>
+                );
+              }
+
+              const summary = sessionSummaries[trainee.trainee_id];
+              return (
+                <Link
+                  key={trainee.id}
+                  href={`/admin/schedule/session/${trainee.trainee_id}?date=${date}&slot=${slot.id}`}
+                  aria-label={
+                    summary
+                      ? `עריכת האימון של ${trainee.trainee_name}`
+                      : `בניית אימון עבור ${trainee.trainee_name}`
+                  }
+                >
+                  <Badge
+                    variant={summary ? "default" : "secondary"}
+                    className="gap-1 font-normal transition-opacity hover:opacity-80"
+                  >
+                    {summary ? (
+                      <Dumbbell className="h-3 w-3" />
+                    ) : (
+                      <Plus className="h-3 w-3" />
+                    )}
+                    {trainee.trainee_name}
+                    {summary ? ` (${summary.exerciseCount})` : ""}
+                  </Badge>
+                </Link>
+              );
+            })}
           </div>
           {slot.focus_he && (
             <p className="text-sm text-muted-foreground">{slot.focus_he}</p>
           )}
+          <p className="text-xs text-muted-foreground">
+            לחיצה על מתאמן מקושר בונה או עורכת את האימון שלו להיום.
+          </p>
         </CardContent>
       </Card>
 
