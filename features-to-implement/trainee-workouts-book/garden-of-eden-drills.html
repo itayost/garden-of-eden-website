@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ספר התרגילים | Garden of Eden</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#080808;
+  --green:#2ecc71;
+  --green-dark:#0d3b1e;
+  --green-mid:#1a6b3a;
+  --gold:#c9a84c;
+  --red:#e74c3c;
+  --blue:#3498db;
+  --purple:#9b59b6;
+  --white:#f8f8f4;
+  --gray:#9a9a90;
+  --card:#111;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Heebo',sans-serif;background:var(--black);color:var(--white);direction:rtl;}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(8,8,8,0.97);backdrop-filter:blur(16px);border-bottom:1px solid rgba(46,204,113,0.12);height:52px;display:flex;align-items:center;padding:0 16px;gap:12px;}
+.nav-logo{font-family:'Oswald',sans-serif;font-size:14px;font-weight:700;color:var(--green);letter-spacing:3px;flex-shrink:0;}
+.nav-cats{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;}
+.nav-cats::-webkit-scrollbar{display:none;}
+.nav-cat{padding:5px 12px;font-size:11px;font-weight:700;letter-spacing:0.5px;border-radius:20px;cursor:pointer;white-space:nowrap;border:1px solid transparent;color:var(--gray);transition:all 0.2s;}
+.nav-cat:hover{color:var(--white);}
+.nav-cat.active{color:#000;background:var(--green);border-color:var(--green);}
+
+/* COVER */
+.cover{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px;position:relative;overflow:hidden;background:var(--black);}
+.cover-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(46,204,113,0.06) 0%,transparent 55%),radial-gradient(ellipse at 85% 30%,rgba(201,168,76,0.04) 0%,transparent 50%),radial-gradient(ellipse at 60% 90%,rgba(46,204,113,0.04) 0%,transparent 50%);}
+.cover-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(46,204,113,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(46,204,113,0.03) 1px,transparent 1px);background-size:60px 60px;}
+.cover-label{position:relative;font-size:11px;font-weight:700;letter-spacing:6px;text-transform:uppercase;color:var(--green);margin-bottom:24px;}
+.cover-title{position:relative;font-family:'Oswald',sans-serif;font-size:clamp(52px,12vw,110px);font-weight:700;line-height:0.9;letter-spacing:-3px;color:var(--white);}
+.cover-title .accent{color:var(--green);display:block;}
+.cover-sub{position:relative;font-size:16px;font-weight:300;color:var(--gray);margin-top:24px;line-height:1.6;max-width:480px;}
+.cover-divider{position:relative;width:80px;height:3px;background:linear-gradient(90deg,var(--green),var(--gold));margin:36px auto;border-radius:2px;}
+.cover-philosophy{position:relative;max-width:600px;font-family:'Oswald',sans-serif;font-size:clamp(16px,3vw,24px);font-weight:400;line-height:1.6;color:var(--white);}
+.cover-philosophy em{color:var(--green);font-style:normal;}
+.cover-stats{position:relative;display:flex;gap:40px;justify-content:center;margin-top:40px;flex-wrap:wrap;}
+.cs-num{font-family:'Oswald',sans-serif;font-size:42px;font-weight:700;color:var(--green);line-height:1;}
+.cs-label{font-size:10px;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+.cover-btn{position:relative;margin-top:40px;padding:16px 36px;background:var(--green);color:#000;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;letter-spacing:0.5px;transition:all 0.2s;}
+.cover-btn:hover{background:#27ae60;transform:translateY(-2px);}
+
+/* HOW IT WORKS */
+.how-section{padding:72px 20px;background:#0a0a0a;border-top:1px solid rgba(255,255,255,0.04);}
+.how-inner{max-width:960px;margin:0 auto;}
+.section-label{font-size:10px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--green);margin-bottom:12px;}
+.section-title{font-family:'Oswald',sans-serif;font-size:clamp(28px,5vw,48px);font-weight:700;color:var(--white);margin-bottom:8px;}
+.section-sub{font-size:15px;color:var(--gray);font-weight:300;line-height:1.7;margin-bottom:40px;max-width:560px;}
+
+/* CHAIN DISPLAY */
+.chain-demo{background:#111;border:1px solid rgba(46,204,113,0.15);border-radius:16px;padding:28px 24px;}
+.chain-title{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:20px;}
+.chain-flow{display:flex;flex-direction:column;gap:0;}
+.chain-node{display:grid;grid-template-columns:auto 1fr;gap:0 16px;align-items:stretch;}
+.chain-connector{display:flex;flex-direction:column;align-items:center;gap:0;}
+.chain-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.chain-dot.situation{background:var(--gold);}
+.chain-dot.problem{background:var(--red);}
+.chain-dot.root{background:var(--blue);}
+.chain-dot.drill{background:var(--green);}
+.chain-dot.result{background:var(--purple);}
+.chain-line{width:2px;flex:1;min-height:16px;}
+.chain-line.gold{background:linear-gradient(180deg,var(--gold),var(--red));}
+.chain-line.red{background:linear-gradient(180deg,var(--red),var(--blue));}
+.chain-line.blue{background:linear-gradient(180deg,var(--blue),var(--green));}
+.chain-line.green{background:linear-gradient(180deg,var(--green),var(--purple));}
+.chain-content{padding-bottom:20px;}
+.chain-type{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.6;margin-bottom:3px;}
+.chain-text{font-size:14px;color:var(--white);font-weight:500;line-height:1.4;}
+.chain-note{font-size:11px;color:var(--gray);margin-top:3px;line-height:1.5;}
+
+/* SITUATIONS SECTION */
+.situations-section{padding:0 16px 80px;max-width:960px;margin:0 auto;}
+
+/* CATEGORY HEADER */
+.cat-header{display:flex;align-items:center;gap:14px;padding:52px 0 24px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:24px;}
+.cat-icon-big{font-size:28px;}
+.cat-title-big{font-family:'Oswald',sans-serif;font-size:26px;font-weight:700;color:var(--white);}
+.cat-desc{font-size:13px;color:var(--gray);margin-top:3px;}
+.cat-count-badge{margin-right:auto;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--green);}
+
+/* SITUATION CARDS */
+.sit-grid{display:grid;gap:16px;}
+.sit-card{background:var(--card);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;transition:border-color 0.3s;}
+.sit-card:hover{border-color:rgba(46,204,113,0.2);}
+.sit-card.open{border-color:rgba(46,204,113,0.4);}
+
+.sit-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:20px 20px;cursor:pointer;user-select:none;}
+.sit-num{font-family:'Oswald',sans-serif;font-size:11px;font-weight:700;color:var(--green);background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:6px;padding:4px 9px;min-width:38px;text-align:center;}
+.sit-title{font-family:'Oswald',sans-serif;font-size:19px;font-weight:600;color:var(--white);line-height:1.1;}
+.sit-subtitle{font-size:11px;color:var(--gray);margin-top:3px;}
+.sit-toggle{font-size:20px;color:var(--green);transition:transform 0.3s;width:24px;text-align:center;flex-shrink:0;}
+.sit-card.open .sit-toggle{transform:rotate(45deg);}
+
+.sit-body{display:none;border-top:1px solid rgba(255,255,255,0.06);}
+.sit-card.open .sit-body{display:block;}
+
+/* CHAIN INSIDE CARD */
+.sit-chain{padding:24px 20px 0;}
+.sit-chain-title{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:16px;}
+
+.chain-row{display:flex;gap:12px;align-items:flex-start;padding-bottom:4px;}
+.chain-left{display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0;padding-top:4px;}
+.chain-circle{width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;}
+.cc-situation{background:var(--gold);}
+.cc-why{background:var(--red);}
+.cc-root{background:var(--blue);}
+.cc-drill{background:var(--green);}
+.cc-result{background:var(--purple);}
+.chain-vline{width:2px;flex:1;min-height:12px;margin:2px 0;}
+.cv-gold{background:linear-gradient(180deg,var(--gold) 0%,var(--red) 100%);}
+.cv-red{background:linear-gradient(180deg,var(--red) 0%,var(--blue) 100%);}
+.cv-blue{background:linear-gradient(180deg,var(--blue) 0%,var(--green) 100%);}
+.cv-green{background:linear-gradient(180deg,var(--green) 0%,var(--purple) 100%);}
+
+.chain-right{flex:1;padding-bottom:16px;}
+.cr-type{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.cr-type.t-situation{color:var(--gold);}
+.cr-type.t-why{color:var(--red);}
+.cr-type.t-root{color:var(--blue);}
+.cr-type.t-drill{color:var(--green);}
+.cr-type.t-result{color:var(--purple);}
+.cr-main{font-size:15px;font-weight:600;color:var(--white);line-height:1.3;}
+.cr-note{font-size:12px;color:var(--gray);margin-top:4px;line-height:1.5;}
+
+/* DRILLS LIST */
+.drills-section{padding:20px 20px 24px;border-top:1px solid rgba(255,255,255,0.05);}
+.drills-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:14px;}
+.drill-item{background:rgba(255,255,255,0.03);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-right:3px solid var(--green);position:relative;}
+.drill-name{font-family:'Oswald',sans-serif;font-size:14px;font-weight:700;color:var(--white);}
+.drill-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+.drill-muscle{display:inline-block;font-size:10px;font-weight:700;color:var(--green);background:rgba(46,204,113,0.1);border-radius:4px;padding:2px 7px;}
+.drill-sets{display:inline-block;font-size:10px;font-weight:700;color:var(--gold);background:rgba(201,168,76,0.1);border-radius:4px;padding:2px 7px;}
+.drill-how{font-size:12px;color:#bbb;margin-top:8px;line-height:1.6;}
+.drill-connect{font-size:11px;color:var(--green);margin-top:8px;padding-top:8px;border-top:1px solid rgba(46,204,113,0.1);line-height:1.5;}
+.drill-connect strong{color:var(--white);}
+
+/* FOOTER */
+.footer{background:#040404;border-top:1px solid rgba(255,255,255,0.05);padding:40px 16px;text-align:center;}
+.footer-logo{font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;color:var(--green);letter-spacing:3px;}
+.footer-sub{font-size:10px;color:var(--gray);margin-top:8px;letter-spacing:2px;}
+
+@media(max-width:600px){
+  .cover-stats{gap:24px;}
+  .sit-title{font-size:16px;}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">G·O·E</div>
+  <div class="nav-cats">
+    <div class="nav-cat active" onclick="scrollTo_cat('attack',this)">⚔️ התקפה</div>
+    <div class="nav-cat" onclick="scrollTo_cat('passing',this)">🎯 מסירה</div>
+    <div class="nav-cat" onclick="scrollTo_cat('defense',this)">🛡️ הגנה</div>
+    <div class="nav-cat" onclick="scrollTo_cat('movement',this)">🏃 תנועה</div>
+    <div class="nav-cat" onclick="scrollTo_cat('physical',this)">💪 פיזי</div>
+  </div>
+</nav>
+
+<!-- COVER -->
+<section class="cover">
+  <div class="cover-bg"></div>
+  <div class="cover-grid"></div>
+  <div class="cover-label">Garden of Eden Soccer Academy</div>
+  <h1 class="cover-title">ספר<span class="accent">התרגילים</span></h1>
+  <p class="cover-sub">מסיטואציית משחק — עד לשריר שצריך לחזק.<br>השרשרת המלאה.</p>
+  <div class="cover-divider"></div>
+  <div class="cover-philosophy">
+    כדי <em>לעבור שחקן באחד על אחד</em> — צריך צעד ראשון מהיר.<br>
+    כדי שהצעד יהיה מהיר — צריך <em>גיד אכילס, ישבן, ארבע ראשי.</em><br>
+    כדי לחזק אותם — יש <em>תרגיל ספציפי.</em><br>
+    זה הספר הזה.
+  </div>
+  <div class="cover-stats">
+    <div><div class="cs-num">24</div><div class="cs-label">סיטואציות משחק</div></div>
+    <div><div class="cs-num">5</div><div class="cs-label">שלבי שרשרת</div></div>
+    <div><div class="cs-num">60+</div><div class="cs-label">תרגילים ספציפיים</div></div>
+  </div>
+  <button class="cover-btn" onclick="document.getElementById('attack').scrollIntoView({behavior:'smooth'})">פתח את הספר ↓</button>
+</section>
+
+<!-- HOW IT WORKS -->
+<div class="how-section">
+  <div class="how-inner">
+    <div class="section-label">איך הספר עובד</div>
+    <div class="section-title">5 שלבי השרשרת</div>
+    <div class="section-sub">כל סיטואציית משחק מפורקת לשרשרת שורשים — עד לתרגיל הספציפי שפותר את הבעיה מהשורש.</div>
+    <div class="chain-demo">
+      <div class="chain-title">דוגמה: לעבור שחקן באחד על אחד</div>
+      <div class="chain-flow">
+        <div class="chain-node">
+          <div class="chain-connector"><div class="chain-dot situation"></div><div class="chain-line gold"></div></div>
+          <div class="chain-content"><div class="chain-type" style="color:var(--gold)">🎮 סיטואציית משחק</div><div class="chain-text">לעבור שחקן באחד על אחד</div><div class="chain-note">מה קורה במגרש — הבעיה שרואים</div></div>
+        </div>
+        <div class="chain-node">
+          <div class="chain-connector"><div class="chain-dot problem"></div><div class="chain-line red"></div></div>
+          <div class="chain-content"><div class="chain-type" style="color:var(--red)">❌ למה זה לא עובד</div><div class="chain-text">הצעד הראשון איטי — המגן מתאים את עצמו לפני שהשחקן זז</div><div class="chain-note">הבעיה האמיתית מאחורי מה שרואים</div></div>
+        </div>
+        <div class="chain-node">
+          <div class="chain-connector"><div class="chain-dot root"></div><div class="chain-line blue"></div></div>
+          <div class="chain-content"><div class="chain-type" style="color:var(--blue)">🔍 שורש הבעיה</div><div class="chain-text">גיד אכילס חלש + טכניקת Push Off שגויה + עבודת ידיים לא מייצרת כוח</div><div class="chain-note">מה גורם לצעד הראשון להיות איטי — השריר/המכניקה</div></div>
+        </div>
+        <div class="chain-node">
+          <div class="chain-connector"><div class="chain-dot drill"></div><div class="chain-line green"></div></div>
+          <div class="chain-content"><div class="chain-type" style="color:var(--green)">🏋️ תרגיל ספציפי</div><div class="chain-text">Single Leg Calf Raises + Depth Jumps + Arm Drive Drill</div><div class="chain-note">מה עושים באימון כדי לפתור את השורש</div></div>
+        </div>
+        <div class="chain-node">
+          <div class="chain-connector"><div class="chain-dot result"></div></div>
+          <div class="chain-content"><div class="chain-type" style="color:var(--purple)">✅ החיבור למשחק</div><div class="chain-text">גיד אכילס חזק + Push Off נכון = 0.2 שניות מהירות בצעד הראשון — מספיק לעבור כל מגן</div><div class="chain-note">איך זה מתבטא בפועל במגרש</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="situations-section">
+<!-- ===== ATTACK ===== -->
+<div class="cat-header" id="attack">
+  <div class="cat-icon-big">⚔️</div>
+  <div><div class="cat-title-big">התקפה אישית</div><div class="cat-desc">סיטואציות שדורשות יצירת יתרון אישי</div></div>
+  <div class="cat-count-badge">5 סיטואציות</div>
+</div>
+<div class="sit-grid">
+
+<!-- S01 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">01</div>
+    <div><div class="sit-title">לעבור שחקן באחד על אחד</div><div class="sit-subtitle">קצה · תוקף · כל עמדה</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">לעבור שחקן באחד על אחד</div><div class="cr-note">התוקף מול מגן — צריך לפרוץ או לפתוח מרחב</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">הצעד הראשון איטי — המגן מספיק להסתגל לפני שהשחקן זז</div><div class="cr-note">ההטעיה עובדת, אבל הפרץ שאחריה לא מהיר מספיק</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① גיד אכילס חלש — זמן מגע עם הקרקע ארוך מדי<br>② Push Off לא מהיר — ירך וישבן לא מפעילים בזמן<br>③ עבודת ידיים לא מייצרת מומנטום קדימה<br>④ טכניקת ריצה — צעד ראשון נמוך מדי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים ספציפיים</div><div class="cr-main">↓ ראה רשימת תרגילים מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">גיד אכילס + Push Off + ידיים = 0.2 שניות מהירות בצעד הראשון — מספיק לכל מגן</div><div class="cr-note">ההפרש בין לעבור ולא לעבור הוא שבריר שניה — ושם מחוזקים</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים — מהשורש למשחק</div>
+      <div class="drill-item"><div class="drill-name">Single Leg Calf Raises — Explosive</div><div class="drill-badges"><span class="drill-muscle">🦵 גיד אכילס + תאומים</span><span class="drill-sets">3×20 כל רגל</span></div><div class="drill-how">על מדרגה — ירידה איטית 3 שניות, עלייה מהירה + קפיצה קטנה. מתקדם: משקל 5 ק"ג בידיים.</div><div class="drill-connect"><strong>החיבור:</strong> כל 0.1 שניה שמתקצרת בזמן מגע עם הקרקע = עוד יתרון על המגן</div></div>
+      <div class="drill-item"><div class="drill-name">Depth Jumps</div><div class="drill-badges"><span class="drill-muscle">💥 גיד אכילס + כוח תגובתי</span><span class="drill-sets">3×5 · מנוחה 2 דקות</span></div><div class="drill-how">ירידה מתיבה → נגיעה בקרקע = קפיצה מיידית. זמן מגע עם הקרקע — כמה שקצר. לא לכפוף ברכיים עמוק.</div><div class="drill-connect"><strong>החיבור:</strong> מאמן את מנגנון הכיווץ האלסטי של גיד אכילס — בדיוק מה שמפעיל Explosive Push Off</div></div>
+      <div class="drill-item"><div class="drill-name">Hip Extension Power — Single Leg RDL</div><div class="drill-badges"><span class="drill-muscle">💪 גלוטאוס + ירך אחורית</span><span class="drill-sets">3×10 כל רגל</span></div><div class="drill-how">עמידה על רגל אחת — להשפיל את הגוף קדימה תוך הרמת הרגל האחורית. לשמור גוף ישר כלוח. לחזור בכוח.</div><div class="drill-connect"><strong>החיבור:</strong> גלוטאוס חזק = דחיפה ראשונה חזקה = מרחק גדול בצעד הראשון</div></div>
+      <div class="drill-item"><div class="drill-name">Arm Drive Acceleration</div><div class="drill-badges"><span class="drill-muscle">💪 כתפיים + Core + מומנטום</span><span class="drill-sets">5×20 מטר</span></div><div class="drill-how">ריצה קצרה עם דגש על ידיים: מרפקים ב-90°, ידיים נעות מלמטה-אחורה ללמעלה-קדימה בכוח. לא לחצות את קו הגוף.</div><div class="drill-connect"><strong>החיבור:</strong> כל פעולת יד חזקה = הרגל הנגדית דוחפת חזק יותר — חוק ניוטון השלישי</div></div>
+      <div class="drill-item"><div class="drill-name">Explosive Push Off Cone Drill</div><div class="drill-badges"><span class="drill-muscle">💥 כל שרשרת ספרינט</span><span class="drill-sets">6×5 מטר פרץ</span></div><div class="drill-how">עמידה מול חרוט ב-0.5 מטר. אות → פרץ אגרסיבי מעל החרוט. הצעד הראשון חייב לנחות מעבר לחרוט. ידיים פועלות ביחד עם הרגל.</div><div class="drill-connect"><strong>החיבור:</strong> סימולציה ישירה — הרגע שאחרי ה-Scissor, כשהמגן הוטעה</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S02 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">02</div>
+    <div><div class="sit-title">להאיץ לחלל עם כדור</div><div class="sit-subtitle">קצה · תוקף · CM שיוצא לפרץ</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">חלל נפתח מאחורי ההגנה — צריך להאיץ עם כדור ולהגיע ראשון</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">הכדור "בורח" קדימה יותר מדי — השחקן מרוץ אחריו, לא מנחה אותו</div><div class="cr-note">או: מהיר בלי כדור, איטי עם כדור</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① כדרור ספרינט — לא יודע מתי לדחוף הכדור ומתי לשמור צמוד<br>② קסמות פנימיות חלשות — כדור "נופל" בין הרגליים בריצה<br>③ מהירות ריצה עם כדור נמוכה ממהירות ריצה נקייה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמגיע לכדור לפני המגן — יוצר הזדמנות. שחקן שמגיע אחריו — מאבד אותה</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Speed Dribbling Straights</div><div class="drill-badges"><span class="drill-muscle">🦶 כדרור ספרינט</span><span class="drill-sets">5×30 מטר</span></div><div class="drill-how">כדרור בקו ישר במהירות מירבית. לדחוף הכדור קדימה 2-3 נגיעות, ולרדוף אחריו. מדידת זמן. מטרה: להגיע לנקודה B לפני שהכדור מתרחק יותר מ-5 מטר.</div><div class="drill-connect"><strong>החיבור:</strong> מאמן את היחס הנכון בין מהירות הריצה לדחיפת הכדור</div></div>
+      <div class="drill-item"><div class="drill-name">Inside of Foot Sprint Drill</div><div class="drill-badges"><span class="drill-muscle">🦶 קסמות פנימיות + שרירי ירך</span><span class="drill-sets">3×20 מטר</span></div><div class="drill-how">כדרור מהיר עם פנים כף הרגל בלבד. כל נגיעה — לכוון הכדור ולא רק לגעת בו. להרגיש שהרגל "מנחה" את הכדור.</div><div class="drill-connect"><strong>החיבור:</strong> כדרור עם פנים כף הרגל מאפשר שמירה על שליטה גם בריצה מהירה</div></div>
+      <div class="drill-item"><div class="drill-name">Flying 30s + Ball</div><div class="drill-badges"><span class="drill-muscle">💥 מהירות מירבית + כדרור</span><span class="drill-sets">4×30 מטר</span></div><div class="drill-how">20 מטר האצה עם כדור → 30 מטר מהירות מירבית. השחקן לא מפחית מהירות בגלל הכדור. אם הכדור מתרחק — לתת לו, לרדוף, ולהמשיך.</div><div class="drill-connect"><strong>החיבור:</strong> מהירות מירבית עם כדור צריכה להיות קרובה למהירות ללא כדור</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S03 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">03</div>
+    <div><div class="sit-title">לסיים לשער מזווית קשה</div><div class="sit-subtitle">תוקף · קצה · כל שחקן שמגיע לשער</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">שחקן בצד, זווית חדה — שוער סוגר. לשלוח לשער</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">הכדור נשלח לצד הקרוב — לא לרחוק. או: בועט מעל השוער אבל מעל הקורה</div><div class="cr-note">לא יודע לנצל את הזווית הקצרה לטובתו</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① לא מכיר את שלושת האפשרויות מזווית קשה<br>② הגוף לא מאורגן לבעיטה מהירה לפני הקבלה<br>③ חוסר ביטחון ברגל החלשה מהצד הקשה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמכיר את 3 האפשרויות — שוער לא יכול לסגור עליו לגמרי</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Three Options Finishing Drill</div><div class="drill-badges"><span class="drill-muscle">🧠 הכרת אפשרויות</span><span class="drill-sets">5 × כל אפשרות</span></div><div class="drill-how">מזווית קשה — תרגול 3 אפשרויות בנפרד: 1. שלח לצד הרחוק (נגד השוער). 2. כדרור לפנים השער. 3. מסירה למרכז. להחליט לפני הקבלה — לא אחריה.</div><div class="drill-connect"><strong>החיבור:</strong> שוער שרואה שאתה יודע שלוש אפשרויות — לא יכול לסגור לגמרי</div></div>
+      <div class="drill-item"><div class="drill-name">Far Post Driving Shot</div><div class="drill-badges"><span class="drill-muscle">🦵 קוואדריספס + פלקסורי ירך</span><span class="drill-sets">20 × כל צד</span></div><div class="drill-how">מזווית 45° — לבעוט לעמוד הרחוק. גוף מעל הכדור. קרסול נעול. לנחוב תחת הכדור קצת כדי להשאיר נמוך. לחזור על זה מהצד הקשה.</div><div class="drill-connect"><strong>החיבור:</strong> עמוד הרחוק הוא האזור שהכי קשה לשוער להגיע אליו מזווית — לנצל את זה</div></div>
+      <div class="drill-item"><div class="drill-name">Weak Foot Angle Shooting</div><div class="drill-badges"><span class="drill-muscle">🦶 רגל חלשה</span><span class="drill-sets">30 ביום מהצד הקשה</span></div><div class="drill-how">30 בעיטות מזווית החלשה (הצד של הרגל החלשה). לא לרדוף אחרי דיוק — קודם ביטחון בתנועה. שבוע 2: להוסיף כוון ספציפי לפני כל בעיטה.</div><div class="drill-connect"><strong>החיבור:</strong> שחקן שיורה ברגל החלשה מזווית — שוער לא יכול לקרוא אותו</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S04 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">04</div>
+    <div><div class="sit-title">לסיים לשער אחרי כדרור</div><div class="sit-subtitle">תוקף · קצה · שחקן שנכנס לקופסה</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">שחקן פרץ — כדרור לקופסה — סיום. הכל צריך להתחבר בתנועה אחת רציפה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">הסיום מגיע כשהמגן כבר חזר. או: הכדור לא בנגיעה נוחה לבעיטה אחרי הכדרור</div><div class="cr-note">הבעיה היא בנגיעה האחרונה לפני הבעיטה — לא בבעיטה עצמה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① הנגיעה האחרונה לא מכינה את הכדור לבעיטה<br>② מחליט על סיום מאוחר מדי — הגוף כבר לא מוכן<br>③ קצב כדרור לא מאפשר בעיטה נוחה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמחליט לסיים לפני שהכדור מגיע — הסיום מהיר ב-0.5 שניות ממי שמחליט אחרי</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Set Up Touch + Shoot</div><div class="drill-badges"><span class="drill-muscle">🦶 נגיעת הכנה</span><span class="drill-sets">5×10 · כל צד</span></div><div class="drill-how">כדרור 3 חרוטים → הנגיעה האחרונה לפני הבעיטה חייבת להכין את הכדור לרגל הבועטת. לא "לשלוח" בכוח — לכוון נגיעת הכנה ואז לבעוט.</div><div class="drill-connect"><strong>החיבור:</strong> 90% מהסיומות הכושלות הן בגלל נגיעת הכנה גרועה — לא בגלל הבעיטה</div></div>
+      <div class="drill-item"><div class="drill-name">Decision Dribble + Finish</div><div class="drill-badges"><span class="drill-muscle">🧠 החלטה מוקדמת</span><span class="drill-sets">6 מהלכים × 4 זוויות</span></div><div class="drill-how">לפני שמתחיל הכדרור — לבחור: ימין / שמאל / רחוק / קרוב. לבצע בדיוק את מה שהחלטת. מי שמשנה החלטה בזמן ריצה — פסול.</div><div class="drill-connect"><strong>החיבור:</strong> שחקן שמחליט על סיום לפני הקופסה — סיים כשהשוער עוד לא קרא אותו</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S05 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">05</div>
+    <div><div class="sit-title">לשמור כדור בגב למגן</div><div class="sit-subtitle">תוקף · CF · שחקן ציר</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">שחקן מקבל כדור עם מגן מאחוריו — צריך לשמור ולהפנות</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">השחקן נדחף ומאבד כדור. או: שומר אבל לא יכול להפנות</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① Core חלש — לא מצליח לעמוד בלחץ פיזי מאחורה<br>② מרפק לא משמש ל"לעצור" את המגן<br>③ מיקום גוף — כדור רחוק מהגוף במקום מוגן</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמחזיק כדור בגב = מושך מגן = פותח מרחב לשחקן אחר</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Back-to-Goal Hold Drill</div><div class="drill-badges"><span class="drill-muscle">💪 Core + גוף עליון</span><span class="drill-sets">3×30 שניות</span></div><div class="drill-how">שחקן עומד עם כדור בין הרגליים. שותף לוחץ מהאחור בעדינות. השחקן שומר על עמדה נמוכה, כדור קרוב לגוף, מרפקים יוצאים לצדדים (לא לאחורה — זה פאול). לנשום.</div><div class="drill-connect"><strong>החיבור:</strong> Core + עמדה נמוכה = שחקן שלא נופל בלחץ פיזי</div></div>
+      <div class="drill-item"><div class="drill-name">Plank Variations + Resistance</div><div class="drill-badges"><span class="drill-muscle">💪 Core עמוק</span><span class="drill-sets">3×45 שניות</span></div><div class="drill-how">Plank רגיל + שותף לוחץ על הגב/צדדים. השחקן לא זזzzz. להוסיף: Plank עם הזזת רגל/יד בזמן הלחץ.</div><div class="drill-connect"><strong>החיבור:</strong> Core שמחזיק תחת לחץ חיצוני = גוף שמחזיק כדור תחת לחץ מגן</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end attack grid -->
+
+<!-- ===== PASSING ===== -->
+<div class="cat-header" id="passing">
+  <div class="cat-icon-big">🎯</div>
+  <div><div class="cat-title-big">מסירה ויצירה</div><div class="cat-desc">סיטואציות שדורשות העברת כדור מדויקת</div></div>
+  <div class="cat-count-badge">5 סיטואציות</div>
+</div>
+<div class="sit-grid">
+
+<!-- S06 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">06</div>
+    <div><div class="sit-title">למסור תחת לחץ</div><div class="sit-subtitle">כל עמדה — בעיקר מגן וCM</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">שחקן עם כדור ולוחץ קרוב — שניה אחת לקבל החלטה ולמסור</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">מאבד כדור תחת לחץ. או: מוסר לאיש המסומן. או: נוגע 3 פעמים לפני שמחליט</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① לא סרק את המגרש לפני שהכדור הגיע — אין "תמונה" מראש<br>② מסירה 1-Touch לא מדויקת — צריך 2-3 נגיעות<br>③ קריאת הלוחץ — לא יודע מתי הוא קרוב מדי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שסרק לפני = יודע לאן ילך הכדור לפני שנגע בו = לוחץ לא מפתיע אותו</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Rondo 4v2 — Scan Before Touch</div><div class="drill-badges"><span class="drill-muscle">🧠 + 🦶 סריקה + מסירה</span><span class="drill-sets">3×4 דקות</span></div><div class="drill-how">Rondo רגיל — כלל נוסף: לפני כל קבלת כדור לפנות את הראש פעמיים לצדדים. מי שלא סרק לפני הקבלה — אסור לו לשחק את הנגיעה הבאה.</div><div class="drill-connect"><strong>החיבור:</strong> סריקה לפני = "תמונה" מוכנה = מסירה בלי היסוס גם תחת לחץ</div></div>
+      <div class="drill-item"><div class="drill-name">Wall Pass 1-Touch Pressure</div><div class="drill-badges"><span class="drill-muscle">🦶 מסירה מהירה</span><span class="drill-sets">3×90 שניות</span></div><div class="drill-how">3 מטר מקיר. מסירה 1-Touch לשערון מסומן. שותף לוחץ קלות מהצד — השחקן לא יכול לעצור. חייב לשחק 1-Touch.</div><div class="drill-connect"><strong>החיבור:</strong> 1-Touch תחת לחץ = מסירה שיוצאת לפני שהלוחץ מגיע</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S07 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">07</div>
+    <div><div class="sit-title">לפתוח מגרש עם מסירה ארוכה</div><div class="sit-subtitle">מגן · CM · שוער מודרני</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">קצה שני פתוח — לשלוח 35-40 מטר בדיוק</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">הכדור גבוה מדי ואיטי — מגן מגיע. או: מדויק אבל לא מספיק חזק</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① פלקסורי ירך חלשים — תחנת בעיטה לא יציבה<br>② גוף לא מעל הכדור — הכדור "עולה" במקום לצאת ישר<br>③ קרסול לא נעול — אנרגיה מתפזרת בנגיעה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">מסירה ארוכה מדויקת = העברת הכדור בצד השני תוך 2 שניות = בלי לחץ</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Hip Flexor Strengthening</div><div class="drill-badges"><span class="drill-muscle">💪 פלקסורי ירך</span><span class="drill-sets">3×15 כל צד</span></div><div class="drill-how">שכיבה על גב, הרמת רגל ישרה ל-45° + עצירה 2 שניות. Resistance Band בגרסה מתקדמת. לחזק את השריר שמייצר את תחנת הבעיטה.</div><div class="drill-connect"><strong>החיבור:</strong> פלקסורי ירך חזקים = תחנת בעיטה יציבה = כוח ודיוק בו זמנית</div></div>
+      <div class="drill-item"><div class="drill-name">Driven Pass Progression</div><div class="drill-badges"><span class="drill-muscle">🦵 בעיטת שחרור</span><span class="drill-sets">3×10 · מרחק הולך וגדל</span></div><div class="drill-how">התחלה: 20 מטר לשותף. הגדלה: 25, 30, 35, 40 מטר בכל שבוע. לנחוב תחת הכדור ולא מרכזו. גוף מעל — לא מאחורה. קרסול נעול.</div><div class="drill-connect"><strong>החיבור:</strong> מסירה שנשארת נמוכה ומהירה = לא ניתנת ליירוט</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S08 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">08</div>
+    <div><div class="sit-title">לקבל כדור בין הקווים</div><div class="sit-subtitle">CM · תוקף שני · קצה פנימי</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">שחקן מוצא מרחב בין קו ההגנה לאמצע — מקבל כדור, פנה, תוקף</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">מקבל כדור עם גב לשער — לא יכול לתקוף. או: מגן מגיע לפני שמספיק להפנות</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① מגיע לאזור בין הקווים עם גוף ישר — לא בפנייה<br>② לא סרק לפני הקבלה — לא יודע לאן ללכת<br>③ כריה ראשונה לא מרחיקה מהמגן</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמקבל כבר בפנייה = המגן כבר מאחורה = הזדמנות לתקוף</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Half-Turn Reception + Attack</div><div class="drill-badges"><span class="drill-muscle">🧠 + 🦶 פנייה + כריה</span><span class="drill-sets">4×8 כל צד</span></div><div class="drill-how">מסרן מחוץ לאזור. שחקן נע לאזור בין הקווים בפנייה חצי. סריקה לפני. קבלה + כריה ראשונה לכיוון השער. מגן סטטי בהתחלה → מגן פעיל בהמשך.</div><div class="drill-connect"><strong>החיבור:</strong> חצי פנייה לפני = רואה 60% יותר מגרש = מחליט לפני שהמגן בא</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S09 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">09</div>
+    <div><div class="sit-title">למסור אחרי פנייה (Half Turn)</div><div class="sit-subtitle">CM · מגן · כל שחקן שמקבל בגב</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">קבלת כדור עם גב לשער → פנייה → מסירה קדימה — בשנייה אחת</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">לוחץ כובש בזמן הפנייה. או: מוסר אחרי הפנייה לאדם המסומן</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① סריקה לפני הפנייה לא נעשית — לא יודע לאן לפנות<br>② כריה ראשונה לא מרחיקה — לוחץ מגיע לפני הפנייה<br>③ גוב חצי פנייה לפני הקבלה — לא מאפשר תנועה קדימה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמוסר לפני שמסתובב לגמרי = לוחץ לא מספיק להגיע</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Check-Scan-Receive-Pass</div><div class="drill-badges"><span class="drill-muscle">🧠 סדר פעולות</span><span class="drill-sets">3×12 חזרות</span></div><div class="drill-how">4 שלבים בסדר קבוע: 1. Check — תנועה קצרה להסיח. 2. Scan — 2 פניות ראש. 3. Receive — חצי פנייה לפני הכדור. 4. Pass — מסירה לכיוון שסרקת. כל שלב חייב להתרחש לפני הבא.</div><div class="drill-connect"><strong>החיבור:</strong> כשהסדר הזה הופך לאוטומטי — מהירות הביצוע גדלה פי 2</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S10 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header">
+    <div class="sit-num">10</div>
+    <div><div class="sit-title">מסירת קיר (Wall Pass / 1-2)</div><div class="sit-subtitle">כל עמדה — שחקן שמגיע לפרוץ</div></div>
+    <div class="sit-toggle">+</div>
+  </div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">שחקן כדרר לכיוון מגן → מסר לשותף → רץ → קיבל חזרה מאחורי המגן</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">השותף לא מחזיר בזמן. או: הריצה להתנתק מתחילה מאוחר מדי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① הריצה להתנתק לא מתחילה ברגע המסירה — מאחרת<br>② השותף (הקיר) לא מוכן לקבל ולהחזיר 1-Touch<br>③ תזמון — הריצה לחלל לא מסונכרנת עם הכדור</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">1-2 מהיר = מגן הוטעה ועוצר — שחקן כבר מאחוריו</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Wall Pass Circuit</div><div class="drill-badges"><span class="drill-muscle">🦶 + 🧠 תזמון + מסירה</span><span class="drill-sets">3×8 מהלכים</span></div><div class="drill-how">שחקן A כדרר לשחקן B (קיר). B מחזיר 1-Touch בדיוק. A רץ לחלל — הכדור והשחקן מגיעים יחד. כלל: A חייב לרוץ ברגע שהכדור יוצא ממנו — לא אחרי.</div><div class="drill-connect"><strong>החיבור:</strong> הריצה שמתחילה ברגע המסירה = 0.5 שניות יתרון על המגן</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end passing -->
+
+<!-- ===== DEFENSE ===== -->
+<div class="cat-header" id="defense">
+  <div class="cat-icon-big">🛡️</div>
+  <div><div class="cat-title-big">הגנה אישית</div><div class="cat-desc">סיטואציות שדורשות עצירה, ניצחון ועיכוב</div></div>
+  <div class="cat-count-badge">5 סיטואציות</div>
+</div>
+<div class="sit-grid">
+
+<!-- S11 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">11</div><div><div class="sit-title">לעצור תוקף מהיר</div><div class="sit-subtitle">מגן · סטופר · כל מגן</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">תוקף מהיר פורץ — המגן צריך לחזור ולנצח אותו</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">מגן מנסה לנגוח מיד — תוקף עובר. או: מגן מגיע מהכיוון הלא נכון</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① מגן לא מכיר "Jockey" — לא יודע לעכב<br>② מרכז כובד גבוה מדי — לא יכול לשנות כיוון מהר<br>③ ניגש מהכיוון הלא נכון — נותן לתוקף את הצד הרחב</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">מגן שמנגח בזמן הנכון (כשתוקף מאבד שליטה) = כובש כדור. מגן שמנגח מוקדם = מפסיד</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Defensive Stance + Shuffle</div><div class="drill-badges"><span class="drill-muscle">🦵 קוואדריספס + Core</span><span class="drill-sets">5×30 שניות</span></div><div class="drill-how">עמידה נמוכה, ברכיים כפופות 45°, משקל על קצות האצבעות. Shuffle Steps צדיים — לא לצלב רגליים. קצב עולה כל 10 שניות. לא לעמוד ישר בין צעדים.</div><div class="drill-connect"><strong>החיבור:</strong> עמידה נמוכה = מרכז כובד נמוך = תגובה מהירה לכל כיוון</div></div>
+      <div class="drill-item"><div class="drill-name">Jockey & Delay Live</div><div class="drill-badges"><span class="drill-muscle">🧠 + 🦵 עיתוי + תגובה</span><span class="drill-sets">6 סיטואציות 1v1</span></div><div class="drill-how">תוקף עם כדור מגיע. מגן נסוג — לא ניגש. לשמור מרחק 1-1.5 מטר. לחכות לרגע שהתוקף מאבד שליטה (נגיעה גדולה, מבט למטה) — אז לנגוח. לא לפני.</div><div class="drill-connect"><strong>החיבור:</strong> הנגיחה שמגיעה ברגע הנכון = 80% הצלחה. מוקדם מדי = 20%</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S12 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">12</div><div><div class="sit-title">לנגוח ולנצח כדור</div><div class="sit-subtitle">כל מגן — בעיקר CM הגנתי</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">מגן נוגח — כדור צריך ללכת לכיוון בטוח, לא לתוקף שני</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">נוגח אבל הכדור עולה לתוקף שני. או: מפסיד את הנגיחה כי לא מוכן פיזית</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① גוף לא מוצב נכון לפני הנגיחה — לא "מגבה" את הכדור<br>② כף הרגל לא נעולה — כדור מסטה<br>③ לא מחליט על כיוון לפני הנגיחה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">נגיחה שיוצאת לצד הנכון = כדור לשוחרר / לצד → מתחילה התקפה</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Directional Tackle Drill</div><div class="drill-badges"><span class="drill-muscle">🦵 + 🧠 נגיחה מכוונת</span><span class="drill-sets">3×8 · כל כיוון</span></div><div class="drill-how">כדור זזסטטי. מגן ניגש — לפני הנגיחה לקרוא: "ימינה!" / "שמאלה!". לבצע בדיוק. כדור חייב ללכת לכיוון שנאמר. מגדיל: כדור נע לאט.</div><div class="drill-connect"><strong>החיבור:</strong> נגיחה עם כוון = כדור שלך. נגיחה בלי כוון = כדור של התוקף השני</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S13 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">13</div><div><div class="sit-title">לנצח מאבק אווירי בניתור</div><div class="sit-subtitle">מגן · תוקף · כל שחקן בפינות</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">קרוס / פינה / בעיטת אמצע — צריך לנצח את המאבק האווירי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">הניתור איטי — יריב מגיע לכדור ראשון. או: גבוה אבל לא יכול לכוון עם הראש</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① Box Jumps לא מספיק — תקרת הניתור נמוכה<br>② עיתוי הניתור — מוקדם מדי / מאוחר מדי<br>③ תנועת צוואר לא מכוונת כדור לנקודה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">5 ס"מ ניתור נוסף + עיתוי נכון = ניצחון במאבק האווירי</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Box Jumps Progressive</div><div class="drill-badges"><span class="drill-muscle">💥 גלוטאוס + תאומים</span><span class="drill-sets">4×6 · מנוחה מלאה</span></div><div class="drill-how">תיבה 40-60 ס"מ. קפיצה שתי רגליים — נחיתה רכה על האצבעות. כשתיבה נמוכה קלה: להגביר גובה. מטרה: גובה ניתור מקסימלי, לא כמות.</div><div class="drill-connect"><strong>החיבור:</strong> כל ס"מ נוסף בניתור = יתרון על יריב</div></div>
+      <div class="drill-item"><div class="drill-name">Heading Timing Drill</div><div class="drill-badges"><span class="drill-muscle">🧠 + 🦶 עיתוי ניתור</span><span class="drill-sets">3×10</span></div><div class="drill-how">שותף זורק כדור לאוויר. השחקן מחליט: לנתר כשהכדור בגובה X. לא מוקדם, לא מאוחר. להגיע לנקודה הגבוהה של הניתור בדיוק כשהכדור שם.</div><div class="drill-connect"><strong>החיבור:</strong> עיתוי = לנתר 0.5 שניות אחרי היריב — כדי להגיע לשיא הניתור בזמן</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S14-15 combined -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">14</div><div><div class="sit-title">לעכב תוקף עד לתגבור</div><div class="sit-subtitle">כל מגן — סיטואציית 1v1 הגנתית</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">מגן לבד מול תוקף — תגבור שניה רחוק. לעכב 3-5 שניות</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">מגן ניגש מוקדם מדי — תוקף עובר. מגן מחכה אבל לא במיקום נכון — תוקף פורץ בצד</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① לא מכיר את עקרון ה-Goal Side — גוף בין כדור לשער<br>② Shuffle Steps לא מספיק מהירים לכסות שינוי כיוון<br>③ בהלה — ניגש כי לא יכול להכיל את הלחץ הנפשי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">מגן שמחזיק 5 שניות = תגבור מגיע = 2v1 = כובשים כדור</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">5-Second Delay Challenge</div><div class="drill-badges"><span class="drill-muscle">🧠 + 🦵 עיכוב מכוון</span><span class="drill-sets">6 סיטואציות</span></div><div class="drill-how">תוקף מגיע לקו. מגן חייב לעכב 5 שניות מבלי שתוקף יעבור. מגן מנצח = עצירה בלי נגיחה. תוקף מנצח = עבר. מדידת זמן בכל ניסיון.</div><div class="drill-connect"><strong>החיבור:</strong> 5 שניות עיכוב = חברים חוזרים = הגנה שלמה</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">15</div><div><div class="sit-title">לחזור ולהגן אחרי אובדן כדור</div><div class="sit-subtitle">כל עמדה — מעבר הגנתי</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">קבוצה אבדה כדור — 3 שניות קריטיות לחזור ולסגור</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">שחקן עומד ומסתכל — לא חוזר. או: חוזר אבל לא לעמדה הנכונה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① אין "Trigger" — שחקן לא מחובר לרגע אובדן הכדור<br>② ריצה חזרה לא מהירה — עייפות / לא מחויב<br>③ לא יודע לאן לחזור — עמדת חזרה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שחוזר תוך 3 שניות = מצמצם יתרון — שחקן שעומד = מצמצם הקבוצה שלו</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Transition Trigger Drill</div><div class="drill-badges"><span class="drill-muscle">🧠 + 💨 תגובה מיידית</span><span class="drill-sets">5×3 מהלכים</span></div><div class="drill-how">SSG 4v4. כשמאמן צועק "מעבר!" — כולם קופאים. מי שכבר זזלכיוון ההגנה מקבל נקודה. מי שעמד = 0. בודקים: כמה שניות לוקח לכל שחקן לתגובה ראשונה.</div><div class="drill-connect"><strong>החיבור:</strong> ה-3 שניות הראשונות הן הקריטיות — הקבוצות הטובות מנצחות עליהן</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end defense -->
+
+<!-- ===== MOVEMENT ===== -->
+<div class="cat-header" id="movement">
+  <div class="cat-icon-big">🏃</div>
+  <div><div class="cat-title-big">מעברים ותנועה</div><div class="cat-desc">סיטואציות שדורשות תנועה חכמה בלי כדור</div></div>
+  <div class="cat-count-badge">5 סיטואציות</div>
+</div>
+<div class="sit-grid">
+
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">16</div><div><div class="sit-title">להתנתק מסמן</div><div class="sit-subtitle">כל שחקן שמקבל כדור — בעיקר CM ותוקף</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">מגן צמוד — שחקן צריך ליצור רווח לקבלת כדור</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">הפאסה לא מגיעה — שחקן תמיד מסומן. או: מתנתק אבל מסרן לא רואה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① תנועת פיתוי לא קיימת — הולך ישר לנקודה<br>② תזמון ההתנתקות לא מסונכרן עם המסרן<br>③ לא קורא מה המגן עושה — לא יודע לנצל תנועה שלו</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמשתמש ב-Check Run = יוצר 1-2 מטר רווח = מקבל כדור פנוי</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Check Run Pattern</div><div class="drill-badges"><span class="drill-muscle">🧠 + 🦵 תנועת פיתוי</span><span class="drill-sets">5 מהלכים × 3</span></div><div class="drill-how">שחקן A זזלכיוון הלא נכון (פיתוי). עוצר. פונה בכוח לכיוון האמיתי. מסרן שולח לנקודה האמיתית. כלל: הפיתוי חייב להיות לפחות 3 צעדים.</div><div class="drill-connect"><strong>החיבור:</strong> מגן שנוע בכיוון הפיתוי מאחר ב-0.5 שניות — מספיק לקבל כדור פנוי</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">17</div><div><div class="sit-title">לרוץ לחלל מאחורי ההגנה</div><div class="sit-subtitle">קצה התקפי · תוקף שני</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">מסרן עם כדור — מגן אחרון גבוה. לפרוץ לחלל לפני שמגן חוזר</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">הריצה מתחילה מאוחר — מגן מגיע ראשון. או: אופסייד כי מוקדם מדי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① עיתוי — לא יודע מתי המסרן מתכוון לשחרר<br>② קריאת קו ההגנה — לא מזהה מתי הם גבוהים<br>③ מהירות ריצה — לא מהיר מספיק לנצח מגן גם עם יתרון</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">ריצה שמתחילה ברגע הנכון + מהירות = הזדמנות 1v0 עם שוער</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Timing Run — Sync with Passer</div><div class="drill-badges"><span class="drill-muscle">🧠 עיתוי</span><span class="drill-sets">5 מהלכים × 3</span></div><div class="drill-how">מסרן עומד. שחקן ב-A. ברגע שמסרן מתחיל לנוע (לא ברגע שהכדור יוצא) — שחקן רץ לנקודה B. הכדור והשחקן מגיעים יחד לנקודה B. תגמול על סנכרון מושלם.</div><div class="drill-connect"><strong>החיבור:</strong> לרוץ ברגע שהמסרן מתחיל לנוע = להגיע לכדור שניה לפני המגן</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">18</div><div><div class="sit-title">לתמוך בשחקן עם כדור</div><div class="sit-subtitle">כל עמדה — בניית משחק קבוצתי</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">שחקן עם כדור לחוץ — צריך שחקנים תומכים בזוויות נכונות</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">כולם עומדים באותו קו — שחקן עם כדור לא יכול למסור</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① לא מכירים את עקרון "משולש התמיכה" — עמוד מאחורה ולפנים<br>② עומדים במרחק לא נכון — רחוק מדי / קרוב מדי<br>③ לא מתקשרים — שחקן עם כדור לא יודע שיש להם</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">משולש תמיכה = שחקן עם כדור תמיד יש לו לפחות 2 אפשרויות = לחץ נגמר</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Support Triangle Rondo</div><div class="drill-badges"><span class="drill-muscle">🧠 מיקום + תמיכה</span><span class="drill-sets">4×4 דקות</span></div><div class="drill-how">Rondo 4v2. כלל: כל שחקן עם כדור חייב לראות לפחות 2 תומכים בזוויות שונות. אם לא — הוא לא יכול למסור עד שאחד זזלזווית אחרת.</div><div class="drill-connect"><strong>החיבור:</strong> תמיכה בזוויות שונות = שחקן עם כדור תמיד יש לו יציאה</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">19</div><div><div class="sit-title">לנוע בין הקווים</div><div class="sit-subtitle">CM · קצה פנימי · תוקף שני</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">המרחב בין קו ההגנה לאמצע — הכי מסוכן במגרש. לנוע לשם ולקבל</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">שחקן עומד בין הקווים אבל לא מסרן רואה. או: מגן מגיע לפני הכדור</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① תנועה לאזור ישירה — מגן נוע ביחד<br>② לא בחצי פנייה — לא יכול לקבל ולתקוף<br>③ לא יוצר קשר עין עם המסרן לפני התנועה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמוצא בין הקווים בחצי פנייה = מקבל + תוקף תוך שנייה אחת</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Half-Space Penetration Drill</div><div class="drill-badges"><span class="drill-muscle">🧠 + 🦶 תנועה + קבלה</span><span class="drill-sets">5 מהלכים × 3</span></div><div class="drill-how">שחקן מגיע לחצי מרחב בין הקווים מכיוון לא ישר (Check Run). מגיע בחצי פנייה. מקבל + כריה ראשונה לשער. מדגישים: לא לעמוד בין הקווים — לנוע לשם.</div><div class="drill-connect"><strong>החיבור:</strong> בין הקווים הוא המרחב שכל הגנה מפחדת ממנו — שחקן שמוצא אותו, מסוכן</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">20</div><div><div class="sit-title">להגיב לשינוי צד (Switch)</div><div class="sit-subtitle">קצה · מגן רוחבי · CM</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">כדור עובר לצד שני — צריך לכסות או לנצל מהר</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">שחקן מגיב מאוחר — הצד השני כבר לחוץ. או: מגיע לצד אחר אבל לא מוכן לפעולה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① לא עוקב אחרי כדור — לא רואה את ה-Switch מתפתח<br>② תנועה ב-Switch לא מוכנה — עומד ולא בתנועה<br>③ קצה שלא מגיע בזמן = לא מקבל כדור פנוי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמגיע בזמן לצד השני + פנוי = Switch מועיל. מאוחר = Switch מבוזבז</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Switch Reaction Drill</div><div class="drill-badges"><span class="drill-muscle">🧠 + 💨 תגובה + ריצה</span><span class="drill-sets">6 מהלכים</span></div><div class="drill-how">3 שחקנים בצד אחד. מסרן עם כדור. ברגע שמסרן מפנה גוף לצד השני — שחקן הקצה השני מתחיל לרוץ. מקבל כדור תוך שהוא בתנועה — לא עצירה.</div><div class="drill-connect"><strong>החיבור:</strong> Switch יעיל = קצה שמגיע בזמן ובתנועה — לא עומד ומחכה</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end movement -->
+
+<!-- ===== PHYSICAL ===== -->
+<div class="cat-header" id="physical">
+  <div class="cat-icon-big">💪</div>
+  <div><div class="cat-title-big">פיזי-ספציפי</div><div class="cat-desc">סיטואציות שנפתרות דרך שיפור פיזי ממוקד</div></div>
+  <div class="cat-count-badge">4 סיטואציות</div>
+</div>
+<div class="sit-grid">
+
+<!-- S21 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">21</div><div><div class="sit-title">לשמור ביצועים בדקה 80</div><div class="sit-subtitle">כל עמדה — סיבולת + ריקברי</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">דקה 75-90 — השחקן חייב לתת 100% כמו בדקה ה-1</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">שחקן איטי יותר, מסירות קצרות יותר, החלטות שגויות — כל זה מהעייפות</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① VO2 Max נמוך — ריקברי בין ספרינטים איטי<br>② גליקוגן — לא אכל נכון לפני<br>③ אימון סיבולת לא ספציפי לכדורגל</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שמתאמן לדקה 80 — קובע משחקים בדקה 80. השחקנים עייפים — הוא לא</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">30-30 Intervals</div><div class="drill-badges"><span class="drill-muscle">💥 VO2 Max</span><span class="drill-sets">10-12 חזרות</span></div><div class="drill-how">30 שניות ב-90% מהירות מקסימלית → 30 שניות הליכה. חזור 10-12 פעמים. מחקה ספרינטים קצרים עם ריקברי חלקי — בדיוק כמו כדורגל.</div><div class="drill-connect"><strong>החיבור:</strong> VO2 Max גבוה = ריקברי מהיר בין ספרינטים = פחות ירידה בדקה 80</div></div>
+      <div class="drill-item"><div class="drill-name">Second-Half Simulation</div><div class="drill-badges"><span class="drill-muscle">💪 + 🧠 כדורגל עייף</span><span class="drill-sets">20 דקות כדורגל אחרי עומס</span></div><div class="drill-how">30 דקות ריצה + Zone 2 → מיד 20 דקות SSG. שחקנים מתחילים את ה-SSG בעייפות. מטרה: לשמור על איכות מסירות וקבלת החלטות גם כשעייפים.</div><div class="drill-connect"><strong>החיבור:</strong> כדורגל בעייפות = הכנה לדקה 70-90 שמכריעה משחקים</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S22 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">22</div><div><div class="sit-title">לחזור מפציעה מהר יותר</div><div class="sit-subtitle">כל שחקן — מניעה + ריקברי</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">מצב</div><div class="cr-main">פציעה — ולחזור לכושר המלא הכי מהר אפשר</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לוקח זמן</div><div class="cr-main">לא עשו מניעה לפני — שרירים לא מוכנים. ריקברי שגוי — חזרה מוקדמת מדי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① גמישות + מוביליות לא מתוחזקת — שרירים קשים = פציעה קלה<br>② Nordic Curls לא נעשים — Hamstring Tears קל למניעה<br>③ מסורת של "לחכות שיעבור" — לא ריקברי פעיל</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">שחקן שעושה Nordic Curls + Hip 90-90 כל יום = סיכון Hamstring Tear יורד ב-70%</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים מניעתיים — חובה</div>
+      <div class="drill-item"><div class="drill-name">Nordic Curl</div><div class="drill-badges"><span class="drill-muscle">🦵 Hamstring — מניעת קרע</span><span class="drill-sets">3×5 · התקדמות הדרגתית</span></div><div class="drill-how">שחקן על ברכיים, שותף מחזיק קרסוליים. ירידה לאט קדימה תוך שמירת גוף ישר — כוח Hamstring בלבד. כמה שאפשר לאט. עלייה בידיים. לאחר 4 שבועות: ירידה ועלייה.</div><div class="drill-connect"><strong>החיבור:</strong> מחקרים מראים 70% פחות Hamstring Tears עם Nordic Curl קבוע</div></div>
+      <div class="drill-item"><div class="drill-name">Hip 90-90 + Dynamic Warmup</div><div class="drill-badges"><span class="drill-muscle">🦵 היפ + פלקסורי ירך</span><span class="drill-sets">2 דקות כל צד · כל יום</span></div><div class="drill-how">ישיבה עם שתי ברכיים ב-90°. לנשום לתוך ההרחבה. לא לדחוף. 10 דקות Dynamic Warmup לפני כל אימון: Leg Swings, Hip Circles, Lunge + Rotation.</div><div class="drill-connect"><strong>החיבור:</strong> היפ גמיש = עומס מופחת על גיד המפשעה והברך</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S23 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">23</div><div><div class="sit-title">לנצח דואל פיזי בכתף</div><div class="sit-subtitle">כל עמדה — בעיקר CM ומגן</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">ריצה כתף בכתף לכדור — מי מגיע ראשון ועומד ב"דחיפה"</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">שחקן נדחף ומאבד מסלול. או: שחקן חושש מהדואל הפיזי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-root">🔍</div><div class="chain-vline cv-blue"></div></div><div class="chain-right"><div class="cr-type t-root">שורשי הבעיה</div><div class="cr-main">① Core חלש — גוף לא מחובר = נפילה בדחיפה<br>② כתפיים לא חזקות — לא יכול "להחזיק" את היריב<br>③ ביטחון — חושש מהמגע הפיזי, לא יוצר אותו</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">Core + כתפיים + ביטחון = שחקן שיוצר קשר פיזי ולא מאבד מסלול</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Shoulder Run Drill</div><div class="drill-badges"><span class="drill-muscle">💪 Core + כתפיים</span><span class="drill-sets">5 × 20 מטר</span></div><div class="drill-how">שני שחקנים רצים כתף בכתף ל-20 מטר. כל אחד מנסה להחזיק את המסלול שלו. לא לדחוף — ליצור קשר כתף ולשמור קו ישר. מי שסוטה מהמסלול = מפסיד.</div><div class="drill-connect"><strong>החיבור:</strong> Core שמחזיק תחת לחץ צדי = שחקן שמגיע לכדור גם עם יריב בצד</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- S24 -->
+<div class="sit-card" onclick="toggleSit(this)">
+  <div class="sit-header"><div class="sit-num">24</div><div><div class="sit-title">לקפוץ גבוה יותר לפינה</div><div class="sit-subtitle">מגן · תוקף · כל שחקן בפינות</div></div><div class="sit-toggle">+</div></div>
+  <div class="sit-body">
+    <div class="sit-chain">
+      <div class="sit-chain-title">שרשרת השורשים</div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-situation">🎮</div><div class="chain-vline cv-gold"></div></div><div class="chain-right"><div class="cr-type t-situation">סיטואציית משחק</div><div class="cr-main">פינה — כדור גבוה — צריך לנצח את הניתור ולכוון את הראש</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">למה זה לא עובד</div><div class="cr-main">לא גבוה מספיק. או: גבוה אבל ראש לא מכוון לשער. או: עיתוי ניתור שגוי</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-why">❌</div><div class="chain-vline cv-red"></div></div><div class="chain-right"><div class="cr-type t-why">שרשרת שלמה</div><div class="cr-main">① Box Jumps: גובה ניתור מקסימלי<br>② עיתוי: לנתר 0.5 שניות אחרי היריב<br>③ Single Leg Calf Raises: ניתור מרגל אחת קדימה<br>④ Neck Strengthening: שליטה בכיוון הכדור</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-drill">🏋️</div><div class="chain-vline cv-green"></div></div><div class="chain-right"><div class="cr-type t-drill">תרגילים</div><div class="cr-main">↓ ראה מטה</div></div></div>
+      <div class="chain-row"><div class="chain-left"><div class="chain-circle cc-result">✅</div></div><div class="chain-right"><div class="cr-type t-result">חיבור למשחק</div><div class="cr-main">עיתוי + גובה + כיוון = ניצחון במאבק האווירי + כדור לפינה הנכונה</div></div></div>
+    </div>
+    <div class="drills-section">
+      <div class="drills-label">תרגילים</div>
+      <div class="drill-item"><div class="drill-name">Box Jumps + Heading Combo</div><div class="drill-badges"><span class="drill-muscle">💥 + 🧠 ניתור + כיוון</span><span class="drill-sets">3×8</span></div><div class="drill-how">Box Jump → נחיתה → ניתור מיידי לכדור שנזרק. המטרה: להגיע לנקודה הגבוהה ביותר של הניתור בדיוק כשהכדור שם. להכוון ראש לנקודה מסוימת לפני הקשר.</div><div class="drill-connect"><strong>החיבור:</strong> שילוב גובה + עיתוי + כיוון — כל פינה הופכת להזדמנות</div></div>
+      <div class="drill-item"><div class="drill-name">Approach + Jump Heading</div><div class="drill-badges"><span class="drill-muscle">💪 ניתור מריצה</span><span class="drill-sets">10 × מכל צד</span></div><div class="drill-how">3-4 צעדי ריצה → ניתור מרגל אחת. מגיע גבוה יותר ממקום עמידה. ידיים עוזרות לגובה. ראש מכוון לפני הקשר — לא בזמן הקשר.</div><div class="drill-connect"><strong>החיבור:</strong> ריצה לפינה + ניתור מרגל = 15-20 ס"מ גובה נוסף ממי שניתר ממקום</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end physical -->
+
+</div><!-- end situations-section -->
+
+<div class="footer">
+  <div class="footer-logo">GARDEN OF EDEN</div>
+  <div class="footer-sub">Soccer Academy · Haifa · ספר התרגילים — מהסיטואציה לשריר</div>
+  <div style="margin-top:16px;font-size:10px;color:#1a1a1a;">© Garden of Eden Soccer Academy</div>
+</div>
+
+<script>
+function toggleSit(card){
+  if(event.target.closest('.drills-section,.sit-chain'))return;
+  card.classList.toggle('open');
+}
+
+function scrollTo_cat(id,tabEl){
+  document.querySelectorAll('.nav-cat').forEach(function(t){t.classList.remove('active');});
+  tabEl.classList.add('active');
+  var el=document.getElementById(id);
+  if(el){var y=el.getBoundingClientRect().top+window.pageYOffset-60;window.scrollTo({top:y,behavior:'smooth'});}
+}
+
+// Auto highlight nav on scroll
+var cats=['attack','passing','defense','movement','physical'];
+var map={attack:0,passing:1,defense:2,movement:3,physical:4};
+window.addEventListener('scroll',function(){
+  var cur='';
+  cats.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el&&window.pageYOffset>=el.offsetTop-120)cur=id;
+  });
+  if(cur!==''&&map[cur]!==undefined){
+    document.querySelectorAll('.nav-cat').forEach(function(t){t.classList.remove('active');});
+    document.querySelectorAll('.nav-cat')[map[cur]].classList.add('active');
+  }
+});
+</script>
+</body>
+</html>

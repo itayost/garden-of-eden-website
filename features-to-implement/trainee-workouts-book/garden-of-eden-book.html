@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ספר פיתוח שחקן | Garden of Eden</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--black:#0a0a0a;--green-dark:#0d3b1e;--green-mid:#1a6b3a;--green-accent:#2ecc71;--gold:#c9a84c;--white:#f8f8f4;--gray-mid:#9a9a90;}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{font-family:'Heebo',sans-serif;background:var(--black);color:var(--white);direction:rtl;}
+.page{display:none;}.page.active{display:block;}
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,10,0.97);backdrop-filter:blur(12px);border-bottom:1px solid rgba(46,204,113,0.15);padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:54px;}
+.nav-brand{font-family:'Oswald',sans-serif;font-size:15px;font-weight:700;color:var(--green-accent);letter-spacing:3px;cursor:pointer;flex-shrink:0;}
+.nav-tabs{display:flex;gap:2px;list-style:none;overflow-x:auto;scrollbar-width:none;}
+.nav-tabs::-webkit-scrollbar{display:none;}
+.nav-tab{padding:6px 12px;font-size:11px;font-weight:600;color:var(--gray-mid);cursor:pointer;border-radius:4px;transition:all 0.2s;white-space:nowrap;border:1px solid transparent;}
+.nav-tab:hover{color:var(--white);background:rgba(46,204,113,0.1);}
+.nav-tab.active{color:var(--green-accent);border-color:rgba(46,204,113,0.3);background:rgba(46,204,113,0.07);}
+/* COVER */
+.cover{min-height:100vh;background:linear-gradient(160deg,#0d3b1e 0%,#061a0e 60%,#000 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:60px 24px;text-align:center;}
+.cover::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(46,204,113,0.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(201,168,76,0.06) 0%,transparent 50%);}
+.field-lines{position:absolute;inset:0;opacity:0.04;background-image:linear-gradient(0deg,transparent 49%,#2ecc71 49%,#2ecc71 51%,transparent 51%),linear-gradient(90deg,transparent 49%,#2ecc71 49%,#2ecc71 51%,transparent 51%);background-size:120px 120px;}
+.cover-brand{font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:6px;text-transform:uppercase;color:var(--green-accent);margin-bottom:28px;position:relative;}
+.cover-title{font-family:'Oswald',sans-serif;font-size:clamp(44px,10vw,88px);font-weight:700;line-height:0.95;letter-spacing:-2px;color:var(--white);position:relative;}
+.cover-title span{color:var(--green-accent);display:block;}
+.cover-subtitle{font-size:15px;font-weight:300;color:var(--gray-mid);margin-top:20px;letter-spacing:1px;}
+.cover-divider{width:60px;height:3px;background:linear-gradient(90deg,var(--green-accent),var(--gold));margin:32px auto;border-radius:2px;}
+.cover-stats{display:flex;gap:32px;justify-content:center;position:relative;flex-wrap:wrap;}
+.cover-stat-num{font-family:'Oswald',sans-serif;font-size:38px;font-weight:700;color:var(--green-accent);line-height:1;}
+.cover-stat-label{font-size:10px;color:var(--gray-mid);letter-spacing:2px;text-transform:uppercase;margin-top:5px;}
+.cover-btns{display:flex;gap:10px;margin-top:36px;flex-wrap:wrap;justify-content:center;position:relative;}
+.btn{padding:13px 24px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;}
+.btn-primary{background:var(--green-accent);color:#000;}
+.btn-primary:hover{background:#27ae60;transform:translateY(-1px);}
+.btn-secondary{background:transparent;color:var(--white);border:1px solid rgba(255,255,255,0.2);}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
+.btn-gold{background:var(--gold);color:#000;}
+/* SECTION */
+.section{padding:56px 16px;max-width:960px;margin:0 auto;}
+.section-eyebrow{font-size:10px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--green-accent);margin-bottom:12px;}
+/* CATEGORY DIVIDER */
+.cat-divider{display:flex;align-items:center;gap:14px;margin:48px 0 24px;padding-bottom:14px;border-bottom:1px solid rgba(46,204,113,0.12);}
+.cat-icon{font-size:24px;}.cat-label{font-family:'Oswald',sans-serif;font-size:24px;font-weight:700;color:var(--white);}
+.cat-count{font-size:11px;color:var(--gray-mid);letter-spacing:2px;margin-right:auto;}
+/* PARAM CARDS */
+.params-grid{display:grid;gap:14px;}
+.param-card{background:#111;border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;transition:border-color 0.3s;}
+.param-card:hover{border-color:rgba(46,204,113,0.2);}
+.param-card.open{border-color:rgba(46,204,113,0.35);}
+.param-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:18px 20px;cursor:pointer;user-select:none;}
+.param-num{font-family:'Oswald',sans-serif;font-size:11px;font-weight:700;color:var(--green-accent);background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:6px;padding:4px 9px;min-width:38px;text-align:center;}
+.param-name{font-family:'Oswald',sans-serif;font-size:18px;font-weight:600;color:var(--white);line-height:1.1;}
+.param-meta{font-size:10px;color:var(--gray-mid);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.pos-tag{font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.2);}
+.param-toggle{font-size:20px;color:var(--green-accent);transition:transform 0.3s;width:26px;text-align:center;flex-shrink:0;}
+.param-card.open .param-toggle{transform:rotate(45deg);}
+.param-body{display:none;border-top:1px solid rgba(255,255,255,0.07);}
+.param-card.open .param-body{display:block;}
+/* MAIN TABS */
+.card-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.07);overflow-x:auto;scrollbar-width:none;}
+.card-tabs::-webkit-scrollbar{display:none;}
+.card-tab{flex-shrink:0;padding:11px 10px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;cursor:pointer;color:var(--gray-mid);transition:all 0.2s;border-bottom:2px solid transparent;white-space:nowrap;}
+.card-tab.active-tab{color:var(--white);border-bottom-color:var(--green-accent);}
+.card-tab:nth-child(2).active-tab{border-bottom-color:var(--gold);color:var(--gold);}
+.card-tab:nth-child(3).active-tab{border-bottom-color:#7ec8e3;color:#7ec8e3;}
+.card-tab:nth-child(4).active-tab{border-bottom-color:#c084fc;color:#c084fc;}
+.card-panel{display:none;padding:20px;}
+.card-panel.active-panel{display:block;}
+/* EXERCISES */
+.ex-list{list-style:none;display:flex;flex-direction:column;gap:12px;}
+.ex-item{background:rgba(255,255,255,0.03);border-radius:10px;padding:14px 16px;border-right:3px solid var(--green-accent);}
+.ex-name{font-family:'Oswald',sans-serif;font-size:14px;font-weight:700;color:var(--white);}
+.ex-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;}
+.ex-muscle{display:inline-block;font-size:10px;font-weight:700;color:var(--green-accent);background:rgba(46,204,113,0.1);border-radius:4px;padding:2px 7px;}
+.ex-sets{display:inline-block;font-size:10px;font-weight:700;color:var(--gold);background:rgba(201,168,76,0.1);border-radius:4px;padding:2px 7px;}
+.ex-how{font-size:12px;color:#bbb;margin-top:7px;line-height:1.6;}
+.ex-why{font-size:11px;color:var(--gray-mid);margin-top:7px;line-height:1.5;padding-top:7px;border-top:1px solid rgba(255,255,255,0.06);}
+.ex-why strong{color:#ccc;}
+/* AGE TABLE */
+.age-table{width:100%;border-collapse:collapse;margin-top:4px;font-size:12px;}
+.age-table th{background:rgba(46,204,113,0.08);color:var(--green-accent);font-weight:700;padding:8px 10px;text-align:right;font-size:10px;letter-spacing:1px;}
+.age-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;vertical-align:top;line-height:1.5;}
+.age-table tr:last-child td{border-bottom:none;}
+.age-table tr:hover td{background:rgba(255,255,255,0.02);}
+.age-badge{display:inline-block;font-size:10px;font-weight:700;color:#000;background:var(--green-accent);border-radius:4px;padding:1px 7px;margin-left:4px;}
+.age-badge.u12{background:#7ec8e3;color:#000;}
+.age-badge.u14{background:var(--green-accent);color:#000;}
+.age-badge.u16{background:var(--gold);color:#000;}
+.age-badge.u18{background:#c084fc;color:#000;}
+/* RECOVERY BOX */
+.recovery-box{background:rgba(126,200,227,0.06);border:1px solid rgba(126,200,227,0.2);border-radius:8px;padding:14px 16px;margin-top:12px;}
+.recovery-title{font-size:10px;font-weight:700;letter-spacing:2px;color:#7ec8e3;margin-bottom:8px;text-transform:uppercase;}
+.recovery-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.recovery-item{font-size:12px;color:#ccc;line-height:1.5;}
+.recovery-item strong{color:#7ec8e3;display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
+/* REPORT */
+.report-text{font-size:14px;color:#ccc;line-height:1.8;font-weight:300;}
+.report-highlight{background:rgba(46,204,113,0.06);border:1px solid rgba(46,204,113,0.15);border-radius:8px;padding:13px 15px;margin-top:12px;font-size:12px;color:var(--green-accent);line-height:1.6;}
+.report-highlight strong{color:var(--white);}
+/* VERBAL */
+.verbal-text{font-size:14px;color:#ccc;line-height:1.8;font-weight:300;border-right:3px solid #7ec8e3;padding-right:14px;margin-bottom:12px;}
+.verbal-tip{background:rgba(126,200,227,0.06);border:1px solid rgba(126,200,227,0.15);border-radius:8px;padding:11px 13px;font-size:12px;color:#7ec8e3;line-height:1.6;}
+/* POSITION PANEL */
+.pos-grid{display:grid;gap:10px;}
+.pos-item{background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px 14px;}
+.pos-name{font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;color:var(--gold);}
+.pos-desc{font-size:12px;color:#bbb;margin-top:5px;line-height:1.6;}
+/* PHILOSOPHY */
+.philosophy{background:linear-gradient(135deg,#0d3b1e 0%,#061a0e 100%);padding:56px 20px;text-align:center;border-top:1px solid rgba(46,204,113,0.2);border-bottom:1px solid rgba(46,204,113,0.2);}
+.phil-quote{font-family:'Oswald',sans-serif;font-size:clamp(18px,3.5vw,30px);font-weight:400;line-height:1.5;color:var(--white);max-width:720px;margin:0 auto;}
+.phil-quote em{color:var(--green-accent);font-style:normal;}
+.phil-author{margin-top:18px;font-size:11px;color:var(--gray-mid);letter-spacing:3px;text-transform:uppercase;}
+/* CHAIN */
+.chain-section{background:#0d0d0d;padding:56px 20px;border-top:1px solid rgba(255,255,255,0.04);}
+.chain-visual{display:flex;align-items:stretch;justify-content:center;gap:0;margin-top:32px;flex-wrap:wrap;}
+.chain-step{background:#161616;border:1px solid rgba(46,204,113,0.18);border-radius:10px;padding:18px 16px;text-align:center;min-width:130px;flex:1;max-width:180px;}
+.chain-icon{font-size:24px;margin-bottom:8px;}.chain-label{font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;color:var(--white);}
+.chain-desc{font-size:10px;color:var(--gray-mid);margin-top:4px;line-height:1.4;}
+.chain-arrow{font-size:18px;color:var(--green-accent);margin:0 4px;opacity:0.5;align-self:center;}
+/* FOOTER */
+.footer{background:#050505;border-top:1px solid rgba(255,255,255,0.06);padding:36px 16px;text-align:center;}
+.footer-brand{font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;color:var(--green-accent);letter-spacing:3px;}
+.footer-sub{font-size:10px;color:var(--gray-mid);margin-top:7px;letter-spacing:2px;}
+/* ===== PARENTS PAGE ===== */
+.parents-page{background:#f5f4ef;color:#1a1a1a;direction:rtl;min-height:100vh;}
+.parents-header{background:linear-gradient(135deg,#0d3b1e,#1a6b3a);padding:44px 20px;text-align:center;color:var(--white);}
+.parents-logo{font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:5px;color:var(--green-accent);margin-bottom:14px;}
+.parents-title{font-family:'Oswald',sans-serif;font-size:clamp(26px,6vw,48px);font-weight:700;color:var(--white);line-height:1.1;}
+.parents-title span{color:var(--green-accent);}
+.parents-subtitle{font-size:14px;color:rgba(255,255,255,0.6);margin-top:10px;font-weight:300;}
+.parents-intro{background:#fff;border-bottom:1px solid #e0e0d8;padding:28px 20px;max-width:820px;margin:0 auto;font-size:14px;color:#444;line-height:1.8;font-weight:300;}
+.parents-intro strong{color:#0d3b1e;font-weight:700;}
+.parents-body{max-width:820px;margin:0 auto;padding:28px 20px;}
+.parents-cat-title{font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:#0d3b1e;margin:32px 0 14px;padding-bottom:8px;border-bottom:2px solid #0d3b1e;display:flex;align-items:center;gap:8px;}
+.parents-card{background:#fff;border-radius:10px;margin-bottom:12px;border:1px solid #e0e0d8;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.04);}
+.parents-card-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;}
+.parents-num{font-family:'Oswald',sans-serif;font-size:11px;font-weight:700;color:#1a6b3a;background:#e8f5ee;border-radius:5px;padding:3px 8px;min-width:36px;text-align:center;}
+.parents-pname{font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;color:#1a1a1a;}
+.parents-ptag{font-size:10px;color:#888;letter-spacing:1.5px;margin-top:2px;text-transform:uppercase;}
+.parents-toggle{font-size:17px;color:#1a6b3a;transition:transform 0.3s;}
+.parents-card.open .parents-toggle{transform:rotate(45deg);}
+.parents-card-body{display:none;border-top:1px solid #eee;}
+.parents-card.open .parents-card-body{display:block;}
+.parents-summary{padding:18px;font-size:13px;color:#444;line-height:1.8;font-weight:300;}
+.parents-what{background:#f0f7f3;border-right:3px solid #1a6b3a;border-radius:0 8px 8px 0;padding:12px 14px;margin-top:12px;font-size:12px;color:#1a3a25;line-height:1.7;}
+.parents-what strong{font-weight:700;color:#0d3b1e;display:block;margin-bottom:3px;}
+.parents-expect{background:#fafafa;border:1px solid #e8e8e0;border-radius:8px;padding:12px 14px;margin-top:10px;}
+.parents-expect-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:6px;}
+.parents-expect-text{font-size:12px;color:#555;line-height:1.7;}
+.parents-timeline{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.parents-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.tag-time{background:#e8f5ee;color:#1a6b3a;}.tag-type{background:#fef6e4;color:#9a6c1a;}
+@media(max-width:600px){.chain-visual{flex-direction:column;align-items:center;}.chain-arrow{transform:rotate(90deg);}.recovery-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="page active" id="page-book">
+<nav class="nav">
+  <div class="nav-brand" onclick="showPage('book')">G·O·E</div>
+  <ul class="nav-tabs">
+    <li class="nav-tab active" onclick="navGo('tech',this)">⚽ טכניקה</li>
+    <li class="nav-tab" onclick="navGo('physical',this)">💪 פיזי</li>
+    <li class="nav-tab" onclick="navGo('tactical',this)">🧠 טקטיקה</li>
+    <li class="nav-tab" onclick="navGo('mental',this)">🧩 מנטליות</li>
+    <li class="nav-tab" onclick="navGo('life',this)">🌱 חיים</li>
+    <li class="nav-tab" onclick="navGo('gk',this)">🥅 שוער</li>
+    <li class="nav-tab" onclick="showPage('parents')" style="color:var(--gold);">👨‍👩‍👦 הורים</li>
+  </ul>
+</nav>
+
+<section class="cover">
+  <div class="field-lines"></div>
+  <div class="cover-brand">Garden of Eden Soccer Academy</div>
+  <h1 class="cover-title">ספר פיתוח<span>השחקן</span></h1>
+  <p class="cover-subtitle">32 פרמטרים · גיל · עמדה · שרירים · חיבור למשחק</p>
+  <div class="cover-divider"></div>
+  <div class="cover-stats">
+    <div class="cover-stat"><div class="cover-stat-num">32</div><div class="cover-stat-label">פרמטרים</div></div>
+    <div class="cover-stat"><div class="cover-stat-num">360°</div><div class="cover-stat-label">מודל פיתוח</div></div>
+    <div class="cover-stat"><div class="cover-stat-num">5</div><div class="cover-stat-label">קטגוריות גיל</div></div>
+  </div>
+  <div class="cover-btns">
+    <button class="btn btn-primary" onclick="navGo('tech',null)">התחל לקרוא</button>
+    <button class="btn btn-secondary" onclick="showPage('parents')">👨‍👩‍👦 דף הורים</button>
+  </div>
+</section>
+
+<div class="philosophy">
+  <p class="phil-quote">כשהורה שואל <em>"למה הוא לא טוב באחד על אחד?"</em><br>התשובה היא שאלה: <em>האם הוא עשה מספיק Calf Raises השבוע?</em></p>
+  <p class="phil-author">— פילוסופיית Garden of Eden · פיתוח מהשורש</p>
+</div>
+
+<div class="chain-section">
+  <div style="max-width:960px;margin:0 auto;">
+    <div class="section-eyebrow">איך זה עובד</div>
+    <div style="font-family:'Oswald',sans-serif;font-size:clamp(22px,4vw,38px);font-weight:700;color:var(--white);margin-bottom:8px;">השרשרת מאחורי כל פרמטר</div>
+    <div class="chain-visual">
+      <div class="chain-step"><div class="chain-icon">🔍</div><div class="chain-label">פרמטר</div><div class="chain-desc">מה רואים במגרש</div></div>
+      <div class="chain-arrow">←</div>
+      <div class="chain-step"><div class="chain-icon">🏋️</div><div class="chain-label">תרגיל</div><div class="chain-desc">מה עובדים באימון</div></div>
+      <div class="chain-arrow">←</div>
+      <div class="chain-step"><div class="chain-icon">💪</div><div class="chain-label">שריר / יכולת</div><div class="chain-desc">מה מתחזק</div></div>
+      <div class="chain-arrow">←</div>
+      <div class="chain-step"><div class="chain-icon">📅</div><div class="chain-label">לפי גיל</div><div class="chain-desc">מה עושים מתי</div></div>
+      <div class="chain-arrow">←</div>
+      <div class="chain-step"><div class="chain-icon">⚽</div><div class="chain-label">לפי עמדה</div><div class="chain-desc">מי צריך מה</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="params-section">
+<!-- ===== TECHNIQUE ===== -->
+<div class="cat-divider" id="tech">
+  <div class="cat-icon">⚽</div><div class="cat-label">טכניקה</div>
+  <div class="cat-count">פרמטרים 01–08</div>
+</div>
+<div class="params-grid">
+
+<!-- 01 -->
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header">
+    <div class="param-num">01</div>
+    <div><div class="param-name">אחד על אחד התקפי</div><div class="param-meta">טכניקה <span class="pos-tag">קצה</span><span class="pos-tag">תוקף</span><span class="pos-tag">CM</span></div></div>
+    <div class="param-toggle">+</div>
+  </div>
+  <div class="param-body">
+    <div class="card-tabs">
+      <div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div>
+      <div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div>
+      <div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div>
+      <div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div>
+    </div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Scissor / Step Over</div><div class="ex-badges"><span class="ex-muscle">🦵 קואורדינציה + ירך</span><span class="ex-sets">3×10 חזרות</span></div><div class="ex-how">עמידה מול חרוט — רגל ימין מעל הכדור שמאלה (פייק), אחר כך שמאל ימינה. קצב עולה. פרץ קצר אחרי כל הטעיה.</div><div class="ex-why"><strong>למה זה עובד:</strong> מלמד את המוח להפריד בין תנועת הרגל לכיוון הגוף האמיתי</div></li>
+      <li class="ex-item"><div class="ex-name">Inside Cut / Outside Cut</div><div class="ex-badges"><span class="ex-muscle">🦵 פלקסורי ירך + תאומים</span><span class="ex-sets">4×8 כל צד</span></div><div class="ex-how">כדרור בקו ישר → בנקודה מסומנת, משיכת כדור פנימה (Inside) או החוצה (Outside). קצב הולך וגדל.</div><div class="ex-why"><strong>למה זה עובד:</strong> הרגל המושכת עושה שינוי הכיוון האמיתי אחרי ההטעיה</div></li>
+      <li class="ex-item"><div class="ex-name">Explosive Push Off</div><div class="ex-badges"><span class="ex-muscle">💥 גלוטאוס + קוואדריספס</span><span class="ex-sets">3×6 כל צד</span></div><div class="ex-how">דחיפה אלימה קדימה-אלכסונית מרגל אחת. זמן מגע עם האדמה — כמה שקצר יותר.</div><div class="ex-why"><strong>למה זה עובד:</strong> רגל המטעה חייבת לדחוף — לא רק לסמן</div></li>
+      <li class="ex-item"><div class="ex-name">Single Leg Calf Raises</div><div class="ex-badges"><span class="ex-muscle">🦵 תאומים + גיד אכילס</span><span class="ex-sets">3×20 כל רגל</span></div><div class="ex-how">על מדרגה — ירידה איטית 3 שניות, עלייה מהירה + קפיצה קטנה. שלב מתקדם: אחיזת משקל 5 ק"ג.</div><div class="ex-why"><strong>למה זה עובד:</strong> הניתור בשינוי כיוון מגיע מגיד אכילס — בלי חוזק שם, אין ניתור מהיר</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th><th>עומס</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Scissor בלבד — קואורדינציה ופיתוח תנועה. אין קפיצות עם משקל.</td><td>2×8 · קצב נמוך</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Scissor + Inside Cut. מתחילים Push Off בלי משקל. Calf Raises על מדרגה.</td><td>3×10 · קצב בינוני</td></tr>
+        <tr><td><span class="age-badge u16">U15-16</span></td><td>כל התרגילים. Depth Jumps מוגבל. Calf Raises עם משקל קל.</td><td>3×12-15 · קצב גבוה</td></tr>
+        <tr><td><span class="age-badge u18">U17+</span></td><td>תוכנית מלאה עם עומס מקסימלי. Plyometrics מלא.</td><td>4×15+ · מהירות מירבית</td></tr>
+      </table>
+      <div class="recovery-box">
+        <div class="recovery-title">🔄 ריקברי בין אימוני כוח</div>
+        <div class="recovery-grid">
+          <div class="recovery-item"><strong>U10-12</strong>24-36 שעות מנוחה בין אימונים</div>
+          <div class="recovery-item"><strong>U13-14</strong>36-48 שעות</div>
+          <div class="recovery-item"><strong>U15-16</strong>48 שעות בין אימוני כוח כבדים</div>
+          <div class="recovery-item"><strong>U17+</strong>48-72 שעות לפי עומס</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">עובדים על הכלים הפיזיים והטכניים שמאפשרים לפרוץ מול מגן — הטעיה, שינוי כיוון וניתור מהיר.</div><div class="report-highlight"><strong>מה לצפות:</strong> 4-6 שבועות: הטעיה נכונה באימון. 3 חודשים: הטעיה במשחק ברגעים עם לחץ נמוך. 6 חודשים: הטעיה כמכשיר עקבי.<br><br><strong>תרגיל בית:</strong> 3×20 Calf Raises כל יום — 3 דקות שמשנות את הניתור.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">כדי לפרוץ מגן, הבן שלך צריך קודם כוח בגיד אכילס ובתאומים. הניתור בשינוי הכיוון מגיע משם. אנחנו בונים את זה עכשיו.</div><div class="verbal-tip">💡 "זה לא שהוא לא טוב — זה שאנחנו בונים את הקיר לפני שצובעים אותו"</div></div>
+  </div>
+</div>
+
+<!-- 02 -->
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header">
+    <div class="param-num">02</div>
+    <div><div class="param-name">אחד על אחד הגנתי</div><div class="param-meta">טכניקה <span class="pos-tag">סטופר</span><span class="pos-tag">מגן</span><span class="pos-tag">כל עמדה</span></div></div>
+    <div class="param-toggle">+</div>
+  </div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Defensive Stance Drill</div><div class="ex-badges"><span class="ex-muscle">🦵 קוואדריספס + גלוטאוס</span><span class="ex-sets">Hold 30 שניות × 5</span></div><div class="ex-how">רגליים רחבות, ברכיים 45°, משקל על קצות האצבעות. צעדים צדיים קטנים בעמידה נמוכה.</div><div class="ex-why"><strong>למה זה עובד:</strong> מרכז כובד נמוך = תגובה מהירה לכל כיוון</div></li>
+      <li class="ex-item"><div class="ex-name">Mirror Drill</div><div class="ex-badges"><span class="ex-muscle">💪 Core + פלקסורי ירך</span><span class="ex-sets">3×30 שניות</span></div><div class="ex-how">שני שחקנים מול מול. אחד זז — השני "מראה". רק Shuffle Steps. אסור לפנות גב.</div><div class="ex-why"><strong>למה זה עובד:</strong> מעקב רגליים ללא הסתובבות — כישור מספר 1 של מגן</div></li>
+      <li class="ex-item"><div class="ex-name">Jockey & Delay</div><div class="ex-badges"><span class="ex-muscle">🧠 עיתוי + שיווי משקל</span><span class="ex-sets">5 סיטואציות × 2 צדדים</span></div><div class="ex-how">תוקף מגיע — המגן נסוג לאט, גוף בין כדור לשער. מטרה: עיכוב 5 שניות לפחות.</div><div class="ex-why"><strong>למה זה עובד:</strong> שחקן שיודע לעכב יציל יותר שערים משחקן שתמיד ניגש</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th><th>עומס</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Defensive Stance בלבד + Mirror Drill. ללא Jockey — עדיין בונים תחושת גוף.</td><td>2×20 שניות</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>כל התרגילים. מתחילים Jockey בסיטואציות פשוטות.</td><td>3×30 שניות</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>תוכנית מלאה + סיטואציות מורכבות. מוסיפים לחץ ריאלי.</td><td>עומס מלא</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">מפתחים עמידה הגנתית נכונה ועיתוי נגיחה. הגנה טובה היא כישור מדויק — לא אגרסיביות.</div><div class="report-highlight"><strong>סימן ההתקדמות:</strong> תראו שהוא מחכה יותר ולא ניגש מיד — זה בדיוק מה שאנחנו עובדים עליו.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">הגנה זה לא אינסטינקט — זה טכניקה. שחקן שנגיח תמיד מוקדם מדי — יפסיד תמיד.</div><div class="verbal-tip">💡 "מגן טוב לא מנסה לקחת כדור — הוא מכריח את התוקף לטעות"</div></div>
+  </div>
+</div>
+
+<!-- 03 -->
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header">
+    <div class="param-num">03</div>
+    <div><div class="param-name">קבלת כדור תחת לחץ</div><div class="param-meta">טכניקה <span class="pos-tag">כל עמדה</span></div></div>
+    <div class="param-toggle">+</div>
+  </div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">First Touch Directional</div><div class="ex-badges"><span class="ex-muscle">🦶 פנים כף רגל</span><span class="ex-sets">3×12 כל צד</span></div><div class="ex-how">שותף מסר מזוויות שונות. כריה ראשונה שמרחיקה 45° מהמסרן. לספוג — לא לתת לקפוץ.</div><div class="ex-why"><strong>למה זה עובד:</strong> כריה לכיוון הנכון = מגן כבר מאחורי בצעד הבא</div></li>
+      <li class="ex-item"><div class="ex-name">Half-Turn Reception</div><div class="ex-badges"><span class="ex-muscle">🧠 מודעות מרחבית</span><span class="ex-sets">4×8</span></div><div class="ex-how">גב למסרן — לסרוק מגרש לפני הקבלה. לפנות חצי פנייה לפני שהכדור מגיע.</div><div class="ex-why"><strong>למה זה עובד:</strong> חצי פנייה לפני הקבלה = רואה 60% יותר מגרש</div></li>
+      <li class="ex-item"><div class="ex-name">Rondo 4v2</div><div class="ex-badges"><span class="ex-muscle">🧠 + 🦶 שילוב מלא</span><span class="ex-sets">3 × 4 דקות</span></div><div class="ex-how">ריבוע 8×8. 4 מחוץ, 2 לוחצים. מטרה: 10 מסירות ברצף. Ajax, Barcelona, Liverpool — כל יום.</div><div class="ex-why"><strong>למה זה עובד:</strong> לחץ אמיתי + תנועה + קבלת כדור — הסימולציה הכי קרובה למשחק</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th><th>עומס</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>First Touch בלבד — כריה נכונה ללא לחץ. Rondo 4v2 בריבוע גדול יותר (12×12).</td><td>2×8</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Half-Turn + First Touch + Rondo 4v2 בסטנדרט. מוסיפים לחץ הדרגתי.</td><td>3×10</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>Rondo 3v1 (קשה יותר). Half-Turn תחת לחץ ריאלי.</td><td>עומס מלא</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">עובדים על קבלת כדור נכונה גם כשיש לחץ.</div><div class="report-highlight"><strong>סימן ההתקדמות:</strong> תראו שהוא מסתכל לפני שהכדור מגיע — זה הסימן הכי טוב.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">הכריה הראשונה קובעת את כל מה שבא אחריה.</div><div class="verbal-tip">💡 "Barcelona עושים Rondo כל בוקר — הבן שלך עושה אותו איתנו"</div></div>
+  </div>
+</div>
+
+<!-- 04 -->
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header">
+    <div class="param-num">04</div>
+    <div><div class="param-name">מסירה קצרה ומדויקת</div><div class="param-meta">טכניקה <span class="pos-tag">כל עמדה</span></div></div>
+    <div class="param-toggle">+</div>
+  </div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Wall Passing 1-Touch</div><div class="ex-badges"><span class="ex-muscle">🦶 פנים כף רגל</span><span class="ex-sets">3 × 2 דקות</span></div><div class="ex-how">3 מטר מקיר. מסירה ב-1 נגיעה לשערון מסומן. קצב עולה כל 30 שניות.</div><div class="ex-why"><strong>למה זה עובד:</strong> 1-Touch = אין זמן לחשוב — הגוף חייב לדעת לבד</div></li>
+      <li class="ex-item"><div class="ex-name">Triangle Passing</div><div class="ex-badges"><span class="ex-muscle">🧠 + 🦶 תנועה + דיוק</span><span class="ex-sets">4×6 דקות</span></div><div class="ex-how">3 שחקנים במשולש 8 מטר. מסירה → ריצה לנקודה אחרת. אין עצירה.</div><div class="ex-why"><strong>למה זה עובד:</strong> מסירה + תנועה = כדורגל אמיתי</div></li>
+      <li class="ex-item"><div class="ex-name">Weak Foot Daily</div><div class="ex-badges"><span class="ex-muscle">🦶 רגל חלשה</span><span class="ex-sets">100 מסירות ביום</span></div><div class="ex-how">100 מסירות ברגל החלשה בכל אימון — לקיר, לשותף, לפח. חייב 100. זה מינימום.</div><div class="ex-why"><strong>למה זה עובד:</strong> שחקן דו-רגלי = שחקן שאי אפשר לצפות</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th><th>יעד יומי</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Wall Passing 2-Touch. מסירות ברגל חלשה — לא חייב מהירות.</td><td>50 מסירות ברגל חלשה</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Wall Passing 1-Touch. Triangle Passing. 100 ביום ברגל חלשה.</td><td>100 מסירות</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>1-Touch תחת לחץ. Triangle בקצב גבוה. 150+ ביום.</td><td>150+ מסירות</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">מסירה מדויקת בקצב גבוה + עבודה על הרגל החלשה.</div><div class="report-highlight"><strong>תרגיל בית:</strong> 100 מסירות לקיר ברגל החלשה — 5 דקות שמשנות שחקן. 100 ביום = 36,500 בשנה.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">מסירה מדויקת בקצב גבוה היא לא ביולוגית — זה חזרות.</div><div class="verbal-tip">💡 "תבקש ממנו 100 מסירות לקיר ברגל שמאל בבית — זה הדבר הכי טוב שאפשר לעשות"</div></div>
+  </div>
+</div>
+
+<!-- 05-08 condensed with age -->
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">05</div><div><div class="param-name">מסירה ארוכה</div><div class="param-meta">טכניקה <span class="pos-tag">מגן</span><span class="pos-tag">CM</span><span class="pos-tag">קצה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Driven Pass Technique</div><div class="ex-badges"><span class="ex-muscle">🦵 קוואדריספס + פלקסורי ירך</span><span class="ex-sets">3×10 · 20→40 מטר</span></div><div class="ex-how">גוף מעל הכדור, קרסול נעול, בעיטה עם פנים עליון כף הרגל. לנחוב תחתית הכדור.</div><div class="ex-why"><strong>למה זה עובד:</strong> מסירה ארוכה מדויקת פותחת מגרש שלם</div></li>
+      <li class="ex-item"><div class="ex-name">Hip Flexor Strengthening</div><div class="ex-badges"><span class="ex-muscle">💪 פלקסורי ירך</span><span class="ex-sets">3×15 כל צד</span></div><div class="ex-how">שכיבה על גב, הרמת רגל ישרה ל-45°, עצירה 2 שניות. Resistance Band בגרסה מתקדמת.</div><div class="ex-why"><strong>למה זה עובד:</strong> פלקסורי ירך חזקים = תחנת בעיטה יציבה = כוח + דיוק</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th><th>מרחק</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>טכניקה בלבד — לא כוח. מרחק קצר, קרסול נעול.</td><td>15-20 מטר</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>מרחק הולך וגדל. Hip Flexor ללא התנגדות.</td><td>20-30 מטר</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>מרחק מלא. Hip Flexor עם Band.</td><td>30-40 מטר</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">מסירה ארוכה מדויקת פותחת מגרש שלם — כישור נדיר ויקר בכדורגל.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">זה לא כוח — זה טכניקה של כף רגל, זווית גוף ועיתוי.</div><div class="verbal-tip">💡 "שחקן שפותח 40 מטר בדיוק — שווה כמו שניים"</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">06</div><div><div class="param-name">בעיטה לשער</div><div class="param-meta">טכניקה <span class="pos-tag">תוקף</span><span class="pos-tag">קצה</span><span class="pos-tag">CM</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Shooting Mechanics Static</div><div class="ex-badges"><span class="ex-muscle">🦵 קוואדריספס</span><span class="ex-sets">20 בעיטות × 3</span></div><div class="ex-how">כדור סטטי. רגל עמידה 15 ס"מ לצד. קרסול נעול. להביט לנקודה מסוימת בשער — מיקום קודם לכוח.</div><div class="ex-why"><strong>למה זה עובד:</strong> 90% מהשחקנים נכשלים בסיום כי חושבים על כוח — לא על מיקום</div></li>
+      <li class="ex-item"><div class="ex-name">Finishing After Dribble</div><div class="ex-badges"><span class="ex-muscle">🧠 מעבר + טכניקה</span><span class="ex-sets">5 × 4 זוויות</span></div><div class="ex-how">כדרור 3 חרוטים → בעיטה. להצהיר לפני: ימינה? שמאלה? גובה? — ואז לבצע.</div><div class="ex-why"><strong>למה זה עובד:</strong> הצהרה לפני = החלטה לפני שמגיעים לכדור</div></li>
+      <li class="ex-item"><div class="ex-name">Weak Foot Shooting</div><div class="ex-badges"><span class="ex-muscle">🦶 רגל חלשה</span><span class="ex-sets">30 בעיטות ביום</span></div><div class="ex-how">30 בעיטות לרשת ברגל החלשה. לא דרישה לדיוק בהתחלה — לתחושת ביטחון בתנועה.</div><div class="ex-why"><strong>למה זה עובד:</strong> שחקן שיורה משתי הרגליים — שוער לא יכול לסגור זווית אחת ולהיות בטוח</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th><th>יעד</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Static Shooting בלבד — מכניקה נכונה. רגל חלשה ללא לחץ.</td><td>15 בעיטות ביום</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Finishing After Dribble. Weak Foot נוסף.</td><td>30 בעיטות ביום</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>בעיטות תחת לחץ מלא. זוויות קשות. מהירות ביצוע.</td><td>50+ בעיטות ביום</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">מפתחים יכולת סיום — ירי מדויק מזוויות שונות, עם שתי הרגליים.</div><div class="report-highlight"><strong>בבית:</strong> 30 בעיטות ברגל החלשה לפח / קיר / רשת — 5 דקות ביום.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">בעיטה לשער נכונה היא לא רק כוח — מכניקה שלמה. כשזה נכנס לתת-מודע — נכנס גם במשחק.</div><div class="verbal-tip">💡 "30 בעיטות ברגל שמאל בבית כל יום"</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">07</div><div><div class="param-name">כישורי כדרור</div><div class="param-meta">טכניקה <span class="pos-tag">קצה</span><span class="pos-tag">תוקף</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Close Control Slalom</div><div class="ex-badges"><span class="ex-muscle">🦶 שליטה עדינה</span><span class="ex-sets">6 ריצות × 20 מטר</span></div><div class="ex-how">8 חרוטים במרווח 1 מטר. כדרור צמוד — לא מתרחק יותר מנגיעה אחת. וריאציות: פנים → חוץ → חופשי.</div><div class="ex-why"><strong>למה זה עובד:</strong> שליטה צמודה = שינוי כיוון בכל רגע</div></li>
+      <li class="ex-item"><div class="ex-name">Change of Pace Gate Drill</div><div class="ex-badges"><span class="ex-muscle">💥 כוח מתפרץ + שינוי קצב</span><span class="ex-sets">4 × 40 מטר</span></div><div class="ex-how">40 מטר עם 3 שערים. לפני כל שער — עצירה מלאה 2 שניות → פרץ מהיר. ההאצה מהעצירה חייבת להיות קצרה ואלימה.</div><div class="ex-why"><strong>למה זה עובד:</strong> שינוי קצב מבלבל מגנים יותר ממהירות — כי הוא מקפיא אותם</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Close Control בלבד — שליטה לפני מהירות. אין דגש על קצב.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>שניהם. Change of Pace מוגבל.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>תוכנית מלאה + כדרור תחת לחץ שחקן.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">עובדים על שליטה בכדור תוך תנועה ושינוי קצב שמבלבל מגנים.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">שינוי קצב מנצח מהירות — תמיד.</div><div class="verbal-tip">💡 "כדרור זה לא ריצה עם כדור — זה תקשורת בין הרגל לכדור"</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">08</div><div><div class="param-name">ריצה ללא כדור</div><div class="param-meta">טכניקה <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Timing Run Patterns</div><div class="ex-badges"><span class="ex-muscle">🧠 קריאת משחק + ריצה</span><span class="ex-sets">5 מהלכים × 3</span></div><div class="ex-how">מסרן במרכז. שחקן בנקודה A. מסרן נותן אות — שחקן רץ לנקודה B בזמן שהכדור יוצא לנקודה B. הכדור והשחקן מגיעים יחד.</div><div class="ex-why"><strong>למה זה עובד:</strong> ריצה מוקדמת = אופסייד. מאוחרת = מגן כבר שם. עיתוי הוא הכל</div></li>
+      <li class="ex-item"><div class="ex-name">Decoy Runs</div><div class="ex-badges"><span class="ex-muscle">💪 ירך + מודעות קבוצתית</span><span class="ex-sets">3×5 מהלכים</span></div><div class="ex-how">שחקן A רץ ימינה (פיתוי). שחקן B מנצל המרחב שנפתח. מחליפים. "הריצה שלך לא בשבילך — היא בשביל B".</div><div class="ex-why"><strong>למה זה עובד:</strong> ריצות פיתוי — אחד הכישורים הכי מתקדמים, ואחד הפחות מלומדים</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Timing Runs פשוטים — עיתוי בלבד. Decoy לא עדיין.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>שניהם. Decoy ב-2v2 פשוט.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>Decoy מורכב + Third Man Run.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">90% מהמשחק זה בלי כדור. שחקן שנע בחכמה — מקבל כדורים.</div><div class="report-highlight"><strong>שאלה לבדיקה בבית:</strong> "לאן תרוץ אם המסרן קיבל כדור עכשיו?" — אם עונה מהר, אנחנו בכיוון.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">90% מהמשחק זה בלי כדור. שחקן שיודע לנוע בחכמה — מסוכן הרבה יותר.</div><div class="verbal-tip">💡 "תשאל אותו: לאן תרוץ אם המסרן קיבל כדור עכשיו?"</div></div>
+  </div>
+</div>
+
+</div><!-- end tech -->
+<!-- ===== PHYSICAL ===== -->
+<div class="cat-divider" id="physical">
+  <div class="cat-icon">💪</div><div class="cat-label">פיזי ואתלטי</div>
+  <div class="cat-count">פרמטרים 09–15</div>
+</div>
+<div class="params-grid">
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">09</div><div><div class="param-name">כוח מתפרץ</div><div class="param-meta">פיזי <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Box Jumps</div><div class="ex-badges"><span class="ex-muscle">💥 גלוטאוס + קוואדריספס + תאומים</span><span class="ex-sets">4×6 · מנוחה מלאה</span></div><div class="ex-how">תיבה 40-60 ס"מ. קפיצה שתי רגליים — נחיתה רכה על האצבעות. Step Down בירידה. 1 שניה עמידה יציבה בין חזרות.</div><div class="ex-why"><strong>למה זה עובד:</strong> ניתור גבוה ומהיר = שליטה באוויר במאבק אווירי בניתור</div></li>
+      <li class="ex-item"><div class="ex-name">Depth Jumps</div><div class="ex-badges"><span class="ex-muscle">💥 גיד אכילס + תאומים</span><span class="ex-sets">3×5 · מנוחה 2 דקות</span></div><div class="ex-how">ירידה מתיבה → נגיעה בקרקע = קפיצה מיידית. זמן מגע כמה שקצר. לא לכפוף ברכיים יותר מדי — הכוח מגיד אכילס.</div><div class="ex-why"><strong>למה זה עובד:</strong> זמן מגע קצר = שינוי כיוון מהיר בדואל</div></li>
+      <li class="ex-item"><div class="ex-name">Single Leg Calf Raises</div><div class="ex-badges"><span class="ex-muscle">🦵 תאומים + גיד אכילס</span><span class="ex-sets">3×20 כל רגל</span></div><div class="ex-how">על מדרגה — ירידה 3 שניות, עלייה מהירה + קפיצה קטנה. מתקדם: אחיזת 5 ק"ג.</div><div class="ex-why"><strong>למה זה עובד:</strong> גיד אכילס חזק = ניתור מהיר = פרץ ראשוני שמנצח מגן</div></li>
+      <li class="ex-item"><div class="ex-name">Squat Jumps</div><div class="ex-badges"><span class="ex-muscle">💪 רביעת ירך + גלוטאוס</span><span class="ex-sets">4×8 · מנוחה מלאה</span></div><div class="ex-how">ישיבה ל-90° → קפיצה מירבית → נחיתה רכה ל-90° → קפיצה הבאה ללא עצירה.</div><div class="ex-why"><strong>למה זה עובד:</strong> כוח כפיפת ברך לדחיפה מהירה — בסיס לכל האצה</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה מותר / מה עובדים</th><th>עומס</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>⚠️ ללא Box Jumps ו-Depth Jumps — מפרקים עדיין בהתפתחות. Squat Jumps קלים בלבד. Calf Raises על ריצפה.</td><td>2×10 קל</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Box Jumps בגובה נמוך (30 ס"מ). ללא Depth Jumps. Calf Raises על מדרגה.</td><td>3×6-8</td></tr>
+        <tr><td><span class="age-badge u16">U15-16</span></td><td>כל התרגילים. Depth Jumps מוגבל (3×4). עומס הדרגתי.</td><td>3×10-12</td></tr>
+        <tr><td><span class="age-badge u18">U17+</span></td><td>תוכנית מלאה. Box Jumps גבוה + Depth Jumps מלא.</td><td>4×6+ עומס מקסימלי</td></tr>
+      </table>
+      <div class="recovery-box">
+        <div class="recovery-title">🔄 ריקברי בין אימוני כוח מתפרץ</div>
+        <div class="recovery-grid">
+          <div class="recovery-item"><strong>בין ימי כוח</strong>48-72 שעות מנוחה לפחות</div>
+          <div class="recovery-item"><strong>לפני משחק</strong>אין Depth Jumps 48 שעות לפני</div>
+          <div class="recovery-item"><strong>אחרי כוח כבד</strong>Foam Rolling + מקלחת קרה</div>
+          <div class="recovery-item"><strong>בעונה תחרותית</strong>להפחית עומס ב-30%</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">בונים כוח מתפרץ שמאפשר האצה מהירה, קפיצה גבוהה ושינוי כיוון חד.</div><div class="report-highlight"><strong>תרגיל בית:</strong> 3×20 Calf Raises כל יום. 3 דקות שמשנות את הניתור לגמרי.<br><br>⚠️ חשוב: לילדים מתחת לגיל 13 — רק Squat Jumps קלים. אין קפיצות כבדות.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">כוח מתפרץ הוא הבסיס לכל — לאחד על אחד, למאבק אווירי בניתור, להאצה הראשונה.</div><div class="verbal-tip">💡 "Calf Raises בבית כל יום — הכי פשוט ועם הכי הרבה השפעה"</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">10</div><div><div class="param-name">מהירות ריצה</div><div class="param-meta">פיזי <span class="pos-tag">קצה</span><span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">A-Skip / B-Skip</div><div class="ex-badges"><span class="ex-muscle">🦵 פלקסורי ירך + גלוטאוס</span><span class="ex-sets">3×20 מטר כל תרגיל</span></div><div class="ex-how">A-Skip: הרמת ברך גבוהה + דחיפת רגל למטה. B-Skip: A + יישור רגל לפני הדחיפה. להתמקד בגובה ברכיים ומהירות ידיים.</div><div class="ex-why"><strong>למה זה עובד:</strong> טכניקת ריצה נכונה מוסיפה 5-10% מהירות ללא כל שיפור כוח</div></li>
+      <li class="ex-item"><div class="ex-name">Flying 30s</div><div class="ex-badges"><span class="ex-muscle">💥 כל שרירי ספרינט</span><span class="ex-sets">4×30 מטר · מנוחה 3 דקות</span></div><div class="ex-how">20 מטר האצה → 30 מטר מהירות מירבית. מדידת זמן בכל ריצה.</div><div class="ex-why"><strong>למה זה עובד:</strong> מהירות מירבית — מי שמגיע לכדור ראשון, מנצח</div></li>
+      <li class="ex-item"><div class="ex-name">Resisted Sprint</div><div class="ex-badges"><span class="ex-muscle">💪 גלוטאוס + ירכיים</span><span class="ex-sets">5×20 מטר</span></div><div class="ex-how">שותף מחזיק חגורה מהאחור בהתנגדות קלה. אחרי 5 — ריצה חופשית 20 מטר (מרגיש טיסה).</div><div class="ex-why"><strong>למה זה עובד:</strong> ריצה נגד התנגדות + חופשית = מוח מגדיל קצב צעד</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>A-Skip בלבד — טכניקת ריצה. ללא ספרינטים בעצימות מקסימלית.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>A+B Skip + Flying 30s בעצימות 85%.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>תוכנית מלאה. Resisted Sprint + מדידת זמן.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">מהירות לא רק ביולוגית — טכניקת ריצה נכונה מוסיפה 5-10% ללא מאמץ נוסף.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">מהירות לא רק ביולוגית — טכניקת ריצה נכונה מוסיפה 5-10%.</div><div class="verbal-tip">💡 "Usain Bolt אמר שהידיים מריצות את הרגליים"</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">11</div><div><div class="param-name">סיבולת אירובית</div><div class="param-meta">פיזי <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Zone 2 Running</div><div class="ex-badges"><span class="ex-muscle">❤️ לב + ריאות</span><span class="ex-sets">20-30 דקות · 65-75% דופק</span></div><div class="ex-how">ריצה בקצב שמאפשר שיחה עם מאמץ. 2-3 פעמים בשבוע. בסיס אירובי = יסוד כל הכדורגל.</div><div class="ex-why"><strong>למה זה עובד:</strong> ריקברי מהיר בין ספרינטים במשחק</div></li>
+      <li class="ex-item"><div class="ex-name">30-30 Intervals</div><div class="ex-badges"><span class="ex-muscle">💥 VO2 Max</span><span class="ex-sets">10-12 חזרות</span></div><div class="ex-how">30 שניות ב-90% מקסימלי → 30 שניות הליכה. אחרי 3 שבועות: לעבור ל-40-20.</div><div class="ex-why"><strong>למה זה עובד:</strong> מחקה את פרופיל המאמץ של כדורגל</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th><th>זמן</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Zone 2 בלבד — ללא Intervals. ריצה קלה ושמחה.</td><td>15-20 דקות</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Zone 2 + Intervals מתחילים (30-30).</td><td>20-25 דקות</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>תוכנית מלאה. 40-20 Intervals.</td><td>25-35 דקות</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">בסיס סיבולת שמחזיק את השחקן חזק לאורך 90 הדקות.</div><div class="report-highlight"><strong>בבית:</strong> ריצה קלה 20 דקות 3 פעמים בשבוע = שחקן אחר לגמרי בדקה 70.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">שחקן עייף לא חושב. הסיבולת היא הבסיס לכל שאר היכולות.</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">12–15</div><div><div class="param-name">גמישות · Core · כוח עליון · ריקברי</div><div class="param-meta">פיזי <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Hip 90-90 Stretch (12)</div><div class="ex-badges"><span class="ex-muscle">🦵 היפ + פלקסורי ירך</span><span class="ex-sets">2 דקות כל צד · כל יום</span></div><div class="ex-how">ישיבה, שתי ברכיים ב-90°. גוף ישר. לנשום לתוך ההרחבה — לא לדחוף בכוח.</div><div class="ex-why"><strong>למה זה עובד:</strong> היפ פתוח = צעד ראשון מהיר + מניעת פציעות ברך ומפשעה</div></li>
+      <li class="ex-item"><div class="ex-name">Dead Bug (13)</div><div class="ex-badges"><span class="ex-muscle">💪 Core עמוק</span><span class="ex-sets">3×10 כל צד</span></div><div class="ex-how">שכיבה על גב. ידיים למעלה, ברכיים ב-90°. להוריד רגל ויד בו זמנית — גב תחתון דחוס לרצפה.</div><div class="ex-why"><strong>למה זה עובד:</strong> Core עמוק = העברת כוח ללא דליפת אנרגיה</div></li>
+      <li class="ex-item"><div class="ex-name">Push-Up Progression (14)</div><div class="ex-badges"><span class="ex-muscle">💪 חזה + כתפיים</span><span class="ex-sets">3×15 · וריאציה שונה כל שבוע</span></div><div class="ex-how">שבוע 1: רגיל | שבוע 2: רחב | שבוע 3: צר. ירידה 2 שניות, עלייה מהירה.</div><div class="ex-why"><strong>למה זה עובד:</strong> עמידות בדואל כתף לכתף + הגנה על כדור בגב</div></li>
+      <li class="ex-item"><div class="ex-name">Recovery Protocol (15)</div><div class="ex-badges"><span class="ex-muscle">❤️ מחזור דם + דלקת</span><span class="ex-sets">10-15 דקות אחרי אימון כבד</span></div><div class="ex-how">ריצה קלה 5 דקות → Foam Roll: ירכיים קדמיות, ירכיים אחוריות, תאומים. 30-60 שניות כל אזור. מקלחת קרה 2-3 דקות.</div><div class="ex-why"><strong>למה זה עובד:</strong> פינוי חומצת חלב + שחרור שרירים = האימון הבא טוב יותר</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>הערות חשובות</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>גמישות דינמית בלבד לפני אימון. סטטי רק אחרי. Core קל — ללא עומס גב. Push-Ups על ברכיים אם צריך.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>כל הגמישות. Dead Bug מלא. Push-Ups מלאים.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>תוכנית מלאה. Recovery Protocol חובה אחרי אימון כבד.</td></tr>
+      </table>
+      <div class="recovery-box">
+        <div class="recovery-title">🔄 Recovery בין ימים — לכל הגילאים</div>
+        <div class="recovery-grid">
+          <div class="recovery-item"><strong>יום אחרי אימון כבד</strong>Zone 2 קל + Foam Rolling בלבד</div>
+          <div class="recovery-item"><strong>יום לפני משחק</strong>אין כוח כבד — רק הפעלה קלה</div>
+          <div class="recovery-item"><strong>שעתיים אחרי אימון</strong>ארוחת ריקברי: חלבון + פחמימות</div>
+          <div class="recovery-item"><strong>לפני שינה</strong>Hip 90-90 + Dead Bug — 5 דקות</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">בונים גוף שלם — גמישות, Core, כוח עליון וריקברי. כל אחד מהם תומך ישירות בביצועים.</div><div class="report-highlight"><strong>בבית כל יום:</strong> Hip 90-90 בבוקר (2 דקות) + Dead Bug לפני שינה (5 דקות) + מקלחת קרה אחרי אימון (2 דקות).</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">מה שקורה מחוץ לאימון חשוב כמו האימון עצמו — ריקברי, גמישות, שינה.</div></div>
+  </div>
+</div>
+
+</div><!-- end physical -->
+
+<!-- ===== TACTICAL ===== -->
+<div class="cat-divider" id="tactical">
+  <div class="cat-icon">🧠</div><div class="cat-label">טקטיקה וחשיבה</div>
+  <div class="cat-count">פרמטרים 16–21</div>
+</div>
+<div class="params-grid">
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">16</div><div><div class="param-name">קריאת משחק</div><div class="param-meta">טקטיקה <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Video Analysis — Freeze Frame</div><div class="ex-badges"><span class="ex-muscle">🧠 זיכרון עבודה</span><span class="ex-sets">15 דקות × שבוע</span></div><div class="ex-how">עוצרים סרטון — "לאן היית הולך עכשיו?" לפני שממשיכים. השחקן מסביר ההחלטה.</div><div class="ex-why"><strong>למה זה עובד:</strong> עצירה + הסבר = המוח מתאמן לקרוא תמונות לפני שהן קורות</div></li>
+      <li class="ex-item"><div class="ex-name">SSG 3v3 — 2 נגיעות מקסימום</div><div class="ex-badges"><span class="ex-muscle">🧠 + ⚽ קריאה + ביצוע</span><span class="ex-sets">4 × 3 דקות</span></div><div class="ex-how">מגרש 20×15, שני שערים. כלל: אסור לכדרר יותר מ-2 נגיעות. מאלץ קריאת משחק מהירה.</div><div class="ex-why"><strong>למה זה עובד:</strong> כשאין זמן לכדרר — המוח חייב לחשוב קודם לפעולה</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>SSG 3v3 עם 3 נגיעות. Video Analysis פשוט — "לאן רצת?" לא "לאן היית צריך לרוץ".</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>2 נגיעות. Video Analysis מעמיק יותר.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>1 נגיעה מקסימום + ניתוח עמוק.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">שחקן שרואה לפני האחרים — תמיד יהיה צעד קדימה.</div><div class="report-highlight"><strong>בבית:</strong> תוך כדי משחק בטלוויזיה — "לאן היית שולח עכשיו?" — מאמן קריאת משחק.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">שחקן חכם תמיד יהיה צעד לפני — גם מול מהיר ממנו.</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">17–21</div><div><div class="param-name">עמדה · מעברים · פרסינג · בנייה · בין הקווים</div><div class="param-meta">טקטיקה <span class="pos-tag">לפי עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'p')">⚽ לפי עמדה</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Position Scenarios (17)</div><div class="ex-badges"><span class="ex-muscle">🧠 מיקום + מבנה</span><span class="ex-sets">10 תרחישים × אימון</span></div><div class="ex-how">"הכדור אצל המגן הימני — אתה CM — לאן אתה זז?" השחקן עונה זזז לפני שהכדור יוצא.</div><div class="ex-why"><strong>למה זה עובד:</strong> הבנת מה לעשות לפני שהכדור מגיע = כישור שמבדיל שחקני עילית</div></li>
+      <li class="ex-item"><div class="ex-name">Transition Trigger (18)</div><div class="ex-badges"><span class="ex-muscle">🧠 זיהוי + תגובה</span><span class="ex-sets">5×5 מהלכים</span></div><div class="ex-how">SSG + מאמן צועק "מעבר!" — כולם קופאים. מי הגיב נכון מקבל נקודה.</div><div class="ex-why"><strong>למה זה עובד:</strong> 3 השניות הראשונות אחרי מעבר הן הכי חשובות</div></li>
+      <li class="ex-item"><div class="ex-name">Half-Space Penetration (21)</div><div class="ex-badges"><span class="ex-muscle">🧠 מיקום + עיתוי</span><span class="ex-sets">5 מהלכים × 3</span></div><div class="ex-how">שחקן זז לחצי-מרחב בין הגנה לאמצע. מקבל בפנייה חצי פנייה — ממשיך קדימה.</div><div class="ex-why"><strong>למה זה עובד:</strong> בין הקווים = המרחב שכל הגנה מפחדת ממנו</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="p">
+      <div class="pos-grid">
+        <div class="pos-item"><div class="pos-name">🥅 סטופר / מגן מרכזי</div><div class="pos-desc">17: מיקום בין הקווים בהגנה. 18: מעבר להתקפה — מתי לצאת עם כדור. 19: פרסינג — מתי לנגוח ומתי לחכות.</div></div>
+        <div class="pos-item"><div class="pos-name">🏃 קצה / מגן רוחבי</div><div class="pos-desc">17: כיסוי מרחב כשהכדור בצד השני. 18: מעבר מהיר מהגנה להתקפה. 21: כניסה לבין הקווים בזמן נכון.</div></div>
+        <div class="pos-item"><div class="pos-name">🎯 CM / שחקן ציר</div><div class="pos-desc">17: מיקום בין קווי הגנה והתקפה. 20: בניית משחק — קבלה + מסירה תחת לחץ. 21: מציאת מרחב בין הקווים.</div></div>
+        <div class="pos-item"><div class="pos-name">⚽ קצה התקפי / תוקף</div><div class="pos-desc">21: כניסה לבין הקווים מאחור. 18: מעבר מהיר. 17: מיקום בזמן בניית משחק.</div></div>
+      </div>
+    </div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>פרמטר 17 בלבד — עמדה בסיסית. ללא פרסינג מאורגן.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>17+18+20. מעברים פשוטים. בניית משחק בסיסית.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>כל הפרמטרים. פרסינג מאורגן + בין הקווים.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">שחקן שמבין את המשחק כמערכת — מגיע למקום הנכון לפני שהכדור שם.</div><div class="report-highlight"><strong>מה לצפות:</strong> בהדרגה תראו שהוא מגיע למקום הנכון לפני שהכדור שם — זה הסימן הכי טוב.</div></div>
+  </div>
+</div>
+
+</div><!-- end tactical -->
+
+<!-- ===== MENTAL ===== -->
+<div class="cat-divider" id="mental">
+  <div class="cat-icon">🧩</div><div class="cat-label">מנטליות</div>
+  <div class="cat-count">פרמטרים 22–26</div>
+</div>
+<div class="params-grid">
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">22</div><div><div class="param-name">התמודדות עם כישלון</div><div class="param-meta">מנטליות <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">3-Second Reset Protocol</div><div class="ex-badges"><span class="ex-muscle">🧠 ויסות רגשי</span><span class="ex-sets">מיד אחרי כל טעות</span></div><div class="ex-how">אחרי טעות: 1. נשימה. 2. מחווה פיזית (אגרוף / מחיאת ידיים). 3. מילת כוח ("בא" / "קדימה"). 4. תנועה מיידית.</div><div class="ex-why"><strong>למה זה עובד:</strong> מנתק את המוח מהטעות ומחזיר לריכוז תוך 3 שניות</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>גישה</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>לא לנתח טעויות — רק לחזור לריצה. "אין בעיה, תמשיך!" — זה הכל.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Reset Protocol מלא. לדבר על זה בסיכום אימון — לא באמצעו.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>Reset + ניתוח עצמי מבוקר. שחקן מוביל את תהליך הלמידה מהטעות שלו.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">מה שמבדיל שחקנים גדולים הוא לא כמה טועים — אלא כמה מהר חוזרים אחרי טעות.</div><div class="report-highlight"><strong>חשוב מאוד:</strong> אחרי משחק שלא הלך — לא לנתח מיד. אחת לשבוע: "מה אחד דבר שלמדת?"</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">כל השחקנים הגדולים טועים. מה שמבדיל זה מה שבא אחרי הטעות.</div><div class="verbal-tip">💡 "שים לב כמה שניות לוקח לו לחזור לריכוז — זה מה שאנחנו מפתחים"</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">23–26</div><div><div class="param-name">ביטחון · ריכוז · מנהיגות · לחץ</div><div class="param-meta">מנטליות <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Success Log — יומן הצלחות (23)</div><div class="ex-badges"><span class="ex-muscle">🧠 זהות ספורטיבית</span><span class="ex-sets">3 שורות בסוף כל יום אימון</span></div><div class="ex-how">לכתוב 3 דברים ספציפיים שהלכו טוב. לא "הכל טוב" — ספציפי: "הצלחתי Scissor 3 פעמים ברצף".</div><div class="ex-why"><strong>למה זה עובד:</strong> המוח מחפש מה שאנחנו מחפשים — יומן הצלחות מאמן אותו לחפש הצלחות</div></li>
+      <li class="ex-item"><div class="ex-name">Box Breathing Pre-Game (24)</div><div class="ex-badges"><span class="ex-muscle">🧠 מיקוד + הרגעת CNS</span><span class="ex-sets">5 דקות לפני כל משחק</span></div><div class="ex-how">שאיפה 4 שניות → עצירה 4 → נשיפה 4 → עצירה 4. 5 מחזורים. Navy SEALs משתמשים בזה לפני פעולות.</div><div class="ex-why"><strong>למה זה עובד:</strong> מוריד קורטיזול ומגביר מיקוד תוך דקות — מדעי</div></li>
+      <li class="ex-item"><div class="ex-name">Rotating Captain (25)</div><div class="ex-badges"><span class="ex-muscle">🧠 אחריות + תקשורת</span><span class="ex-sets">פעם בחודש לכל שחקן</span></div><div class="ex-how">קפטן אימון: מוביל Warmup, מדבר ב-Timeout, מוביל סיכום קבוצתי. לא חייב להיות הכי טוב.</div><div class="ex-why"><strong>למה זה עובד:</strong> אחריות = גדילה. שחקן שמוביל — משחק אחרת כל החודש</div></li>
+      <li class="ex-item"><div class="ex-name">High-Stakes Simulation (26)</div><div class="ex-badges"><span class="ex-muscle">🧠 סובלנות ללחץ</span><span class="ex-sets">5 פנדלים מול קבוצה שצועקת</span></div><div class="ex-how">כולם צועקים ומסיחים — השחקן מבצע פנדל. מדמה: דקה 90, חצי גמר.</div><div class="ex-why"><strong>למה זה עובד:</strong> חשיפה מבוקרת ללחץ = פחות תגובת לחץ במשחק האמיתי</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>גישה</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Success Log בפשטות ("מה היה כיף היום?"). ללא High-Stakes Simulation. Rotating Captain — כן.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>כל הכלים. High-Stakes בעצימות נמוכה.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>תוכנית מלאה. Box Breathing לפני כל משחק — חובה.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">ביטחון נבנה — לא נולדים איתו. לחץ לפני משחק = סימן שאכפת לו.</div><div class="report-highlight"><strong>הדבר הכי חשוב בבית:</strong> "מה הלך לך טוב היום?" — כל ערב, להאזין בלי לנתח.<br><br><strong>לפני משחק:</strong> 5 דקות שקט ובלי הוראות — תנו לו להיכנס לתוכו.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">ביטחון נבנה אימון אחרי אימון. אנחנו בתהליך הנכון.</div><div class="verbal-tip">💡 "הלחץ שהוא מרגיש לפני משחק = סימן שאכפת לו. זה טוב — צריך ללמד לרתום אותו"</div></div>
+  </div>
+</div>
+
+</div><!-- end mental -->
+
+<!-- ===== LIFE ===== -->
+<div class="cat-divider" id="life">
+  <div class="cat-icon">🌱</div><div class="cat-label">חיים מחוץ למגרש</div>
+  <div class="cat-count">פרמטרים 27–30</div>
+</div>
+<div class="params-grid">
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">27</div><div><div class="param-name">תזונה לביצועים</div><div class="param-meta">חיים <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ פרוטוקול</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Pre-Training Meal</div><div class="ex-badges"><span class="ex-muscle">⚡ גליקוגן</span><span class="ex-sets">2-3 שעות לפני</span></div><div class="ex-how">פחמימות מורכבות + חלבון. אורז + עוף, פסטה + טונה, לחם מלא + ביצים. לא מעובד, לא שמן.</div><div class="ex-why"><strong>למה זה עובד:</strong> גליקוגן מלא = מאגרי אנרגיה מלאים. ארוחה שגויה = אימון מבוזבז</div></li>
+      <li class="ex-item"><div class="ex-name">Post-Training Recovery Window</div><div class="ex-badges"><span class="ex-muscle">💪 שיקום שרירים</span><span class="ex-sets">תוך 30-45 דקות אחרי</span></div><div class="ex-how">חלבון + פחמימות פשוטות. שייק: חלב + בננה + 2 ביצים. אחרי שעה — החלון סגור.</div><div class="ex-why"><strong>למה זה עובד:</strong> חלון 30-45 דקות = שיקום שרירים פי 2 מהיר</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>הערות תזונה</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>לא להגביל כמויות — גדילה. לדגיש: לא ג'אנק לפני אימון. חלבון + פירות אחרי.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Recovery Window — חשוב מאוד בגיל זה. גדילה מואצת = צורך בחלבון גבוה.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>פרוטוקול מלא. תזמון מדויק לפני ואחרי.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">מה שהשחקן אוכל זה חלק מהאימון.</div><div class="report-highlight"><strong>מתכון ריקברי:</strong> שייק: כוס חלב + בננה + 2 ביצים — תוך 30-45 דקות אחרי אימון.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">הארוחה הנכונה תוך 30 דקות אחרי האימון היא האימון השלישי של היום.</div><div class="verbal-tip">💡 "שייק: חלב + בננה + 2 ביצים = 5 שניות הכנה + ריקברי כפול"</div></div>
+  </div>
+</div>
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">28–30</div><div><div class="param-name">שינה · ניהול זמן · מודל לחיקוי</div><div class="param-meta">חיים <span class="pos-tag">כל עמדה</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ פרוטוקול</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Sleep Protocol (28)</div><div class="ex-badges"><span class="ex-muscle">🧠 + 💪 הורמון גדילה</span><span class="ex-sets">8-9 שעות · מסך כבוי 60 דקות לפני</span></div><div class="ex-how">הגוף בונה שריר ומשחרר הורמוני גדילה רק בשינה עמוקה. LeBron ישן 9-10 שעות — לא במקרה.</div><div class="ex-why"><strong>למה זה עובד:</strong> כל שעת אימון ללא שינה מספקת = אימון מבוזבז</div></li>
+      <li class="ex-item"><div class="ex-name">Evening Bag Prep (29)</div><div class="ex-badges"><span class="ex-muscle">🧠 משמעת</span><span class="ex-sets">10 דקות בלילה לפני</span></div><div class="ex-how">בלילה לפני: לארוז תיק → לבדוק ציוד → להכין בגדים → להחליט על ארוחה. לא בבוקר האימון.</div><div class="ex-why"><strong>למה זה עובד:</strong> בוקר כאוטי = אימון כאוטי. הכנה = ראש פנוי</div></li>
+      <li class="ex-item"><div class="ex-name">Role Model Weekly Study (30)</div><div class="ex-badges"><span class="ex-muscle">🧠 שאיפה</span><span class="ex-sets">15 דקות שבועיות</span></div><div class="ex-how">3 דקות Highlights של שחקן באותה עמדה. לשאול: מה עשה שאני לא? מה אני רוצה "לגנוב" ממנו?</div><div class="ex-why"><strong>למה זה עובד:</strong> מודל ספציפי = יעד קונקרטי = מוטיבציה אמיתית</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>שינה מומלצת</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>9-11 שעות. גדילה מואצת — שינה חיונית מאוד.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>9-10 שעות. גיל ההתבגרות — שינה משפיעה ישירות על הורמוני גדילה.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>8-9 שעות. Power Nap 20 דקות ביום גמ' — מקובל גם בפרופסיונלים.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">שינה, משמעת ומודל לחיקוי — שלושת הגורמים שמשפיעים מחוץ למגרש.</div><div class="report-highlight"><strong>3 כללים לבית:</strong><br>1. מסך כבוי 60 דקות לפני שינה<br>2. תיק מוכן בלילה לפני<br>3. "מי השחקן שאתה הכי רוצה להיות כמוהו?" — לצפות ב-Highlights ביחד</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">מה שקורה מחוץ למגרש — שינה, אכילה, משמעת — זה חלק בלתי נפרד מהאימון.</div></div>
+  </div>
+</div>
+
+</div><!-- end life -->
+
+<!-- ===== GOALKEEPER ===== -->
+<div class="cat-divider" id="gk">
+  <div class="cat-icon">🥅</div><div class="cat-label">שוער</div>
+  <div class="cat-count">פרמטר 31</div>
+</div>
+<div class="params-grid">
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">31</div><div><div class="param-name">פיתוח שוער — מודל 360°</div><div class="param-meta">שוער <span class="pos-tag">שוער בלבד</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div><div class="card-tab" onclick="switchTab(event,this,'v')">💬 בעל פה</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Goalkeeper Stance & Footwork</div><div class="ex-badges"><span class="ex-muscle">🦵 קוואדריספס + Core + תגובה</span><span class="ex-sets">5×2 דקות</span></div><div class="ex-how">עמידה מקצועית: ברכיים כפופות קל, משקל על קצות האצבעות, ידיים מוכנות. תנועה צדית ב-Shuffle Steps תוך שמירת עמדה. לא לצלב רגליים.</div><div class="ex-why"><strong>למה זה עובד:</strong> שוער שנוע בצעדים נכונים = מוכן לכל כיוון בכל רגע</div></li>
+      <li class="ex-item"><div class="ex-name">Diving Technique — Low Shots</div><div class="ex-badges"><span class="ex-muscle">💪 כתפיים + Core + תגובה</span><span class="ex-sets">3×8 כל צד</span></div><div class="ex-how">הגנה על בעיטה נמוכה: לכפוף ברך קדימה → לצלול לצד → הגוף יוצר חסימה. היד התחתונה מחזיקה, עליונה חוסמת. נחיתה על כתף — לא על אמה.</div><div class="ex-why"><strong>למה זה עובד:</strong> צלילה נכונה = יותר שערים מוצלים + פחות פציעות</div></li>
+      <li class="ex-item"><div class="ex-name">Distribution — Short & Long</div><div class="ex-badges"><span class="ex-muscle">🦶 + 💪 בעיטה + זריקה</span><span class="ex-sets">15 מסירות × כל סוג</span></div><div class="ex-how">קצרה (Throw): פתיחה מדויקת לשחקן פתוח. ארוכה (Kick): Driven Pass מדויק 40+ מטר. שוער מודרני = שחקן נוסף בבניית המשחק.</div><div class="ex-why"><strong>למה זה עובד:</strong> שוער שמחלק נכון = יתרון טקטי ענק לכל הקבוצה</div></li>
+      <li class="ex-item"><div class="ex-name">1v1 Situations</div><div class="ex-badges"><span class="ex-muscle">🧠 קריאה + תזמון + אומץ</span><span class="ex-sets">6 סיטואציות × 2</span></div><div class="ex-how">תוקף מגיע לבד: לצאת בנחישות — לא לחצות שטח בינים. לגדל (להרחיב ידיים ורגליים). לחכות לרגע האחרון לפני הצלת רגל.</div><div class="ex-why"><strong>למה זה עובד:</strong> שוער שיוצא בנחישות = מצמצם זווית = שולט בסיטואציה</div></li>
+      <li class="ex-item"><div class="ex-name">Communication Drill</div><div class="ex-badges"><span class="ex-muscle">🗣️ תקשורת + מנהיגות</span><span class="ex-sets">כל אימון</span></div><div class="ex-how">בכל תרגיל הגנתי: השוער חייב להנחות בקול רם — "ימינה!", "שלך!", "יצא!". קבוצה שלמה עם שוער שמנחה = הגנה שונה לגמרי.</div><div class="ex-why"><strong>למה זה עובד:</strong> שוער הוא המנהיג ההגנתי — 180° ראייה, הוא רואה הכל לפני כולם</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>מה עובדים</th><th>הערות</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>Stance + Footwork + זריקות קצרות בלבד. ללא צלילות על ריצוף קשה.</td><td>משחק חופשי + כיף</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Diving מלא. Distribution שתי הרגליים. 1v1 בסיסי.</td><td>טכניקה לפני כוח</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>כל הפרמטרים. Communication חובה. Distribution ארוכה.</td><td>שוער מודרני מלא</td></tr>
+      </table>
+      <div class="recovery-box">
+        <div class="recovery-title">⚠️ שוער — ייחודיות פיזית</div>
+        <div class="recovery-grid">
+          <div class="recovery-item"><strong>כתפיים</strong>Rotator Cuff + מתיחות לאחר כל אימון</div>
+          <div class="recovery-item"><strong>ברכיים</strong>Quad + Hamstring חיזוק שווה</div>
+          <div class="recovery-item"><strong>אצבעות</strong>לא לצלול על ריצוף קשה ללא כפפות</div>
+          <div class="recovery-item"><strong>גב</strong>Core חזק = גב מוגן בצלילות</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">שוער מודרני הוא הרבה יותר מ"מי שעוצר כדורים" — הוא שחקן ראשון בבניית המשחק ומנהיג הגנתי.</div><div class="report-highlight"><strong>מה לצפות:</strong> השוער לומד לתקשר בקול רם ולפתוח משחק — זה לוקח זמן אבל משנה את כל הקבוצה.<br><br><strong>בבית:</strong> Stance + Footwork מול קיר — 5 דקות ביום.</div></div>
+    <div class="card-panel" data-panel="v"><div class="verbal-text">השוער הוא המאמן על המגרש. הוא רואה הכל לפני כולם — ואנחנו מלמדים אותו להשתמש בזה.</div><div class="verbal-tip">💡 "שוער שמנחה את ההגנה בקול — מציל שערים בלי לגעת בכדור"</div></div>
+  </div>
+</div>
+
+</div><!-- end gk -->
+
+<!-- ===== COMMUNICATION ===== -->
+<div class="cat-divider" id="comm">
+  <div class="cat-icon">📢</div><div class="cat-label">תקשורת מגרשית</div>
+  <div class="cat-count">פרמטר 32</div>
+</div>
+<div class="params-grid">
+
+<div class="param-card" onclick="toggleCard(this)">
+  <div class="param-header"><div class="param-num">32</div><div><div class="param-name">תקשורת מגרשית</div><div class="param-meta">כישור עצמאי <span class="pos-tag">כל עמדה</span><span class="pos-tag">קפטן</span><span class="pos-tag">שוער</span></div></div><div class="param-toggle">+</div></div>
+  <div class="param-body">
+    <div class="card-tabs"><div class="card-tab active-tab" onclick="switchTab(event,this,'t')">🏋️ תרגילים</div><div class="card-tab" onclick="switchTab(event,this,'p')">⚽ לפי עמדה</div><div class="card-tab" onclick="switchTab(event,this,'a')">📅 לפי גיל</div><div class="card-tab" onclick="switchTab(event,this,'r')">📋 להורים</div></div>
+    <div class="card-panel active-panel" data-panel="t"><ul class="ex-list">
+      <li class="ex-item"><div class="ex-name">Verbal Cue Library</div><div class="ex-badges"><span class="ex-muscle">🗣️ שפת מגרש</span><span class="ex-sets">לשנן + לתרגל</span></div><div class="ex-how">מילים שחייב כל שחקן להכיר: "שלי!", "שלך!", "פנוי!", "הפנה!", "זמן!", "שמאל/ימין!". לתרגל בכל SSG — מי לא אומר שום דבר, מקבל אזהרה.</div><div class="ex-why"><strong>למה זה עובד:</strong> מידע בשבריר שניה = שחקן מקבל כדור במקום נכון</div></li>
+      <li class="ex-item"><div class="ex-name">Communication SSG</div><div class="ex-badges"><span class="ex-muscle">🗣️ + ⚽ שילוב</span><span class="ex-sets">3 × 4 דקות</span></div><div class="ex-how">SSG רגיל — כלל: אסור לקבל כדור בלי לקרוא "שלי!" לפני. כל מסירה חייבת לבוא עם הנחיה לשחקן ("הפנה!", "ימינה!"). אם לא — הכדור עובר.</div><div class="ex-why"><strong>למה זה עובד:</strong> כדורגל שקט = כדורגל עיוור. תקשורת = 11 שחקנים שפועלים כאחד</div></li>
+      <li class="ex-item"><div class="ex-name">Pressure Communication</div><div class="ex-badges"><span class="ex-muscle">🗣️ תקשורת תחת לחץ</span><span class="ex-sets">4×3 דקות · אינטנסיבי</span></div><div class="ex-how">SSG עם קצב גבוה ולחץ — המטרה היחידה: לא לאבד תקשורת גם כשקשה. מאמן מציין: "מי לא דיבר 30 שניות?"</div><div class="ex-why"><strong>למה זה עובד:</strong> שחקנים תמיד מדברים כשקל — כישור אמיתי הוא לדבר גם כשעייפים ולחוצים</div></li>
+    </ul></div>
+    <div class="card-panel" data-panel="p">
+      <div class="pos-grid">
+        <div class="pos-item"><div class="pos-name">🥅 שוער</div><div class="pos-desc">180° ראייה — אחראי להנחות כל ההגנה. "ימינה!", "יצא!", "שלך!", "עצור!" — חייב לדבר כל הזמן.</div></div>
+        <div class="pos-item"><div class="pos-name">🛡️ סטופר / מגן</div><div class="pos-desc">להנחות קו ההגנה — "לעלות!", "לרדת!", "זמן!", "פרסינג!". גם לתקשר עם השוער מאחורה.</div></div>
+        <div class="pos-item"><div class="pos-name">🎯 CM / ציר</div><div class="pos-desc">לנהל קצב המשחק — "אחורה!", "שחרר!", "פנוי!". הוא המאמן בשדה.</div></div>
+        <div class="pos-item"><div class="pos-name">⚽ קצה / תוקף</div><div class="pos-desc">"שלי!" בכל קבלת כדור. "הפנה!" כשמסרן לחוץ. "אחורה!" כשצריך לסגת.</div></div>
+      </div>
+    </div>
+    <div class="card-panel" data-panel="a">
+      <table class="age-table">
+        <tr><th>גיל</th><th>גישה לתקשורת</th></tr>
+        <tr><td><span class="age-badge u12">U10-12</span></td><td>"שלי!" בלבד — שחקן שקורא "שלי!" לפני כל קבלת כדור. זה הכל. שאר יבוא לבד.</td></tr>
+        <tr><td><span class="age-badge u14">U13-14</span></td><td>Verbal Cue Library מלא. SSG עם כלל תקשורת.</td></tr>
+        <tr><td><span class="age-badge u16">U15+</span></td><td>תקשורת תחת לחץ. כל שחקן מנהיג תקשורת בעמדה שלו.</td></tr>
+      </table>
+    </div>
+    <div class="card-panel" data-panel="r"><div class="report-text">תקשורת מגרשית היא כישור עצמאי — נפרד ממנהיגות אישיותית. שחקן שקט במגרש = שחקן שמפסיד מידע.</div><div class="report-highlight"><strong>מה לצפות:</strong> בהדרגה תשמעו אותו אומר "שלי!" ומנחה שחקנים — זה שינוי משמעותי בהבנת המשחק.</div></div>
+  </div>
+</div>
+
+</div><!-- end communication -->
+</div><!-- end section -->
+
+<footer class="footer">
+  <div class="footer-brand">GARDEN OF EDEN</div>
+  <div class="footer-sub">Soccer Academy · Haifa · 360° Player Development</div>
+  <div style="margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <button class="btn btn-secondary" onclick="showPage('parents')" style="font-size:12px;">👨‍👩‍👦 דף הורים →</button>
+  </div>
+  <div style="margin-top:14px;font-size:10px;color:#222;">© Garden of Eden Soccer Academy</div>
+</footer>
+</div><!-- end page-book -->
+
+<!-- ====== PARENTS PAGE ====== -->
+<div class="page" id="page-parents">
+<nav class="nav">
+  <div class="nav-brand" onclick="showPage('book')" style="font-size:13px;letter-spacing:1px;">← חזרה לספר</div>
+  <ul class="nav-tabs"><li class="nav-tab active" style="color:var(--gold);">👨‍👩‍👦 דף הורים</li></ul>
+</nav>
+<div class="parents-page">
+<div class="parents-header">
+  <div class="parents-logo">GARDEN OF EDEN SOCCER ACADEMY</div>
+  <h1 class="parents-title">מה אנחנו <span>בונים</span><br>עם הילד שלך</h1>
+  <p class="parents-subtitle">32 פרמטרי פיתוח · לפי גיל · לפי עמדה · מה לצפות</p>
+</div>
+<div class="parents-intro">
+  <strong>לכל הורה יקר,</strong><br><br>
+  לפעמים אתם שואלים "למה הוא לא טוב ב-X?" — והתשובה היא תמיד: כי X היא תוצאה של 3-4 דברים אחרים שצריכים קודם להיות מוצקים.<br><br>
+  המסמך הזה מסביר בשפה פשוטה מה אנחנו עובדים עליו, למה, ומה תראו — ומתי.
+</div>
+<div class="parents-body">
+
+<div class="parents-cat-title"><span>⚽</span> טכניקה</div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">01</div><div><div class="parents-pname">אחד על אחד התקפי</div><div class="parents-ptag">טכניקה · קצה / תוקף / CM</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary">כדי לפרוץ מגן, השחקן צריך שרשרת שלמה: הטעיה → משיכת כדור → דחיפה עם הרגל המטעה → ניתור בכיוון החדש. הניתור מגיע מהתאומים וגיד אכילס — שרירים שדורשים עבודה ייעודית.<div class="parents-what"><strong>תרגיל בית:</strong> 3×20 Calf Raises כל יום — כל רגל. 3 דקות שמשנות את הניתור.</div><div class="parents-expect"><div class="parents-expect-label">מה לצפות ומתי</div><div class="parents-expect-text">4-6 שבועות: הטעיה נכונה באימון. 3 חודשים: הטעיה במשחק. 6 חודשים: כמכשיר עקבי.</div></div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ 3-6 חודשים</span><span class="parents-tag tag-type">💪 פיזי + טכניקה</span></div></div></div></div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">02</div><div><div class="parents-pname">אחד על אחד הגנתי</div><div class="parents-ptag">טכניקה · סטופר / מגן</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary">הגנה היא לא אגרסיביות — היא טכניקה. שחקן שנגיח מוקדם מדי — יפסיד תמיד.<div class="parents-what"><strong>סימן ההתקדמות:</strong> תראו שהוא מחכה יותר — זה בדיוק מה שאנחנו עובדים עליו.</div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ 2-4 חודשים</span><span class="parents-tag tag-type">🧠 + 💪</span></div></div></div></div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">03-08</div><div><div class="parents-pname">קבלת כדור · מסירות · כדרור · ריצה ללא כדור</div><div class="parents-ptag">טכניקה · כל עמדה</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary"><strong>קבלת כדור (03):</strong> הכריה הראשונה קובעת הכל. סימן ההתקדמות: מסתכל לפני שהכדור מגיע.<br><strong>מסירה קצרה (04):</strong> 100 מסירות ביום ברגל החלשה — 5 דקות שמשנות שחקן.<br><strong>מסירה ארוכה (05):</strong> פותחת מגרש שלם — כישור נדיר. לא כוח, טכניקה.<br><strong>בעיטה לשער (06):</strong> 30 בעיטות ברגל החלשה ביום בבית.<br><strong>כדרור (07):</strong> שינוי קצב מנצח מהירות — תמיד.<br><strong>ריצה ללא כדור (08):</strong> 90% מהמשחק זה בלי כדור.<div class="parents-what"><strong>שאלה לבדיקה:</strong> "לאן תרוץ אם המסרן קיבל כדור עכשיו?" — אם עונה מהר, בכיוון.</div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ 3-6 חודשים</span><span class="parents-tag tag-type">🦶 + 🧠 שילוב</span></div></div></div></div>
+
+<div class="parents-cat-title"><span>💪</span> פיזי ואתלטי</div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">09</div><div><div class="parents-pname">כוח מתפרץ</div><div class="parents-ptag">פיזי · כל עמדה</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary">הבסיס לכל — אחד על אחד, מאבק אווירי בניתור, האצה ראשונה.<div class="parents-what"><strong>תרגיל בית:</strong> 3×20 Single Leg Calf Raises כל יום — 3 דקות.<br><strong>⚠️ לילדים מתחת לגיל 13:</strong> רק Squat Jumps קלים. אין קפיצות כבדות.</div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ 6-10 שבועות</span><span class="parents-tag tag-type">💥 כוח</span></div></div></div></div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">10-15</div><div><div class="parents-pname">מהירות · סיבולת · גמישות · Core · כוח · ריקברי</div><div class="parents-ptag">פיזי · כל עמדה</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary"><strong>מהירות (10):</strong> טכניקת ריצה נכונה מוסיפה 5-10% ללא מאמץ נוסף.<br><strong>סיבולת (11):</strong> ריצה קלה 20 דקות 3x בשבוע = שחקן אחר בדקה 70.<br><strong>גמישות (12):</strong> Hip 90-90 בבוקר — 2 דקות שמונעות פציעות.<br><strong>Core (13):</strong> Dead Bug לפני שינה — שחקן קשה להפיל.<br><strong>ריקברי (15):</strong> מקלחת קרה 2 דקות אחרי אימון = ריקברי כפול.<div class="parents-what"><strong>Recovery בין ימים:</strong> יום אחרי אימון כבד — רק ריצה קלה + Foam Rolling. לא עוד כוח.</div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ שוטף</span><span class="parents-tag tag-type">💪 תחזוקה</span></div></div></div></div>
+
+<div class="parents-cat-title"><span>🧠</span> טקטיקה</div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">16-21</div><div><div class="parents-pname">קריאת משחק · עמדה · מעברים · פרסינג · בין הקווים</div><div class="parents-ptag">טקטיקה · לפי עמדה</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary">כל הפרמטרים הטקטיקים קשורים לשאלה: <strong>האם הוא מבין את המשחק כמערכת?</strong><br><br>שחקן שמבין איפה הוא אמור להיות לפני שהכדור מגיע — שחקן שמשחק ברמה אחרת.<div class="parents-what"><strong>בבית:</strong> תוך כדי משחק בטלוויזיה — "לאן היית שולח עכשיו?" — מאמן קריאת משחק.<br><strong>מה לצפות:</strong> בהדרגה יגיע למקום הנכון לפני שהכדור שם — זה הסימן הכי טוב.</div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ 4-8 חודשים</span><span class="parents-tag tag-type">🧠 הבנה עמוקה</span></div></div></div></div>
+
+<div class="parents-cat-title"><span>🧩</span> מנטליות</div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">22-26</div><div><div class="parents-pname">כישלון · ביטחון · ריכוז · מנהיגות · לחץ</div><div class="parents-ptag">מנטליות · כל עמדה</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary">ביטחון נבנה — לא נולדים איתו. לחץ לפני משחק = סימן שאכפת לו.<div class="parents-what"><strong>הדבר הכי חשוב בבית:</strong> "מה הלך לך טוב היום?" — כל ערב, להאזין בלי לנתח.</div><div class="parents-what"><strong>אחרי משחק שלא הלך:</strong> לא לנתח מיד. לא "למה לא...?" — אחת לשבוע בשיחה רגועה.</div><div class="parents-what"><strong>לפני משחק:</strong> 5 דקות שקט ובלי הוראות — תנו לו להיכנס לתוכו.</div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ תהליך מתמשך</span><span class="parents-tag tag-type">🧠 מנטלי</span></div></div></div></div>
+
+<div class="parents-cat-title"><span>🌱</span> חיים מחוץ למגרש</div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">27-30</div><div><div class="parents-pname">תזונה · שינה · זמן · מודל</div><div class="parents-ptag">חיים · כל עמדה</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary"><strong>תזונה:</strong> שייק תוך 30-45 דקות אחרי אימון: חלב + בננה + 2 ביצים.<br><strong>שינה:</strong> 8-9 שעות (U10-12: 9-11). מסך כבוי 60 דקות לפני.<br><strong>ניהול זמן:</strong> תיק מוכן בלילה לפני — לא בבוקר האימון.<br><strong>מודל:</strong> "מי השחקן שאתה הכי רוצה להיות כמוהו?" — תצפו ב-Highlights ביחד.<div class="parents-timeline"><span class="parents-tag tag-time">⏱ מיידי</span><span class="parents-tag tag-type">⚡ + 💤 אנרגיה + שינה</span></div></div></div></div>
+
+<div class="parents-cat-title"><span>🥅</span> שוער</div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">31</div><div><div class="parents-pname">פיתוח שוער</div><div class="parents-ptag">שוער בלבד</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary">שוער מודרני הוא הרבה יותר מ"מי שעוצר כדורים" — הוא שחקן ראשון בבנייה ומנהיג הגנתי.<div class="parents-what"><strong>4 עמודי תווך שעובדים:</strong><br>1. Stance ו-Footwork מדויקים<br>2. Diving — טכניקת צלילה נכונה<br>3. Distribution — פתיחת משחק קצר וארוך<br>4. תקשורת — להנחות את ההגנה בקול</div><div class="parents-what"><strong>בבית:</strong> Stance + תנועה צדית מול קיר — 5 דקות ביום.</div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ 3-6 חודשים</span><span class="parents-tag tag-type">🥅 שוער</span></div></div></div></div>
+
+<div class="parents-cat-title"><span>📢</span> תקשורת מגרשית</div>
+
+<div class="parents-card" onclick="toggleParents(this)"><div class="parents-card-header"><div class="parents-num">32</div><div><div class="parents-pname">תקשורת מגרשית</div><div class="parents-ptag">כישור עצמאי · כל עמדה</div></div><div class="parents-toggle">+</div></div><div class="parents-card-body"><div class="parents-summary">תקשורת מגרשית היא כישור נפרד ממנהיגות אישיותית. שחקן שקט במגרש = שחקן שמפסיד מידע.<div class="parents-what"><strong>מה לצפות:</strong> בהדרגה תשמעו אותו אומר "שלי!" — זה שינוי גדול בהבנת המשחק.</div><div class="parents-timeline"><span class="parents-tag tag-time">⏱ 4-8 שבועות</span><span class="parents-tag tag-type">🗣️ תקשורת</span></div></div></div></div>
+
+<!-- SUMMARY -->
+<div style="background:#0d3b1e;border-radius:14px;padding:24px 20px;margin-top:32px;color:#f8f8f4;">
+  <div style="font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;color:#2ecc71;margin-bottom:14px;">5 הדברים הכי חשובים שאפשר לעשות בבית</div>
+  <ol style="padding-right:18px;font-size:13px;line-height:2.1;color:rgba(248,248,244,0.85);">
+    <li><strong style="color:#fff;">100 מסירות ביום ברגל החלשה</strong> — לקיר, לפח, לכל מקום</li>
+    <li><strong style="color:#fff;">Calf Raises × 20 כל רגל</strong> — כל יום, 3 דקות</li>
+    <li><strong style="color:#fff;">שינה 8-9 שעות</strong> — מסך כבוי 60 דקות לפני</li>
+    <li><strong style="color:#fff;">ארוחה תוך 30-45 דקות אחרי אימון</strong> — חלב + בננה + ביצים</li>
+    <li><strong style="color:#fff;">"מה הלך לך טוב היום?"</strong> — שאלה אחת כל ערב, להאזין בלי לנתח</li>
+  </ol>
+</div>
+
+<div style="text-align:center;padding:28px 0;">
+  <button class="btn btn-primary" onclick="showPage('book')" style="font-size:13px;">חזרה לספר המלא ←</button>
+</div>
+
+</div></div></div><!-- end parents -->
+
+<script>
+function showPage(n){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('page-'+n).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function navGo(id,tabEl){
+  showPage('book');
+  setTimeout(function(){
+    var el=document.getElementById(id);
+    if(el){var y=el.getBoundingClientRect().top+window.pageYOffset-64;window.scrollTo({top:y,behavior:'smooth'});}
+  },50);
+  if(tabEl){
+    document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+    tabEl.classList.add('active');
+  }
+}
+function toggleCard(card){
+  if(event.target.closest('.card-tab,.card-panel'))return;
+  card.classList.toggle('open');
+}
+function switchTab(e,tabEl,panel){
+  e.stopPropagation();
+  var card=tabEl.closest('.param-card');
+  card.querySelectorAll('.card-tab').forEach(function(t){t.classList.remove('active-tab');});
+  card.querySelectorAll('.card-panel').forEach(function(p){p.classList.remove('active-panel');});
+  tabEl.classList.add('active-tab');
+  card.querySelector('[data-panel="'+panel+'"]').classList.add('active-panel');
+}
+function toggleParents(card){
+  if(event.target.closest('.parents-card-body'))return;
+  card.classList.toggle('open');
+}
+var sections=['tech','physical','tactical','mental','life','gk','comm'];
+window.addEventListener('scroll',function(){
+  if(!document.getElementById('page-book').classList.contains('active'))return;
+  var cur='';
+  sections.forEach(function(id){var el=document.getElementById(id);if(el&&window.pageYOffset>=el.offsetTop-120)cur=id;});
+  var map={tech:0,physical:1,tactical:2,mental:3,life:4,gk:5};
+  var tabs=document.querySelectorAll('.nav-tab');
+  tabs.forEach(function(t){t.classList.remove('active');});
+  if(cur!==''&&map[cur]!==undefined)tabs[map[cur]].classList.add('active');
+});
+</script>
+</body>
+</html>
