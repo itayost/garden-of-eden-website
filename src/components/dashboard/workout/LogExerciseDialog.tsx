@@ -13,9 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { logExerciseAction } from "@/lib/actions/trainee-workout";
+import { StepperInput } from "./StepperInput";
 
 export interface LogDialogTarget {
   exerciseId: string;
@@ -34,10 +33,12 @@ interface LogExerciseDialogProps {
   target: LogDialogTarget;
 }
 
+const WEIGHT_QUICK_ADDS = [1, 2.5, 5];
+
 /**
- * The quick sets/reps/weight form — the heart of the QR flow. Numeric-only,
- * three fields, one tap to save; a 10-year-old at a squat rack fills it in
- * ten seconds.
+ * The quick sets/reps/weight form — the heart of the QR flow. Stepper rows
+ * with thumb-sized −/+ targets: a 10-year-old at a squat rack never fights
+ * the phone's number keyboard mid-set. Typing stays possible.
  */
 export function LogExerciseDialog({
   open,
@@ -53,6 +54,12 @@ export function LogExerciseDialog({
     target.existing?.weightKg?.toString() ?? "",
   );
   const [loading, setLoading] = useState(false);
+
+  const addWeight = (delta: number) => {
+    const base = weight === "" ? 0 : Number(weight);
+    const next = Math.min((Number.isFinite(base) ? base : 0) + delta, 500);
+    setWeight(String(Math.round(next * 100) / 100));
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -83,56 +90,64 @@ export function LogExerciseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="rounded-2xl sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{target.exerciseName}</DialogTitle>
+          <DialogTitle className="text-xl">{target.exerciseName}</DialogTitle>
           <DialogDescription>
             {target.existing ? "עדכון הרישום — מה עשית בפועל?" : "מה עשית בפועל?"}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="log-sets">סטים</Label>
-              <Input
-                id="log-sets"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={99}
-                value={sets}
-                onChange={(event) => setSets(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="log-reps">חזרות</Label>
-              <Input
-                id="log-reps"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={999}
-                value={reps}
-                onChange={(event) => setReps(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="log-weight">משקל (ק&quot;ג)</Label>
-              <Input
-                id="log-weight"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                max={500}
-                step={0.5}
-                value={weight}
-                onChange={(event) => setWeight(event.target.value)}
-              />
+          <div className="space-y-3">
+            <StepperInput
+              id="log-sets"
+              label="סטים"
+              value={sets}
+              onChange={setSets}
+              min={1}
+              max={99}
+            />
+            <StepperInput
+              id="log-reps"
+              label="חזרות"
+              value={reps}
+              onChange={setReps}
+              min={1}
+              max={999}
+            />
+            <StepperInput
+              id="log-weight"
+              label={'משקל (ק"ג)'}
+              value={weight}
+              onChange={setWeight}
+              min={0}
+              max={500}
+              step={0.5}
+              inputMode="decimal"
+            />
+            <div className="flex justify-end gap-1.5">
+              {WEIGHT_QUICK_ADDS.map((delta) => (
+                <Button
+                  key={delta}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full text-xs tabular-nums"
+                  onClick={() => addWeight(delta)}
+                >
+                  +{delta}
+                </Button>
+              ))}
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full rounded-2xl bg-grass text-base font-bold text-forest hover:bg-grass/90"
+            disabled={loading}
+          >
             {loading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             שמירה
           </Button>

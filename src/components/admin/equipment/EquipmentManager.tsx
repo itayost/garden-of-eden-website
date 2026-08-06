@@ -86,12 +86,48 @@ export function EquipmentManager({
         </div>
       </div>
 
-      <Card>
+      {/* Mobile: card list — the table cramps below ~400px. */}
+      {equipment.length > 0 && (
+        <div className="space-y-2 md:hidden">
+          {equipment.map((item) => (
+            <Card key={item.id} className="rounded-2xl py-0">
+              <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 font-bold">
+                    <QrCode className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{item.name_he}</span>
+                  </p>
+                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                    {item.code}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant={item.is_active ? "default" : "secondary"}>
+                    {item.is_active ? "פעיל" : "לא פעיל"}
+                  </Badge>
+                  {isAdmin && (
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                      עריכה
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Card className={equipment.length > 0 ? "hidden md:block" : undefined}>
         <CardContent>
           {equipment.length === 0 ? (
-            <p className="py-12 text-center text-muted-foreground">
-              אין ציוד בקטלוג עדיין{isAdmin ? " — הוסף את המכשיר הראשון." : "."}
-            </p>
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <span className="rounded-full bg-muted p-3">
+                <QrCode className="h-6 w-6 text-muted-foreground" />
+              </span>
+              <p className="text-muted-foreground">
+                אין ציוד בקטלוג עדיין{isAdmin ? " — הוסף את המכשיר הראשון." : "."}
+              </p>
+            </div>
           ) : (
             <Table>
               <TableHeader>

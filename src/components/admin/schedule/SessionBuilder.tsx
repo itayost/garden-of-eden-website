@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -27,9 +27,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ExercisePicker } from "@/features/workouts/components/ExercisePicker";
 import type { WorkoutExercise, WorkoutProgram } from "@/features/workouts/lib/types";
 import {
@@ -105,6 +104,30 @@ export function SessionBuilder({
   const [loadingPrevious, setLoadingPrevious] = useState(false);
 
   const backHref = `/admin/schedule?date=${date}`;
+
+  // What the trainee actually did — keyed by SESSION-EXERCISE id (the row key
+  // of existing rows), so two rows of the same library exercise keep their own
+  // logs. Logs whose row was removed still render in an aside below the list:
+  // deleting a row must not hide what the trainee actually did.
+  const logByRowKey = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const exercise of session?.exercises ?? []) {
+      const log = exercise.logs?.[0];
+      if (log) map[exercise.id] = formatLog(log);
+    }
+    return map;
+  }, [session]);
+
+  const orphanedLogs = useMemo(() => {
+    const rowKeys = new Set(rows.map((row) => row.key));
+    return (session?.exercises ?? [])
+      .filter((exercise) => (exercise.logs?.length ?? 0) > 0 && !rowKeys.has(exercise.id))
+      .map((exercise) => ({
+        id: exercise.id,
+        name: exercise.exercise?.name_he ?? exercise.exercise?.name_en ?? "תרגיל",
+        line: formatLog(exercise.logs![0]),
+      }));
+  }, [session, rows]);
 
   // Imports MERGE into the current list rather than replacing it — wiping
   // rows the trainer already tuned would be silent data loss. Exercises
@@ -246,29 +269,18 @@ export function SessionBuilder({
   }
 
   return (
-    <div className="space-y-6">
+    // pb-28 clears the sticky action bar on mobile.
+    <div className="space-y-6 pb-28 md:pb-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">אימון עבור {traineeName}</h1>
+          <h1 className="font-display text-2xl text-forest">
+            אימון עבור {traineeName}
+          </h1>
           <p className="text-sm text-muted-foreground">
             {formatDate(date)}
             {session ? ` · נבנה על ידי ${session.built_by_name}` : ""}
             {session?.completed_at ? " · הושלם" : ""}
           </p>
-          {session && session.exercises.some((e) => (e.logs?.length ?? 0) > 0) && (
-            <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-              {session.exercises
-                .filter((e) => (e.logs?.length ?? 0) > 0)
-                .map((e) => (
-                  <p key={e.id}>
-                    {e.exercise?.name_he ?? e.exercise?.name_en ?? "תרגיל"} —{" "}
-                    <span className="font-medium text-green-700 dark:text-green-400">
-                      {formatLog(e.logs![0])}
-                    </span>
-                  </p>
-                ))}
-            </div>
-          )}
         </div>
         <Button variant="ghost" asChild>
           <Link href={backHref}>
@@ -302,119 +314,150 @@ export function SessionBuilder({
       </div>
 
       {rows.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            אין תרגילים עדיין — הוסף מהמאגר, העתק מתוכנית או שכפל אימון קודם.
+        <Card className="border-2 border-dashed">
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="rounded-full bg-muted p-3">
+              <Plus className="h-6 w-6 text-muted-foreground" />
+            </span>
+            <p className="text-muted-foreground">
+              אין תרגילים עדיין — הוסף מהמאגר, העתק מתוכנית או שכפל אימון קודם.
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {rows.map((row, index) => (
-            <Card key={row.key}>
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-base">
-                  {index + 1}. {row.exerciseName}
-                </CardTitle>
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => moveRow(index, -1)}
-                    disabled={index === 0}
-                    aria-label="הזזה למעלה"
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => moveRow(index, 1)}
-                    disabled={index === rows.length - 1}
-                    aria-label="הזזה למטה"
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() =>
-                      setRows((prev) => prev.filter((r) => r.key !== row.key))
-                    }
-                    aria-label={`הסרת ${row.exerciseName}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+        <Card className="rounded-2xl py-0">
+          <CardContent className="divide-y px-4 py-1">
+            {rows.map((row, index) => {
+              const loggedLine = logByRowKey[row.key];
+              return (
+                <div key={row.key} className="group flex items-start gap-3 py-3">
+                  <span className="mt-1.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-forest text-xs font-extrabold text-cream">
+                    {index + 1}
+                  </span>
+
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-sm font-bold">
+                        {row.exerciseName}
+                      </p>
+                      <div className="flex shrink-0 gap-0.5 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => moveRow(index, -1)}
+                          disabled={index === 0}
+                          aria-label="הזזה למעלה"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => moveRow(index, 1)}
+                          disabled={index === rows.length - 1}
+                          aria-label="הזזה למטה"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() =>
+                            setRows((prev) => prev.filter((r) => r.key !== row.key))
+                          }
+                          aria-label={`הסרת ${row.exerciseName}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                      <Input
+                        id={`sets-${row.key}`}
+                        type="number"
+                        min={1}
+                        max={99}
+                        inputMode="numeric"
+                        placeholder="סטים"
+                        aria-label="סטים"
+                        className="h-9"
+                        value={row.targetSets ?? ""}
+                        onChange={(event) =>
+                          updateRow(row.key, {
+                            targetSets:
+                              event.target.value === ""
+                                ? null
+                                : Number(event.target.value),
+                          })
+                        }
+                      />
+                      <Input
+                        id={`reps-${row.key}`}
+                        placeholder="חזרות (8-10)"
+                        aria-label="חזרות"
+                        className="h-9"
+                        value={row.targetReps}
+                        onChange={(event) =>
+                          updateRow(row.key, { targetReps: event.target.value })
+                        }
+                      />
+                      <Input
+                        id={`load-${row.key}`}
+                        placeholder={'משקל (20 ק"ג)'}
+                        aria-label="משקל או עומס"
+                        className="h-9"
+                        value={row.targetLoad}
+                        onChange={(event) =>
+                          updateRow(row.key, { targetLoad: event.target.value })
+                        }
+                      />
+                      <Input
+                        id={`notes-${row.key}`}
+                        placeholder="הערה"
+                        aria-label="הערה"
+                        className="h-9"
+                        value={row.notes}
+                        onChange={(event) =>
+                          updateRow(row.key, { notes: event.target.value })
+                        }
+                      />
+                    </div>
+
+                    {loggedLine && (
+                      <p className="text-xs font-medium text-green-700 tabular-nums">
+                        בוצע בפועל: {loggedLine}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  <div className="space-y-1">
-                    <Label htmlFor={`sets-${row.key}`} className="text-xs">
-                      סטים
-                    </Label>
-                    <Input
-                      id={`sets-${row.key}`}
-                      type="number"
-                      min={1}
-                      max={99}
-                      inputMode="numeric"
-                      value={row.targetSets ?? ""}
-                      onChange={(event) =>
-                        updateRow(row.key, {
-                          targetSets:
-                            event.target.value === ""
-                              ? null
-                              : Number(event.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor={`reps-${row.key}`} className="text-xs">
-                      חזרות
-                    </Label>
-                    <Input
-                      id={`reps-${row.key}`}
-                      placeholder="8-10"
-                      value={row.targetReps}
-                      onChange={(event) =>
-                        updateRow(row.key, { targetReps: event.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor={`load-${row.key}`} className="text-xs">
-                      משקל / עומס
-                    </Label>
-                    <Input
-                      id={`load-${row.key}`}
-                      placeholder={'20 ק"ג'}
-                      value={row.targetLoad}
-                      onChange={(event) =>
-                        updateRow(row.key, { targetLoad: event.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor={`notes-${row.key}`} className="text-xs">
-                      הערה
-                    </Label>
-                    <Input
-                      id={`notes-${row.key}`}
-                      value={row.notes}
-                      onChange={(event) =>
-                        updateRow(row.key, { notes: event.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              );
+            })}
+          </CardContent>
+        </Card>
       )}
 
-      <div className="flex flex-wrap justify-between gap-2">
+      {orphanedLogs.length > 0 && (
+        <Card className="rounded-2xl border-dashed py-0">
+          <CardContent className="space-y-1 px-4 py-3">
+            <p className="text-xs font-semibold text-muted-foreground">
+              רישומים של המתאמן לתרגילים שהוסרו מהאימון:
+            </p>
+            {orphanedLogs.map((log) => (
+              <p key={log.id} className="text-xs text-muted-foreground tabular-nums">
+                {log.name} —{" "}
+                <span className="font-medium text-green-700">{log.line}</span>
+              </p>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sticky on mobile so the trainer never scrolls back up to save. */}
+      <div className="fixed inset-x-0 bottom-16 z-40 flex justify-between gap-2 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-6 md:static md:bg-none md:p-0">
         {session ? (
           <Button
             variant="outline"
@@ -422,13 +465,17 @@ export function SessionBuilder({
             onClick={() => setDeleteOpen(true)}
           >
             <Trash2 className="me-2 h-4 w-4" />
-            מחיקת האימון
+            מחיקה
           </Button>
         ) : (
           <span />
         )}
 
-        <Button onClick={handleSave} disabled={saving || rows.length === 0}>
+        <Button
+          className="flex-1 rounded-xl bg-forest font-bold hover:bg-forest-light md:flex-initial md:px-8"
+          onClick={handleSave}
+          disabled={saving || rows.length === 0}
+        >
           {saving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
           שמירת האימון
         </Button>

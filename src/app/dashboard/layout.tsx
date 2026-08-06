@@ -6,6 +6,7 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DASHBOARD_PAGE_TITLES } from "@/lib/navigation/dashboard-nav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
+import { MotionProvider } from "@/components/MotionProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingTourProvider } from "@/features/onboarding-tour";
 import type { Profile } from "@/types/database";
@@ -43,6 +44,9 @@ export default async function DashboardLayout({
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   return (
+    // MotionConfig(reducedMotion="user") so the workout screen's springs and
+    // celebration respect prefers-reduced-motion.
+    <MotionProvider>
     <SidebarProvider defaultOpen={sidebarOpen}>
       <DashboardSidebar user={user} profile={profile} />
       <SidebarInset>
@@ -63,5 +67,6 @@ export default async function DashboardLayout({
         />
       </Suspense>
     </SidebarProvider>
+    </MotionProvider>
   );
 }
