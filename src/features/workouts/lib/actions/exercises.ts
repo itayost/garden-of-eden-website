@@ -47,6 +47,7 @@ interface RawWorkoutExercise {
   name_he: string | null;
   name_en: string | null;
   equipment: string | null;
+  equipment_id: string | null;
   cues_he: string | null;
   goal_he: string | null;
   order_index: number;
@@ -64,6 +65,7 @@ function mapExercise(raw: RawWorkoutExercise): WorkoutExercise {
     nameHe: raw.name_he,
     nameEn: raw.name_en,
     equipment: raw.equipment,
+    equipmentId: raw.equipment_id,
     cuesHe: raw.cues_he,
     goalHe: raw.goal_he,
     orderIndex: raw.order_index,
@@ -87,7 +89,7 @@ export async function listExercises(
   const to = from + PAGE_SIZE - 1;
 
   let query = typedFrom(adminClient, "workout_exercises")
-    .select("id, main_category, sub_category, name_he, name_en, equipment, cues_he, goal_he, order_index", {
+    .select("id, main_category, sub_category, name_he, name_en, equipment, equipment_id, cues_he, goal_he, order_index", {
       count: "exact",
     })
     .order("order_index")
@@ -166,6 +168,7 @@ export async function createExercise(input: ExerciseInput): Promise<ActionResult
         name_he: emptyToNull(validated.data.name_he),
         name_en: emptyToNull(validated.data.name_en),
         equipment: emptyToNull(validated.data.equipment),
+        equipment_id: validated.data.equipment_id ?? null,
         cues_he: emptyToNull(validated.data.cues_he),
         goal_he: emptyToNull(validated.data.goal_he),
         order_index: orderIndex,
@@ -217,6 +220,7 @@ export async function updateExercise(
         name_he: emptyToNull(validated.data.name_he),
         name_en: emptyToNull(validated.data.name_en),
         equipment: emptyToNull(validated.data.equipment),
+        equipment_id: validated.data.equipment_id ?? null,
         cues_he: emptyToNull(validated.data.cues_he),
         goal_he: emptyToNull(validated.data.goal_he),
       })

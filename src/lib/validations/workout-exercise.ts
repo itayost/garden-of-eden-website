@@ -12,6 +12,16 @@ export const exerciseSchema = z.object({
   name_he: z.string().max(200, "שם בעברית ארוך מדי").nullable().optional(),
   name_en: z.string().max(200, "שם באנגלית ארוך מדי").nullable().optional(),
   equipment: z.string().max(200, "שם ציוד ארוך מדי").nullable().optional(),
+  // Structured link to the equipment catalog (QR scan matching). The free-text
+  // `equipment` column above stays as a display fallback.
+  equipment_id: z
+    .string()
+    .regex(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      "מזהה ציוד לא תקין",
+    )
+    .nullable()
+    .optional(),
   cues_he: z.string().max(1000, "הוראות ביצוע ארוכות מדי").nullable().optional(),
   goal_he: z.string().max(500, "תיאור מטרה ארוך מדי").nullable().optional(),
 });

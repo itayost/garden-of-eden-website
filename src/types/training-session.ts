@@ -9,9 +9,13 @@
  * `typedFrom()` and these interfaces are the source of truth.
  */
 
-/** PostgREST select string for a session with its exercises and their library rows. */
+/**
+ * PostgREST select string for a session with its exercises, their library
+ * rows, and any logs. For staff the logs embed shows what was actually done;
+ * RLS scopes which log rows each caller sees.
+ */
 export const SESSION_SELECT_WITH_EXERCISES =
-  "*, exercises:training_session_exercises(id, session_id, exercise_id, order_index, target_sets, target_reps_he, target_load_he, notes_he, exercise:workout_exercises(id, name_he, name_en, main_category, sub_category, equipment))";
+  "*, exercises:training_session_exercises(id, session_id, exercise_id, order_index, target_sets, target_reps_he, target_load_he, notes_he, exercise:workout_exercises(id, name_he, name_en, main_category, sub_category, equipment, equipment_id), logs:exercise_logs(id, sets, reps, weight_kg, note_he, logged_at))";
 
 export interface SessionExercise {
   id: string;
@@ -30,7 +34,18 @@ export interface SessionExercise {
     main_category: string;
     sub_category: string | null;
     equipment: string | null;
+    equipment_id?: string | null;
+    cues_he?: string | null;
   } | null;
+  /** The trainee's logs for this session exercise (trainee/staff views). */
+  logs?: {
+    id: string;
+    sets: number | null;
+    reps: number | null;
+    weight_kg: number | null;
+    note_he: string | null;
+    logged_at: string;
+  }[];
 }
 
 export interface TrainingSession {

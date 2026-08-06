@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Dumbbell, MapPin, Pencil, Plus, Trash2, User } from "lucide-react";
+import { Check, Dumbbell, MapPin, Pencil, Plus, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -120,6 +120,7 @@ export function SlotCard({
               }
 
               const summary = sessionSummaries[trainee.trainee_id];
+              const completed = Boolean(summary?.completed_at);
               return (
                 <Link
                   key={trainee.id}
@@ -132,9 +133,15 @@ export function SlotCard({
                 >
                   <Badge
                     variant={summary ? "default" : "secondary"}
-                    className="gap-1 font-normal transition-opacity hover:opacity-80"
+                    className={cn(
+                      "gap-1 font-normal transition-opacity hover:opacity-80",
+                      completed &&
+                        "bg-green-600 text-white hover:bg-green-600/90",
+                    )}
                   >
-                    {summary ? (
+                    {completed ? (
+                      <Check className="h-3 w-3" />
+                    ) : summary ? (
                       <Dumbbell className="h-3 w-3" />
                     ) : (
                       <Plus className="h-3 w-3" />

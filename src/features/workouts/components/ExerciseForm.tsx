@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -17,10 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createExercise, updateExercise } from "@/features/workouts/lib/actions";
+import { listEquipmentAction } from "@/lib/actions/equipment";
 import { exerciseSchema } from "@/lib/validations/workout-exercise";
 import type { ExerciseInput } from "@/lib/validations/workout-exercise";
 import { MAIN_CATEGORIES } from "@/features/workouts/lib/types";
 import type { WorkoutExercise } from "@/features/workouts/lib/types";
+import type { Equipment } from "@/types/equipment";
+
+const NO_EQUIPMENT_VALUE = "__none__";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -54,12 +58,27 @@ export function ExerciseForm({ exercise, onSaved, onCancel }: ExerciseFormProps)
       name_he: exercise?.nameHe ?? null,
       name_en: exercise?.nameEn ?? null,
       equipment: exercise?.equipment ?? null,
+      equipment_id: exercise?.equipmentId ?? null,
       cues_he: exercise?.cuesHe ?? null,
       goal_he: exercise?.goalHe ?? null,
     },
   });
 
   const mainCategoryValue = watch("main_category");
+  const equipmentIdValue = watch("equipment_id");
+
+  // The equipment catalog for the structured link. Loaded once per mount;
+  // the form lives inside a dialog so mount = open.
+  const [equipmentOptions, setEquipmentOptions] = useState<Equipment[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    listEquipmentAction().then((result) => {
+      if (!cancelled && "success" in result) setEquipmentOptions(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onSubmit = (data: ExerciseInput) => {
     startTransition(async () => {
@@ -146,9 +165,37 @@ export function ExerciseForm({ exercise, onSaved, onCancel }: ExerciseFormProps)
         )}
       </div>
 
-      {/* equipment */}
+      {/* equipment_id — structured link, drives QR scan matching */}
       <div className="space-y-1">
-        <Label htmlFor="equipment">ציוד</Label>
+        <Label htmlFor="equipment-id">ציוד מהקטלוג</Label>
+        <Select
+          value={equipmentIdValue ?? NO_EQUIPMENT_VALUE}
+          onValueChange={(v) =>
+            setValue("equipment_id", v === NO_EQUIPMENT_VALUE ? null : v)
+          }
+          disabled={pending}
+        >
+          <SelectTrigger id="equipment-id">
+            <SelectValue placeholder="ללא ציוד" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_EQUIPMENT_VALUE}>ללא ציוד</SelectItem>
+            {equipmentOptions.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.name_he}
+                {item.is_active ? "" : " (לא פעיל)"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-muted-foreground text-xs">
+          הקישור לקטלוג קובע לאיזה תרגיל תקפוץ סריקת ה-QR של המכשיר.
+        </p>
+      </div>
+
+      {/* equipment (free text fallback) */}
+      <div className="space-y-1">
+        <Label htmlFor="equipment">ציוד (טקסט חופשי)</Label>
         <Input
           id="equipment"
           placeholder="למשל: משקל חופשי, מוט"
