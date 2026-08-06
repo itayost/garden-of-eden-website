@@ -3,6 +3,25 @@
  * Centralized date formatting for consistent display across the app
  */
 
+export const HEBREW_WEEKDAYS = [
+  "יום ראשון",
+  "יום שני",
+  "יום שלישי",
+  "יום רביעי",
+  "יום חמישי",
+  "יום שישי",
+  "שבת",
+] as const;
+
+/**
+ * Hebrew weekday name for an ISO YYYY-MM-DD date.
+ * Parses at UTC midnight so a date-only string never shifts a day; pass a
+ * date produced by israelToday() when "today" is meant.
+ */
+export function hebrewWeekday(isoDate: string): string {
+  return HEBREW_WEEKDAYS[new Date(`${isoDate}T00:00:00Z`).getUTCDay()];
+}
+
 /**
  * Format date in Hebrew locale (he-IL)
  * Example output: "15 בינואר 2024"

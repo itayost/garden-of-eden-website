@@ -2,13 +2,8 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  mentalQuestionnaireSchema,
-  type MentalQuestionnaireFormData,
-  type MentalQuestionnaireFormInput,
-} from "@/lib/validations/forms";
+import { mentalQuestionnaireSchema, type MentalQuestionnaireFormData, type MentalQuestionnaireFormInput } from "@/lib/validations/forms";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -27,6 +22,8 @@ import {
 import { useFormDraft } from "@/features/form-drafts";
 import { useFormSubmission, fetchUserProfile } from "@/hooks/useFormSubmission";
 import { FormBackButton, FormSubmitButton } from "@/components/forms";
+import { FormShell } from "@/components/forms/FormShell";
+import { Brain } from "lucide-react";
 
 const getDefaultValues = (): MentalQuestionnaireFormInput => ({
   last_session_conclusion: "",
@@ -64,17 +61,14 @@ export default function MentalQuestionnairePage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="sr-only">שאלון מנטלי</h1>
       <FormBackButton />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">שאלון מנטלי</CardTitle>
-          <CardDescription>
-            שתפו אותנו במשוב מהאימון המנטלי / מפגש הזום עם עומר
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <FormShell
+        icon={Brain}
+        title="שאלון מנטלי"
+        description="שתפו אותנו במשוב מהאימון המנטלי / מפגש הזום עם עומר"
+        duration="3 דקות"
+      >
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -202,8 +196,7 @@ export default function MentalQuestionnairePage() {
               <FormSubmitButton loading={loading} />
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </FormShell>
     </div>
   );
 }

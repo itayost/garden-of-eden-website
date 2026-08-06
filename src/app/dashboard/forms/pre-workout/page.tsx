@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { preWorkoutSchema, type PreWorkoutFormData, type PreWorkoutFormInput } from "@/lib/validations/forms";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -23,6 +22,8 @@ import {
 import { useFormDraft } from "@/features/form-drafts";
 import { useFormSubmission, fetchUserProfile, calculateAge } from "@/hooks/useFormSubmission";
 import { FormBackButton, FormSubmitButton } from "@/components/forms";
+import { FormShell } from "@/components/forms/FormShell";
+import { Activity } from "lucide-react";
 
 const defaultValues: PreWorkoutFormInput = {
   group_training: "",
@@ -63,17 +64,14 @@ export default function PreWorkoutFormPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="sr-only">שאלון לפני אימון</h1>
       <FormBackButton />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">שאלון לפני אימון</CardTitle>
-          <CardDescription>
-            אנחנו נשמח לשמוע איך אתה מרגיש כדי שנגיע הכי מוכנים לאימון
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <FormShell
+        icon={Activity}
+        title="שאלון לפני אימון"
+        description="אנחנו נשמח לשמוע איך אתה מרגיש כדי שנגיע הכי מוכנים לאימון"
+        duration="2 דקות"
+      >
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -246,8 +244,7 @@ export default function PreWorkoutFormPage() {
               <FormSubmitButton loading={loading} />
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </FormShell>
     </div>
   );
 }

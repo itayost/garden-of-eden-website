@@ -41,6 +41,87 @@ function getRankBadgeVariant(rank: number): "default" | "secondary" | "outline" 
   return "outline";
 }
 
+/**
+ * The top-3 podium — first place centered, raised, gold and glowing; silver
+ * and bronze flanking. A leaderboard for kids deserves a podium, not an icon
+ * swap in a table row.
+ */
+function Podium({
+  entries,
+  currentUserId,
+}: {
+  entries: RankingEntry[];
+  currentUserId?: string;
+}) {
+  // POSITIONAL, not rank-keyed: competition ranking produces ties (1,2,2,4),
+  // so requiring exact ranks 1/2/3 would drop tied players from the page
+  // entirely. The first three entries stand on the podium and each base shows
+  // the entry's real rank, ties included.
+  const [first, second, third] = entries;
+  if (!first || !second || !third) return null;
+
+  const column = (
+    entry: RankingEntry,
+    styles: { disc: string; base: string; height: string; discSize: string },
+  ) => {
+    const isCurrentUser = entry.userId === currentUserId;
+    return (
+      <div className="flex max-w-[110px] flex-1 flex-col items-center gap-1.5">
+        <p className="w-full truncate text-center text-xs font-bold">
+          {entry.userName}
+        </p>
+        {isCurrentUser && (
+          <Badge className="bg-forest text-cream hover:bg-forest">אתה</Badge>
+        )}
+        <span
+          className={cn(
+            "grid place-items-center rounded-full font-display text-white",
+            styles.disc,
+            styles.discSize,
+          )}
+        >
+          {entry.userName.slice(0, 1)}
+        </span>
+        <p className="font-mono text-xs text-muted-foreground tabular-nums">
+          {entry.metricValue.toFixed(2)}
+        </p>
+        <div
+          className={cn(
+            "grid w-full place-items-center rounded-t-xl font-display text-2xl text-white",
+            styles.base,
+            styles.height,
+          )}
+        >
+          {entry.rank}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex items-end justify-center gap-2 border-b pb-0 sm:gap-4">
+      {column(second, {
+        disc: "bg-slate-400",
+        base: "bg-slate-400",
+        height: "h-16",
+        discSize: "h-12 w-12 text-lg",
+      })}
+      {column(first, {
+        disc: "bg-gradient-to-b from-gold-light to-gold shadow-[0_0_22px_rgba(245,158,11,0.5)]",
+        base: "bg-gradient-to-b from-gold to-amber-700",
+        height: "h-24",
+        discSize: "h-16 w-16 text-2xl",
+      })}
+      {column(third, {
+        disc: "bg-amber-700",
+        base: "bg-amber-700",
+        height: "h-12",
+        discSize: "h-12 w-12 text-lg",
+      })}
+    </div>
+  );
+}
+
 export function LeaderboardTable({
   leaderboard,
   category,
@@ -74,6 +155,11 @@ export function LeaderboardTable({
     });
   };
 
+  // Positional split matching the Podium: the first three ENTRIES go on the
+  // podium, everyone else in the list — no entry can fall through on a tie.
+  const hasPodium = leaderboard.length >= 3;
+  const listEntries = hasPodium ? leaderboard.slice(3) : leaderboard;
+
   return (
     <Card>
       <CardHeader className="px-4 sm:px-6">
@@ -83,10 +169,16 @@ export function LeaderboardTable({
         </CardTitle>
         <p className="text-xs text-muted-foreground ps-7">{metricLabel}</p>
       </CardHeader>
-      <CardContent className="px-3 sm:px-6">
+      <CardContent className="space-y-4 px-3 sm:px-6">
+        {/* Podium for the top 3; the lists below start at rank 4. Falls back
+            to plain rows when there are fewer than 3 ranked players. */}
+        {hasPodium && (
+          <Podium entries={leaderboard} currentUserId={currentUserId} />
+        )}
+
         {/* Mobile: Card list */}
         <div className="space-y-2 sm:hidden">
-          {leaderboard.map((entry) => {
+          {listEntries.map((entry) => {
             const isCurrentUser = entry.userId === currentUserId;
             const rankIcon = getRankIcon(entry.rank);
 
@@ -95,7 +187,7 @@ export function LeaderboardTable({
                 key={entry.userId}
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-lg border",
-                  isCurrentUser && "bg-primary/5 border-primary/20"
+                  isCurrentUser && "border-2 border-forest bg-forest/5"
                 )}
               >
                 {/* Rank */}
@@ -117,7 +209,7 @@ export function LeaderboardTable({
                       {entry.userName}
                     </span>
                     {isCurrentUser && (
-                      <Badge variant="outline" className="text-[10px] shrink-0">
+                      <Badge className="shrink-0 bg-forest text-[10px] text-cream hover:bg-forest">
                         אתה
                       </Badge>
                     )}
@@ -152,14 +244,14 @@ export function LeaderboardTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leaderboard.map((entry) => {
+              {listEntries.map((entry) => {
                 const isCurrentUser = entry.userId === currentUserId;
                 const rankIcon = getRankIcon(entry.rank);
 
                 return (
                   <TableRow
                     key={entry.userId}
-                    className={cn(isCurrentUser && "bg-primary/5")}
+                    className={cn(isCurrentUser && "bg-forest/5")}
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -179,7 +271,7 @@ export function LeaderboardTable({
                           {entry.userName}
                         </span>
                         {isCurrentUser && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge className="bg-forest text-xs text-cream hover:bg-forest">
                             אתה
                           </Badge>
                         )}

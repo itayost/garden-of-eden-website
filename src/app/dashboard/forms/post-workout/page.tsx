@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 import { postWorkoutSchema, type PostWorkoutFormData, type PostWorkoutFormInput } from "@/lib/validations/forms";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -29,6 +28,9 @@ interface TrainerOption { id: string; full_name: string | null; }
 import { useFormDraft } from "@/features/form-drafts";
 import { useFormSubmission, fetchUserProfile } from "@/hooks/useFormSubmission";
 import { FormBackButton, FormSubmitButton } from "@/components/forms";
+import { FormShell } from "@/components/forms/FormShell";
+import { BrandSlider } from "@/components/ui/brand-slider";
+import { ClipboardCheck } from "lucide-react";
 
 const getDefaultValues = (): PostWorkoutFormInput => ({
   training_date: new Date().toISOString().split("T")[0],
@@ -90,23 +92,17 @@ export default function PostWorkoutFormPage() {
     fetchTrainers();
   }, []);
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const difficultyValue = form.watch("difficulty_level");
-  const satisfactionValue = form.watch("satisfaction_level");
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="sr-only">שאלון אחרי אימון</h1>
       <FormBackButton />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">שאלון אחרי אימון</CardTitle>
-          <CardDescription>
-            ספרו לנו איך היה האימון - המשוב שלכם עוזר לנו להשתפר
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <FormShell
+        icon={ClipboardCheck}
+        title="שאלון אחרי אימון"
+        description="ספרו לנו איך היה האימון - המשוב שלכם עוזר לנו להשתפר"
+        duration="2 דקות"
+      >
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -159,21 +155,14 @@ export default function PostWorkoutFormPage() {
                       1 = קל מאוד, 10 = קשה מאוד
                     </FormDescription>
                     <FormControl>
-                      <div className="space-y-3">
-                        <input
-                          type="range"
-                          min="1"
-                          max="10"
-                          value={field.value}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                        />
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>קל מאוד</span>
-                          <span className="font-bold text-lg text-primary">{difficultyValue}</span>
-                          <span>קשה מאוד</span>
-                        </div>
-                      </div>
+                      <BrandSlider
+                        value={field.value}
+                        onChange={field.onChange}
+                        min={1}
+                        max={10}
+                        startLabel="קל מאוד"
+                        endLabel="קשה מאוד"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -190,21 +179,14 @@ export default function PostWorkoutFormPage() {
                       1 = לא מרוצה בכלל, 10 = מאוד מרוצה
                     </FormDescription>
                     <FormControl>
-                      <div className="space-y-3">
-                        <input
-                          type="range"
-                          min="1"
-                          max="10"
-                          value={field.value}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                        />
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>לא מרוצה</span>
-                          <span className="font-bold text-lg text-primary">{satisfactionValue}</span>
-                          <span>מאוד מרוצה</span>
-                        </div>
-                      </div>
+                      <BrandSlider
+                        value={field.value}
+                        onChange={field.onChange}
+                        min={1}
+                        max={10}
+                        startLabel="לא מרוצה"
+                        endLabel="מאוד מרוצה"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -248,8 +230,7 @@ export default function PostWorkoutFormPage() {
               <FormSubmitButton loading={loading} />
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </FormShell>
     </div>
   );
 }

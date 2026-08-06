@@ -3,24 +3,19 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlayerCard } from "@/components/player-card";
-import {
-  Video,
-  ClipboardCheck,
-  ArrowLeft,
-  Salad,
-  Activity,
-  CheckCircle2,
-  TrendingUp
-} from "lucide-react";
+import { Video, ClipboardCheck, ArrowLeft, Salad, Activity, TrendingUp } from "lucide-react";
 import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getAgeGroup } from "@/types/assessment";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
+import { hebrewWeekday } from "@/lib/utils/date";
+import { israelToday } from "@/lib/utils/tasks";
+import { ActionTile } from "@/components/dashboard/ActionTile";
 import { transformToRatingChartData } from "@/features/progress-charts/lib/transforms";
 import { RatingMigrationBanner } from "@/components/dashboard/RatingMigrationBanner";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
@@ -102,21 +97,18 @@ export default async function DashboardPage() {
       description: "מלאו לפני כל אימון",
       icon: Activity,
       href: "/dashboard/forms/pre-workout",
-      color: "bg-blue-500",
     },
     {
       title: "שאלון אחרי אימון",
       description: "מלאו אחרי כל אימון",
       icon: ClipboardCheck,
       href: "/dashboard/forms/post-workout",
-      color: "bg-green-500",
     },
     {
       title: "שאלון תזונה",
-      description: hasCompletedNutrition ? "הושלם" : "חובה באימון ראשון",
+      description: hasCompletedNutrition ? "אין צורך למלא שוב" : "חובה באימון ראשון",
       icon: Salad,
       href: "/dashboard/forms/nutrition",
-      color: "bg-orange-500",
       completed: hasCompletedNutrition,
     },
     {
@@ -124,19 +116,20 @@ export default async function DashboardPage() {
       description: "תרגילים לעשות בבית",
       icon: Video,
       href: "/dashboard/videos",
-      color: "bg-purple-500",
     },
   ];
 
+  const firstName = (profile?.full_name || "מתאמן").split(" ")[0];
+
   return (
     <div className="space-y-6 md:space-y-8">
-      {/* Welcome Section */}
+      {/* Welcome Section — opens like a game's title screen, not a dashboard */}
       <div data-tour="welcome">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-          שלום, {profile?.full_name || "מתאמן"}! 👋
+        <h1 className="font-display text-3xl text-forest sm:text-4xl">
+          היי, {firstName}!
         </h1>
-        <p className="text-muted-foreground">
-          ברוכים הבאים לאזור האישי שלך ב-Garden of Eden
+        <p className="text-sm text-muted-foreground">
+          {hebrewWeekday(israelToday())} · בוא נעבוד
         </p>
       </div>
 
@@ -258,74 +251,71 @@ export default async function DashboardPage() {
       {/* Mental Session Recordings */}
       <MentalRecordingsCard />
 
-      {/* Quick Actions */}
+      {/* Quick Actions — unified ActionTile grid */}
       <div data-tour="quick-actions">
-        <h2 className="text-xl font-semibold mb-4">פעולות מהירות</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <p className="mb-3 text-[11px] font-bold tracking-widest text-muted-foreground">
+          פעולות מהירות
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {quickActions.map((action) => (
-            <Link
+            <ActionTile
               key={action.href}
               href={action.href}
-            >
-              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group">
-                <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
-                  <div className="flex items-start justify-between mb-2 sm:mb-4">
-                    <div className={`${action.color} rounded-xl p-3 group-hover:scale-110 transition-transform`}>
-                      <action.icon className="h-6 w-6 text-white" />
-                    </div>
-                    {action.completed && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-700">
-                        <CheckCircle2 className="h-3 w-3 ml-1" />
-                        הושלם
-                      </Badge>
-                    )}
-                  </div>
-                  <h3 className="font-semibold mb-1">{action.title}</h3>
-                  <p className="text-sm text-muted-foreground">{action.description}</p>
-                </CardContent>
-              </Card>
-            </Link>
+              icon={action.icon}
+              title={action.title}
+              subtitle={action.description}
+              completed={action.completed}
+            />
           ))}
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Progress zone — the kid's pride cards, finally on fire */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">הסטטיסטיקות שלי</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          {/* Mini Rating Chart */}
-          {assessments && assessments.length > 0 && (
-            <Link href="/dashboard/assessments" className="col-span-2 sm:col-span-1">
-              <div className="h-full hover:shadow-md transition-shadow cursor-pointer">
-                <MiniRatingChartWrapper data={ratingHistory} />
-              </div>
-            </Link>
-          )}
-          {/* Streak Card */}
+        <p className="mb-3 text-[11px] font-bold tracking-widest text-muted-foreground">
+          ההתקדמות שלי
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div data-tour="streak-card">
             <StreakCard streak={streakData} />
           </div>
-          {/* Achievements Card */}
           <AchievementsCard achievements={achievementsData || []} />
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>שאלונים לפני אימון</CardDescription>
-              <CardTitle className="text-3xl">{preWorkoutCount || 0}</CardTitle>
-            </CardHeader>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <Card className="rounded-2xl py-0">
+            <CardContent className="px-3 py-2.5 text-center">
+              <p className="text-xl font-extrabold text-forest tabular-nums">
+                {preWorkoutCount || 0}
+              </p>
+              <p className="text-[10px] text-muted-foreground">שאלוני לפני</p>
+            </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>שאלונים אחרי אימון</CardDescription>
-              <CardTitle className="text-3xl">{postWorkoutCount || 0}</CardTitle>
-            </CardHeader>
+          <Card className="rounded-2xl py-0">
+            <CardContent className="px-3 py-2.5 text-center">
+              <p className="text-xl font-extrabold text-forest tabular-nums">
+                {postWorkoutCount || 0}
+              </p>
+              <p className="text-[10px] text-muted-foreground">שאלוני אחרי</p>
+            </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>סרטונים שנצפו</CardDescription>
-              <CardTitle className="text-3xl">{videosWatched || 0}</CardTitle>
-            </CardHeader>
+          <Card className="rounded-2xl py-0">
+            <CardContent className="px-3 py-2.5 text-center">
+              <p className="text-xl font-extrabold text-forest tabular-nums">
+                {videosWatched || 0}
+              </p>
+              <p className="text-[10px] text-muted-foreground">סרטונים</p>
+            </CardContent>
           </Card>
         </div>
+
+        {assessments && assessments.length > 0 && (
+          <Link href="/dashboard/assessments" className="mt-3 block">
+            <div className="transition-shadow hover:shadow-md">
+              <MiniRatingChartWrapper data={ratingHistory} />
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Goals Section */}

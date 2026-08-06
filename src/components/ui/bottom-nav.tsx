@@ -54,6 +54,13 @@ export function BottomNav({ items, trailing, badges, className }: BottomNavProps
                   : "text-muted-foreground"
               )}
             >
+              {/* Gold dot anchors the active tab at a glance. */}
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1.5 h-1 w-1 rounded-full bg-gold"
+                />
+              )}
               <item.icon className={cn("h-5 w-5", active && "text-primary")} />
               <span className="text-[10px] font-medium leading-none">
                 {item.label}

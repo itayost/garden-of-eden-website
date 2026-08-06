@@ -8,7 +8,7 @@ import { nutritionSchema, type NutritionFormData, type NutritionFormInput, conve
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   Form,
@@ -25,11 +25,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Salad } from "lucide-react";
 import Link from "next/link";
 import { useFormDraft } from "@/features/form-drafts";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { FormBackButton, FormSubmitButton } from "@/components/forms";
+import { FormShell } from "@/components/forms/FormShell";
 
 const defaultValues: NutritionFormInput = {
   years_competitive: "",
@@ -108,7 +109,7 @@ export default function NutritionFormPage() {
 
         <Card className="text-center py-12">
           <CardContent>
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+            <CheckCircle className="mx-auto mb-4 h-16 w-16 text-grass" />
             <h2 className="text-2xl font-bold mb-2">השאלון כבר הושלם</h2>
             <p className="text-muted-foreground mb-6">
               כבר מילאת את שאלון התזונה. אין צורך למלא אותו שוב.
@@ -124,22 +125,22 @@ export default function NutritionFormPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="sr-only">שאלון תזונה</h1>
       <FormBackButton />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">שאלון תזונה</CardTitle>
-          <CardDescription>
-            שאלון מקיף על הרגלי התזונה והבריאות שלך - יש למלא פעם אחת בלבד
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <FormShell
+        icon={Salad}
+        title="שאלון תזונה"
+        description="שאלון מקיף על הרגלי התזונה והבריאות שלך - יש למלא פעם אחת בלבד"
+        duration="5 דקות"
+      >
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Personal Info Section */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">פרטים אישיים</h3>
+                <h3 className="flex items-center gap-2 text-lg font-semibold">
+                  <span className="font-display text-2xl text-gold">01</span>
+                  פרטים אישיים
+                </h3>
 
                 <FormField
                   control={form.control}
@@ -200,7 +201,10 @@ export default function NutritionFormPage() {
 
               {/* Medical History Section */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">היסטוריה רפואית</h3>
+                <h3 className="flex items-center gap-2 text-lg font-semibold">
+                  <span className="font-display text-2xl text-gold">02</span>
+                  היסטוריה רפואית
+                </h3>
 
                 <FormField
                   control={form.control}
@@ -388,8 +392,7 @@ export default function NutritionFormPage() {
               <FormSubmitButton loading={loading} />
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </FormShell>
     </div>
   );
 }
