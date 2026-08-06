@@ -50,7 +50,7 @@ export function BookCover({
     <div
       className={cn(
         "relative rounded-2xl overflow-hidden mb-8",
-        "bg-gradient-to-br from-primary/20 via-primary/10 to-background",
+        "bg-gradient-to-br from-forest/15 via-forest/5 to-background",
         "border border-primary/20 p-6 sm:p-10"
       )}
     >
@@ -72,10 +72,10 @@ export function BookCover({
 
         {/* Title */}
         <div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight tracking-tight">
+          <h1 className="font-display text-4xl leading-tight text-forest sm:text-6xl">
             ספר פיתוח
             <br />
-            <span className="text-primary">שחקן</span>
+            <span className="gradient-text-gold">שחקן</span>
           </h1>
           <p className="mt-3 text-sm text-muted-foreground font-light">
             מסלול מאורגן לפיתוח מיומנויות כדורגל
@@ -83,7 +83,7 @@ export function BookCover({
         </div>
 
         {/* Divider */}
-        <div className="w-16 h-0.5 bg-gradient-to-r from-primary to-yellow-400 rounded-full" />
+        <div className="w-16 h-0.5 bg-gradient-to-l from-grass to-gold rounded-full" />
 
         {/* Stats */}
         <div className="flex flex-wrap gap-6">
@@ -132,7 +132,7 @@ export function BookCover({
             </span>
           )}
           {position && (
-            <span className="inline-flex items-center rounded-full bg-yellow-400/10 border border-yellow-400/20 px-3 py-1 text-xs font-semibold text-yellow-600 dark:text-yellow-400">
+            <span className="inline-flex items-center rounded-full bg-gold/10 border border-gold/25 px-3 py-1 text-xs font-semibold text-gold">
               {position}
             </span>
           )}

@@ -46,7 +46,7 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
   const youtubeId = getYouTubeId(video.youtube_url);
 
   return (
-    <Card className={`overflow-hidden ${watched ? "bg-green-50/50 border-green-200" : ""}`}>
+    <Card className={`overflow-hidden ${watched ? "border-grass/40 bg-grass/5" : ""}`}>
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Thumbnail / Play Button */}

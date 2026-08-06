@@ -102,9 +102,9 @@ export function PhysicalMetricChart({ data, height = 200 }: PhysicalMetricChartP
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke="hsl(var(--primary))"
+                stroke="var(--color-grass)"
                 strokeWidth={2}
-                dot={{ r: 4, fill: "hsl(var(--primary))" }}
+                dot={{ r: 4, fill: "var(--color-grass)" }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>

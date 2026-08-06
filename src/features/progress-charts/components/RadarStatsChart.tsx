@@ -48,8 +48,8 @@ export function RadarStatsChart({ stats, height = 300 }: RadarStatsChartProps) {
           <Radar
             name="Stats"
             dataKey="value"
-            stroke="hsl(142, 76%, 36%)"
-            fill="hsl(142, 76%, 36%)"
+            stroke="var(--color-grass)"
+            fill="var(--color-grass)"
             fillOpacity={0.3}
           />
         </RadarChart>

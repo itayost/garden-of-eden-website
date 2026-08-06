@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -9,7 +9,10 @@ export const metadata: Metadata = {
   title: "מבדקים | Garden of Eden",
 };
 import { Calendar, Target, TrendingUp, Activity, BarChart3, GitCompare } from "lucide-react";
-import { PlayerCard } from "@/components/player-card/PlayerCard";
+import {
+  AssessmentPlayerPanel,
+  AssessmentPlayerStrip,
+} from "./AssessmentPlayerPanel";
 import {
   ASSESSMENT_LABELS_HE,
   ASSESSMENT_UNITS,
@@ -161,7 +164,7 @@ export default async function DashboardAssessmentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">המבדקים שלי</h1>
+        <h1 className="font-display text-3xl text-forest">המבדקים שלי</h1>
         <div className="flex items-center gap-2 mt-1">
           {ageGroup && (
             <Badge variant="outline">{ageGroup.label}</Badge>
@@ -171,6 +174,13 @@ export default async function DashboardAssessmentsPage() {
           </span>
         </div>
       </div>
+
+      {/* Phones keep the player identity — the side panel is desktop-only. */}
+      <AssessmentPlayerStrip
+        fullName={profile?.full_name ?? null}
+        ratings={calculatedRatings}
+        latestAssessment={latestAssessment ?? null}
+      />
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="progress" dir="rtl">
@@ -195,58 +205,14 @@ export default async function DashboardAssessmentsPage() {
         {/* Progress Charts Tab */}
         <TabsContent value="progress">
           <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-            {/* Left Column - Card Preview (hidden on mobile) */}
-            <div className="hidden lg:block space-y-4">
-              {calculatedRatings && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">הכרטיס שלי</CardTitle>
-                    <CardDescription>מבוסס על המבדק האחרון</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex justify-center">
-                    <PlayerCard
-                      playerName={profile?.full_name || "שחקן"}
-                      position="CM"
-                      cardType="gold"
-                      overallRating={calculatedRatings.overall_rating}
-                      stats={{
-                        pace: calculatedRatings.pace,
-                        shooting: calculatedRatings.shooting,
-                        passing: calculatedRatings.passing,
-                        dribbling: calculatedRatings.dribbling,
-                        defending: calculatedRatings.defending,
-                        physical: calculatedRatings.physical,
-                      }}
-                      avatarUrl={profile?.processed_avatar_url ?? profile?.avatar_url ?? undefined}
-                      linkToStats={false}
-                      size="lg"
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
-              {latestAssessment && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">מבדק אחרון</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">תאריך</span>
-                      <span>
-                        {new Date(latestAssessment.assessment_date).toLocaleDateString("he-IL")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">שלמות</span>
-                      <Badge variant="outline">
-                        {getAssessmentCompleteness(latestAssessment)}%
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            <AssessmentPlayerPanel
+              fullName={profile?.full_name ?? null}
+              position={profile?.position ?? null}
+              avatarUrl={profile?.processed_avatar_url ?? profile?.avatar_url ?? null}
+              ratings={calculatedRatings}
+              latestAssessment={latestAssessment ?? null}
+              completeness={latestAssessment ? getAssessmentCompleteness(latestAssessment) : null}
+            />
 
             {/* Right Column - Progress Charts */}
             <div>
@@ -266,58 +232,14 @@ export default async function DashboardAssessmentsPage() {
         {/* History Tab */}
         <TabsContent value="history">
           <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-            {/* Left Column - Card Preview (hidden on mobile) */}
-            <div className="hidden lg:block space-y-4">
-              {calculatedRatings && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">הכרטיס שלי</CardTitle>
-                    <CardDescription>מבוסס על המבדק האחרון</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex justify-center">
-                    <PlayerCard
-                      playerName={profile?.full_name || "שחקן"}
-                      position="CM"
-                      cardType="gold"
-                      overallRating={calculatedRatings.overall_rating}
-                      stats={{
-                        pace: calculatedRatings.pace,
-                        shooting: calculatedRatings.shooting,
-                        passing: calculatedRatings.passing,
-                        dribbling: calculatedRatings.dribbling,
-                        defending: calculatedRatings.defending,
-                        physical: calculatedRatings.physical,
-                      }}
-                      avatarUrl={profile?.processed_avatar_url ?? profile?.avatar_url ?? undefined}
-                      linkToStats={false}
-                      size="lg"
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
-              {latestAssessment && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">מבדק אחרון</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">תאריך</span>
-                      <span>
-                        {new Date(latestAssessment.assessment_date).toLocaleDateString("he-IL")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">שלמות</span>
-                      <Badge variant="outline">
-                        {getAssessmentCompleteness(latestAssessment)}%
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            <AssessmentPlayerPanel
+              fullName={profile?.full_name ?? null}
+              position={profile?.position ?? null}
+              avatarUrl={profile?.processed_avatar_url ?? profile?.avatar_url ?? null}
+              ratings={calculatedRatings}
+              latestAssessment={latestAssessment ?? null}
+              completeness={latestAssessment ? getAssessmentCompleteness(latestAssessment) : null}
+            />
 
             {/* Right Column - Assessment History */}
             <div className="space-y-4">

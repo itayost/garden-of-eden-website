@@ -174,19 +174,42 @@ export function AchievementsCard({
     return sum + (config?.points || 0);
   }, 0);
 
+  const hasAchievements = achievements.length > 0;
+
+  // A pride card, matching StreakCard's fire: gold gradient with a glow once
+  // the first badge lands; quiet dashed invitation before that.
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-1 text-muted-foreground text-sm">
-          <Trophy className="h-4 w-4 text-yellow-500" />
+    <Card
+      className={
+        hasAchievements
+          ? "h-full rounded-2xl border-0 bg-gradient-to-bl from-yellow-900 via-amber-600 to-gold py-0 text-white shadow-[0_0_18px_rgba(245,158,11,0.35)]"
+          : "h-full rounded-2xl border border-dashed bg-muted/30 py-0"
+      }
+    >
+      <CardContent className="flex h-full flex-col justify-between gap-2 px-4 py-3.5">
+        <p
+          className={
+            hasAchievements
+              ? "flex items-center gap-1 text-xs font-semibold text-amber-100"
+              : "flex items-center gap-1 text-xs font-semibold text-muted-foreground"
+          }
+        >
+          <Trophy className={hasAchievements ? "h-4 w-4 text-yellow-300" : "h-4 w-4"} />
           הישגים
-        </div>
-        <CardTitle className="text-3xl">{achievements.length}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-xs text-muted-foreground">
-          {totalPoints} נקודות
         </p>
+        {hasAchievements ? (
+          <>
+            <p className="font-display text-4xl leading-none">
+              {achievements.length} <span className="text-2xl">🏆</span>
+            </p>
+            <p className="text-xs text-amber-100/90">{totalPoints} נקודות</p>
+          </>
+        ) : (
+          <>
+            <p className="text-3xl font-extrabold text-muted-foreground">0</p>
+            <p className="text-xs text-muted-foreground">ההישג הראשון מחכה לך</p>
+          </>
+        )}
       </CardContent>
     </Card>
   );

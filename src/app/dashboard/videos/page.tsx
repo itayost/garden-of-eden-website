@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BrandProgress } from "@/components/ui/brand-progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -94,14 +95,12 @@ export default async function VideosPage() {
             </div>
           </div>
           {/* Progress bar */}
-          <div className="mt-4 bg-muted rounded-full h-3">
-            <div
-              className="bg-primary rounded-full h-3 transition-all"
-              style={{
-                width: `${totalVideos > 0 ? (watchedVideos / totalVideos) * 100 : 0}%`,
-              }}
-            />
-          </div>
+          <BrandProgress
+            value={watchedVideos}
+            max={totalVideos}
+            className="mt-4"
+            label="התקדמות צפייה בסרטונים"
+          />
         </CardContent>
       </Card>
 
