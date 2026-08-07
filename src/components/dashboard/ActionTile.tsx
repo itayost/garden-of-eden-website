@@ -2,16 +2,36 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Check, ChevronLeft } from "lucide-react";
+import {
+  Activity,
+  Brain,
+  Check,
+  ChevronLeft,
+  ClipboardCheck,
+  Salad,
+  Video,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+// Icons resolve here, inside the client boundary — server pages pass a name.
+// Component functions are not serializable across the Server→Client boundary.
+const ICONS = {
+  activity: Activity,
+  brain: Brain,
+  "clipboard-check": ClipboardCheck,
+  salad: Salad,
+  video: Video,
+} satisfies Record<string, LucideIcon>;
+
+export type ActionTileIcon = keyof typeof ICONS;
+
 interface ActionTileProps {
   href: string;
-  icon: LucideIcon;
+  icon: ActionTileIcon;
   title: string;
   /** One short status line: "מולא היום", "שבת מול הפועל", a count, etc. */
   subtitle?: string;
@@ -28,12 +48,14 @@ interface ActionTileProps {
  */
 export function ActionTile({
   href,
-  icon: Icon,
+  icon,
   title,
   subtitle,
   completed = false,
   tourId,
 }: ActionTileProps) {
+  const Icon = ICONS[icon];
+
   return (
     <motion.div
       whileHover={{ scale: 1.02, y: -2 }}

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlayerCard } from "@/components/player-card";
-import { Video, ClipboardCheck, ArrowLeft, Salad, Activity, TrendingUp } from "lucide-react";
+import { ArrowLeft, Salad, TrendingUp } from "lucide-react";
 import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
@@ -15,7 +15,7 @@ import { getAgeGroup } from "@/types/assessment";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
 import { hebrewWeekday } from "@/lib/utils/date";
 import { israelToday } from "@/lib/utils/tasks";
-import { ActionTile } from "@/components/dashboard/ActionTile";
+import { ActionTile, type ActionTileIcon } from "@/components/dashboard/ActionTile";
 import { transformToRatingChartData } from "@/features/progress-charts/lib/transforms";
 import { RatingMigrationBanner } from "@/components/dashboard/RatingMigrationBanner";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
@@ -91,30 +91,36 @@ export default async function DashboardPage() {
     ? await transformToRatingChartData(supabase, user.id)
     : [];
 
-  const quickActions = [
+  const quickActions: Array<{
+    title: string;
+    description: string;
+    icon: ActionTileIcon;
+    href: string;
+    completed?: boolean;
+  }> = [
     {
       title: "שאלון לפני אימון",
       description: "מלאו לפני כל אימון",
-      icon: Activity,
+      icon: "activity",
       href: "/dashboard/forms/pre-workout",
     },
     {
       title: "שאלון אחרי אימון",
       description: "מלאו אחרי כל אימון",
-      icon: ClipboardCheck,
+      icon: "clipboard-check",
       href: "/dashboard/forms/post-workout",
     },
     {
       title: "שאלון תזונה",
       description: hasCompletedNutrition ? "אין צורך למלא שוב" : "חובה באימון ראשון",
-      icon: Salad,
+      icon: "salad",
       href: "/dashboard/forms/nutrition",
       completed: hasCompletedNutrition,
     },
     {
       title: "סרטוני תרגילים",
       description: "תרגילים לעשות בבית",
-      icon: Video,
+      icon: "video",
       href: "/dashboard/videos",
     },
   ];

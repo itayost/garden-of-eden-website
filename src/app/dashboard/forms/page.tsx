@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Activity, Brain, ClipboardCheck, Salad } from "lucide-react";
 
-import { ActionTile } from "@/components/dashboard/ActionTile";
+import { ActionTile, type ActionTileIcon } from "@/components/dashboard/ActionTile";
 
 export const metadata: Metadata = {
   title: "טפסים | Garden of Eden",
@@ -22,34 +21,40 @@ export default async function FormsPage() {
     .from("nutrition_forms")
     .select("id")
     .eq("user_id", user?.id || "")
-    .single();
+    .maybeSingle();
 
   const hasCompletedNutrition = !!nutritionForm;
 
-  const forms = [
+  const forms: Array<{
+    title: string;
+    subtitle: string;
+    icon: ActionTileIcon;
+    href: string;
+    completed?: boolean;
+  }> = [
     {
       title: "שאלון לפני אימון",
       subtitle: "למילוי לפני כל אימון",
-      icon: Activity,
+      icon: "activity",
       href: "/dashboard/forms/pre-workout",
     },
     {
       title: "שאלון אחרי אימון",
       subtitle: "למילוי אחרי כל אימון",
-      icon: ClipboardCheck,
+      icon: "clipboard-check",
       href: "/dashboard/forms/post-workout",
     },
     {
       title: "שאלון תזונה",
       subtitle: hasCompletedNutrition ? "אין צורך למלא שוב" : "חובה באימון ראשון",
-      icon: Salad,
+      icon: "salad",
       href: "/dashboard/forms/nutrition",
       completed: hasCompletedNutrition,
     },
     {
       title: "שאלון מנטלי",
       subtitle: "אחרי כל מפגש זום עם עומר",
-      icon: Brain,
+      icon: "brain",
       href: "/dashboard/forms/mental",
     },
   ];
