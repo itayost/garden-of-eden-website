@@ -5,7 +5,7 @@ import Image from "next/image";
 
 const staffMembers = [
   { name: "עדן בן חמו", role: "מייסד גארדן אוף עדן", image: "/landing/staff/eden-ben-hamo.webp", founder: true },
-  { name: "עידו ברק", role: "מאמן כדורגל ואנליסט וידיאו", image: "" },
+  { name: "עידו ברק", role: "מאמן כדורגל ואנליסט וידיאו", image: "/landing/staff/ido-barak.webp" },
   { name: "לידור זנטי", role: "מאמן יכולות אתלטיות", image: "/landing/staff/lidor-hay-zinti.webp" },
   { name: "נדב דטנר", role: "מאמן יכולות אתלטיות", image: "/landing/staff/nadav-datner.webp" },
   { name: "דין לוי", role: "מאמן יכולות אתלטיות", image: "/landing/staff/dean-levi.webp" },
