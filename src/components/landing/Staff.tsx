@@ -12,7 +12,6 @@ const staffMembers = [
   { name: "דניאל קמרט", role: "תזונאי קליני", image: "/landing/staff/daniel-kamrat.webp" },
   { name: "אביעד וכשטוק", role: "מאמן יכולות אתלטיות", image: "/landing/staff/aviad-vachshtok.webp" },
   { name: "יוני דנינו", role: "ספורטרפיסט", image: "/landing/staff/yoni-danino.webp" },
-  { name: "גבריאל פיזיסקי", role: "פיזוטרפיסט", image: "" },
   { name: "חוסין סקר", role: "דוקטור ספורט", image: "" },
   { name: "עמית סוארי", role: "מאמן שוערים", image: "/landing/staff/amit-suari.webp" },
   { name: "רן אטיאס", role: "מאמן יכולות אתלטיות", image: "/landing/staff/ran-atias.webp" },
