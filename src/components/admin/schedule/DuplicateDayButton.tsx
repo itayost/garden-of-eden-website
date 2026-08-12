@@ -65,9 +65,14 @@ export function DuplicateDayButton({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" disabled={targetHasSlots}>
-          <CopyPlus className="me-2 h-4 w-4" />
-          שכפל מיום קודם
+        {/* Icon-only on a phone — see CopyWhatsAppButton. */}
+        <Button
+          variant="outline"
+          disabled={targetHasSlots}
+          aria-label="שכפל מיום קודם"
+        >
+          <CopyPlus className="h-4 w-4" />
+          <span className="hidden sm:inline">שכפל מיום קודם</span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

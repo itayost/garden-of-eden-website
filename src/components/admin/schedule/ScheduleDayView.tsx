@@ -24,6 +24,7 @@ interface ScheduleDayViewProps {
   sessionSummaries: Record<string, SessionSummary>;
   /** Set when loading failed — renders an error state, never a false empty day. */
   loadError: string | null;
+  /** Admin-only powers: whole-day duplication. Slots themselves are staff-wide. */
   isAdmin: boolean;
   currentUserId: string;
   trainers: TrainerOption[];
@@ -130,21 +131,29 @@ export function ScheduleDayView({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/*
+          On a phone the primary action takes its own full-width row above the
+          secondary ones (order-first + w-full force the wrap) — the board is
+          built from the field, and "סלוט חדש" must not end up as the third
+          button in a cramped wrap. From sm up the row reads normally.
+        */}
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Button
+            onClick={openCreate}
+            disabled={loadError !== null}
+            className="order-first w-full sm:order-none sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            סלוט חדש
+          </Button>
           <CopyWhatsAppButton slots={slots} />
           {isAdmin && (
-            <>
-              <DuplicateDayButton
-                targetDate={date}
-                // On a load error the real slot state is unknown; treating the
-                // day as occupied disables duplication onto it.
-                targetHasSlots={loadError !== null || slots.length > 0}
-              />
-              <Button onClick={openCreate} disabled={loadError !== null}>
-                <Plus className="me-2 h-4 w-4" />
-                סלוט חדש
-              </Button>
-            </>
+            <DuplicateDayButton
+              targetDate={date}
+              // On a load error the real slot state is unknown; treating the
+              // day as occupied disables duplication onto it.
+              targetHasSlots={loadError !== null || slots.length > 0}
+            />
           )}
         </div>
       </div>
@@ -162,8 +171,16 @@ export function ScheduleDayView({
               <CalendarDays className="h-6 w-6 text-muted-foreground" />
             </span>
             <p className="text-muted-foreground">
-              אין לוח ליום זה{isAdmin ? " — הוסף סלוט או שכפל מיום קודם." : "."}
+              {isAdmin
+                ? "אין לוח ליום זה — הוסף סלוט או שכפל מיום קודם."
+                : "אין לוח ליום זה — הוסף את הסלוט הראשון."}
             </p>
+            {/* On an empty day this is the most visible thing on the screen —
+                the answer to "where do I add a slot from my phone". */}
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              סלוט חדש
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -186,7 +203,6 @@ export function ScheduleDayView({
                     slot={slot}
                     date={date}
                     sessionSummaries={sessionSummaries}
-                    isAdmin={isAdmin}
                     isMine={slot.trainer_id === currentUserId}
                     onEdit={() => openEdit(slot)}
                   />
@@ -197,17 +213,15 @@ export function ScheduleDayView({
         </div>
       )}
 
-      {isAdmin && (
-        <SlotFormDialog
-          key={formInstance}
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          date={date}
-          slot={editTarget}
-          trainers={trainers}
-          trainees={trainees}
-        />
-      )}
+      <SlotFormDialog
+        key={formInstance}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        date={date}
+        slot={editTarget}
+        trainers={trainers}
+        trainees={trainees}
+      />
     </div>
   );
 }
