@@ -31,17 +31,19 @@ interface SlotCardProps {
   date: string;
   /** trainee_id -> session summary for this day. */
   sessionSummaries: Record<string, SessionSummary>;
-  isAdmin: boolean;
   /** True when the viewing trainer is this slot's trainer — highlighted. */
   isMine: boolean;
   onEdit: () => void;
 }
 
+/**
+ * Editing is not gated here: the page is already behind verifyAdminOrTrainer,
+ * and the board is one shared document that any staff member may fix.
+ */
 export function SlotCard({
   slot,
   date,
   sessionSummaries,
-  isAdmin,
   isMine,
   onEdit,
 }: SlotCardProps) {
@@ -105,26 +107,24 @@ export function SlotCard({
             )}
           </div>
 
-          {isAdmin && (
-            <div className="flex shrink-0 gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onEdit}
-                aria-label="עריכת סלוט"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setConfirmOpen(true)}
-                aria-label="מחיקת סלוט"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <div className="flex shrink-0 gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onEdit}
+              aria-label="עריכת סלוט"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setConfirmOpen(true)}
+              aria-label="מחיקת סלוט"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-2 px-4 pb-3">

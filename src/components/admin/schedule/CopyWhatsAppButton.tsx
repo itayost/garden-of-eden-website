@@ -30,10 +30,17 @@ export function CopyWhatsAppButton({ slots }: CopyWhatsAppButtonProps) {
     }
   };
 
+  // Icon-only on a phone: the full label is the widest thing in the header row
+  // and would push the primary "סלוט חדש" out of sight.
   return (
-    <Button variant="outline" onClick={handleCopy} disabled={slots.length === 0}>
-      <MessageCircle className="me-2 h-4 w-4" />
-      העתק כהודעת וואטסאפ
+    <Button
+      variant="outline"
+      onClick={handleCopy}
+      disabled={slots.length === 0}
+      aria-label="העתק כהודעת וואטסאפ"
+    >
+      <MessageCircle className="h-4 w-4" />
+      <span className="hidden sm:inline">העתק כהודעת וואטסאפ</span>
     </Button>
   );
 }

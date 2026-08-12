@@ -8,7 +8,13 @@ Two facts decided it. First, bookings are not reliably managed in Arbox — the 
 
 ## Consequences
 
-The schedule requires a few minutes of admin input each morning, mitigated by day duplication. Roster entries allow free-text names precisely because the source is a human list, not a registration system.
+The schedule requires a few minutes of staff input each morning, mitigated by day duplication.
+
+> Amended 2026-08-12: "admin-authored" now means staff-authored. Trainers may
+> create, edit, and delete slots so the board can be built from a phone in the
+> studio; whole-day duplication remains admin-only. The decision above — hand
+> authored, not synced from Arbox — is unchanged.
+ Roster entries allow free-text names precisely because the source is a human list, not a registration system.
 
 ## Revisit when
 

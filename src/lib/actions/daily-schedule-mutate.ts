@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { verifyAdmin } from "@/lib/actions/shared";
+import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import {
@@ -33,14 +34,23 @@ function revalidateSchedule() {
 /**
  * Resolves the trainer's display-name snapshot. The snapshot keeps the
  * schedule readable if the trainer is later renamed or deleted.
+ *
+ * Admin client on purpose: the profiles SELECT policies let a trainer read
+ * only their own row and active trainer rows, so a trainer assigning a slot to
+ * an admin-who-coaches would be told "המאמן שנבחר אינו קיים" — a lie. Safe
+ * because every caller gated on verifyAdminOrTrainer, and this reads one name.
+ *
+ * Deliberately does not filter on is_active, unlike the form's pick-list: a
+ * deactivated trainer cannot be newly assigned (they are absent from the
+ * list), but a slot that already carries one must stay editable, or it is
+ * frozen on the board until someone clears the trainer by hand.
  */
 async function resolveTrainerName(
-  supabase: Awaited<ReturnType<typeof createClient>>,
   trainerId: string | null,
 ): Promise<{ name: string | null } | { error: string }> {
   if (!trainerId) return { name: null };
 
-  const { data, error } = await supabase
+  const { data, error } = await createAdminClient()
     .from("profiles")
     .select("full_name")
     .eq("id", trainerId)
@@ -60,9 +70,54 @@ async function resolveTrainerName(
 }
 
 /**
+ * Verifies every linked roster entry points at a real, active trainee.
+ *
+ * The schema only checks UUID shape and the FK accepts any profile id, so
+ * without this a crafted call could plant an admin's — or a deactivated
+ * trainee's — id in a roster. The row would look linked on the board but
+ * behave as free text and dead-end in the session builder, which filters on
+ * role. Cheap to get right here, and the actor set is now every trainer.
+ *
+ * Admin client for the same reason as resolveTrainerName: a trainer cannot
+ * read trainee rows through RLS. Callers are gated on verifyAdminOrTrainer.
+ */
+async function verifyRosterTrainees(
+  trainees: { traineeId: string | null; name: string }[],
+): Promise<{ error: string | null }> {
+  const ids = trainees
+    .map((entry) => entry.traineeId)
+    .filter((id): id is string => id !== null);
+
+  // An all-free-text roster is legitimate — those names have no account.
+  if (ids.length === 0) return { error: null };
+
+  const { data, error } = await createAdminClient()
+    .from("profiles")
+    .select("id")
+    .in("id", ids)
+    .eq("role", "trainee")
+    .eq("is_active", true)
+    .is("deleted_at", null);
+
+  if (error) {
+    console.error("Verify roster trainees error:", error);
+    return { error: "שגיאה באימות רשימת המתאמנים" };
+  }
+
+  // The schema already rejects duplicate ids, so a matching count means every
+  // id resolved to a distinct active trainee.
+  if ((data?.length ?? 0) !== ids.length) {
+    return { error: "אחד המתאמנים ברשימה אינו קיים או אינו פעיל" };
+  }
+
+  return { error: null };
+}
+
+/**
  * Atomic roster replace via the replace_slot_roster RPC — delete + insert in
  * one transaction, so a failure can never leave a slot with a lost or partial
- * roster. SECURITY INVOKER: the admin-only RLS write policy still applies.
+ * roster. SECURITY INVOKER: the staff (admin or trainer) RLS write policy on
+ * daily_schedule_slot_trainees still applies.
  */
 async function replaceRoster(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -105,8 +160,12 @@ function rosterRows(
   }));
 }
 
+/**
+ * Trainers build the board too, not just admins — the slot is recorded where
+ * the work happens. Matches the RLS staff-write policy on the schedule tables.
+ */
 export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
-  const { error: authError, user } = await verifyAdmin();
+  const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const validated = slotSchema.safeParse(input);
@@ -121,8 +180,11 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
     validated.data;
   const supabase = await createClient();
 
-  const trainerResult = await resolveTrainerName(supabase, trainerId);
+  const trainerResult = await resolveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
+
+  const rosterCheck = await verifyRosterTrainees(trainees);
+  if (rosterCheck.error) return { error: rosterCheck.error };
 
   const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")
     .insert({
@@ -163,9 +225,12 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
  * Updates a slot. The roster is replaced wholesale (delete + insert) — the
  * form always submits the complete list, and roster rows carry no state of
  * their own worth preserving.
+ *
+ * Any staff member may edit any slot: the board is one shared document, and a
+ * trainer who spots a wrong hour fixes it rather than chasing an admin.
  */
 export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const validated = slotUpdateSchema.safeParse(input);
@@ -187,8 +252,11 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
 
   if (!existing) return { error: "הסלוט לא נמצא" };
 
-  const trainerResult = await resolveTrainerName(supabase, trainerId);
+  const trainerResult = await resolveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
+
+  const rosterCheck = await verifyRosterTrainees(trainees);
+  if (rosterCheck.error) return { error: rosterCheck.error };
 
   const { data: updated, error } = await typedFrom(supabase, "daily_schedule_slots")
     .update({
@@ -217,7 +285,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
 }
 
 export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const validated = slotIdSchema.safeParse({ slotId });
@@ -225,15 +293,20 @@ export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
 
   const supabase = await createClient();
 
-  // Roster rows cascade with the slot.
-  const { error } = await typedFrom(supabase, "daily_schedule_slots")
+  // Roster rows cascade with the slot. The .select() is not decoration: a
+  // delete that RLS rejects returns no error and zero rows, which would
+  // otherwise be reported to the user as a successful deletion.
+  const { data: deleted, error } = await typedFrom(supabase, "daily_schedule_slots")
     .delete()
-    .eq("id", validated.data.slotId);
+    .eq("id", validated.data.slotId)
+    .select("id");
 
   if (error) {
     console.error("Delete slot error:", error);
     return { error: "שגיאה במחיקת הסלוט" };
   }
+
+  if ((deleted?.length ?? 0) === 0) return { error: "הסלוט לא נמצא" };
 
   revalidateSchedule();
 
@@ -244,6 +317,13 @@ export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
  * Copies every slot (with roster) from one day to another. Refuses when the
  * target day already has slots — duplicating on top of an existing schedule
  * would double it, and "merge" has no obvious meaning.
+ *
+ * Admin-only, unlike the single-slot writes above: rebuilding a whole day in
+ * one click is an admin decision. RLS cannot tell a bulk copy from the
+ * individual inserts it is made of, so this gate lives here and nowhere else —
+ * do not "align" it with the staff-write policy. It is an ergonomic guard, not
+ * a containment boundary: a trainer can still build or clear the same day slot
+ * by slot, so do not rely on it to bound what a trainer can damage.
  */
 export async function duplicateDayAction(
   input: DuplicateDayInput,

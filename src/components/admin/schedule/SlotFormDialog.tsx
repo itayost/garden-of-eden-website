@@ -7,11 +7,11 @@ import { toast } from "sonner";
 
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SheetDialogContent } from "@/components/ui/sheet-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,16 +158,23 @@ export function SlotFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <SheetDialogContent>
+        {/* Padding lives on the header and the body, not the surface, so the
+            header and its close button stay put while the body scrolls. */}
+        <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
           <DialogTitle>{slot ? "עריכת סלוט" : "סלוט חדש"}</DialogTitle>
           <DialogDescription>
             שעה, מאמן, מתאמנים ופוקוס — קבוצה אחת בלוח היומי.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <form
+          onSubmit={handleSubmit}
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6"
+        >
+          {/* One column on a phone: the hour chips and the trainer select each
+              need the full width to stay tappable. */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="slot-time">שעה</Label>
               {/* The academy's real hours — one tap beats the time picker. */}
@@ -352,7 +359,10 @@ export function SlotFormDialog({
             />
           </div>
 
-          <div className="flex justify-end gap-2">
+          {/* Sticky inside the scrolling body: on a phone the roster can grow
+              past the sheet, and שמירה must never be the thing you scroll to
+              find. -mx cancels the body padding so the bar spans the surface. */}
+          <div className="sticky bottom-0 -mx-4 flex justify-end gap-2 border-t bg-background px-4 pt-3 pb-1 sm:-mx-6 sm:px-6">
             <Button
               type="button"
               variant="outline"
@@ -367,7 +377,7 @@ export function SlotFormDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
+      </SheetDialogContent>
     </Dialog>
   );
 }

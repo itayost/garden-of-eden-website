@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { ScheduleDayView } from "@/components/admin/schedule/ScheduleDayView";
-import { getLinkableTraineesAction } from "@/lib/actions/admin-tasks";
-import { listTrainersForAssignmentAction } from "@/lib/actions/admin-trainers-list";
 import { getScheduleAction } from "@/lib/actions/daily-schedule";
+import { getSlotFormOptionsAction } from "@/lib/actions/schedule-options";
 import { getSessionSummariesAction } from "@/lib/actions/training-sessions";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { israelToday } from "@/lib/utils/tasks";
@@ -27,16 +26,15 @@ export default async function SchedulePage({ searchParams }: PageProps) {
   const date =
     params.date && isValidDateString(params.date) ? params.date : israelToday();
 
-  // Trainer and trainee rosters feed admin-only editing UI; a trainer reads
-  // the schedule and never needs them. Session summaries feed the per-trainee
-  // built/not-built indicators, which both roles see.
-  const [scheduleResult, summariesResult, trainersResult, traineesResult] =
-    await Promise.all([
-      getScheduleAction(date),
-      getSessionSummariesAction(date),
-      isAdmin ? listTrainersForAssignmentAction() : null,
-      isAdmin ? getLinkableTraineesAction() : null,
-    ]);
+  // Both roles edit slots, so both need the pick-lists that feed the slot form
+  // (a trainer cannot read trainee rows through RLS, hence the dedicated
+  // action). Session summaries feed the per-trainee built/not-built
+  // indicators. isAdmin now gates only whole-day duplication.
+  const [scheduleResult, summariesResult, optionsResult] = await Promise.all([
+    getScheduleAction(date),
+    getSessionSummariesAction(date),
+    getSlotFormOptionsAction(),
+  ]);
 
   // A load error must not render as an empty day: "אין לוח" invites the admin
   // to rebuild or duplicate onto a day that actually has slots.
@@ -46,10 +44,10 @@ export default async function SchedulePage({ searchParams }: PageProps) {
   // failing the whole page over.
   const sessionSummaries =
     "success" in summariesResult ? summariesResult.data : {};
-  const trainers =
-    trainersResult && "success" in trainersResult ? trainersResult.data : [];
-  const trainees =
-    traineesResult && "success" in traineesResult ? traineesResult.data : [];
+  const options =
+    "success" in optionsResult
+      ? optionsResult.data
+      : { trainers: [], trainees: [] };
 
   return (
     <ScheduleDayView
@@ -60,8 +58,8 @@ export default async function SchedulePage({ searchParams }: PageProps) {
       loadError={loadError}
       isAdmin={isAdmin}
       currentUserId={user!.id}
-      trainers={trainers}
-      trainees={trainees}
+      trainers={options.trainers}
+      trainees={options.trainees}
     />
   );
 }
