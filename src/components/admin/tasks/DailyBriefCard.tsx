@@ -14,17 +14,19 @@ interface DailyBriefCardProps {
   brief: DailyBrief | null;
   /** ISO YYYY-MM-DD in Israel time. */
   briefDate: string;
-  isAdmin: boolean;
 }
 
 /**
  * Today's brief, at the top of the tasks page.
  *
+ * Every staff member who reaches this page may write it — the page itself is
+ * gated on verifyAdminOrTrainer, so there is no role check here.
+ *
  * When no brief exists for today this renders an explicit empty state. It must
  * never fall back to an earlier day's brief — stale operational instructions
  * are worse than none.
  */
-export function DailyBriefCard({ brief, briefDate, isAdmin }: DailyBriefCardProps) {
+export function DailyBriefCard({ brief, briefDate }: DailyBriefCardProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
@@ -36,25 +38,23 @@ export function DailyBriefCard({ brief, briefDate, isAdmin }: DailyBriefCardProp
             בריף יומי
           </CardTitle>
 
-          {isAdmin && (
-            <Button
-              variant={brief ? "outline" : "default"}
-              size="sm"
-              onClick={() => setDialogOpen(true)}
-            >
-              {brief ? (
-                <>
-                  <Pencil className="me-2 h-4 w-4" />
-                  עריכה
-                </>
-              ) : (
-                <>
-                  <Plus className="me-2 h-4 w-4" />
-                  כתיבת בריף
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            variant={brief ? "outline" : "default"}
+            size="sm"
+            onClick={() => setDialogOpen(true)}
+          >
+            {brief ? (
+              <>
+                <Pencil className="me-2 h-4 w-4" />
+                עריכה
+              </>
+            ) : (
+              <>
+                <Plus className="me-2 h-4 w-4" />
+                כתיבת בריף
+              </>
+            )}
+          </Button>
         </CardHeader>
 
         <CardContent>
@@ -72,24 +72,22 @@ export function DailyBriefCard({ brief, briefDate, isAdmin }: DailyBriefCardProp
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              אין בריף להיום
-              {isAdmin ? "." : ". המנהל טרם כתב בריף."}
+              אין בריף להיום. אפשר לכתוב אחד לכל הצוות.
             </p>
           )}
         </CardContent>
       </Card>
 
-      {isAdmin && (
-        <DailyBriefDialog
-          // Remount on date or content change so the textarea shows current data:
-          // useState(prop) only runs on mount.
-          key={`${briefDate}-${brief?.updated_at ?? "empty"}`}
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          briefDate={briefDate}
-          initialContent={brief?.content ?? ""}
-        />
-      )}
+      <DailyBriefDialog
+        // Remount on date or content change so the textarea shows current data:
+        // useState(prop) only runs on mount.
+        key={`${briefDate}-${brief?.updated_at ?? "empty"}`}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        briefDate={briefDate}
+        initialContent={brief?.content ?? ""}
+      />
+
     </>
   );
 }

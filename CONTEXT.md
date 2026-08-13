@@ -65,7 +65,7 @@ The Admin returning a closed Task to open because the work was not actually done
 _Avoid_: Rejecting, declining
 
 **Daily brief**:
-One free-text note per calendar day, written by an Admin and read by all staff. General announcements only — the day's structure lives in the Daily schedule, not here.
+One free-text note per calendar day, written by any staff member — Admin or Trainer — and read by all staff. Shared, not per-author: the second person to write today's brief rewrites the first one's. General announcements only — the day's structure lives in the Daily schedule, not here.
 _Avoid_: Announcement, memo, bulletin, notice
 
 **Daily schedule**:
@@ -110,7 +110,7 @@ _Avoid_: Session, workday
 Whether a Shift is a morning or a regular one. Friday has no morning shift.
 
 **Shift report**:
-The structured end-of-day form a Trainer fills in about their Shift. Distinct from the Daily brief, which flows the other way — Admin to staff.
+The structured end-of-day form a Trainer fills in about their Shift. Distinct from the Daily brief: a report is one Trainer's own record of a day that has ended, the brief is the whole staff's shared note for the day ahead.
 
 ### Training
 

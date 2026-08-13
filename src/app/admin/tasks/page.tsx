@@ -36,7 +36,7 @@ export default async function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <DailyBriefCard brief={brief} briefDate={today} isAdmin={isAdmin} />
+      <DailyBriefCard brief={brief} briefDate={today} />
 
       {isAdmin && <TasksReviewSection tasks={tasks} today={today} />}
 

@@ -66,10 +66,13 @@ export interface DailyBrief {
   /** ISO YYYY-MM-DD. Unique — one brief per calendar day, globally. */
   brief_date: string;
   content: string;
-  /** The admin who first wrote this day's brief. Never changes on edit. */
+  /** The staff member who first wrote this day's brief. Never changes on edit. */
   author_id: string;
   author_name: string;
-  /** The admin who last edited it. Equals the author until someone else edits. */
+  /**
+   * The staff member who last edited it. Equals the author until someone else
+   * edits — any admin or trainer may rewrite any day's brief.
+   */
   updated_by_id: string | null;
   updated_by_name: string | null;
   created_at: string;
