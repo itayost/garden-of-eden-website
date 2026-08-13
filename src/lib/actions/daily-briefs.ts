@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidDateString } from "@/lib/validations/common";
@@ -46,10 +46,12 @@ export async function getBriefAction(date: string): Promise<BriefResult> {
  * Write or rewrite the brief for a date. There is one brief per calendar day
  * globally, so this upserts on `brief_date` rather than inserting.
  *
- * Admin only — a trainer reads the brief but never writes it.
+ * Any staff member writes it — the trainer who took the call about the day's
+ * change is usually the one who knows about it first. A deactivated trainer is
+ * blocked by RLS (briefs_staff_insert / briefs_staff_update), not here.
  */
 export async function upsertBriefAction(input: DailyBriefInput): Promise<UpsertResult> {
-  const { error: authError, user, adminProfile } = await verifyAdmin();
+  const { error: authError, user, profile } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const validated = dailyBriefSchema.safeParse(input);
@@ -61,7 +63,7 @@ export async function upsertBriefAction(input: DailyBriefInput): Promise<UpsertR
   }
 
   const { briefDate, content } = validated.data;
-  const callerName = adminProfile!.full_name ?? "מנהל";
+  const callerName = profile!.full_name ?? "צוות";
   const supabase = await createClient();
 
   const { data: existing } = await typedFrom(supabase, "daily_briefs")
@@ -72,7 +74,8 @@ export async function upsertBriefAction(input: DailyBriefInput): Promise<UpsertR
   // Insert and update are separate rather than a single upsert, because an
   // upsert would rewrite author_id/author_name on every edit and credit the
   // last editor as the author. Editing records updated_by_* instead; the
-  // guard_daily_brief_author trigger enforces the same rule at the DB level.
+  // guard_daily_brief_attribution trigger pins both at the DB level, so these
+  // values are what the row ends up with, not what it trusts from here.
   const { data, error } = existing
     ? await typedFrom(supabase, "daily_briefs")
         .update({
