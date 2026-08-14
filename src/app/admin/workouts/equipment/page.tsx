@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { EquipmentManager } from "@/components/admin/equipment/EquipmentManager";
-import { listEquipmentAction } from "@/lib/actions/equipment";
+import { listEquipmentWithUsageAction } from "@/lib/actions/equipment";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 
 export const metadata: Metadata = {
@@ -13,7 +13,7 @@ export default async function EquipmentPage() {
   const { error: authError, profile } = await verifyAdminOrTrainer();
   if (authError) redirect("/dashboard");
 
-  const result = await listEquipmentAction();
+  const result = await listEquipmentWithUsageAction();
   const equipment = "success" in result ? result.data : [];
   const loadError = "error" in result ? result.error : null;
 

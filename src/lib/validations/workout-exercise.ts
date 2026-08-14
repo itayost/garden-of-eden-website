@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+import { UUID_REGEX } from "@/lib/validations/common";
+import {
+  distanceMSchema,
+  durationSecondsSchema,
+  repsSchema,
+  setsSchema,
+  weightKgSchema,
+} from "@/lib/validations/measures";
+
 /**
  * Validation schema for workout exercise create/update operations.
  */
@@ -16,14 +25,25 @@ export const exerciseSchema = z.object({
   // `equipment` column above stays as a display fallback.
   equipment_id: z
     .string()
-    .regex(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-      "מזהה ציוד לא תקין",
-    )
+    .regex(UUID_REGEX, "מזהה ציוד לא תקין")
     .nullable()
     .optional(),
   cues_he: z.string().max(1000, "הוראות ביצוע ארוכות מדי").nullable().optional(),
   goal_he: z.string().max(500, "תיאור מטרה ארוך מדי").nullable().optional(),
+  // Per-exercise overrides of the machine's defaults. Empty means inherit —
+  // a cable tower hosts three exercises with three different rep schemes.
+  default_sets: setsSchema,
+  default_reps: repsSchema,
+  default_weight_kg: weightKgSchema,
+  default_duration_seconds: durationSecondsSchema,
+  default_distance_m: distanceMSchema,
 });
 
-export type ExerciseInput = z.infer<typeof exerciseSchema>;
+/**
+ * What the form submits. `z.input`, not `z.infer`: the measure fields accept
+ * "" off a text input and only become `number | null` after parsing.
+ */
+export type ExerciseInput = z.input<typeof exerciseSchema>;
+
+/** What the action receives after a successful parse. */
+export type ExerciseParsed = z.output<typeof exerciseSchema>;

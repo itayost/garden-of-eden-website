@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -17,11 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createExercise, updateExercise } from "@/features/workouts/lib/actions";
-import { listEquipmentAction } from "@/lib/actions/equipment";
 import { exerciseSchema } from "@/lib/validations/workout-exercise";
 import type { ExerciseInput } from "@/lib/validations/workout-exercise";
 import { MAIN_CATEGORIES } from "@/features/workouts/lib/types";
 import type { WorkoutExercise } from "@/features/workouts/lib/types";
+import { MeasureBadges } from "@/components/admin/equipment/MeasureBadges";
+import { numText, resolveDefaults } from "@/lib/utils/performance-profile";
+import { NumberField } from "@/components/ui/number-field";
 import type { Equipment } from "@/types/equipment";
 
 const NO_EQUIPMENT_VALUE = "__none__";
@@ -32,6 +34,8 @@ const NO_EQUIPMENT_VALUE = "__none__";
 
 interface ExerciseFormProps {
   exercise?: WorkoutExercise;
+  /** The catalog, already loaded by the table — the dialog does not refetch. */
+  equipmentOptions: Equipment[];
   onSaved: () => void;
   onCancel: () => void;
 }
@@ -40,7 +44,12 @@ interface ExerciseFormProps {
 // ExerciseForm
 // ---------------------------------------------------------------------------
 
-export function ExerciseForm({ exercise, onSaved, onCancel }: ExerciseFormProps) {
+export function ExerciseForm({
+  exercise,
+  equipmentOptions,
+  onSaved,
+  onCancel,
+}: ExerciseFormProps) {
   const isEdit = Boolean(exercise);
   const [pending, startTransition] = useTransition();
 
@@ -61,24 +70,22 @@ export function ExerciseForm({ exercise, onSaved, onCancel }: ExerciseFormProps)
       equipment_id: exercise?.equipmentId ?? null,
       cues_he: exercise?.cuesHe ?? null,
       goal_he: exercise?.goalHe ?? null,
+      default_sets: numText(exercise?.defaultSets),
+      default_reps: numText(exercise?.defaultReps),
+      default_weight_kg: numText(exercise?.defaultWeightKg),
+      default_duration_seconds: numText(exercise?.defaultDurationSeconds),
+      default_distance_m: numText(exercise?.defaultDistanceM),
     },
   });
 
   const mainCategoryValue = watch("main_category");
   const equipmentIdValue = watch("equipment_id");
 
-  // The equipment catalog for the structured link. Loaded once per mount;
-  // the form lives inside a dialog so mount = open.
-  const [equipmentOptions, setEquipmentOptions] = useState<Equipment[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    listEquipmentAction().then((result) => {
-      if (!cancelled && "success" in result) setEquipmentOptions(result.data);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const selectedEquipment =
+    equipmentOptions.find((item) => item.id === equipmentIdValue) ?? null;
+
+  // Shown as placeholders, so an empty override reads as "inherits this".
+  const inherited = resolveDefaults(null, selectedEquipment);
 
   const onSubmit = (data: ExerciseInput) => {
     startTransition(async () => {
@@ -192,6 +199,69 @@ export function ExerciseForm({ exercise, onSaved, onCancel }: ExerciseFormProps)
           הקישור לקטלוג קובע לאיזה תרגיל תקפוץ סריקת ה-QR של המכשיר.
         </p>
       </div>
+
+      {/* What the linked machine measures, and what this exercise inherits.
+          Read-only: tracking is a physical property of the machine. */}
+      {selectedEquipment && (
+        <div className="space-y-3 rounded-xl border bg-muted/30 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold">נמדד במכשיר</span>
+            <MeasureBadges measures={selectedEquipment} />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs">ברירות מחדל לתרגיל הזה</Label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <NumberField
+                id="default-sets"
+                label="סטים"
+                placeholder={numText(inherited.sets) || "—"}
+                disabled={pending}
+                {...register("default_sets")}
+              />
+              {selectedEquipment.tracks_reps && (
+                <NumberField
+                  id="default-reps"
+                  label="חזרות"
+                  placeholder={numText(inherited.reps) || "—"}
+                  disabled={pending}
+                  {...register("default_reps")}
+                />
+              )}
+              {selectedEquipment.tracks_weight && (
+                <NumberField
+                  id="default-weight"
+                  label='משקל (ק"ג)'
+                  placeholder={numText(inherited.weightKg) || "—"}
+                  disabled={pending}
+                  {...register("default_weight_kg")}
+                />
+              )}
+              {selectedEquipment.tracks_duration && (
+                <NumberField
+                  id="default-duration"
+                  label="זמן (שניות)"
+                  placeholder={numText(inherited.durationSeconds) || "—"}
+                  disabled={pending}
+                  {...register("default_duration_seconds")}
+                />
+              )}
+              {selectedEquipment.tracks_distance && (
+                <NumberField
+                  id="default-distance"
+                  label="מרחק (מטרים)"
+                  placeholder={numText(inherited.distanceM) || "—"}
+                  disabled={pending}
+                  {...register("default_distance_m")}
+                />
+              )}
+            </div>
+            <p className="text-muted-foreground text-xs">
+              ריק = יורש מהמכשיר (המספר האפור). מלא רק אם התרגיל הזה שונה.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* equipment (free text fallback) */}
       <div className="space-y-1">

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,7 +22,13 @@ import {
   createEquipmentAction,
   updateEquipmentAction,
 } from "@/lib/actions/equipment";
+import {
+  equipmentFormSchema,
+  type EquipmentFormInput,
+} from "@/lib/validations/exercise-log";
+import { numText } from "@/lib/utils/performance-profile";
 import type { Equipment } from "@/types/equipment";
+import { EquipmentTrackingFields } from "./EquipmentTrackingFields";
 
 interface EquipmentFormDialogProps {
   open: boolean;
@@ -30,29 +37,58 @@ interface EquipmentFormDialogProps {
   equipment: Equipment | null;
 }
 
+function toFormValues(equipment: Equipment | null): EquipmentFormInput {
+  return {
+    isActive: equipment?.is_active ?? true,
+    name: equipment?.name_he ?? "",
+    notes: equipment?.notes_he ?? "",
+    howto: equipment?.howto_he ?? "",
+    // A brand-new machine measures weight and reps, which is what every
+    // machine effectively did before profiles existed.
+    tracksWeight: equipment?.tracks_weight ?? true,
+    tracksReps: equipment?.tracks_reps ?? true,
+    tracksDuration: equipment?.tracks_duration ?? false,
+    tracksDistance: equipment?.tracks_distance ?? false,
+    defaultSets: numText(equipment?.default_sets),
+    defaultReps: numText(equipment?.default_reps),
+    defaultWeightKg: numText(equipment?.default_weight_kg),
+    defaultDurationSeconds: numText(equipment?.default_duration_seconds),
+    defaultDistanceM: numText(equipment?.default_distance_m),
+    weightMinKg: numText(equipment?.weight_min_kg),
+    weightMaxKg: numText(equipment?.weight_max_kg),
+    weightStepKg: numText(equipment?.weight_step_kg),
+  };
+}
+
 export function EquipmentFormDialog({
   open,
   onOpenChange,
   equipment,
 }: EquipmentFormDialogProps) {
   const router = useRouter();
-  const [name, setName] = useState(equipment?.name_he ?? "");
-  const [notes, setNotes] = useState(equipment?.notes_he ?? "");
-  const [isActive, setIsActive] = useState(equipment?.is_active ?? true);
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setLoading(true);
+  const form = useForm<EquipmentFormInput>({
+    resolver: zodResolver(equipmentFormSchema),
+    defaultValues: toFormValues(equipment),
+  });
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = form;
+
+  const nameValue = watch("name");
+  const formError = Object.entries(errors).find(
+    ([field]) => field !== "name",
+  )?.[1]?.message;
+
+  const onSubmit = async (values: EquipmentFormInput) => {
     try {
       const result = equipment
-        ? await updateEquipmentAction({
-            equipmentId: equipment.id,
-            name,
-            notes,
-            isActive,
-          })
-        : await createEquipmentAction({ name, notes });
+        ? await updateEquipmentAction({ ...values, equipmentId: equipment.id })
+        : await createEquipmentAction(values);
 
       if ("error" in result) {
         toast.error(result.error);
@@ -63,14 +99,15 @@ export function EquipmentFormDialog({
       router.refresh();
     } catch {
       toast.error("שגיאה בשמירת הציוד");
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        dir="rtl"
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-md"
+      >
         <DialogHeader>
           <DialogTitle>{equipment ? "עריכת ציוד" : "ציוד חדש"}</DialogTitle>
           <DialogDescription>
@@ -80,25 +117,35 @@ export function EquipmentFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="equipment-name">שם</Label>
             <Input
               id="equipment-name"
-              value={name}
               placeholder="לדוגמה: מתקן סקוואט"
-              onChange={(event) => setName(event.target.value)}
-              required
+              disabled={isSubmitting}
+              {...register("name")}
             />
+            {errors.name && (
+              <p className="text-destructive text-xs">{errors.name.message}</p>
+            )}
           </div>
+
+          <EquipmentTrackingFields form={form} disabled={isSubmitting} />
+
+          {/* A cross-field failure lands on a specific input, and that input
+              may be hidden behind its measure toggle. Surfacing the first
+              non-name error covers every such case without a whitelist that
+              goes stale each time a field is added. */}
+          {formError && <p className="text-destructive text-xs">{formError}</p>}
 
           <div className="space-y-2">
             <Label htmlFor="equipment-notes">הערות (אופציונלי)</Label>
             <Textarea
               id="equipment-notes"
               rows={2}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
+              disabled={isSubmitting}
+              {...register("notes")}
             />
           </div>
 
@@ -112,8 +159,10 @@ export function EquipmentFormDialog({
               </div>
               <Switch
                 id="equipment-active"
-                checked={isActive}
-                onCheckedChange={setIsActive}
+                checked={watch("isActive")}
+                onCheckedChange={(next) =>
+                  setValue("isActive", next, { shouldDirty: true })
+                }
               />
             </div>
           )}
@@ -123,12 +172,12 @@ export function EquipmentFormDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={loading}
+              disabled={isSubmitting}
             >
               ביטול
             </Button>
-            <Button type="submit" disabled={loading || !name.trim()}>
-              {loading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isSubmitting || !nameValue?.trim()}>
+              {isSubmitting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               שמירה
             </Button>
           </div>

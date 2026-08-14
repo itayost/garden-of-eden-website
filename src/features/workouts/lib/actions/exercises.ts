@@ -6,8 +6,19 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import { exerciseSchema } from "@/lib/validations/workout-exercise";
-import type { ExerciseInput } from "@/lib/validations/workout-exercise";
-import type { WorkoutExercise, ExerciseFilters } from "@/features/workouts/lib/types";
+import type {
+  ExerciseInput,
+  ExerciseParsed,
+} from "@/lib/validations/workout-exercise";
+import {
+  UNLINKED_EQUIPMENT_FILTER,
+  type WorkoutExercise,
+  type ExerciseFilters,
+} from "@/features/workouts/lib/types";
+import {
+  EQUIPMENT_PROFILE_COLUMNS,
+  type EquipmentProfile,
+} from "@/types/equipment";
 
 export type { ExerciseInput } from "@/lib/validations/workout-exercise";
 import { deriveSubCategories } from "@/features/workouts/lib/grid-utils";
@@ -17,6 +28,8 @@ import { deriveSubCategories } from "@/features/workouts/lib/grid-utils";
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 20;
+/** Below this, a machine-name lookup matches too much to be worth a query. */
+const MIN_EQUIPMENT_SEARCH_LENGTH = 2;
 const REVALIDATE_PATH = "/admin/workouts/exercises";
 
 // ---------------------------------------------------------------------------
@@ -27,6 +40,38 @@ const emptyToNull = (v: string | null | undefined): string | null => {
   const t = (v ?? "").trim();
   return t.length > 0 ? t : null;
 };
+
+/** The five nullable override columns, straight off a parsed exercise. */
+function defaultOverrides(data: ExerciseParsed) {
+  return {
+    default_sets: data.default_sets,
+    default_reps: data.default_reps,
+    default_weight_kg: data.default_weight_kg,
+    default_duration_seconds: data.default_duration_seconds,
+    default_distance_m: data.default_distance_m,
+  };
+}
+
+/**
+ * Equipment ids whose Hebrew name matches the search term. Used to widen the
+ * exercise search across the FK without an inner join.
+ */
+async function findEquipmentIdsByName(
+  adminClient: ReturnType<typeof createAdminClient>,
+  term: string,
+): Promise<string[]> {
+  const { data, error } = (await typedFrom(adminClient, "equipment")
+    .select("id")
+    .ilike("name_he", `%${term}%`)
+    .limit(200)) as { data: { id: string }[] | null; error: unknown };
+
+  if (error) {
+    console.error("findEquipmentIdsByName error:", error);
+    return [];
+  }
+
+  return (data ?? []).map((row) => row.id).filter(isValidUUID);
+}
 
 // ---------------------------------------------------------------------------
 // Action result type
@@ -51,7 +96,24 @@ interface RawWorkoutExercise {
   cues_he: string | null;
   goal_he: string | null;
   order_index: number;
+  default_sets: number | null;
+  default_reps: number | null;
+  default_weight_kg: number | null;
+  default_duration_seconds: number | null;
+  default_distance_m: number | null;
+  /** Embedded catalog row: the real link, plus the full profile. */
+  equipment_ref?: (EquipmentProfile & { code: string }) | null;
 }
+
+/**
+ * Columns the library reads.
+ *
+ * The `equipment_ref` embed does double duty: it lets the table show the
+ * linked machine instead of the legacy free-text label, and it carries the
+ * full profile so the session builder can seed a row's targets without a
+ * second round trip per exercise added.
+ */
+const EXERCISE_SELECT = `id, main_category, sub_category, name_he, name_en, equipment, equipment_id, cues_he, goal_he, order_index, default_sets, default_reps, default_weight_kg, default_duration_seconds, default_distance_m, equipment_ref:equipment(code, ${EQUIPMENT_PROFILE_COLUMNS})`;
 
 // ---------------------------------------------------------------------------
 // Mapper: snake_case DB row -> camelCase WorkoutExercise
@@ -66,6 +128,14 @@ function mapExercise(raw: RawWorkoutExercise): WorkoutExercise {
     nameEn: raw.name_en,
     equipment: raw.equipment,
     equipmentId: raw.equipment_id,
+    equipmentName: raw.equipment_ref?.name_he ?? null,
+    equipmentCode: raw.equipment_ref?.code ?? null,
+    equipmentProfile: raw.equipment_ref ?? null,
+    defaultSets: raw.default_sets,
+    defaultReps: raw.default_reps,
+    defaultWeightKg: raw.default_weight_kg,
+    defaultDurationSeconds: raw.default_duration_seconds,
+    defaultDistanceM: raw.default_distance_m,
     cuesHe: raw.cues_he,
     goalHe: raw.goal_he,
     orderIndex: raw.order_index,
@@ -89,9 +159,7 @@ export async function listExercises(
   const to = from + PAGE_SIZE - 1;
 
   let query = typedFrom(adminClient, "workout_exercises")
-    .select("id, main_category, sub_category, name_he, name_en, equipment, equipment_id, cues_he, goal_he, order_index", {
-      count: "exact",
-    })
+    .select(EXERCISE_SELECT, { count: "exact" })
     .order("order_index")
     .range(from, to);
 
@@ -103,6 +171,15 @@ export async function listExercises(
     query = query.eq("sub_category", filters.subCategory);
   }
 
+  // "Which exercises run on this machine" — the target of the count badge on
+  // the equipment catalog. UNLINKED_EQUIPMENT_FILTER inverts it, which is the
+  // more useful view: rows that can never match a QR scan.
+  if (filters.equipmentId === UNLINKED_EQUIPMENT_FILTER) {
+    query = query.is("equipment_id", null);
+  } else if (filters.equipmentId && isValidUUID(filters.equipmentId)) {
+    query = query.eq("equipment_id", filters.equipmentId);
+  }
+
   if (filters.search) {
     // Strip characters that would break the PostgREST `.or()` filter grammar
     // (`,` separates clauses, `()` groups) or act as LIKE wildcards (`%` `_`),
@@ -110,9 +187,26 @@ export async function listExercises(
     // error that silently returns zero rows.
     const term = filters.search.replace(/[,()%_*\\]/g, " ").trim();
     if (term) {
-      query = query.or(
-        `name_he.ilike.%${term}%,name_en.ilike.%${term}%,equipment.ilike.%${term}%`
-      );
+      const clauses = [
+        `name_he.ilike.%${term}%`,
+        `name_en.ilike.%${term}%`,
+        `equipment.ilike.%${term}%`,
+      ];
+
+      // Searching a machine name must find the exercises on it, even when
+      // nobody typed anything into the legacy free-text column. A filter on
+      // the embed would narrow the embed, not the parent rows, and an inner
+      // join would drop every unlinked exercise — so resolve the ids first.
+      // Gated on 2+ characters: one-letter terms match most of the catalog
+      // and would double every keystroke's cost for nothing.
+      if (term.length >= MIN_EQUIPMENT_SEARCH_LENGTH) {
+        const matchingIds = await findEquipmentIdsByName(adminClient, term);
+        if (matchingIds.length > 0) {
+          clauses.push(`equipment_id.in.(${matchingIds.join(",")})`);
+        }
+      }
+
+      query = query.or(clauses.join(","));
     }
   }
 
@@ -171,6 +265,7 @@ export async function createExercise(input: ExerciseInput): Promise<ActionResult
         equipment_id: validated.data.equipment_id ?? null,
         cues_he: emptyToNull(validated.data.cues_he),
         goal_he: emptyToNull(validated.data.goal_he),
+        ...defaultOverrides(validated.data),
         order_index: orderIndex,
       })
       .select("id")
@@ -223,6 +318,7 @@ export async function updateExercise(
         equipment_id: validated.data.equipment_id ?? null,
         cues_he: emptyToNull(validated.data.cues_he),
         goal_he: emptyToNull(validated.data.goal_he),
+        ...defaultOverrides(validated.data),
       })
       .eq("id", id);
 

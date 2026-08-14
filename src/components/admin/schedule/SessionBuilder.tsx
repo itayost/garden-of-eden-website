@@ -37,6 +37,19 @@ import {
   upsertSessionAction,
 } from "@/lib/actions/training-sessions";
 import { formatDate } from "@/lib/utils/date";
+import {
+  makeBuilderRow,
+  seedRowFromEquipment,
+} from "@/lib/utils/session-import";
+import {
+  formatMeasures,
+  numText,
+  resolveDefaults,
+  resolveTrackingProfile,
+  type TrackingProfile,
+} from "@/lib/utils/performance-profile";
+import { MEASURE_BOUNDS } from "@/lib/validations/measures";
+import { DEFAULT_WEIGHT_STEP_KG } from "@/lib/utils/performance-profile";
 import type {
   SessionBuilderRow,
   TrainingSession,
@@ -56,31 +69,72 @@ interface SessionBuilderProps {
   programs: WorkoutProgram[];
 }
 
+/**
+ * The numeric target inputs a row can show, in render order.
+ *
+ * One entry per measure, matching the log dialog: a treadmill tracks time AND
+ * distance and must be able to receive a target for both. A row with no
+ * machine shows the free-text load field instead of any of these.
+ */
+const NUMERIC_TARGETS = [
+  {
+    flag: "tracksWeight",
+    field: "targetWeightKg",
+    label: 'משקל (ק"ג)',
+    min: 0,
+    max: MEASURE_BOUNDS.weightKg.max,
+    mode: "decimal",
+  },
+  {
+    flag: "tracksDuration",
+    field: "targetDurationSeconds",
+    label: "זמן (שניות)",
+    min: MEASURE_BOUNDS.durationSeconds.min,
+    max: MEASURE_BOUNDS.durationSeconds.max,
+    mode: "numeric",
+  },
+  {
+    flag: "tracksDistance",
+    field: "targetDistanceM",
+    label: "מרחק (מטרים)",
+    min: MEASURE_BOUNDS.distanceM.min,
+    max: MEASURE_BOUNDS.distanceM.max,
+    mode: "numeric",
+  },
+] as const satisfies readonly {
+  flag: keyof TrackingProfile;
+  field: keyof SessionBuilderRow;
+  label: string;
+  min: number;
+  max: number;
+  mode: "numeric" | "decimal";
+}[];
+
 function sessionToRows(session: TrainingSession): SessionBuilderRow[] {
-  return session.exercises.map((exercise) => ({
-    key: exercise.id,
-    exerciseId: exercise.exercise_id,
-    exerciseName:
-      exercise.exercise?.name_he ?? exercise.exercise?.name_en ?? "תרגיל",
-    targetSets: exercise.target_sets,
-    targetReps: exercise.target_reps_he ?? "",
-    targetLoad: exercise.target_load_he ?? "",
-    notes: exercise.notes_he ?? "",
-  }));
+  return session.exercises.map((exercise) =>
+    makeBuilderRow({
+      key: exercise.id,
+      exerciseId: exercise.exercise_id,
+      exerciseName:
+        exercise.exercise?.name_he ?? exercise.exercise?.name_en ?? "תרגיל",
+      targetSets: exercise.target_sets,
+      targetReps: exercise.target_reps_he ?? "",
+      targetLoad: exercise.target_load_he ?? "",
+      targetRepsNum: numText(exercise.target_reps),
+      targetWeightKg: numText(exercise.target_weight_kg),
+      targetDurationSeconds: numText(exercise.target_duration_seconds),
+      targetDistanceM: numText(exercise.target_distance_m),
+      notes: exercise.notes_he ?? "",
+      equipment: exercise.exercise?.equipment_ref ?? null,
+    }),
+  );
 }
 
-/** "3 סטים · 10 חזרות · 20 ק"ג" from the trainee's log, for the staff view. */
-function formatLog(log: {
-  sets: number | null;
-  reps: number | null;
-  weight_kg: number | null;
-}): string {
-  const parts: string[] = [];
-  if (log.sets) parts.push(`${log.sets} סטים`);
-  if (log.reps) parts.push(`${log.reps} חזרות`);
-  if (log.weight_kg !== null && log.weight_kg !== undefined)
-    parts.push(`${log.weight_kg} ק"ג`);
-  return parts.join(" · ");
+/** The numeric target inputs this row should render. */
+function rowTargets(row: SessionBuilderRow) {
+  if (!row.equipment) return [];
+  const profile = resolveTrackingProfile(row.equipment);
+  return NUMERIC_TARGETS.filter((target) => profile[target.flag]);
 }
 
 export function SessionBuilder({
@@ -113,7 +167,7 @@ export function SessionBuilder({
     const map: Record<string, string> = {};
     for (const exercise of session?.exercises ?? []) {
       const log = exercise.logs?.[0];
-      if (log) map[exercise.id] = formatLog(log);
+      if (log) map[exercise.id] = formatMeasures(log);
     }
     return map;
   }, [session]);
@@ -125,7 +179,7 @@ export function SessionBuilder({
       .map((exercise) => ({
         id: exercise.id,
         name: exercise.exercise?.name_he ?? exercise.exercise?.name_en ?? "תרגיל",
-        line: formatLog(exercise.logs![0]),
+        line: formatMeasures(exercise.logs![0]),
       }));
   }, [session, rows]);
 
@@ -140,9 +194,15 @@ export function SessionBuilder({
     });
   };
 
+  /**
+   * Any edit clears the "seeded from the machine" badge — otherwise it keeps
+   * claiming the numbers are defaults after the trainer has changed them.
+   */
   const updateRow = (key: string, patch: Partial<SessionBuilderRow>) => {
     setRows((prev) =>
-      prev.map((row) => (row.key === key ? { ...row, ...patch } : row)),
+      prev.map((row) =>
+        row.key === key ? { ...row, ...patch, seededFromEquipment: false } : row,
+      ),
     );
   };
 
@@ -156,19 +216,37 @@ export function SessionBuilder({
     });
   };
 
+  /**
+   * Adds a row with its targets already seeded from the machine it runs on.
+   *
+   * The picker's rows carry the machine's profile (EXERCISE_SELECT embeds it),
+   * so this stays synchronous — no round trip per exercise, and no row that
+   * appears blank and then fills in.
+   */
   const addExercise = (exercise: WorkoutExercise) => {
-    setRows((prev) => [
-      ...prev,
-      {
+    setRows((prev) => {
+      const row = makeBuilderRow({
         key: `new-${exercise.id}-${prev.length}-${Date.now()}`,
         exerciseId: exercise.id,
         exerciseName: exercise.nameHe ?? exercise.nameEn ?? "תרגיל",
-        targetSets: null,
-        targetReps: "",
-        targetLoad: "",
-        notes: "",
-      },
-    ]);
+      });
+
+      const machine = exercise.equipmentProfile;
+      if (!machine) return [...prev, row];
+
+      const defaults = resolveDefaults(
+        {
+          default_sets: exercise.defaultSets,
+          default_reps: exercise.defaultReps,
+          default_weight_kg: exercise.defaultWeightKg,
+          default_duration_seconds: exercise.defaultDurationSeconds,
+          default_distance_m: exercise.defaultDistanceM,
+        },
+        machine,
+      );
+
+      return [...prev, seedRowFromEquipment(row, machine, defaults)];
+    });
   };
 
   const loadPrevious = async () => {
@@ -216,6 +294,10 @@ export function SessionBuilder({
           targetSets: row.targetSets,
           targetReps: row.targetReps,
           targetLoad: row.targetLoad,
+          targetRepsNum: row.targetRepsNum,
+          targetWeightKg: row.targetWeightKg,
+          targetDurationSeconds: row.targetDurationSeconds,
+          targetDistanceM: row.targetDistanceM,
           notes: row.notes,
         })),
       });
@@ -375,12 +457,19 @@ export function SessionBuilder({
                       </div>
                     </div>
 
+                    {row.seededFromEquipment && (
+                      <p className="text-[11px] font-medium text-amber-700">
+                        ברירת מחדל מהציוד
+                        {row.equipment ? ` · ${row.equipment.name_he}` : ""}
+                      </p>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                       <Input
                         id={`sets-${row.key}`}
                         type="number"
                         min={1}
-                        max={99}
+                        max={MEASURE_BOUNDS.sets.max}
                         inputMode="numeric"
                         placeholder="סטים"
                         aria-label="סטים"
@@ -395,26 +484,80 @@ export function SessionBuilder({
                           })
                         }
                       />
-                      <Input
-                        id={`reps-${row.key}`}
-                        placeholder="חזרות (8-10)"
-                        aria-label="חזרות"
-                        className="h-9"
-                        value={row.targetReps}
-                        onChange={(event) =>
-                          updateRow(row.key, { targetReps: event.target.value })
-                        }
-                      />
-                      <Input
-                        id={`load-${row.key}`}
-                        placeholder={'משקל (20 ק"ג)'}
-                        aria-label="משקל או עומס"
-                        className="h-9"
-                        value={row.targetLoad}
-                        onChange={(event) =>
-                          updateRow(row.key, { targetLoad: event.target.value })
-                        }
-                      />
+                      {/* A machine that counts reps gets a number; anything
+                          else keeps the free text, where "8-10" and "עד כשל"
+                          live. Both columns exist, so nothing is lost. */}
+                      {row.equipment?.tracks_reps ? (
+                        <Input
+                          id={`reps-${row.key}`}
+                          type="number"
+                          min={MEASURE_BOUNDS.reps.min}
+                          max={MEASURE_BOUNDS.reps.max}
+                          inputMode="numeric"
+                          placeholder="חזרות"
+                          aria-label="חזרות"
+                          className="h-9"
+                          value={row.targetRepsNum}
+                          onChange={(event) =>
+                            updateRow(row.key, { targetRepsNum: event.target.value })
+                          }
+                        />
+                      ) : (
+                        <Input
+                          id={`reps-${row.key}`}
+                          placeholder="חזרות (8-10)"
+                          aria-label="חזרות"
+                          className="h-9"
+                          value={row.targetReps}
+                          onChange={(event) =>
+                            updateRow(row.key, { targetReps: event.target.value })
+                          }
+                        />
+                      )}
+                      {/* One input per measure the machine records. A
+                          treadmill tracks time AND distance, so these are
+                          independent, not a choice of one. */}
+                      {rowTargets(row).map((target) => (
+                        <Input
+                          key={target.field}
+                          id={`${target.field}-${row.key}`}
+                          type="number"
+                          min={target.min}
+                          max={target.max}
+                          step={
+                            target.field === "targetWeightKg"
+                              ? (row.equipment?.weight_step_kg ??
+                                DEFAULT_WEIGHT_STEP_KG)
+                              : 1
+                          }
+                          inputMode={target.mode}
+                          placeholder={target.label}
+                          aria-label={target.label}
+                          className="h-9"
+                          value={row[target.field]}
+                          onChange={(event) =>
+                            updateRow(row.key, {
+                              [target.field]: event.target.value,
+                            })
+                          }
+                        />
+                      ))}
+
+                      {/* No machine: keep the free-text load field exactly as
+                          it was before profiles existed. */}
+                      {!row.equipment && (
+                        <Input
+                          id={`load-${row.key}`}
+                          placeholder={'משקל (20 ק"ג)'}
+                          aria-label="משקל או עומס"
+                          className="h-9"
+                          value={row.targetLoad}
+                          onChange={(event) =>
+                            updateRow(row.key, { targetLoad: event.target.value })
+                          }
+                        />
+                      )}
+
                       <Input
                         id={`notes-${row.key}`}
                         placeholder="הערה"
