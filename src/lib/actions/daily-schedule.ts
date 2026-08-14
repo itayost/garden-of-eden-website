@@ -5,6 +5,8 @@
 
 export { getScheduleAction } from "./daily-schedule-list";
 
+export { buildDayFromWeeklyScheduleAction } from "./daily-schedule-build";
+
 export {
   createSlotAction,
   deleteSlotAction,

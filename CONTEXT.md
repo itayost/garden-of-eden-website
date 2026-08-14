@@ -76,6 +76,26 @@ _Avoid_: Timetable, calendar, לו"ז (in code)
 One group at one hour: (date, hour, Trainer, Focus, location, Roster). Two trainers at the same hour are two Slots.
 _Avoid_: Class, session, lesson
 
+**Weekly schedule**:
+The standing weekly staffing pattern, made of Bands. It says who covers which stretch of a Sunday, not who is on this coming Sunday — it names no date and expires on none. The Daily schedule is still authored per day; the Weekly schedule only tells it who is around.
+_Avoid_: Rota, timetable, לו"ז (in code)
+
+**Band**:
+One stretch of one weekday a Trainer covers: (weekday, start, end, Trainer, location, label). Two Trainers on the same stretch are two Bands, the same way two Trainers at one hour are two Slots. An open-ended Band ("18:00 והלאה") has no end and runs to the end of the day.
+_Avoid_: Shift — that is time already clocked; Slot — that is a dated group
+
+**Standby**:
+A Band the Trainer covers only if called in ("חיזוק במידת הצורך"). It shows in the day's staffing but never seeds a Slot, because nobody has yet decided it is happening.
+_Avoid_: Backup, on-call, reserve
+
+**Exception**:
+A dated deviation from the standing week: a Trainer absent for one date, or an extra one-off Band on one date. A swap is one of each. Exceptions never edit the Weekly schedule — next week is unaffected.
+_Avoid_: Override, absence (that is only one of the two kinds)
+
+**On duty**:
+The staffing actually in force on one date — that weekday's Bands with that date's Exceptions applied. Derived on read and never stored, so it cannot drift from the Bands it comes from.
+_Avoid_: Assignment, rota, today's shift
+
 **Focus**:
 The free-text training theme of a Slot, e.g. "זריזות מהירות טכניקה עם כדור".
 _Avoid_: Topic, subject, theme

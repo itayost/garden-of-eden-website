@@ -33,9 +33,13 @@ function formatSlot(slot: ScheduleSlot): string {
   ]
     .filter(Boolean)
     .join(" ");
-  const trainerPrefix = header ? `${header}: ` : "";
+  // A slot seeded from the weekly schedule carries an hour and a trainer but no
+  // roster until the names are filled in. The colon introduces the names, so
+  // with no names there is nothing to introduce — "דין: " with a dangling colon
+  // reads as a broken message, not as an empty group.
+  const rosterLine = names ? (header ? `${header}: ${names}` : names) : header;
 
-  const lines = [`${trainerPrefix}${names}`];
+  const lines = rosterLine ? [rosterLine] : [];
   if (slot.focus_he) lines.push(slot.focus_he);
   return lines.join("\n");
 }
@@ -57,7 +61,10 @@ export function buildScheduleWhatsAppText(slots: readonly ScheduleSlot[]): strin
   return times
     .map((time) => {
       const group = byTime.get(time)!;
-      return `${time}\n${group.map(formatSlot).join("\n\n")}`;
+      // A slot with no trainer, no location and no roster renders as nothing;
+      // dropping it keeps the hour from trailing a blank line.
+      const body = group.map(formatSlot).filter(Boolean).join("\n\n");
+      return body ? `${time}\n${body}` : time;
     })
     .join("\n\n");
 }

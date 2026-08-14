@@ -128,6 +128,23 @@ export function SlotCard({
         </CardHeader>
 
         <CardContent className="space-y-2 px-4 pb-3">
+          {/*
+            A slot seeded from the weekly schedule arrives with the hour and the
+            trainer but no names. That is a half-built row, so it says so and
+            offers the one action that finishes it, rather than rendering as an
+            ordinary slot that happens to look empty.
+          */}
+          {slot.trainees.length === 0 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onEdit}
+              className="w-full border-dashed text-muted-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              הוספת מתאמנים
+            </Button>
+          ) : (
           <div className="flex flex-wrap gap-1.5">
             {slot.trainees.map((trainee) => {
               // Free-text names have no account and cannot receive sessions —
@@ -174,6 +191,7 @@ export function SlotCard({
               );
             })}
           </div>
+          )}
         </CardContent>
       </Card>
 
