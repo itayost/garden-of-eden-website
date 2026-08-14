@@ -124,4 +124,44 @@ describe("buildScheduleWhatsAppText", () => {
   test("returns an empty string for an empty day", () => {
     expect(buildScheduleWhatsAppText([])).toBe("");
   });
+
+  // A day built from the weekly schedule seeds slots with a trainer and an hour
+  // but no roster — the names are filled in afterwards. Until then the message
+  // must not carry a dangling colon after the trainer.
+  test("renders a rosterless slot as the header alone, no trailing colon", () => {
+    const result = buildScheduleWhatsAppText([
+      slot({ focus_he: null, trainees: [] }),
+    ]);
+
+    expect(result).toBe("15:00\nדין");
+  });
+
+  test("keeps the location and focus on a rosterless slot", () => {
+    const result = buildScheduleWhatsAppText([
+      slot({ location_he: "מגרש", trainees: [] }),
+    ]);
+
+    expect(result).toBe("15:00\nדין (מגרש)\nזריזות מהירות טכניקה עם כדור");
+  });
+
+  test("renders a rosterless, trainer-less slot as the focus alone", () => {
+    const result = buildScheduleWhatsAppText([
+      slot({ trainer_id: null, trainer_name: null, trainees: [] }),
+    ]);
+
+    expect(result).toBe("15:00\nזריזות מהירות טכניקה עם כדור");
+  });
+
+  test("renders a slot with nothing but an hour as just the hour", () => {
+    const result = buildScheduleWhatsAppText([
+      slot({
+        trainer_id: null,
+        trainer_name: null,
+        focus_he: null,
+        trainees: [],
+      }),
+    ]);
+
+    expect(result).toBe("15:00");
+  });
 });

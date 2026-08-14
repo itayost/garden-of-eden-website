@@ -9,8 +9,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { SessionSummary } from "@/types/training-session";
+import type { OnDuty } from "@/types/weekly-schedule";
+import { BuildDayButton } from "./BuildDayButton";
 import { CopyWhatsAppButton } from "./CopyWhatsAppButton";
 import { DuplicateDayButton } from "./DuplicateDayButton";
+import { OnDutyStrip } from "./OnDutyStrip";
 import { SlotCard } from "./SlotCard";
 import { SlotFormDialog } from "./SlotFormDialog";
 
@@ -29,6 +32,11 @@ interface ScheduleDayViewProps {
   currentUserId: string;
   trainers: TrainerOption[];
   trainees: TrainerOption[];
+  /**
+   * Who the weekly schedule puts on this day. Null when it could not be loaded
+   * — the strip and the build button hide rather than claim nobody is on.
+   */
+  onDuty: OnDuty | null;
 }
 
 /** Date-only arithmetic on ISO strings; UTC throughout so no DST surprises. */
@@ -68,6 +76,7 @@ export function ScheduleDayView({
   currentUserId,
   trainers,
   trainees,
+  onDuty,
 }: ScheduleDayViewProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ScheduleSlot | null>(null);
@@ -155,8 +164,19 @@ export function ScheduleDayView({
               targetHasSlots={loadError !== null || slots.length > 0}
             />
           )}
+          {isAdmin && onDuty && onDuty.bands.length > 0 && (
+            <BuildDayButton
+              targetDate={date}
+              targetHasSlots={loadError !== null || slots.length > 0}
+              bandCount={onDuty.bands.length}
+            />
+          )}
         </div>
       </div>
+
+      {/* Context above the board: who the week puts on today, whatever the
+          slots below happen to say. Derived, so nothing here is a row. */}
+      {onDuty && <OnDutyStrip onDuty={onDuty} />}
 
       {loadError ? (
         <Card className="border-destructive">
@@ -171,9 +191,11 @@ export function ScheduleDayView({
               <CalendarDays className="h-6 w-6 text-muted-foreground" />
             </span>
             <p className="text-muted-foreground">
-              {isAdmin
-                ? "אין לוח ליום זה — הוסף סלוט או שכפל מיום קודם."
-                : "אין לוח ליום זה — הוסף את הסלוט הראשון."}
+              {!isAdmin
+                ? "אין לוח ליום זה — הוסף את הסלוט הראשון."
+                : onDuty && onDuty.bands.length > 0
+                  ? "אין לוח ליום זה — בנה מהלוח השבועי, שכפל מיום קודם, או הוסף סלוט."
+                  : "אין לוח ליום זה — הוסף סלוט או שכפל מיום קודם."}
             </p>
             {/* On an empty day this is the most visible thing on the screen —
                 the answer to "where do I add a slot from my phone". */}
@@ -221,6 +243,7 @@ export function ScheduleDayView({
         slot={editTarget}
         trainers={trainers}
         trainees={trainees}
+        onDuty={onDuty}
       />
     </div>
   );

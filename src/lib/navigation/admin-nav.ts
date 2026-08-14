@@ -2,6 +2,7 @@ import {
   BookOpen,
   Calendar,
   CalendarClock,
+  CalendarRange,
   ClipboardCheck,
   Clock,
   Dumbbell,
@@ -47,6 +48,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     label: "תפעול",
     items: [
       { href: "/admin/schedule", label: "לוח יומי", icon: CalendarClock, mobileOrder: 1 },
+      { href: "/admin/weekly-schedule", label: "לוח שבועי", icon: CalendarRange, mobileOrder: 2 },
       { href: "/admin/tasks", label: "משימות", icon: ListChecks, mobileOrder: 5 },
       { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, mobileOrder: 3 },
       { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, mobileOrder: 4 },

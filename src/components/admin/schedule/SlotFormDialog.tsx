@@ -26,12 +26,32 @@ import {
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { cn } from "@/lib/utils";
 import { createSlotAction, updateSlotAction } from "@/lib/actions/daily-schedule";
+import { trainersAtTime } from "@/lib/utils/weekly-schedule";
 import type { ScheduleSlot } from "@/types/schedule";
+import type { OnDuty } from "@/types/weekly-schedule";
 
 const NO_TRAINER_VALUE = "__none__";
 
 /** The academy's operating hours, from the real daily schedule. */
 const HOUR_PRESETS = ["15:00", "16:00", "17:00", "18:00", "19:00"];
+
+const DEFAULT_START_TIME = "15:00";
+
+/**
+ * The distinct trainers the weekly schedule puts on this hour.
+ *
+ * Deduplicated by trainer: someone covering two overlapping stretches is still
+ * one choice, and offering their name twice would read as a bug.
+ */
+function suggestTrainers(onDuty: OnDuty | null, time: string) {
+  if (!onDuty) return [];
+  const seen = new Set<string>();
+  return trainersAtTime(onDuty, time).filter((band) => {
+    if (seen.has(band.trainerId)) return false;
+    seen.add(band.trainerId);
+    return true;
+  });
+}
 
 interface RosterEntry {
   traineeId: string | null;
@@ -47,6 +67,8 @@ interface SlotFormDialogProps {
   slot: ScheduleSlot | null;
   trainers: TrainerOption[];
   trainees: TrainerOption[];
+  /** Who the weekly schedule puts on this day; feeds the trainer suggestion. */
+  onDuty: OnDuty | null;
 }
 
 export function SlotFormDialog({
@@ -56,16 +78,49 @@ export function SlotFormDialog({
   slot,
   trainers,
   trainees,
+  onDuty,
 }: SlotFormDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const [startTime, setStartTime] = useState(
-    slot ? slot.start_time.slice(0, 5) : "15:00",
+  const initialStartTime = slot
+    ? slot.start_time.slice(0, 5)
+    : DEFAULT_START_TIME;
+
+  const [startTime, setStartTime] = useState(initialStartTime);
+  const [trainerId, setTrainerId] = useState<string | null>(() => {
+    // Editing keeps whatever the slot already says, including "no trainer" —
+    // the week must never silently rewrite a decision someone made.
+    if (slot) return slot.trainer_id;
+    const suggested = suggestTrainers(onDuty, initialStartTime);
+    return suggested.length === 1 ? suggested[0].trainerId : null;
+  });
+  // Suggestions stop the moment the user expresses a preference. Edit mode
+  // counts as already-decided.
+  const [trainerTouched, setTrainerTouched] = useState(slot !== null);
+
+  const suggestedTrainers = useMemo(
+    () => suggestTrainers(onDuty, startTime),
+    [onDuty, startTime],
   );
-  const [trainerId, setTrainerId] = useState<string | null>(
-    slot?.trainer_id ?? null,
-  );
+
+  /**
+   * Moving the hour re-suggests the trainer, because "who is on at 16:00" is a
+   * different question from "who is on at 19:00" — but only while the user has
+   * not chosen one. A single covering trainer is filled in; two or more are
+   * offered as chips, since guessing between them would be wrong half the time.
+   */
+  const changeStartTime = (next: string) => {
+    setStartTime(next);
+    if (trainerTouched) return;
+    const suggested = suggestTrainers(onDuty, next);
+    setTrainerId(suggested.length === 1 ? suggested[0].trainerId : null);
+  };
+
+  const chooseTrainer = (next: string | null) => {
+    setTrainerTouched(true);
+    setTrainerId(next);
+  };
   const [focus, setFocus] = useState(slot?.focus_he ?? "");
   const [location, setLocation] = useState(slot?.location_he ?? "");
   const [roster, setRoster] = useState<RosterEntry[]>(
@@ -183,7 +238,7 @@ export function SlotFormDialog({
                   <button
                     key={hour}
                     type="button"
-                    onClick={() => setStartTime(hour)}
+                    onClick={() => changeStartTime(hour)}
                     className={cn(
                       "rounded-full border px-2.5 py-0.5 text-xs tabular-nums transition-colors",
                       startTime === hour
@@ -199,17 +254,38 @@ export function SlotFormDialog({
                 id="slot-time"
                 type="time"
                 value={startTime}
-                onChange={(event) => setStartTime(event.target.value)}
+                onChange={(event) => changeStartTime(event.target.value)}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="slot-trainer">מאמן</Label>
+              {/* Who the weekly schedule puts on this hour — one tap, and the
+                  full list stays below for anything the week did not plan. */}
+              {suggestedTrainers.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {suggestedTrainers.map((band) => (
+                    <button
+                      key={band.trainerId}
+                      type="button"
+                      onClick={() => chooseTrainer(band.trainerId)}
+                      className={cn(
+                        "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                        trainerId === band.trainerId
+                          ? "border-forest bg-forest text-cream"
+                          : "border-border text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      {band.trainerName}
+                    </button>
+                  ))}
+                </div>
+              )}
               <Select
                 value={trainerId ?? NO_TRAINER_VALUE}
                 onValueChange={(value) =>
-                  setTrainerId(value === NO_TRAINER_VALUE ? null : value)
+                  chooseTrainer(value === NO_TRAINER_VALUE ? null : value)
                 }
               >
                 <SelectTrigger id="slot-trainer">

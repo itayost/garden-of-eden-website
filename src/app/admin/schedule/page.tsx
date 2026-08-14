@@ -5,6 +5,7 @@ import { ScheduleDayView } from "@/components/admin/schedule/ScheduleDayView";
 import { getScheduleAction } from "@/lib/actions/daily-schedule";
 import { getSlotFormOptionsAction } from "@/lib/actions/schedule-options";
 import { getSessionSummariesAction } from "@/lib/actions/training-sessions";
+import { getOnDutyAction } from "@/lib/actions/weekly-schedule";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidDateString } from "@/lib/validations/common";
@@ -30,11 +31,13 @@ export default async function SchedulePage({ searchParams }: PageProps) {
   // (a trainer cannot read trainee rows through RLS, hence the dedicated
   // action). Session summaries feed the per-trainee built/not-built
   // indicators. isAdmin now gates only whole-day duplication.
-  const [scheduleResult, summariesResult, optionsResult] = await Promise.all([
-    getScheduleAction(date),
-    getSessionSummariesAction(date),
-    getSlotFormOptionsAction(),
-  ]);
+  const [scheduleResult, summariesResult, optionsResult, onDutyResult] =
+    await Promise.all([
+      getScheduleAction(date),
+      getSessionSummariesAction(date),
+      getSlotFormOptionsAction(),
+      getOnDutyAction(date),
+    ]);
 
   // A load error must not render as an empty day: "אין לוח" invites the admin
   // to rebuild or duplicate onto a day that actually has slots.
@@ -48,6 +51,9 @@ export default async function SchedulePage({ searchParams }: PageProps) {
     "success" in optionsResult
       ? optionsResult.data
       : { trainers: [], trainees: [] };
+  // Null on failure rather than an empty day: the strip and the build button
+  // hide, instead of asserting that nobody is scheduled.
+  const onDuty = "success" in onDutyResult ? onDutyResult.data : null;
 
   return (
     <ScheduleDayView
@@ -60,6 +66,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
       currentUserId={user!.id}
       trainers={options.trainers}
       trainees={options.trainees}
+      onDuty={onDuty}
     />
   );
 }
