@@ -1,4 +1,16 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(xargs -I{} sh -c 'test -f \"{}\" && echo \"keystore exists\" || echo \"keystore MISSING at {}\"')",
+      "Bash(./gradlew bundleRelease --console=plain -q)",
+      "mcp__claude_ai_Vercel__get_runtime_errors",
+      "Bash(sips -g pixelWidth -g pixelHeight '/Users/itayostraich/Downloads/WhatsApp Image 2026-08-11 at 11.42.09.jpeg')",
+      "Bash(sips -g pixelWidth -g pixelHeight served.webp)",
+      "Bash(sips -g pixelWidth -g pixelHeight live-ido.webp)",
+      "Bash(xargs -0 grep -ho \"slide-in-from-bottom[^{,: ]*\")",
+      "Bash(awk -F_ '{print $1}')"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
