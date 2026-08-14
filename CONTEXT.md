@@ -92,6 +92,18 @@ _Avoid_: Workout (bare), session (bare), assigned program
 A machine or station in the studio, catalogued with a permanent code printed as a QR sticker. Scanning it opens the Trainee's log form for the matching exercise.
 _Avoid_: Machine, device, gear
 
+**Measure**:
+One of the five things the studio records: sets, reps, weight, time, distance. Each Equipment declares which of them it measures, and that decides which fields appear in the Trainee's log form. Physical, so an exercise cannot override it: a jump rope has no weight stack.
+_Avoid_: Metric, dimension, field
+
+**Performance profile**:
+The Measures an Equipment records, its starting numbers, and for weight its stack (minimum, maximum, increment). Read by the Trainer's session builder and the Trainee's log form.
+_Avoid_: Settings, config
+
+**Inherit**:
+An exercise with no default of its own takes the Equipment's. NULL means inherit, per Measure and independently — an exercise may override the weight and inherit the reps. An exercise with no Equipment inherits nothing and shows sets, reps and weight.
+_Avoid_: Fallback, cascade, default (bare)
+
 **Exercise log**:
 What a Trainee actually did on one exercise — sets, reps, weight. One row per exercise, a record that is corrected in place, never deleted. Distinct from the targets a Trainer prescribes.
 _Avoid_: Result, entry, submission

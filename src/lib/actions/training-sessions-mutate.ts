@@ -140,6 +140,10 @@ export async function upsertSessionAction(
       target_sets: exercise.targetSets,
       target_reps_he: exercise.targetReps,
       target_load_he: exercise.targetLoad,
+      target_reps: exercise.targetRepsNum,
+      target_weight_kg: exercise.targetWeightKg,
+      target_duration_seconds: exercise.targetDurationSeconds,
+      target_distance_m: exercise.targetDistanceM,
       notes_he: exercise.notes,
     })),
   });

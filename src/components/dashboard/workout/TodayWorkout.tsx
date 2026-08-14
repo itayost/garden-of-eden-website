@@ -17,12 +17,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { completeMySessionAction } from "@/lib/actions/trainee-workout";
+import type { PreviousLogMap } from "@/lib/actions/trainee-workout";
 import { israelToday } from "@/lib/utils/tasks";
-import type { SessionExercise, TrainingSession } from "@/types/training-session";
+import {
+  formatDuration,
+  formatMeasures,
+  resolveDefaults,
+} from "@/lib/utils/performance-profile";
+import type {
+  SessionEquipmentRef,
+  SessionExercise,
+  TrainingSession,
+} from "@/types/training-session";
 import { CompletionCelebration } from "./CompletionCelebration";
 import {
   LogExerciseDialog,
   type LogDialogTarget,
+  type LogDialogValues,
 } from "./LogExerciseDialog";
 
 interface TodayWorkoutProps {
@@ -33,6 +44,10 @@ interface TodayWorkoutProps {
   /** Equipment scanned, for free-log mode and log attribution. */
   equipmentId: string | null;
   equipmentExercises: { id: string; name_he: string | null; name_en: string | null }[];
+  /** The trainee's last log per exercise, for the "בפעם הקודמת" hint. */
+  previousLogs: PreviousLogMap;
+  /** Profile of the scanned machine, so free logs get a measure-aware form. */
+  freeLogEquipment: SessionEquipmentRef | null;
 }
 
 function exerciseName(exercise: SessionExercise): string {
@@ -42,26 +57,33 @@ function exerciseName(exercise: SessionExercise): string {
 /** Target as compact pills: "3×8-10" reads faster than a sentence. */
 function targetPills(exercise: SessionExercise): string[] {
   const pills: string[] = [];
+  // The numeric target wins over the free text when the trainer gave one;
+  // "8-10" and "עד כשל" still render exactly as typed.
+  const repsLabel =
+    exercise.target_reps_he || (exercise.target_reps ? `${exercise.target_reps}` : null);
   const setsReps = [
     exercise.target_sets ? `${exercise.target_sets}` : null,
-    exercise.target_reps_he || null,
+    repsLabel,
   ]
     .filter(Boolean)
     .join("×");
   if (setsReps) pills.push(`יעד ${setsReps}`);
+
   if (exercise.target_load_he) pills.push(exercise.target_load_he);
+  else if (exercise.target_weight_kg !== null)
+    pills.push(`${exercise.target_weight_kg} ק"ג`);
+
+  if (exercise.target_duration_seconds !== null)
+    pills.push(formatDuration(exercise.target_duration_seconds));
+  if (exercise.target_distance_m !== null)
+    pills.push(`${exercise.target_distance_m} מ׳`);
+
   return pills;
 }
 
 function loggedLine(exercise: SessionExercise): string | null {
   const log = exercise.logs?.[0];
-  if (!log) return null;
-  const parts: string[] = [];
-  if (log.sets) parts.push(`${log.sets} סטים`);
-  if (log.reps) parts.push(`${log.reps} חזרות`);
-  if (log.weight_kg !== null && log.weight_kg !== undefined)
-    parts.push(`${log.weight_kg} ק"ג`);
-  return parts.join(" · ");
+  return log ? formatMeasures(log) : null;
 }
 
 const HEBREW_WEEKDAYS = [
@@ -78,12 +100,74 @@ function weekdayLabel(isoDate: string): string {
   return HEBREW_WEEKDAYS[new Date(`${isoDate}T00:00:00Z`).getUTCDay()];
 }
 
+
+/**
+ * Where a fresh log form starts.
+ *
+ * Precedence: the trainer's target, then what the trainee did last time on
+ * this exercise, then the exercise/equipment defaults. Each measure resolves
+ * independently — a target of "3 sets" still inherits last time's weight.
+ */
+function buildPrefill(
+  exercise: SessionExercise,
+  previous: PreviousLogMap[string] | undefined,
+): LogDialogValues {
+  const defaults = resolveDefaults(
+    exercise.exercise ?? null,
+    exercise.exercise?.equipment_ref ?? null,
+  );
+
+  return {
+    sets: exercise.target_sets ?? previous?.sets ?? defaults.sets,
+    reps: exercise.target_reps ?? previous?.reps ?? defaults.reps,
+    weightKg:
+      exercise.target_weight_kg ?? previous?.weight_kg ?? defaults.weightKg,
+    durationSeconds:
+      exercise.target_duration_seconds ??
+      previous?.duration_seconds ??
+      defaults.durationSeconds,
+    distanceM:
+      exercise.target_distance_m ?? previous?.distance_m ?? defaults.distanceM,
+  };
+}
+
+/** The dialog target for a session exercise, with its machine profile. */
+function toDialogTarget(
+  exercise: SessionExercise,
+  equipmentId: string | null,
+  previousLogs: PreviousLogMap,
+): LogDialogTarget {
+  const log = exercise.logs?.[0];
+  const previous = previousLogs[exercise.exercise_id];
+
+  return {
+    exerciseId: exercise.exercise_id,
+    exerciseName: exerciseName(exercise),
+    sessionExerciseId: exercise.id,
+    equipmentId: equipmentId ?? exercise.exercise?.equipment_id ?? null,
+    equipment: exercise.exercise?.equipment_ref ?? null,
+    existing: log
+      ? {
+          sets: log.sets,
+          reps: log.reps,
+          weightKg: log.weight_kg,
+          durationSeconds: log.duration_seconds,
+          distanceM: log.distance_m,
+        }
+      : undefined,
+    prefill: buildPrefill(exercise, previous),
+    previous: previous ?? null,
+  };
+}
+
 export function TodayWorkout({
   session,
   loadError,
   focusId,
   equipmentId,
   equipmentExercises,
+  previousLogs,
+  freeLogEquipment,
 }: TodayWorkoutProps) {
   const router = useRouter();
   const [completing, setCompleting] = useState(false);
@@ -97,36 +181,13 @@ export function TodayWorkout({
   const [logTarget, setLogTarget] = useState<LogDialogTarget | null>(() =>
     // A QR scan lands here with ?focus= — open the right form immediately.
     focusExercise
-      ? {
-          exerciseId: focusExercise.exercise_id,
-          exerciseName: exerciseName(focusExercise),
-          sessionExerciseId: focusExercise.id,
-          equipmentId,
-          targetSets: focusExercise.target_sets,
-          existing: focusExercise.logs?.[0]
-            ? {
-                sets: focusExercise.logs[0].sets,
-                reps: focusExercise.logs[0].reps,
-                weightKg: focusExercise.logs[0].weight_kg,
-              }
-            : undefined,
-        }
+      ? toDialogTarget(focusExercise, equipmentId, previousLogs)
       : null,
   );
   const [dialogInstance, setDialogInstance] = useState(0);
 
   const openLog = (exercise: SessionExercise) => {
-    const log = exercise.logs?.[0];
-    setLogTarget({
-      exerciseId: exercise.exercise_id,
-      exerciseName: exerciseName(exercise),
-      sessionExerciseId: exercise.id,
-      equipmentId: null,
-      targetSets: exercise.target_sets,
-      existing: log
-        ? { sets: log.sets, reps: log.reps, weightKg: log.weight_kg }
-        : undefined,
-    });
+    setLogTarget(toDialogTarget(exercise, null, previousLogs));
     setDialogInstance((n) => n + 1);
   };
 
@@ -140,6 +201,9 @@ export function TodayWorkout({
       exerciseName: exercise.name_he ?? exercise.name_en ?? "תרגיל",
       sessionExerciseId: null,
       equipmentId,
+      // Free logs come from the scanned machine, whose profile the page
+      // passes down alongside its exercises.
+      equipment: freeLogEquipment,
     });
     setDialogInstance((n) => n + 1);
   };

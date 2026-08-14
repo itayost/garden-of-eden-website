@@ -3,22 +3,64 @@
 import { randomBytes } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
+import type { z } from "zod";
 
 import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { DEFAULT_WEIGHT_STEP_KG } from "@/lib/utils/performance-profile";
 import {
   equipmentCreateSchema,
   equipmentUpdateSchema,
   type EquipmentCreateInput,
   type EquipmentUpdateInput,
 } from "@/lib/validations/exercise-log";
-import type { Equipment } from "@/types/equipment";
+import type { Equipment, EquipmentWithUsage } from "@/types/equipment";
 
 type ListResult = { success: true; data: Equipment[] } | { error: string };
+type UsageResult =
+  | { success: true; data: EquipmentWithUsage[] }
+  | { error: string };
 type MutateResult =
   | { success: true; data: Equipment }
   | { error: string; fieldErrors?: Record<string, string[]> };
+
+/** The performance-profile columns, mapped camelCase form -> snake_case DB. */
+function profileColumns(
+  data: Pick<
+    z.output<typeof equipmentCreateSchema>,
+    | "tracksWeight"
+    | "tracksReps"
+    | "tracksDuration"
+    | "tracksDistance"
+    | "defaultSets"
+    | "defaultReps"
+    | "defaultWeightKg"
+    | "defaultDurationSeconds"
+    | "defaultDistanceM"
+    | "weightMinKg"
+    | "weightMaxKg"
+    | "weightStepKg"
+    | "howto"
+  >,
+) {
+  return {
+    tracks_weight: data.tracksWeight,
+    tracks_reps: data.tracksReps,
+    tracks_duration: data.tracksDuration,
+    tracks_distance: data.tracksDistance,
+    default_sets: data.defaultSets,
+    default_reps: data.defaultReps,
+    default_weight_kg: data.defaultWeightKg,
+    default_duration_seconds: data.defaultDurationSeconds,
+    default_distance_m: data.defaultDistanceM,
+    weight_min_kg: data.weightMinKg,
+    weight_max_kg: data.weightMaxKg,
+    // NOT NULL in the DB; an omitted step means "use the standard".
+    weight_step_kg: data.weightStepKg ?? DEFAULT_WEIGHT_STEP_KG,
+    howto_he: data.howto,
+  };
+}
 
 /**
  * Short, URL-safe, unambiguous code for the QR sticker. 8 chars from a
@@ -52,6 +94,43 @@ export async function listEquipmentAction(): Promise<ListResult> {
   return { success: true, data: (data ?? []) as Equipment[] };
 }
 
+/**
+ * The catalog plus how many library exercises point at each machine.
+ *
+ * A zero count is the signal worth surfacing: that machine's sticker scans
+ * fine but can never match an exercise in a session, which is silent today.
+ */
+export async function listEquipmentWithUsageAction(): Promise<UsageResult> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+
+  const supabase = await createClient();
+
+  // PostgREST aggregates the count in the same round trip, so this returns one
+  // row per machine rather than one row per linked exercise.
+  const { data, error } = await typedFrom(supabase, "equipment")
+    .select("*, workout_exercises(count)")
+    .order("is_active", { ascending: false })
+    .order("name_he", { ascending: true });
+
+  if (error) {
+    console.error("List equipment usage error:", error);
+    return { error: "שגיאה בטעינת הציוד" };
+  }
+
+  const rows = (data ?? []) as (Equipment & {
+    workout_exercises?: { count: number }[];
+  })[];
+
+  return {
+    success: true,
+    data: rows.map(({ workout_exercises, ...item }) => ({
+      ...item,
+      exerciseCount: workout_exercises?.[0]?.count ?? 0,
+    })),
+  };
+}
+
 export async function createEquipmentAction(
   input: EquipmentCreateInput,
 ): Promise<MutateResult> {
@@ -76,6 +155,7 @@ export async function createEquipmentAction(
         name_he: validated.data.name,
         notes_he: validated.data.notes,
         code: generateEquipmentCode(),
+        ...profileColumns(validated.data),
       })
       .select()
       .single();
@@ -115,6 +195,7 @@ export async function updateEquipmentAction(
       name_he: validated.data.name,
       notes_he: validated.data.notes,
       is_active: validated.data.isActive,
+      ...profileColumns(validated.data),
     })
     .eq("id", validated.data.equipmentId)
     .select()

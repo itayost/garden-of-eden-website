@@ -1,9 +1,15 @@
 import { z } from "zod";
 
 import { isValidDateString, UUID_REGEX } from "@/lib/validations/common";
+import {
+  distanceMSchema,
+  durationSecondsSchema,
+  repsSchema,
+  setsSchema,
+  weightKgSchema,
+} from "@/lib/validations/measures";
 
 const MAX_TEXT_LENGTH = 300;
-const MAX_SETS = 99;
 /** Guardrail; a daily session for this age group is a handful of exercises. */
 const MAX_EXERCISES_PER_SESSION = 40;
 
@@ -21,23 +27,18 @@ const optionalText = (max: number) =>
     .nullish()
     .transform((v) => v ?? null);
 
-/** Form fields submit "" or a number-ish string; the DB stores int or NULL. */
-const targetSetsSchema = z
-  .union([z.number(), z.string(), z.null(), z.undefined()])
-  .transform((v) => {
-    if (v === null || v === undefined || v === "") return null;
-    const n = typeof v === "number" ? v : Number(v);
-    return Number.isFinite(n) ? Math.trunc(n) : null;
-  })
-  .refine((v) => v === null || (v >= 1 && v <= MAX_SETS), {
-    message: "מספר סטים לא תקין",
-  });
-
 const sessionExerciseSchema = z.object({
   exerciseId: uuidSchema,
-  targetSets: targetSetsSchema,
+  targetSets: setsSchema,
+  // Free text stays: "8-10" and "עד כשל" are not numbers and should not have
+  // to be. The numeric fields below sit beside them, not instead of them, and
+  // are what make an actual-vs-target comparison possible.
   targetReps: optionalText(MAX_TEXT_LENGTH),
   targetLoad: optionalText(MAX_TEXT_LENGTH),
+  targetRepsNum: repsSchema,
+  targetWeightKg: weightKgSchema,
+  targetDurationSeconds: durationSecondsSchema,
+  targetDistanceM: distanceMSchema,
   notes: optionalText(MAX_TEXT_LENGTH),
 });
 

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Dumbbell } from "lucide-react";
+
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -34,7 +37,11 @@ export default function AdminExercisesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ExerciseTable />
+          {/* ExerciseTable reads ?equipment= via useSearchParams, which this
+              statically-rendered page must bound with Suspense. */}
+          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+            <ExerciseTable />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

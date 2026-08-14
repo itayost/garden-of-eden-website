@@ -11,18 +11,21 @@ import {
   type ExerciseLogInput,
 } from "@/lib/validations/exercise-log";
 import { isValidUUID } from "@/lib/validations/common";
-import type { ExerciseLog } from "@/types/equipment";
-import type { TrainingSession } from "@/types/training-session";
+import {
+  EQUIPMENT_PROFILE_COLUMNS,
+  type EquipmentProfile,
+  type ExerciseLog,
+} from "@/types/equipment";
+import {
+  SESSION_SELECT_WITH_EXERCISES,
+  type TrainingSession,
+} from "@/types/training-session";
 
 /**
  * Trainee-facing actions. Every query runs on the user-scoped client, so RLS
  * is the enforcement: a trainee only ever reads/writes his own rows. Staff
  * calling these acts on their own (empty) data — harmless.
  */
-
-/** Session + exercises + the caller's logs, one embed. */
-const MY_SESSION_SELECT =
-  "*, exercises:training_session_exercises(id, session_id, exercise_id, order_index, target_sets, target_reps_he, target_load_he, notes_he, exercise:workout_exercises(id, name_he, name_en, main_category, sub_category, equipment, equipment_id, cues_he), logs:exercise_logs(id, sets, reps, weight_kg, note_he, logged_at))";
 
 type MySessionResult =
   | { success: true; data: TrainingSession | null }
@@ -41,7 +44,7 @@ export async function getMyTodaySessionAction(): Promise<MySessionResult> {
   if (!user) return { error: "לא מחובר" };
 
   const { data, error } = await typedFrom(supabase, "training_sessions")
-    .select(MY_SESSION_SELECT)
+    .select(SESSION_SELECT_WITH_EXERCISES)
     .eq("trainee_id", user.id)
     .eq("session_date", israelToday())
     .maybeSingle();
@@ -84,7 +87,17 @@ export async function logExerciseAction(input: ExerciseLogInput): Promise<LogRes
     return { error: firstError ?? "אימות נתונים נכשל" };
   }
 
-  const { exerciseId, sessionExerciseId, equipmentId, sets, reps, weightKg, note } =
+  const {
+    exerciseId,
+    sessionExerciseId,
+    equipmentId,
+    sets,
+    reps,
+    weightKg,
+    durationSeconds,
+    distanceM,
+    note,
+  } =
     validated.data;
 
   // Ownership check mirroring the RLS policy: the session exercise, when
@@ -120,6 +133,8 @@ export async function logExerciseAction(input: ExerciseLogInput): Promise<LogRes
         sets,
         reps,
         weight_kg: weightKg,
+        duration_seconds: durationSeconds,
+        distance_m: distanceM,
         note_he: note ?? existing.note_he,
         equipment_id: equipmentId ?? existing.equipment_id,
         logged_at: new Date().toISOString(),
@@ -156,6 +171,8 @@ export async function logExerciseAction(input: ExerciseLogInput): Promise<LogRes
       sets,
       reps,
       weight_kg: weightKg,
+      duration_seconds: durationSeconds,
+      distance_m: distanceM,
       note_he: note,
     })
     .select()
@@ -261,10 +278,86 @@ export async function resolveEquipmentCodeAction(code: string): Promise<
 }
 
 /** Exercises linked to one equipment, for the free-log path after a scan. */
+/** What the trainee last recorded per exercise, keyed by exercise id. */
+export type PreviousLogMap = Record<
+  string,
+  Pick<
+    ExerciseLog,
+    "sets" | "reps" | "weight_kg" | "duration_seconds" | "distance_m" | "logged_at"
+  >
+>;
+
+/**
+ * The caller's most recent log for each of the given exercises, excluding
+ * today's session so "בפעם הקודמת" never echoes the row being edited.
+ *
+ * One query ordered newest-first, reduced client-side: the first row seen per
+ * exercise is the latest. RLS already scopes this to the caller.
+ */
+export async function getPreviousLogsAction(
+  exerciseIds: string[],
+  excludeSessionExerciseIds: string[],
+): Promise<{ success: true; data: PreviousLogMap } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "לא מחובר" };
+
+  const ids = exerciseIds.filter(isValidUUID);
+  if (ids.length === 0) return { success: true, data: {} };
+
+  const { data, error } = await typedFrom(supabase, "exercise_logs")
+    .select(
+      "exercise_id, session_exercise_id, sets, reps, weight_kg, duration_seconds, distance_m, logged_at",
+    )
+    .eq("trainee_id", user.id)
+    .in("exercise_id", ids)
+    .order("logged_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error("Get previous logs error:", error);
+    // A missing hint must never block logging.
+    return { success: true, data: {} };
+  }
+
+  const excluded = new Set(excludeSessionExerciseIds);
+  const latest: PreviousLogMap = {};
+
+  for (const row of (data ?? []) as (PreviousLogMap[string] & {
+    exercise_id: string;
+    session_exercise_id: string | null;
+  })[]) {
+    if (row.session_exercise_id && excluded.has(row.session_exercise_id)) continue;
+    if (latest[row.exercise_id]) continue;
+    latest[row.exercise_id] = {
+      sets: row.sets,
+      reps: row.reps,
+      weight_kg: row.weight_kg,
+      duration_seconds: row.duration_seconds,
+      distance_m: row.distance_m,
+      logged_at: row.logged_at,
+    };
+  }
+
+  return { success: true, data: latest };
+}
+
+/**
+ * The scanned machine plus the exercises that run on it — the free-log path.
+ *
+ * Returns the profile too: the trainee's log form needs it to know which
+ * fields to render, and equipment_authenticated_select already lets any
+ * signed-in user read the catalog. Fetching it here rather than through the
+ * admin/trainer-gated equipment action keeps it to one query and, unlike that
+ * action, actually returns something for a trainee.
+ */
 export async function getEquipmentExercisesAction(equipmentId: string): Promise<
   | {
       success: true;
       data: { id: string; name_he: string | null; name_en: string | null }[];
+      equipment: EquipmentProfile | null;
     }
   | { error: string }
 > {
@@ -276,15 +369,26 @@ export async function getEquipmentExercisesAction(equipmentId: string): Promise<
 
   if (!isValidUUID(equipmentId)) return { error: "מזהה ציוד לא תקין" };
 
-  const { data, error } = await typedFrom(supabase, "workout_exercises")
-    .select("id, name_he, name_en")
-    .eq("equipment_id", equipmentId)
-    .order("order_index", { ascending: true });
+  const [exercises, machine] = await Promise.all([
+    typedFrom(supabase, "workout_exercises")
+      .select("id, name_he, name_en")
+      .eq("equipment_id", equipmentId)
+      .order("order_index", { ascending: true }),
+    typedFrom(supabase, "equipment")
+      .select(EQUIPMENT_PROFILE_COLUMNS)
+      .eq("id", equipmentId)
+      .maybeSingle(),
+  ]);
 
-  if (error) {
-    console.error("Get equipment exercises error:", error);
+  if (exercises.error) {
+    console.error("Get equipment exercises error:", exercises.error);
     return { error: "שגיאה בטעינת התרגילים" };
   }
 
-  return { success: true, data: data ?? [] };
+  return {
+    success: true,
+    data: exercises.data ?? [],
+    // A missing profile is not fatal — the form falls back to sets/reps/weight.
+    equipment: (machine.data as EquipmentProfile | null) ?? null,
+  };
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition, useCallback, useEffect } from "react";
-import { Plus, Pencil } from "lucide-react";
+import { useState, useTransition, useCallback, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { Plus, Pencil, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,8 +27,13 @@ import {
   listSubCategories,
   deleteExercise,
 } from "@/features/workouts/lib/actions";
-import { MAIN_CATEGORIES } from "@/features/workouts/lib/types";
+import {
+  MAIN_CATEGORIES,
+  UNLINKED_EQUIPMENT_FILTER,
+} from "@/features/workouts/lib/types";
 import type { WorkoutExercise } from "@/features/workouts/lib/types";
+import { listEquipmentAction } from "@/lib/actions/equipment";
+import type { Equipment } from "@/types/equipment";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -37,17 +43,30 @@ const PAGE_SIZE = 20;
 
 const ALL_MAIN_CATEGORIES_OPTION = { value: "__all__", label: "כל הקטגוריות" };
 const ALL_SUB_CATEGORIES_OPTION = { value: "__all__", label: "כל תת-קטגוריות" };
+const ALL_EQUIPMENT_OPTION = { value: "__all__", label: "כל הציוד" };
+const UNLINKED_EQUIPMENT_OPTION = {
+  value: UNLINKED_EQUIPMENT_FILTER,
+  label: "ללא ציוד מקושר",
+};
 
 // ---------------------------------------------------------------------------
 // ExerciseTable
 // ---------------------------------------------------------------------------
 
 export function ExerciseTable() {
+  const searchParams = useSearchParams();
+
   // Filter & pagination state
   const [mainCategory, setMainCategory] = useState<string>("");
   const [subCategory, setSubCategory] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  // Seeded from ?equipment=<id>, which is where the count badge on the
+  // equipment catalog links to.
+  const [equipmentId, setEquipmentId] = useState<string>(
+    () => searchParams.get("equipment") ?? "",
+  );
   const [page, setPage] = useState<number>(0);
+  const [equipmentOptions, setEquipmentOptions] = useState<Equipment[]>([]);
 
   // Data state
   const [rows, setRows] = useState<WorkoutExercise[]>([]);
@@ -70,13 +89,14 @@ export function ExerciseTable() {
           mainCategory: mainCategory || undefined,
           subCategory: subCategory || undefined,
           search: search || undefined,
+          equipmentId: equipmentId || undefined,
         },
         page
       );
       setRows(result.rows);
       setTotal(result.total);
     });
-  }, [mainCategory, subCategory, search, page]);
+  }, [mainCategory, subCategory, search, equipmentId, page]);
 
   useEffect(() => {
     load();
@@ -127,6 +147,35 @@ export function ExerciseTable() {
     ...MAIN_CATEGORIES.map((c) => ({ value: c, label: c })),
   ];
 
+  const equipmentOptionsList = useMemo(
+    () => [
+      ALL_EQUIPMENT_OPTION,
+      UNLINKED_EQUIPMENT_OPTION,
+      ...equipmentOptions.map((item) => ({
+        value: item.id,
+        label: item.is_active ? item.name_he : `${item.name_he} (לא פעיל)`,
+      })),
+    ],
+    [equipmentOptions],
+  );
+
+  const handleEquipmentChange = (value: string) => {
+    setEquipmentId(value === "__all__" ? "" : value);
+    setPage(0);
+  };
+
+  // The catalog powers the equipment filter. Loaded once — it is a few dozen
+  // rows and does not change while the table is open.
+  useEffect(() => {
+    let cancelled = false;
+    listEquipmentAction().then((result) => {
+      if (!cancelled && "success" in result) setEquipmentOptions(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ---------------------------------------------------------------------------
   // Form dialog handlers
   // ---------------------------------------------------------------------------
@@ -156,7 +205,7 @@ export function ExerciseTable() {
       <TableToolbar
         searchValue={search}
         onSearchChange={handleSearchChange}
-        searchPlaceholder="חיפוש לפי שם, ציוד..."
+        searchPlaceholder="חיפוש לפי שם או מכשיר..."
         filters={
           <>
             <ToolbarSelect
@@ -170,6 +219,12 @@ export function ExerciseTable() {
               onValueChange={handleSubCategoryChange}
               options={subCategoryOptions}
               placeholder="תת-קטגוריה"
+            />
+            <ToolbarSelect
+              value={equipmentId || "__all__"}
+              onValueChange={handleEquipmentChange}
+              options={equipmentOptionsList}
+              placeholder="ציוד"
             />
           </>
         }
@@ -243,6 +298,7 @@ export function ExerciseTable() {
           <ExerciseForm
             key={editTarget?.id ?? "new"}
             exercise={editTarget}
+            equipmentOptions={equipmentOptions}
             onSaved={handleFormSaved}
             onCancel={() => setFormOpen(false)}
           />
@@ -276,7 +332,7 @@ function ExerciseRow({ exercise, onEdit, onDeleted }: ExerciseRowProps) {
         {exercise.subCategory ?? <span className="text-muted-foreground text-xs">—</span>}
       </TableCell>
       <TableCell>
-        {exercise.equipment ?? <span className="text-muted-foreground text-xs">—</span>}
+        <EquipmentCell exercise={exercise} />
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
@@ -304,5 +360,45 @@ function ExerciseRow({ exercise, onEdit, onDeleted }: ExerciseRowProps) {
         </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// EquipmentCell
+//
+// Shows the LINKED CATALOG MACHINE, not the legacy free-text `equipment`
+// column. Those two disagreeing is why the connection looked absent: a fully
+// scannable exercise rendered an em dash, while "משקל חופשי" typed into the
+// text field looked connected and could never match a QR.
+// ---------------------------------------------------------------------------
+
+function EquipmentCell({ exercise }: { exercise: WorkoutExercise }) {
+  if (exercise.equipmentId && exercise.equipmentName) {
+    return (
+      <span className="flex flex-col gap-0.5">
+        <span className="flex items-center gap-1.5 font-medium">
+          <QrCode className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {exercise.equipmentName}
+        </span>
+        {exercise.equipmentCode && (
+          <span dir="ltr" className="text-start font-mono text-[10px] text-muted-foreground">
+            {exercise.equipmentCode}
+          </span>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex flex-col gap-0.5">
+      <span className="w-fit rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+        לא מקושר לציוד
+      </span>
+      {exercise.equipment && (
+        <span className="text-[10px] text-muted-foreground">
+          {exercise.equipment}
+        </span>
+      )}
+    </span>
   );
 }

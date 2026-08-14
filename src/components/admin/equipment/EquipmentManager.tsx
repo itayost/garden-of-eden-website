@@ -15,11 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Equipment } from "@/types/equipment";
+import type { Equipment, EquipmentWithUsage } from "@/types/equipment";
 import { EquipmentFormDialog } from "./EquipmentFormDialog";
+import { MeasureBadges } from "./MeasureBadges";
 
 interface EquipmentManagerProps {
-  equipment: Equipment[];
+  equipment: EquipmentWithUsage[];
   loadError: string | null;
   isAdmin: boolean;
 }
@@ -27,7 +28,11 @@ interface EquipmentManagerProps {
 /**
  * The equipment catalog. Each item's QR sticker encodes
  * /dashboard/scan/<code>; the printable sheet lives at
- * /admin/workouts/equipment/print.
+ * /print/equipment-stickers.
+ *
+ * The exercise count is the column worth reading: a machine linked to zero
+ * exercises scans fine but can never match anything in a session, which is
+ * otherwise silent.
  */
 export function EquipmentManager({
   equipment,
@@ -100,6 +105,10 @@ export function EquipmentManager({
                   <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                     {item.code}
                   </p>
+                  <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <MeasureBadges measures={item} />
+                    <ExerciseCount item={item} />
+                  </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant={item.is_active ? "default" : "secondary"}>
@@ -134,6 +143,8 @@ export function EquipmentManager({
                 <TableRow>
                   <TableHead>שם</TableHead>
                   <TableHead>קוד</TableHead>
+                  <TableHead>נמדד</TableHead>
+                  <TableHead>תרגילים</TableHead>
                   <TableHead>סטטוס</TableHead>
                   <TableHead>הערות</TableHead>
                   {isAdmin && <TableHead />}
@@ -149,6 +160,12 @@ export function EquipmentManager({
                       </span>
                     </TableCell>
                     <TableCell className="font-mono text-xs">{item.code}</TableCell>
+                    <TableCell>
+                      <MeasureBadges measures={item} />
+                    </TableCell>
+                    <TableCell>
+                      <ExerciseCount item={item} />
+                    </TableCell>
                     <TableCell>
                       <Badge variant={item.is_active ? "default" : "secondary"}>
                         {item.is_active ? "פעיל" : "לא פעיל"}
@@ -185,5 +202,32 @@ export function EquipmentManager({
         />
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ExerciseCount — how many library exercises run on this machine
+// ---------------------------------------------------------------------------
+
+function ExerciseCount({ item }: { item: EquipmentWithUsage }) {
+  if (item.exerciseCount === 0) {
+    return (
+      <Link
+        href="/admin/workouts/exercises"
+        className="inline-block rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-bold text-destructive hover:underline"
+        title="סריקת המדבקה תעבוד, אבל היא לא תתאים לשום תרגיל באימון"
+      >
+        ללא תרגילים
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href={`/admin/workouts/exercises?equipment=${item.id}`}
+      className="inline-block rounded-full bg-gold/15 px-2 py-0.5 text-xs font-bold text-amber-700 hover:underline"
+    >
+      {item.exerciseCount} תרגילים
+    </Link>
   );
 }
