@@ -91,15 +91,17 @@ export function ProgramBuilder({ programId, initialGrid }: ProgramBuilderProps) 
     );
   };
 
-  const handleAddExercise = (exercise: WorkoutExercise) => {
-    const newRow: ProgramExerciseRow = {
+  // No dedupe and no alreadyAddedIds on the picker: a program grid may
+  // legitimately repeat an exercise across the weeks.
+  const handleAddExercises = (exercises: WorkoutExercise[]) => {
+    const newRows: ProgramExerciseRow[] = exercises.map((exercise) => ({
       key: crypto.randomUUID(),
       exerciseId: exercise.id,
       exerciseName: exercise.nameHe ?? exercise.nameEn ?? "",
       notesHe: "",
       cells: resizeRowCells([], meta.weeks),
-    };
-    setRows((prev) => [...prev, newRow]);
+    }));
+    setRows((prev) => [...prev, ...newRows]);
   };
 
   const handleSave = () => {
@@ -263,7 +265,7 @@ export function ProgramBuilder({ programId, initialGrid }: ProgramBuilderProps) 
       <ExercisePicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onAdd={handleAddExercise}
+        onAdd={handleAddExercises}
       />
     </div>
   );

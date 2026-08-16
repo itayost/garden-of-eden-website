@@ -9,16 +9,16 @@ import {
   weightKgSchema,
 } from "@/lib/validations/measures";
 
-const MAX_TEXT_LENGTH = 300;
+export const MAX_TEXT_LENGTH = 300;
 /** Guardrail; a daily session for this age group is a handful of exercises. */
-const MAX_EXERCISES_PER_SESSION = 40;
+export const MAX_EXERCISES_PER_SESSION = 40;
 
-const uuidSchema = z.string().regex(UUID_REGEX, "מזהה לא תקין");
+export const uuidSchema = z.string().regex(UUID_REGEX, "מזהה לא תקין");
 
 const dateSchema = z.string().refine(isValidDateString, "תאריך לא תקין");
 
 /** Trims, then treats an empty string as "no value" so the DB stores NULL. */
-const optionalText = (max: number) =>
+export const optionalText = (max: number) =>
   z
     .string()
     .trim()
@@ -27,7 +27,11 @@ const optionalText = (max: number) =>
     .nullish()
     .transform((v) => v ?? null);
 
-const sessionExerciseSchema = z.object({
+/**
+ * One prescribed exercise row. Shared with the session-template schema: the
+ * row shape is identical by design, and a second copy would drift.
+ */
+export const sessionExerciseSchema = z.object({
   exerciseId: uuidSchema,
   targetSets: setsSchema,
   // Free text stays: "8-10" and "עד כשל" are not numbers and should not have
