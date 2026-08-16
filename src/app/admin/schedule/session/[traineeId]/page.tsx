@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { SessionBuilder } from "@/components/admin/schedule/SessionBuilder";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { listTemplatesAction } from "@/lib/actions/session-templates";
 import { getSessionAction } from "@/lib/actions/training-sessions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listPrograms } from "@/features/workouts/lib/actions";
@@ -39,23 +40,28 @@ export default async function SessionBuilderPage({
   // save action's filter so a deactivated trainee 404s here instead of
   // failing after the trainer composed the whole session.
   const adminClient = createAdminClient();
-  const [{ data: trainee }, sessionResult, programs] = await Promise.all([
-    adminClient
-      .from("profiles")
-      .select("id, full_name")
-      .eq("id", traineeId)
-      .eq("role", "trainee")
-      .eq("is_active", true)
-      .is("deleted_at", null)
-      .maybeSingle(),
-    getSessionAction(traineeId, date),
-    listPrograms(),
-  ]);
+  const [{ data: trainee }, sessionResult, programs, templatesResult] =
+    await Promise.all([
+      adminClient
+        .from("profiles")
+        .select("id, full_name")
+        .eq("id", traineeId)
+        .eq("role", "trainee")
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      getSessionAction(traineeId, date),
+      listPrograms(),
+      listTemplatesAction(),
+    ]);
 
   if (!trainee) notFound();
 
   const session = "success" in sessionResult ? sessionResult.data : null;
   const loadError = "error" in sessionResult ? sessionResult.error : null;
+  // A failed template list only costs the import option, so it degrades to an
+  // empty menu item rather than blocking the whole builder.
+  const templates = "success" in templatesResult ? templatesResult.data : [];
 
   return (
     <SessionBuilder
@@ -70,6 +76,7 @@ export default async function SessionBuilderPage({
       session={session}
       loadError={loadError}
       programs={programs}
+      templates={templates}
     />
   );
 }

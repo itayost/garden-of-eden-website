@@ -108,6 +108,10 @@ _Avoid_: Attendance — that is who actually showed up; the Roster is who is pla
 The per-Trainee exercise plan for one calendar day, built by a Trainer from the exercise library. Not a Slot (the group plan) and not a Program (a multi-week template used only as a copy source).
 _Avoid_: Workout (bare), session (bare), assigned program
 
+**Session template (תבנית אימון)**:
+A named, reusable single-day exercise list with its targets, saved from a Training session and loadable into any Trainee's day. Carries the numeric targets and the Equipment link, so it comes back exactly as it was saved. Staff-only and never assigned — what a Trainee sees is the Training session built from it. Not a Program: a Program is a multi-week grid.
+_Avoid_: תוכנית, program, plan, preset
+
 **Equipment**:
 A machine or station in the studio, catalogued with a permanent code printed as a QR sticker. Scanning it opens the Trainee's log form for the matching exercise.
 _Avoid_: Machine, device, gear

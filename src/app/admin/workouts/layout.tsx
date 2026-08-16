@@ -22,6 +22,11 @@ const TABS: WorkoutsTab[] = [
     isActive: (pathname) => pathname.startsWith("/admin/workouts/programs"),
   },
   {
+    label: "תבניות",
+    href: "/admin/workouts/templates",
+    isActive: (pathname) => pathname.startsWith("/admin/workouts/templates"),
+  },
+  {
     label: "ציוד",
     href: "/admin/workouts/equipment",
     isActive: (pathname) => pathname.startsWith("/admin/workouts/equipment"),
