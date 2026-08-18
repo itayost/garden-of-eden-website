@@ -26,12 +26,15 @@ interface BuildDayButtonProps {
   targetHasSlots: boolean;
   /** Working stretches the weekly schedule puts on this day, standby excluded. */
   bandCount: number;
+  /** The week view puts this in a column, where the daily board's sizing does not fit. */
+  compact?: boolean;
 }
 
 export function BuildDayButton({
   targetDate,
   targetHasSlots,
   bandCount,
+  compact = false,
 }: BuildDayButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -58,14 +61,19 @@ export function BuildDayButton({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        {/* Icon-only on a phone — see CopyWhatsAppButton. */}
         <Button
           variant="outline"
+          size={compact ? "sm" : "default"}
+          className={compact ? "w-full text-xs" : undefined}
           disabled={targetHasSlots || bandCount === 0}
           aria-label="בנה מהלוח השבועי"
         >
           <CalendarRange className="h-4 w-4" />
-          <span className="hidden sm:inline">בנה מהלוח השבועי</span>
+          {/* Icon-only on a phone on the daily board; a column always has room
+              for the words, and an unlabelled icon there would be a riddle. */}
+          <span className={compact ? undefined : "hidden sm:inline"}>
+            בנה מהלוח השבועי
+          </span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

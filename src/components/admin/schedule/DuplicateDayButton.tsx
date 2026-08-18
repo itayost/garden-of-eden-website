@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { addDays } from "@/lib/utils/iso-date";
 import { Label } from "@/components/ui/label";
 import { duplicateDayAction } from "@/lib/actions/daily-schedule";
 
@@ -28,20 +29,13 @@ interface DuplicateDayButtonProps {
   targetHasSlots: boolean;
 }
 
-/** Yesterday relative to the target, the overwhelmingly common source. */
-function previousDay(date: string): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
 export function DuplicateDayButton({
   targetDate,
   targetHasSlots,
 }: DuplicateDayButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [fromDate, setFromDate] = useState(previousDay(targetDate));
+  const [fromDate, setFromDate] = useState(addDays(targetDate, -1));
   const [loading, setLoading] = useState(false);
 
   const handleDuplicate = async () => {

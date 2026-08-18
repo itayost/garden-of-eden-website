@@ -4,7 +4,7 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { deriveOnDuty } from "@/lib/utils/weekly-schedule";
-import { isValidDateString } from "@/lib/validations/common";
+import { isValidDateRange, isValidDateString } from "@/lib/validations/common";
 import type {
   OnDuty,
   WeeklyBand,
@@ -18,6 +18,10 @@ type WeekResult =
   | { error: string };
 
 type OnDutyResult = { success: true; data: OnDuty } | { error: string };
+
+type ExceptionsResult =
+  | { success: true; data: WeeklyException[] }
+  | { error: string };
 
 /**
  * Every Band, all seven weekdays, ordered for display.
@@ -132,4 +136,42 @@ export async function getOnDutyAction(date: string): Promise<OnDutyResult> {
       (exceptionsResult.data ?? []) as WeeklyException[],
     ),
   };
+}
+
+/**
+ * The Exceptions in a date window, without the Bands.
+ *
+ * The week view needs the deviations for the seven days on screen, while the
+ * exceptions panel keeps its own window anchored to today. Two windows rather
+ * than one union: a union would make the panel's list grow, and its contents
+ * change, according to which week the other tab happens to be showing.
+ *
+ * The two overlap in the ordinary case, which costs one small extra query and
+ * is worth it for a panel that answers the same question every time.
+ */
+export async function getExceptionsInRangeAction(
+  fromDate: string,
+  toDate: string,
+): Promise<ExceptionsResult> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+
+  if (!isValidDateRange(fromDate, toDate)) {
+    return { error: "טווח תאריכים לא תקין" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await typedFrom(supabase, "weekly_schedule_exceptions")
+    .select("*")
+    .gte("exception_date", fromDate)
+    .lte("exception_date", toDate)
+    .order("exception_date", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: true });
+
+  if (error) {
+    console.error("Get exceptions in range error:", error);
+    return { error: "שגיאה בטעינת החריגות" };
+  }
+
+  return { success: true, data: (data ?? []) as WeeklyException[] };
 }

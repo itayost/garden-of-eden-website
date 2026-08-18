@@ -1,17 +1,49 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { verifyAdmin } from "@/lib/actions/shared";
+import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { addDays } from "@/lib/utils/iso-date";
+import { buildWeek, isBuildableDay } from "@/lib/utils/schedule-week";
+import { israelToday } from "@/lib/utils/tasks";
 import { deriveOnDuty } from "@/lib/utils/weekly-schedule";
-import { buildDaySchema, type BuildDayInput } from "@/lib/validations/weekly-schedule";
-import type { WeeklyBand, WeeklyException } from "@/types/weekly-schedule";
+import {
+  buildDaySchema,
+  buildWeekSchema,
+  type BuildDayInput,
+  type BuildWeekInput,
+} from "@/lib/validations/weekly-schedule";
+import { SLOT_SELECT_WITH_TRAINEES, type ScheduleSlot } from "@/types/schedule";
+import type { OnDuty, WeeklyBand, WeeklyException } from "@/types/weekly-schedule";
 
 type BuildResult =
   | { success: true; count: number }
   | { error: string; fieldErrors?: Record<string, string[]> };
+
+type BuildWeekResult =
+  | { success: true; count: number; dayCount: number }
+  | { error: string; fieldErrors?: Record<string, string[]> };
+
+/**
+ * One slot row per working stretch, at the stretch's start hour.
+ *
+ * Standby is already excluded: deriveOnDuty splits it out, and onDuty.bands
+ * holds only what someone decided is happening.
+ */
+function slotRowsFor(date: string, onDuty: OnDuty, userId: string) {
+  return onDuty.bands.map((band) => ({
+    schedule_date: date,
+    start_time: band.startTime,
+    trainer_id: band.trainerId,
+    trainer_name: band.trainerName,
+    // The stretch's label is what this group is ("ילדים א׳"), which is what the
+    // focus field carries. A stretch with no label leaves it for the trainer.
+    focus_he: band.labelHe,
+    location_he: band.locationHe,
+    created_by: userId,
+  }));
+}
 
 /**
  * Seeds a day's board from the weekly schedule: one slot per working stretch
@@ -83,17 +115,7 @@ export async function buildDayFromWeeklyScheduleAction(
     return { error: "אין שיבוץ בלוח השבועי ליום זה" };
   }
 
-  const rows = onDuty.bands.map((band) => ({
-    schedule_date: date,
-    start_time: band.startTime,
-    trainer_id: band.trainerId,
-    trainer_name: band.trainerName,
-    // The stretch's label is what this group is ("ילדים א׳"), which is what the
-    // focus field carries. A stretch with no label leaves it for the trainer.
-    focus_he: band.labelHe,
-    location_he: band.locationHe,
-    created_by: user!.id,
-  }));
+  const rows = slotRowsFor(date, onDuty, user!.id);
 
   // One insert, unlike duplicateDayAction's loop: there is no roster to attach
   // per row, so the whole build is a single statement and either all of it
@@ -114,7 +136,106 @@ export async function buildDayFromWeeklyScheduleAction(
     return { error: "שגיאה בבניית הלוח" };
   }
 
-  revalidatePath("/admin/schedule");
+  revalidateScheduleSurfaces();
 
   return { success: true, count: created!.length };
+}
+
+/**
+ * Seeds every unbuilt day of one week in a single statement.
+ *
+ * Sunday morning, the admin wants six boards, not six clicks. The rules are the
+ * per-day build's rules applied six times: standby is skipped, seeded slots
+ * carry no roster, and a day that already has a board is left exactly as it is
+ * — skipped rather than refused, because "some of this week is already built"
+ * is the normal case, not an error.
+ *
+ * Past days are skipped too. Backfilling one is legitimate, which is why the
+ * per-day button still offers it, but writing today's template over a week that
+ * already happened is not what a bulk button should do by default.
+ *
+ * Admin-only, as the per-day build is: rebuilding a whole week in one click is
+ * an admin decision.
+ */
+export async function buildWeekFromWeeklyScheduleAction(
+  input: BuildWeekInput,
+): Promise<BuildWeekResult> {
+  const { error: authError, user } = await verifyAdmin();
+  if (authError) return { error: authError };
+
+  const validated = buildWeekSchema.safeParse(input);
+  if (!validated.success) {
+    return {
+      error: "אימות נתונים נכשל",
+      fieldErrors: validated.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  const { weekStart } = validated.data;
+  const weekEnd = addDays(weekStart, 6);
+  const supabase = await createClient();
+
+  const [slotsResult, bandsResult, exceptionsResult] = await Promise.all([
+    typedFrom(supabase, "daily_schedule_slots")
+      .select(SLOT_SELECT_WITH_TRAINEES)
+      .gte("schedule_date", weekStart)
+      .lte("schedule_date", weekEnd),
+    typedFrom(supabase, "weekly_schedule_bands").select("*"),
+    typedFrom(supabase, "weekly_schedule_exceptions")
+      .select("*")
+      .gte("exception_date", weekStart)
+      .lte("exception_date", weekEnd),
+  ]);
+
+  if (slotsResult.error || bandsResult.error || exceptionsResult.error) {
+    console.error(
+      "Build week fetch error:",
+      slotsResult.error ?? bandsResult.error ?? exceptionsResult.error,
+    );
+    return { error: "שגיאה בטעינת הלוח השבועי" };
+  }
+
+  // Saturday is excluded by buildWeek's grid: the academy does not staff it, so
+  // it carries no bands and would contribute nothing to a bulk seed.
+  const { days } = buildWeek({
+    weekStart,
+    today: israelToday(),
+    slots: (slotsResult.data ?? []) as ScheduleSlot[],
+    bands: (bandsResult.data ?? []) as WeeklyBand[],
+    exceptions: (exceptionsResult.data ?? []) as WeeklyException[],
+  });
+
+  const buildable = days.filter(isBuildableDay);
+
+  if (buildable.length === 0) {
+    return { error: "אין ימים לבנות בשבוע הזה" };
+  }
+
+  const rows = buildable.flatMap((day) =>
+    slotRowsFor(day.date, day.onDuty, user!.id),
+  );
+
+  const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")
+    .insert(rows)
+    .select("id");
+
+  if (error) {
+    console.error("Build week insert error:", error);
+    return { error: "שגיאה בבניית הלוח" };
+  }
+
+  // As in the per-day build: an RLS-rejected insert returns no error and no
+  // rows, and reporting that as success would leave the week empty.
+  if ((created?.length ?? 0) === 0) {
+    console.error("Build week returned no rows — check RLS insert policy");
+    return { error: "שגיאה בבניית הלוח" };
+  }
+
+  revalidateScheduleSurfaces();
+
+  return {
+    success: true,
+    count: created!.length,
+    dayCount: buildable.length,
+  };
 }

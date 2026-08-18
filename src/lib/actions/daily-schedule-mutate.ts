@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -26,10 +25,6 @@ type DeleteResult = { success: true } | { error: string };
 type DuplicateResult =
   | { success: true; count: number }
   | { error: string; fieldErrors?: Record<string, string[]> };
-
-function revalidateSchedule() {
-  revalidatePath("/admin/schedule");
-}
 
 /**
  * Resolves the trainer's display-name snapshot. The snapshot keeps the
@@ -216,7 +211,7 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
     return { error: "שגיאה בשמירת רשימת המתאמנים" };
   }
 
-  revalidateSchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true, data: { ...created, trainees: [] } as ScheduleSlot };
 }
@@ -279,7 +274,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const { error: rosterError } = await replaceRoster(supabase, slotId, trainees);
   if (rosterError) return { error: rosterError };
 
-  revalidateSchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true, data: { ...updated, trainees: [] } as ScheduleSlot };
 }
@@ -308,7 +303,7 @@ export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
 
   if ((deleted?.length ?? 0) === 0) return { error: "הסלוט לא נמצא" };
 
-  revalidateSchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true };
 }
@@ -417,7 +412,7 @@ export async function duplicateDayAction(
     }
   }
 
-  revalidateSchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true, count: slots.length };
 }

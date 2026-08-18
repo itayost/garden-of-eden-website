@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { verifyAdmin } from "@/lib/actions/shared";
+import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -27,15 +26,6 @@ type ExceptionResult =
   | { error: string; fieldErrors?: Record<string, string[]> };
 
 type DeleteResult = { success: true } | { error: string };
-
-/**
- * Both surfaces read this data: the weekly editor owns it, and the daily board
- * derives its on-duty strip from it.
- */
-function revalidateWeeklySchedule() {
-  revalidatePath("/admin/weekly-schedule");
-  revalidatePath("/admin/schedule");
-}
 
 /**
  * Resolves the trainer's display-name snapshot.
@@ -114,7 +104,7 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
     return { error: "שגיאה ביצירת הרצועה" };
   }
 
-  revalidateWeeklySchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true, data: created as WeeklyBand };
 }
@@ -169,7 +159,7 @@ export async function updateBandAction(
     return { error: "שגיאה בעדכון הרצועה" };
   }
 
-  revalidateWeeklySchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true, data: updated as WeeklyBand };
 }
@@ -197,7 +187,7 @@ export async function deleteBandAction(bandId: string): Promise<DeleteResult> {
 
   if ((deleted?.length ?? 0) === 0) return { error: "הרצועה לא נמצאה" };
 
-  revalidateWeeklySchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true };
 }
@@ -258,7 +248,7 @@ export async function createExceptionAction(
     return { error: "שגיאה ביצירת החריגה" };
   }
 
-  revalidateWeeklySchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true, data: created as WeeklyException };
 }
@@ -289,7 +279,7 @@ export async function deleteExceptionAction(
 
   if ((deleted?.length ?? 0) === 0) return { error: "החריגה לא נמצאה" };
 
-  revalidateWeeklySchedule();
+  revalidateScheduleSurfaces();
 
   return { success: true };
 }

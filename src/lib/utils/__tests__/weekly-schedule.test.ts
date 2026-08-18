@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { deriveOnDuty, trainersAtTime } from "@/lib/utils/weekly-schedule";
+import {
+  deriveOnDuty,
+  onDutyTimeLabel,
+  trainersAtTime,
+} from "@/lib/utils/weekly-schedule";
 import type { WeeklyBand, WeeklyException } from "@/types/weekly-schedule";
 
 const LIDOR = "11111111-1111-4111-8111-111111111111";
@@ -357,5 +361,17 @@ describe("trainersAtTime", () => {
     const onDuty = deriveOnDuty(SUNDAY, [band()], []);
 
     expect(trainersAtTime(onDuty, "16:00:00")).toHaveLength(1);
+  });
+});
+
+describe("onDutyTimeLabel", () => {
+  test("renders a closed stretch as a range", () => {
+    const onDuty = deriveOnDuty(SUNDAY, [band()], []);
+    expect(onDutyTimeLabel(onDuty.bands[0])).toBe("15:00–18:00");
+  });
+
+  test("renders an open-ended stretch as והלאה", () => {
+    const onDuty = deriveOnDuty(SUNDAY, [band({ end_time: null })], []);
+    expect(onDutyTimeLabel(onDuty.bands[0])).toBe("15:00 והלאה");
   });
 });

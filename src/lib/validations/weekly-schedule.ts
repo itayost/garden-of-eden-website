@@ -108,7 +108,11 @@ export const exceptionIdSchema = z.object({ exceptionId: uuidSchema });
 /** The day to build a board for, from the weekly schedule. */
 export const buildDaySchema = z.object({ date: dateSchema });
 
+/** The Sunday of the week to seed. The action derives the six days itself. */
+export const buildWeekSchema = z.object({ weekStart: dateSchema });
+
 export type BandInput = z.input<typeof bandSchema>;
 export type BandUpdateInput = z.input<typeof bandUpdateSchema>;
 export type ExceptionInput = z.input<typeof exceptionSchema>;
 export type BuildDayInput = z.input<typeof buildDaySchema>;
+export type BuildWeekInput = z.input<typeof buildWeekSchema>;

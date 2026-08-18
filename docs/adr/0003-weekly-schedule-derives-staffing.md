@@ -35,3 +35,15 @@ Standby Bands ("חיזוק במידת הצורך") are shown on the day but neve
 ## Revisit when
 
 Days routinely diverge from the week enough that the seed stops saving time, or the academy wants the weekly schedule to answer for attendance rather than only for planning.
+
+## Amendment: the weekly page shows a dated week too
+
+`/admin/weekly-schedule` now has two tabs. "תבנית קבועה" is the standing week this ADR describes, unchanged. "השבוע הזה" is a real dated week that reads `daily_schedule_slots` for the seven dates on screen.
+
+Nothing above is reversed. Staffing is still derived and never stored, slots are still materialised only on request, and a slot still never writes back to a Band. What changed is that a second surface renders slots, which had two consequences worth recording.
+
+Deriving is what makes the week cheap. Seven days of staffing come from one Bands read and one Exceptions read, composed by `buildWeek` in `src/lib/utils/schedule-week.ts` calling `deriveOnDuty` per date. A materialised `on_duty` table would have made the week view seven lookups against rows that could each be stale.
+
+The one-way rule is what made the dated week necessary. A slot created on the daily board could not appear on a page that only knew weekdays, and the surprise that caused is what prompted this. The answer is a surface with dates on it, not a write-back: a slot on 18.8 still says nothing about every Tuesday.
+
+Two smaller decisions follow from the same reasoning. Saturday appears only when it holds a slot or a one-off extra — the academy does not staff it, but a slot written there is real and must not be invisible. And a day that already has a board shows only that date's deviations, since the routine staffing is already in the slots and repeating it would be the stale-copy problem in visual form.
