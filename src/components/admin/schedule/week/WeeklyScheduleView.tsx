@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { CalendarDays, CalendarRange, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -120,20 +119,8 @@ export function WeeklyScheduleView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 px-1">
-          <CalendarRange className="h-4 w-4 text-muted-foreground" />
-          <span className="font-display text-xl">לוח שבועי</span>
-        </div>
-
-        <Button variant="outline" asChild>
-          <Link href="/admin/schedule">
-            <CalendarDays className="h-4 w-4" />
-            ללוח היומי
-          </Link>
-        </Button>
-      </div>
-
+      {/* The page header and the link to the daily board belong to the shell
+          that owns both tabs. */}
       <p className="text-sm text-muted-foreground">
         מי עובד באיזו רצועה בכל יום בשבוע. הלוח הזה לא שייך לתאריך מסוים — הוא
         קובע מה ברירת המחדל, והלוח היומי עדיין נבנה יום-יום.

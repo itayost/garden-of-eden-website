@@ -142,3 +142,14 @@ export function trainersAtTime(onDuty: OnDuty, time: string): OnDutyBand[] {
     (band) => band.startTime <= at && (band.endTime === null || at < band.endTime),
   );
 }
+
+/**
+ * "15:00–18:00", or "18:00 והלאה" when the stretch is open-ended.
+ *
+ * The on-duty strip and the week view both label stretches, and a stretch that
+ * reads differently on two screens looks like two different stretches.
+ */
+export function onDutyTimeLabel(band: OnDutyBand): string {
+  if (!band.endTime) return `${band.startTime} והלאה`;
+  return `${band.startTime}–${band.endTime}`;
+}

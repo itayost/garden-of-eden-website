@@ -5,6 +5,7 @@
 
 export {
   getBandsAction,
+  getExceptionsInRangeAction,
   getOnDutyAction,
   getWeeklyScheduleAction,
 } from "./weekly-schedule-list";

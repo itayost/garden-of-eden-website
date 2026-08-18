@@ -6,23 +6,18 @@ import { CalendarOff, LifeBuoy, MapPin, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { trainerColor } from "@/lib/utils/trainer-color";
+import { onDutyTimeLabel } from "@/lib/utils/weekly-schedule";
 import type { OnDuty, OnDutyBand } from "@/types/weekly-schedule";
 
 interface OnDutyStripProps {
   onDuty: OnDuty;
 }
 
-/** "15:00–18:00", or "18:00 והלאה" when the stretch is open-ended. */
-function timeLabel(band: OnDutyBand): string {
-  if (!band.endTime) return `${band.startTime} והלאה`;
-  return `${band.startTime}–${band.endTime}`;
-}
-
 /** Stretches sharing an hour range read as one line, the way Eden writes them. */
 function groupByStretch(bands: OnDutyBand[]): [string, OnDutyBand[]][] {
   const groups = new Map<string, OnDutyBand[]>();
   for (const band of bands) {
-    const key = timeLabel(band);
+    const key = onDutyTimeLabel(band);
     groups.set(key, [...(groups.get(key) ?? []), band]);
   }
   return [...groups.entries()];

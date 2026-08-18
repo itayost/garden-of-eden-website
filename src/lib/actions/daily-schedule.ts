@@ -3,9 +3,12 @@
  * Split by concern so each file stays focused; import from here.
  */
 
-export { getScheduleAction } from "./daily-schedule-list";
+export { getScheduleAction, getSlotsForWeekAction } from "./daily-schedule-list";
 
-export { buildDayFromWeeklyScheduleAction } from "./daily-schedule-build";
+export {
+  buildDayFromWeeklyScheduleAction,
+  buildWeekFromWeeklyScheduleAction,
+} from "./daily-schedule-build";
 
 export {
   createSlotAction,

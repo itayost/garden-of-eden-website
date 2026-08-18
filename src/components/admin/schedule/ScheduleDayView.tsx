@@ -7,6 +7,8 @@ import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
+import { hebrewWeekday } from "@/lib/utils/date";
+import { addDays, shortDate } from "@/lib/utils/iso-date";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { SessionSummary } from "@/types/training-session";
 import type { OnDuty } from "@/types/weekly-schedule";
@@ -37,33 +39,6 @@ interface ScheduleDayViewProps {
    * — the strip and the build button hide rather than claim nobody is on.
    */
   onDuty: OnDuty | null;
-}
-
-/** Date-only arithmetic on ISO strings; UTC throughout so no DST surprises. */
-function addDays(date: string, delta: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + delta);
-  return d.toISOString().slice(0, 10);
-}
-
-const HEBREW_WEEKDAYS = [
-  "יום ראשון",
-  "יום שני",
-  "יום שלישי",
-  "יום רביעי",
-  "יום חמישי",
-  "יום שישי",
-  "שבת",
-];
-
-/** An operations tool runs on "יום רביעי", not on an ISO date. */
-function weekdayName(date: string): string {
-  return HEBREW_WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
-}
-
-function shortDate(date: string): string {
-  const [, month, day] = date.split("-");
-  return `${Number(day)}.${Number(month)}`;
 }
 
 export function ScheduleDayView({
@@ -118,7 +93,7 @@ export function ScheduleDayView({
           <div className="flex items-center gap-2 px-2">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
             <span className="font-display text-xl">
-              {weekdayName(date)} · {shortDate(date)}
+              {hebrewWeekday(date)} · {shortDate(date)}
             </span>
             {date === today && (
               <span className="rounded-full bg-forest px-2.5 py-0.5 text-[11px] font-medium text-cream">

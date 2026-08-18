@@ -69,6 +69,14 @@ interface SlotFormDialogProps {
   trainees: TrainerOption[];
   /** Who the weekly schedule puts on this day; feeds the trainer suggestion. */
   onDuty: OnDuty | null;
+  /**
+   * Which day this dialog was opened from, e.g. "יום רביעי · 19.8".
+   *
+   * The daily board leaves it unset — the page around the dialog already says
+   * which day it is. The week view sets it, because there the same dialog
+   * serves six columns and nothing else in it names the date it will write to.
+   */
+  contextLabel?: string;
 }
 
 export function SlotFormDialog({
@@ -79,6 +87,7 @@ export function SlotFormDialog({
   trainers,
   trainees,
   onDuty,
+  contextLabel,
 }: SlotFormDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -217,7 +226,15 @@ export function SlotFormDialog({
         {/* Padding lives on the header and the body, not the surface, so the
             header and its close button stay put while the body scrolls. */}
         <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
-          <DialogTitle>{slot ? "עריכת סלוט" : "סלוט חדש"}</DialogTitle>
+          <DialogTitle>
+            {slot ? "עריכת סלוט" : "סלוט חדש"}
+            {contextLabel && (
+              <span className="font-normal text-muted-foreground">
+                {" · "}
+                {contextLabel}
+              </span>
+            )}
+          </DialogTitle>
           <DialogDescription>
             שעה, מאמן, מתאמנים ופוקוס — קבוצה אחת בלוח היומי.
           </DialogDescription>
