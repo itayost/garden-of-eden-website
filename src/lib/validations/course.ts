@@ -63,6 +63,24 @@ export const courseLessonSchema = z.object({
 });
 
 /**
+ * Recording a video the CMS has just uploaded.
+ *
+ * `video_path` reuses the storage-key schema, which is the one place a path
+ * supplied by a browser reaches the database -- the `..` refinement above is
+ * what stops it naming an object outside the bucket prefix. `duration_sec` comes
+ * from the client reading the file's own metadata, which is why it is bounded
+ * rather than trusted outright.
+ */
+export const lessonVideoSchema = z.object({
+  video_path: videoPath,
+  duration_sec: z
+    .number()
+    .int("אורך חייב להיות מספר שלם")
+    .min(1, "לא ניתן לקרוא את אורך הווידאו")
+    .max(86_400, "אורך מחוץ לטווח"),
+});
+
+/**
  * A player position report. `positionSec` is clamped against the lesson's real
  * duration server-side -- never trust the client's own idea of how long the
  * video is.
@@ -84,5 +102,6 @@ export const reorderSchema = z.object({
 export type CourseInput = z.infer<typeof courseSchema>;
 export type CourseChapterInput = z.infer<typeof courseChapterSchema>;
 export type CourseLessonInput = z.infer<typeof courseLessonSchema>;
+export type LessonVideoInput = z.infer<typeof lessonVideoSchema>;
 export type LessonProgressInput = z.infer<typeof lessonProgressSchema>;
 export type ReorderInput = z.infer<typeof reorderSchema>;

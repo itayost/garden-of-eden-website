@@ -1,13 +1,17 @@
 "use client";
 
 import { useTransition } from "react";
-import { ChevronDown, ChevronUp, VideoOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronUp, Trash2, VideoOff } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import { InlineTitleEdit } from "./InlineTitleEdit";
+import { LessonVideoUpload } from "./LessonVideoUpload";
 import { formatDuration } from "@/features/course/lib/progress-utils";
 import {
+  deleteLesson,
   renameLesson,
   setLessonPublished,
 } from "@/features/course/lib/actions/admin-course";
@@ -15,6 +19,7 @@ import type { AdminCourseLesson } from "@/features/course/lib/actions/admin-cour
 
 interface LessonAdminRowProps {
   lesson: AdminCourseLesson;
+  chapterSlug: string;
   index: number;
   isFirst: boolean;
   isLast: boolean;
@@ -24,12 +29,14 @@ interface LessonAdminRowProps {
 
 export function LessonAdminRow({
   lesson,
+  chapterSlug,
   index,
   isFirst,
   isLast,
   onMove,
   moveDisabled,
 }: LessonAdminRowProps) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   const canPublish = !lesson.needsTitle && lesson.videoPath !== null;
@@ -101,6 +108,36 @@ export function LessonAdminRow({
       <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
         {formatDuration(lesson.durationSec)}
       </span>
+
+      <LessonVideoUpload
+        lessonId={lesson.id}
+        chapterSlug={chapterSlug}
+        lessonSlug={lesson.slug}
+        hasVideo={lesson.videoPath !== null}
+      />
+
+      <DeleteConfirmDialog
+        title="מחיקת שיעור"
+        description={
+          <>
+            השיעור <strong>{lesson.titleHe}</strong> והווידאו שלו יימחקו לגמרי.
+            ההתקדמות שנרשמה למתאמנים בשיעור הזה תימחק גם היא.
+          </>
+        }
+        successMessage="השיעור נמחק"
+        errorMessage="המחיקה נכשלה"
+        onDelete={() => deleteLesson(lesson.id)}
+        onSuccess={() => router.refresh()}
+        trigger={
+          <button
+            type="button"
+            aria-label={`מחיקת השיעור ${lesson.titleHe}`}
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        }
+      />
 
       <Switch
         checked={lesson.isPublished}

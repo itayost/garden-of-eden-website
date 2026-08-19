@@ -43,6 +43,8 @@ export default async function CourseProgressPage() {
         <p className="text-muted-foreground">{report.courseTitleHe}</p>
       </div>
 
+      {/* dt precedes dd so a screen reader pairs each label with its own value;
+          flex-col-reverse keeps the number on top visually. */}
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "מתאמנים", value: report.trainees.length },
@@ -50,11 +52,14 @@ export default async function CourseProgressPage() {
           { label: "סיימו", value: finished.length },
           { label: "שיעורים בקורס", value: report.lessonTotal },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-border p-3">
+          <div
+            key={stat.label}
+            className="flex flex-col-reverse rounded-xl border border-border p-3"
+          >
+            <dt className="text-xs text-muted-foreground">{stat.label}</dt>
             <dd className="text-2xl font-black tabular-nums text-primary">
               {stat.value}
             </dd>
-            <dt className="text-xs text-muted-foreground">{stat.label}</dt>
           </div>
         ))}
       </dl>

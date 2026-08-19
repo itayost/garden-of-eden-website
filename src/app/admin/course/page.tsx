@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BarChart3, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { listCourseAdminTree } from "@/features/course/lib/actions/admin-course";
 import { CourseAdminClient } from "@/features/course/components/admin/CourseAdminClient";
 
@@ -12,7 +13,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminCoursePage() {
-  const course = await listCourseAdminTree();
+  // Trainers reach /admin/* too, and they are authorised for the progress
+  // report. The role has to be known here so a trainer is not shown the CMS's
+  // "no course yet, run the seed script" state, which is both wrong and useless
+  // advice for them.
+  const { profile } = await verifyAdminOrTrainer();
+  const isAdmin = profile?.role === "admin";
+  const course = isAdmin ? await listCourseAdminTree() : null;
 
   return (
     <div className="space-y-6">
@@ -23,7 +30,9 @@ export default async function AdminCoursePage() {
             הקורס הדיגיטלי
           </h1>
           <p className="text-muted-foreground">
-            ניהול פרקים ושיעורים, שמות ופרסום
+            {isAdmin
+              ? "ניהול פרקים ושיעורים, שמות ופרסום"
+              : "מעקב אחר התקדמות המתאמנים בקורס"}
           </p>
         </div>
         <Button asChild variant="outline">
@@ -34,7 +43,14 @@ export default async function AdminCoursePage() {
         </Button>
       </div>
 
-      {course ? (
+      {!isAdmin ? (
+        <div className="rounded-xl border border-dashed border-border bg-card/50 py-16 text-center">
+          <p className="text-sm text-muted-foreground">
+            עריכת תכני הקורס פתוחה למנהלים בלבד. אפשר לצפות בהתקדמות המתאמנים
+            בכפתור שלמעלה.
+          </p>
+        </div>
+      ) : course ? (
         <CourseAdminClient course={course} />
       ) : (
         <div className="rounded-xl border border-dashed border-border bg-card/50 py-16 text-center">

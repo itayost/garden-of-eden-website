@@ -153,6 +153,14 @@ export async function markLessonComplete(
     return { success: false, completed: false, error: "לא מחובר" };
   }
 
+  // Limited for the same reason as updateLessonProgress, and more so: this path
+  // costs two reads, an upsert and then the badge sweep.
+  const rate = await checkRateLimit(user.id, "general");
+  void rate.pending.catch(() => {});
+  if (rate.rateLimited) {
+    return { success: false, completed: false, error: "יותר מדי בקשות, נסה שוב" };
+  }
+
   const { data: lesson } = await typedFrom(supabase, "course_lessons")
     .select("duration_sec")
     .eq("id", lessonId)

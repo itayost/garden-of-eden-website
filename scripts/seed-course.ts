@@ -12,8 +12,9 @@
  *   - Lessons that have a real title and a video are marked published, so Eden
  *     does not have to tick 39 boxes by hand. They stay invisible until the
  *     course itself goes live.
- *   - A row that already exists keeps the publish state the CMS gave it, so a
- *     re-run cannot take live content offline.
+ *   - A row that already exists keeps the title, publish state and ordering the
+ *     CMS gave it, so a re-run cannot take live content offline, revert a name
+ *     Eden typed, or undo her arrangement.
  *   - Nothing is ever published while it still carries a generated placeholder
  *     title or has no video; the database CHECK constraints enforce the same
  *     rule independently.
@@ -183,7 +184,7 @@ async function main(): Promise<void> {
   for (const chapter of seed.chapters) {
     const { data: priorChapter, error: priorChapterError } = await db
       .from("course_chapters")
-      .select("title_he, subtitle_he, needs_title")
+      .select("title_he, subtitle_he, needs_title, order_index")
       .eq("course_id", course.id)
       .eq("slug", chapter.slug)
       .maybeSingle();
@@ -206,6 +207,13 @@ async function main(): Promise<void> {
       ((priorChapter as { subtitle_he?: string | null } | null)?.subtitle_he ??
         null);
 
+    // Ordering belongs to the CMS once the row exists: /admin/course is the only
+    // reorder UI, and the manifest order is just filename order. Overwriting it
+    // would silently undo Eden's arrangement with no way to recover it.
+    const chapterOrder =
+      (priorChapter as { order_index?: number } | null)?.order_index ??
+      chapter.orderIndex;
+
     const { data: chapterRow, error: chapterError } = await db
       .from("course_chapters")
       .upsert(
@@ -215,7 +223,7 @@ async function main(): Promise<void> {
           title_he: chapterTitle.titleHe,
           subtitle_he: chapterSubtitle,
           needs_title: chapterTitle.needsTitle,
-          order_index: chapter.orderIndex,
+          order_index: chapterOrder,
         },
         { onConflict: "course_id,slug" }
       )
@@ -234,7 +242,7 @@ async function main(): Promise<void> {
     // anything behind Eden's back.
     const { data: priorLessons, error: priorLessonError } = await db
       .from("course_lessons")
-      .select("slug, is_published, title_he, needs_title")
+      .select("slug, is_published, title_he, needs_title, order_index")
       .eq("chapter_id", chapterRow.id);
 
     if (priorLessonError) {
@@ -246,7 +254,8 @@ async function main(): Promise<void> {
     const priorBySlug = new Map(
       (priorLessons ?? []).map((row) => [
         row.slug as string,
-        row as { is_published: boolean | null } & PriorTitle,
+        row as { is_published: boolean | null; order_index: number | null } &
+          PriorTitle,
       ])
     );
 
@@ -264,7 +273,7 @@ async function main(): Promise<void> {
         duration_sec: lesson.durationSec,
         needs_title: title.needsTitle,
         is_published: (priorPublished ?? publishable) && publishable,
-        order_index: lesson.orderIndex,
+        order_index: prior?.order_index ?? lesson.orderIndex,
       };
     });
 

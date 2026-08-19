@@ -46,18 +46,20 @@ export function ChapterCompleteCard({
           סיימת את {chapter.titleHe}
         </p>
 
+        {/* dt precedes dd so the term/definition pairing survives a screen
+            reader; flex-col-reverse puts the number on top visually. */}
         <dl className="mt-4 grid grid-cols-2 gap-3 text-center">
-          <div>
+          <div className="flex flex-col-reverse">
+            <dt className="text-[11px] text-muted-foreground">שיעורים</dt>
             <dd className="text-xl font-black tabular-nums text-primary">
               {chapter.lessons.length}
             </dd>
-            <dt className="text-[11px] text-muted-foreground">שיעורים</dt>
           </div>
-          <div>
+          <div className="flex flex-col-reverse">
+            <dt className="text-[11px] text-muted-foreground">זמן צפייה</dt>
             <dd className="text-xl font-black tabular-nums text-primary">
               {formatDuration(seconds)}
             </dd>
-            <dt className="text-[11px] text-muted-foreground">זמן צפייה</dt>
           </div>
         </dl>
 

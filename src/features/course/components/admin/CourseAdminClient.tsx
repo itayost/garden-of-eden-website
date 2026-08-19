@@ -2,16 +2,19 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { InlineTitleEdit } from "./InlineTitleEdit";
 import { LessonAdminRow } from "./LessonAdminRow";
 import { formatDuration } from "@/features/course/lib/progress-utils";
 import {
+  createLesson,
   renameChapter,
   renameCourse,
+  reorderChapters,
   reorderLessons,
   setCoursePublished,
 } from "@/features/course/lib/actions/admin-course";
@@ -34,6 +37,8 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
   const [selectedId, setSelectedId] = useState(course.chapters[0]?.id ?? null);
   const [publishPending, startPublish] = useTransition();
   const [orderPending, startOrder] = useTransition();
+  const [addPending, startAdd] = useTransition();
+  const [newTitle, setNewTitle] = useState<string | null>(null);
 
   const selected = useMemo(
     () => course.chapters.find((c) => c.id === selectedId) ?? null,
@@ -75,6 +80,41 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
         toast.error(result.error);
         return;
       }
+      router.refresh();
+    });
+  };
+
+  const handleMoveChapter = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= course.chapters.length) return;
+
+    const ids = moved(course.chapters, index, target).map((c) => c.id);
+    startOrder(async () => {
+      const result = await reorderChapters(course.id, ids);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
+  const handleAddLesson = () => {
+    if (!selected || newTitle === null) return;
+    const title = newTitle.trim();
+    if (title.length === 0) {
+      toast.error("נדרשת כותרת");
+      return;
+    }
+
+    startAdd(async () => {
+      const result = await createLesson(selected.id, title);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("השיעור נוסף — העלה לו וידאו כדי לפרסם אותו");
+      setNewTitle(null);
       router.refresh();
     });
   };
@@ -133,27 +173,51 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
             const active = chapter.id === selectedId;
             const drafts = chapter.lessons.filter((l) => !l.isPublished).length;
             return (
-              <button
-                key={chapter.id}
-                type="button"
-                onClick={() => setSelectedId(chapter.id)}
-                aria-current={active ? "true" : undefined}
-                className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-start text-sm transition-colors",
-                  active
-                    ? "bg-card font-bold shadow-sm ring-1 ring-border"
-                    : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <span className="min-w-0 truncate">
-                  {chapter.needsTitle ? `פרק ${index + 1}` : chapter.titleHe}
+              <div key={chapter.id} className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(chapter.id)}
+                  aria-current={active ? "true" : undefined}
+                  className={cn(
+                    "flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-3 py-2 text-start text-sm transition-colors",
+                    active
+                      ? "bg-card font-bold shadow-sm ring-1 ring-border"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <span className="min-w-0 truncate">
+                    {chapter.needsTitle ? `פרק ${index + 1}` : chapter.titleHe}
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {drafts > 0
+                      ? `${chapter.lessons.length - drafts}/${chapter.lessons.length}`
+                      : chapter.lessons.length}
+                  </span>
+                </button>
+
+                <span className="flex shrink-0 flex-col">
+                  <button
+                    type="button"
+                    onClick={() => handleMoveChapter(index, -1)}
+                    disabled={index === 0 || orderPending}
+                    aria-label={`הזז את ${chapter.titleHe} למעלה`}
+                    className="grid h-4 w-4 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveChapter(index, 1)}
+                    disabled={
+                      index === course.chapters.length - 1 || orderPending
+                    }
+                    aria-label={`הזז את ${chapter.titleHe} למטה`}
+                    className="grid h-4 w-4 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
                 </span>
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                  {drafts > 0
-                    ? `${chapter.lessons.length - drafts}/${chapter.lessons.length}`
-                    : chapter.lessons.length}
-                </span>
-              </button>
+              </div>
             );
           })}
         </nav>
@@ -193,6 +257,7 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
                   <LessonAdminRow
                     key={lesson.id}
                     lesson={lesson}
+                    chapterSlug={selected.slug}
                     index={index}
                     isFirst={index === 0}
                     isLast={index === selected.lessons.length - 1}
@@ -201,6 +266,50 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
                   />
                 ))}
               </ul>
+            )}
+
+            {newTitle === null ? (
+              <button
+                type="button"
+                onClick={() => setNewTitle("")}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                הוספת שיעור
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/5 p-2">
+                <Input
+                  autoFocus
+                  value={newTitle}
+                  onChange={(event) => setNewTitle(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") handleAddLesson();
+                    if (event.key === "Escape") setNewTitle(null);
+                  }}
+                  placeholder="שם השיעור"
+                  aria-label="שם השיעור החדש"
+                  disabled={addPending}
+                  className="h-8"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddLesson}
+                  disabled={addPending}
+                  className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground disabled:opacity-50"
+                >
+                  הוסף
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewTitle(null)}
+                  disabled={addPending}
+                  aria-label="בטל"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             )}
           </section>
         ) : (

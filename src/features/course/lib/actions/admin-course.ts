@@ -6,7 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdmin } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
-import { reorderSchema } from "@/lib/validations/course";
+import { lessonVideoSchema, reorderSchema } from "@/lib/validations/course";
+import { COURSE_VIDEO_BUCKET } from "../playback-config";
 
 // ---------------------------------------------------------------------------
 // Result and view types
@@ -460,6 +461,188 @@ export async function reorderLessons(
   });
 
   if (error) return reorderError(error.message, "reorder_course_lessons");
+
+  revalidateCourse();
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Lessons: create, attach video, delete
+// ---------------------------------------------------------------------------
+
+/**
+ * Turn a Hebrew title into an ASCII slug usable as a storage-path segment.
+ *
+ * Hebrew does not transliterate cleanly, so rather than mangle it this falls
+ * back to a timestamp-free positional slug. The slug is an identifier, not
+ * something anyone reads -- `title_he` is what shows in the UI.
+ */
+function lessonSlug(titleHe: string, position: number): string {
+  const ascii = titleHe
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const suffix = ascii.length >= 2 ? ascii.slice(0, 40) : "lesson";
+  return `${String(position).padStart(2, "0")}-${suffix}`;
+}
+
+/**
+ * Add a lesson to a chapter. It starts unpublished and without a video -- the
+ * CHECK constraint would reject anything else, and the video arrives in a
+ * second step once the file has finished uploading.
+ */
+export async function createLesson(
+  chapterId: string,
+  titleHe: string
+): Promise<CourseActionResult & { lessonId?: string }> {
+  const { error: authError } = await verifyAdmin();
+  if (authError) return { error: authError };
+  if (!isValidUUID(chapterId)) return { error: "מזהה פרק לא תקין" };
+
+  const titleError = validateTitle(titleHe);
+  if (titleError) return { error: titleError };
+
+  const db = createAdminClient();
+
+  const { data: siblings, error: readError } = await typedFrom(
+    db,
+    "course_lessons"
+  )
+    .select("slug, order_index")
+    .eq("chapter_id", chapterId);
+
+  if (readError) {
+    console.error("createLesson read siblings failed:", readError);
+    return { error: "שמירה נכשלה" };
+  }
+
+  const existing = (siblings ?? []) as {
+    slug: string;
+    order_index: number;
+  }[];
+  const nextIndex =
+    existing.reduce((max, row) => Math.max(max, row.order_index), -1) + 1;
+
+  // The slug only has to be unique within the chapter; nudge past a collision
+  // rather than failing in front of Eden.
+  const taken = new Set(existing.map((row) => row.slug));
+  let slug = lessonSlug(titleHe, nextIndex);
+  for (let n = 2; taken.has(slug); n++) {
+    slug = `${lessonSlug(titleHe, nextIndex)}-${n}`;
+  }
+
+  const { data, error } = await typedFrom(db, "course_lessons")
+    .insert({
+      chapter_id: chapterId,
+      slug,
+      title_he: titleHe.trim(),
+      needs_title: false,
+      is_published: false,
+      order_index: nextIndex,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("createLesson failed:", error);
+    return { error: "שמירה נכשלה" };
+  }
+
+  revalidateCourse();
+  return { success: true, lessonId: data.id };
+}
+
+/**
+ * Record the storage key of a video the browser has just uploaded.
+ *
+ * The upload itself goes straight from the browser to the bucket under the
+ * "Admins manage course video objects" policy, so this only writes the pointer
+ * and the duration the client read off the file's metadata.
+ */
+export async function setLessonVideo(
+  lessonId: string,
+  videoPath: string,
+  durationSec: number
+): Promise<CourseActionResult> {
+  const { error: authError } = await verifyAdmin();
+  if (authError) return { error: authError };
+  if (!isValidUUID(lessonId)) return { error: "מזהה שיעור לא תקין" };
+
+  const parsed = lessonVideoSchema.safeParse({
+    video_path: videoPath,
+    duration_sec: Math.round(durationSec),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "נתונים לא תקינים" };
+  }
+
+  return updateOneRow(
+    "course_lessons",
+    lessonId,
+    {
+      video_path: parsed.data.video_path,
+      // A CMS upload is a single rendition: there is no 480p companion unless
+      // the file went through the transcode pipeline.
+      video_path_sd: null,
+      duration_sec: parsed.data.duration_sec,
+    },
+    "setLessonVideo",
+    { notFound: "שיעור לא נמצא" }
+  );
+}
+
+/**
+ * Delete a lesson and the objects behind it.
+ *
+ * Storage is cleared first: a failure there leaves a row pointing at a file that
+ * still exists, which is recoverable, whereas deleting the row first would
+ * orphan the objects with nothing left naming them.
+ */
+export async function deleteLesson(
+  lessonId: string
+): Promise<CourseActionResult> {
+  const { error: authError } = await verifyAdmin();
+  if (authError) return { error: authError };
+  if (!isValidUUID(lessonId)) return { error: "מזהה שיעור לא תקין" };
+
+  const db = createAdminClient();
+
+  const { data: lesson, error: readError } = await typedFrom(
+    db,
+    "course_lessons"
+  )
+    .select("video_path, video_path_sd")
+    .eq("id", lessonId)
+    .maybeSingle();
+
+  if (readError) {
+    console.error("deleteLesson read failed:", readError);
+    return { error: "המחיקה נכשלה" };
+  }
+  if (!lesson) return { error: "שיעור לא נמצא" };
+
+  const paths = [lesson.video_path, lesson.video_path_sd].filter(
+    (path): path is string => typeof path === "string" && path.length > 0
+  );
+
+  if (paths.length > 0) {
+    const { error: storageError } = await db.storage
+      .from(COURSE_VIDEO_BUCKET)
+      .remove(paths);
+    // A missing object is not a reason to keep the row: log and carry on.
+    if (storageError) {
+      console.error("deleteLesson storage remove failed:", storageError);
+    }
+  }
+
+  const { error } = await typedFrom(db, "course_lessons")
+    .delete()
+    .eq("id", lessonId);
+
+  if (error) {
+    console.error("deleteLesson failed:", error);
+    return { error: "המחיקה נכשלה" };
+  }
 
   revalidateCourse();
   return { success: true };
