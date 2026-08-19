@@ -1,4 +1,4 @@
-import { ARBOX_BASE_URL, ARBOX_PAGE_LIMIT, ARBOX_MAX_PAGES } from "./constants";
+import { arboxGet, fetchArboxReport } from "./fetch";
 
 /**
  * Reading purchase history out of Arbox to decide who is a course-only buyer.
@@ -54,39 +54,6 @@ interface SaleRow {
   item_type?: string | null;
 }
 
-function apiKey(): string {
-  const key = process.env.ARBOX_API_KEY;
-  if (!key) throw new Error("ARBOX_API_KEY env var is not set");
-  return key;
-}
-
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${ARBOX_BASE_URL}${path}`, {
-    headers: { "api-key": apiKey(), Accept: "application/json" },
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new Error(
-      `Arbox ${path.split("?")[0]} failed: ${response.status} ${response.statusText}`
-    );
-  }
-  return (await response.json()) as T;
-}
-
-/** Fetch every page of a report, stopping at a short page or the page cap. */
-async function fetchReport<T>(name: string, query = ""): Promise<T[]> {
-  const all: T[] = [];
-  for (let page = 1; page <= ARBOX_MAX_PAGES; page++) {
-    const json = await getJson<{ data?: T[] }>(
-      `/reports/${name}?reportName=${name}&limit=${ARBOX_PAGE_LIMIT}&page=${page}${query}`
-    );
-    const rows = json.data ?? [];
-    all.push(...rows);
-    if (rows.length < ARBOX_PAGE_LIMIT) break;
-  }
-  return all;
-}
-
 /** Inclusive month windows from `start` to today, each within Arbox's 31-day cap. */
 export function monthWindows(
   start: string,
@@ -95,15 +62,18 @@ export function monthWindows(
   const windows: { from: string; to: string }[] = [];
   const cursor = new Date(`${start}T00:00:00Z`);
   cursor.setUTCDate(1);
+  const pad = (n: number) => String(n).padStart(2, "0");
 
   while (cursor <= today) {
     const year = cursor.getUTCFullYear();
     const month = cursor.getUTCMonth();
-    const last = new Date(Date.UTC(year, month + 1, 0));
-    const pad = (n: number) => String(n).padStart(2, "0");
+    const monthEnd = new Date(Date.UTC(year, month + 1, 0));
+    // Never ask for a range ending in the future: Arbox may reject it, and one
+    // validation error would take down the whole nightly sweep.
+    const end = monthEnd > today ? today : monthEnd;
     windows.push({
       from: `${year}-${pad(month + 1)}-01`,
-      to: `${year}-${pad(month + 1)}-${pad(last.getUTCDate())}`,
+      to: `${end.getUTCFullYear()}-${pad(end.getUTCMonth() + 1)}-${pad(end.getUTCDate())}`,
     });
     cursor.setUTCMonth(month + 1);
   }
@@ -131,7 +101,7 @@ interface ProductTypes {
  * counts as paid training if any of its types is a plan or a session.
  */
 async function fetchProductTypes(): Promise<ProductTypes> {
-  const json = await getJson<{ data?: MembershipTypeEntry[] }>("/membershipTypes");
+  const json = await arboxGet<{ data?: MembershipTypeEntry[] }>("/membershipTypes");
   const paid = new Set<string>();
   const known = new Set<string>();
   for (const entry of json.data ?? []) {
@@ -175,15 +145,15 @@ export async function fetchPaidTrainingUserIds(
     }
   };
 
-  consider(await fetchReport<MembershipRow>("activeMembershipsReport"));
-  consider(await fetchReport<MembershipRow>("canceledMembershipsReport"));
+  consider(await fetchArboxReport<MembershipRow>("activeMembershipsReport"));
+  consider(await fetchArboxReport<MembershipRow>("canceledMembershipsReport"));
 
   for (const { from, to } of monthWindows(MEMBERSHIP_HISTORY_START, today)) {
     consider(
-      await fetchReport<MembershipRow>(
-        "expiredMembershipsReport",
-        `&fromDate=${from}&toDate=${to}`
-      )
+      await fetchArboxReport<MembershipRow>("expiredMembershipsReport", {
+        fromDate: from,
+        toDate: to,
+      })
     );
   }
 
@@ -197,10 +167,10 @@ export async function fetchCourseBuyerIds(
   const ids = new Set<number>();
 
   for (const { from, to } of monthWindows(SALES_HISTORY_START, today)) {
-    const sales = await fetchReport<SaleRow>(
-      "salesReport",
-      `&fromDate=${from}&toDate=${to}`
-    );
+    const sales = await fetchArboxReport<SaleRow>("salesReport", {
+      fromDate: from,
+      toDate: to,
+    });
     for (const sale of sales) {
       const id = toUserId(sale.user_id);
       if (id && sale.item_name === DIGITAL_COURSE_ITEM_NAME) ids.add(id);

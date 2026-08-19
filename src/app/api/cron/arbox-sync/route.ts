@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { syncArboxUsers, syncArboxBirthdays } from "@/lib/arbox/sync";
 import { syncCourseAccess } from "@/lib/arbox/sync-access";
 
+// The access step alone makes ~50 serial Arbox calls; the default limit is not
+// enough, and a timeout would discard the two steps that already succeeded.
+export const maxDuration = 300;
+
 /**
  * Vercel Cron Job: Sync Arbox members to Supabase trainee accounts.
  *
@@ -32,13 +36,23 @@ export async function GET(request: NextRequest) {
     const birthdayResult = await syncArboxBirthdays();
     // Runs last: it classifies the profiles the two steps above may have just
     // created or linked.
-    const accessResult = await syncCourseAccess();
+    // Isolated: this step is the long one, and its failure must not throw away
+    // the user and birthday results that already landed.
+    let accessResult: Awaited<ReturnType<typeof syncCourseAccess>> | null = null;
+    let accessError: string | null = null;
+    try {
+      accessResult = await syncCourseAccess();
+    } catch (error) {
+      accessError = error instanceof Error ? error.message : String(error);
+      console.error("[Arbox Sync] Access sync failed:", accessError);
+    }
 
     return NextResponse.json({
       success: true,
       users: usersResult,
       birthdays: birthdayResult,
       access: accessResult,
+      accessError,
     });
   } catch (error) {
     console.error("[Arbox Sync] Fatal error:", error);

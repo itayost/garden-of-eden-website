@@ -63,7 +63,7 @@ export async function updateSession(request: NextRequest) {
   } | null = null;
 
   if (user && isProtectedPath) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select(
         "profile_completed, role, arbox_paid_training, arbox_bought_course, access_override"
@@ -71,6 +71,15 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .is("deleted_at", null)
       .maybeSingle();
+
+    if (error) {
+      // A failed read is not the same as "this user has no profile". Treating it
+      // as one would bounce every admin and trainer out of /admin, skip the
+      // onboarding gate, and misclassify access -- so let the request through
+      // untouched and let the page-level checks deal with it.
+      console.error("[middleware] profile lookup failed:", error.message);
+      return supabaseResponse;
+    }
     profile = data;
   }
 
@@ -93,6 +102,12 @@ export async function updateSession(request: NextRequest) {
     // Someone who bought only the digital course sees only the digital course.
     // Checked here rather than per-page so a new trainee route is restricted by
     // default instead of leaking until someone remembers to gate it.
+    //
+    // This gates *navigation*, not data. Server actions, /api routes and direct
+    // PostgREST calls with the user's own JWT are unaffected, and no RLS policy
+    // filters by tier -- a course-only trainee could still read their own rows
+    // in members-only tables. In practice those rows do not exist, because they
+    // have never trained here. Tier-aware RLS is the fix if that ever changes.
     if (profile) {
       const tier = resolveAccessTier({
         arboxPaidTraining: profile.arbox_paid_training,

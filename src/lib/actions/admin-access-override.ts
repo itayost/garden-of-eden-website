@@ -20,7 +20,7 @@ export async function setAccessOverride(
   userId: string,
   override: AccessOverride
 ): Promise<ActionResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError, user, adminProfile } = await verifyAdmin();
   if (authError) return { error: authError };
   if (!isValidUUID(userId)) return { error: "מזהה משתמש לא תקין" };
   if (override !== null && override !== "full" && override !== "course_only") {
@@ -40,6 +40,20 @@ export async function setAccessOverride(
   }
   if (!data || data.length === 0) {
     return { error: "המשתמש לא נמצא" };
+  }
+
+  // Granting or revoking a customer's access to the app is exactly the change
+  // support will later need to attribute, so it is logged like every other admin
+  // profile mutation. Best-effort: a failed log must not fail the change.
+  const { error: logError } = await db.from("activity_logs").insert({
+    user_id: userId,
+    action: "access_override_changed",
+    actor_id: user!.id,
+    actor_name: adminProfile?.full_name || "מנהל",
+    changes: { access_override: override },
+  });
+  if (logError) {
+    console.error("setAccessOverride activity log failed:", logError.message);
   }
 
   revalidatePath(`/admin/users/${userId}`);

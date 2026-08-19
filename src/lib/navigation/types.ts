@@ -54,5 +54,16 @@ export function filterNavForTier(
   tier: AccessTier,
 ): NavItem[] {
   if (tier === "full") return items;
-  return items.filter((item) => isPathAllowedForTier(tier, item.href));
+
+  const allowed = items.filter((item) => isPathAllowedForTier(tier, item.href));
+
+  // None of the pages a course-only trainee can reach is marked mobilePrimary,
+  // so filtering alone would leave splitBottomNav with an empty main bar and
+  // hide their only content page behind the "עוד" sheet. With this few items
+  // they all belong in the bar.
+  return allowed.map((item, index) => ({
+    ...item,
+    mobilePrimary: true,
+    mobileOrder: index + 1,
+  }));
 }
