@@ -157,3 +157,15 @@ _Avoid_: Test, evaluation, measurement
 **Development book**:
 The library of drills and training material.
 _Avoid_: Playbook, curriculum
+
+**Course**:
+The digital video course. A fixed sequence of Chapters of recorded Lessons that every Trainee can watch. Distinct from the Development book: the book is reference material a Trainee dips into by position and age, the Course is watched through in order.
+_Avoid_: Program, curriculum, class, training plan
+
+**Chapter**:
+A named group of Lessons inside the Course. Chapters are ordered and a Trainee may open any of them; nothing is locked behind completing an earlier one.
+_Avoid_: Module, unit, section
+
+**Lesson**:
+One video in the Course, and the unit a Trainee completes. A Lesson counts as complete at 90% watched, or when the Trainee marks it done. A Lesson is never a thing that happens on the pitch — that is a Slot, which is why Slot lists "lesson" as a word to avoid.
+_Avoid_: Episode, clip, video

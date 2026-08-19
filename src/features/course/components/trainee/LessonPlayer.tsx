@@ -63,7 +63,15 @@ export function LessonPlayer({
 
     try {
       const result = await updateLessonProgress(lessonId, position);
-      if (result.success && result.completed && !completedRef.current) {
+      if (!result.success) {
+        // A rejected write (rate limit, failed save) has to stay retryable for
+        // the same reason a thrown one does: otherwise pausing on the exact
+        // second that failed means the later pause/unmount flushes dedupe
+        // against a position that was never stored, and it is lost.
+        lastReportedRef.current = 0;
+        return;
+      }
+      if (result.completed && !completedRef.current) {
         completedRef.current = true;
         onCompletedChange?.(true);
       }

@@ -40,7 +40,12 @@ export function InlineTitleEdit({
       toast.error("נדרשת כותרת");
       return;
     }
-    if (next === value) {
+    // An unchanged title is only a no-op once the row has a real name. While the
+    // value is still a generated placeholder the save is what clears
+    // `needs_title`, so confirming the placeholder text as the real title (Eden
+    // may well want "פרק 1" verbatim) has to go through to the server -- else the
+    // row stays flagged and unpublishable with nothing on screen explaining why.
+    if (next === value && !isPlaceholder) {
       setEditing(false);
       return;
     }

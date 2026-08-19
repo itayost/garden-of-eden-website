@@ -205,6 +205,47 @@ function optionalText(
 }
 
 /**
+ * Patch exactly one row by id, and treat "matched nothing" as a failure.
+ *
+ * `.update().eq("id", ...)` against an id that no longer exists reports no error
+ * and updates zero rows, so without the RETURNING clause the CMS would toast
+ * "נשמר" over a row it never touched -- which is what a page left open across a
+ * re-seed or a deletion produces. `.select("id")` rides along on the same round
+ * trip.
+ *
+ * `messages.constraint` is the Hebrew rendering of a CHECK violation (23514) for
+ * this table, since the raw constraint name is no use to Eden.
+ */
+async function updateOneRow(
+  table: string,
+  id: string,
+  patch: Record<string, unknown>,
+  context: string,
+  messages: { notFound: string; constraint?: string }
+): Promise<CourseActionResult> {
+  const db = createAdminClient();
+  const { data, error } = await typedFrom(db, table)
+    .update(patch)
+    .eq("id", id)
+    .select("id");
+
+  if (error) {
+    if (error.code === "23514" && messages.constraint) {
+      return { error: messages.constraint };
+    }
+    console.error(`${context} failed:`, error);
+    return { error: "שמירה נכשלה" };
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    return { error: messages.notFound };
+  }
+
+  revalidateCourse();
+  return { success: true };
+}
+
+/**
  * Rename a chapter. Supplying a real title is what clears the placeholder flag,
  * which is in turn what lets its lessons be published.
  */
@@ -222,22 +263,17 @@ export async function renameChapter(
 
   const subtitle = optionalText(subtitleHe);
 
-  const db = createAdminClient();
-  const { error } = await typedFrom(db, "course_chapters")
-    .update({
+  return updateOneRow(
+    "course_chapters",
+    chapterId,
+    {
       title_he: titleHe.trim(),
       ...(subtitle.present ? { subtitle_he: subtitle.value } : {}),
       needs_title: false,
-    })
-    .eq("id", chapterId);
-
-  if (error) {
-    console.error("renameChapter failed:", error);
-    return { error: "שמירה נכשלה" };
-  }
-
-  revalidateCourse();
-  return { success: true };
+    },
+    "renameChapter",
+    { notFound: "הפרק לא נמצא" }
+  );
 }
 
 /** Rename a lesson, clearing its placeholder flag. */
@@ -255,22 +291,17 @@ export async function renameLesson(
 
   const description = optionalText(descriptionHe);
 
-  const db = createAdminClient();
-  const { error } = await typedFrom(db, "course_lessons")
-    .update({
+  return updateOneRow(
+    "course_lessons",
+    lessonId,
+    {
       title_he: titleHe.trim(),
       ...(description.present ? { description_he: description.value } : {}),
       needs_title: false,
-    })
-    .eq("id", lessonId);
-
-  if (error) {
-    console.error("renameLesson failed:", error);
-    return { error: "שמירה נכשלה" };
-  }
-
-  revalidateCourse();
-  return { success: true };
+    },
+    "renameLesson",
+    { notFound: "השיעור לא נמצא" }
+  );
 }
 
 /** Rename the course itself. */
@@ -288,22 +319,17 @@ export async function renameCourse(
 
   const description = optionalText(descriptionHe);
 
-  const db = createAdminClient();
-  const { error } = await typedFrom(db, "courses")
-    .update({
+  return updateOneRow(
+    "courses",
+    courseId,
+    {
       title_he: titleHe.trim(),
       ...(description.present ? { description_he: description.value } : {}),
       needs_title: false,
-    })
-    .eq("id", courseId);
-
-  if (error) {
-    console.error("renameCourse failed:", error);
-    return { error: "שמירה נכשלה" };
-  }
-
-  revalidateCourse();
-  return { success: true };
+    },
+    "renameCourse",
+    { notFound: "הקורס לא נמצא" }
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -325,21 +351,16 @@ export async function setLessonPublished(
   if (authError) return { error: authError };
   if (!isValidUUID(lessonId)) return { error: "מזהה שיעור לא תקין" };
 
-  const db = createAdminClient();
-  const { error } = await typedFrom(db, "course_lessons")
-    .update({ is_published: isPublished })
-    .eq("id", lessonId);
-
-  if (error) {
-    if (error.code === "23514") {
-      return { error: "אי אפשר לפרסם שיעור בלי שם או בלי וידאו" };
+  return updateOneRow(
+    "course_lessons",
+    lessonId,
+    { is_published: isPublished },
+    "setLessonPublished",
+    {
+      notFound: "השיעור לא נמצא",
+      constraint: "אי אפשר לפרסם שיעור בלי שם או בלי וידאו",
     }
-    console.error("setLessonPublished failed:", error);
-    return { error: "שמירה נכשלה" };
-  }
-
-  revalidateCourse();
-  return { success: true };
+  );
 }
 
 /** Publish or unpublish the whole course -- the single gate trainees see. */
@@ -351,21 +372,16 @@ export async function setCoursePublished(
   if (authError) return { error: authError };
   if (!isValidUUID(courseId)) return { error: "מזהה קורס לא תקין" };
 
-  const db = createAdminClient();
-  const { error } = await typedFrom(db, "courses")
-    .update({ is_published: isPublished })
-    .eq("id", courseId);
-
-  if (error) {
-    if (error.code === "23514") {
-      return { error: "אי אפשר לפרסם קורס בלי שם" };
+  return updateOneRow(
+    "courses",
+    courseId,
+    { is_published: isPublished },
+    "setCoursePublished",
+    {
+      notFound: "הקורס לא נמצא",
+      constraint: "אי אפשר לפרסם קורס בלי שם",
     }
-    console.error("setCoursePublished failed:", error);
-    return { error: "שמירה נכשלה" };
-  }
-
-  revalidateCourse();
-  return { success: true };
+  );
 }
 
 // ---------------------------------------------------------------------------

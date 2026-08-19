@@ -9,13 +9,14 @@ A="$SRC/פרקים"
 B="$SRC/פרקים 2"
 C="$SRC/פרקים 3"
 
-rm -rf "$DST"
-mkdir -p "$DST"/{00-intro,01-chapter-1,02-chapter-2,03-nutrition-mentality,04-chapter-4,99-outro}
-
-# link <source> <dest>
+# link <source> <dest> -- records the pair; nothing touches disk until every
+# source below has been proven to exist. Wiping $DST first was destructive on a
+# re-run: the tree is only hardlinks to the originals, so once those source
+# folders have been cleared out of Downloads (they are 20+ GB of video), a second
+# run deleted the one remaining copy and then failed on the first MISSING.
+PAIRS=()
 link() {
-  if [ ! -f "$1" ]; then echo "MISSING: $1" >&2; exit 1; fi
-  ln "$1" "$2"
+  PAIRS+=("$1" "$2")
 }
 
 # --- intro ---
@@ -69,5 +70,25 @@ link "$A/פרק 4/4444.mp4"              "$DST/04-chapter-4/04-lesson-4.mp4"
 
 # --- outro ---
 link "$B/סיום.mp4"                    "$DST/99-outro/99-outro.mp4"
+
+# --- verify every source, then build ---
+missing=0
+for ((i = 0; i < ${#PAIRS[@]}; i += 2)); do
+  if [ ! -f "${PAIRS[i]}" ]; then
+    echo "MISSING: ${PAIRS[i]}" >&2
+    missing=$((missing + 1))
+  fi
+done
+if [ "$missing" -gt 0 ]; then
+  echo "$missing source file(s) missing; $DST left untouched." >&2
+  exit 1
+fi
+
+rm -rf "$DST"
+mkdir -p "$DST"/{00-intro,01-chapter-1,02-chapter-2,03-nutrition-mentality,04-chapter-4,99-outro}
+
+for ((i = 0; i < ${#PAIRS[@]}; i += 2)); do
+  ln "${PAIRS[i]}" "${PAIRS[i + 1]}"
+done
 
 echo "Linked $(find "$DST" -name '*.mp4' | wc -l | tr -d ' ') files into $DST"
