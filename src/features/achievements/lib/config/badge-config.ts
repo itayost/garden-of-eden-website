@@ -229,6 +229,35 @@ export const BADGE_CONFIGS: Record<AchievementBadgeType, BadgeConfig> = {
     rarity: "legendary",
     points: 500,
   },
+
+  // Digital course badges
+  course_first_lesson: {
+    type: "course_first_lesson",
+    nameHe: "יצאת לדרך",
+    descriptionHe: "סיימת את השיעור הראשון בקורס",
+    emoji: "🎬",
+    category: "course",
+    rarity: "common",
+    points: 10,
+  },
+  course_chapter_complete: {
+    type: "course_chapter_complete",
+    nameHe: "פרק בכיס",
+    descriptionHe: "סיימת פרק שלם בקורס",
+    emoji: "🎯",
+    category: "course",
+    rarity: "uncommon",
+    points: 60,
+  },
+  course_complete: {
+    type: "course_complete",
+    nameHe: "סיימת את הקורס",
+    descriptionHe: "צפית בכל השיעורים בקורס הדיגיטלי!",
+    emoji: "🥇",
+    category: "course",
+    rarity: "legendary",
+    points: 500,
+  },
 };
 
 /**
@@ -242,6 +271,7 @@ export const CATEGORY_LABELS: Record<BadgeCategory, string> = {
   streaks: "רצפים",
   goals: "יעדים",
   book: "ספר פיתוח",
+  course: "הקורס הדיגיטלי",
 };
 
 /**

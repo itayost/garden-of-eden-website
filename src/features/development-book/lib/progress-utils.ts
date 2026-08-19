@@ -1,9 +1,8 @@
+import { progressPercent } from "@/lib/utils/math";
 import type { BookParameterWithChildren, DrillProgressMap } from "./types";
 
-export function progressPercent(doneCount: number, total: number): number {
-  if (total <= 0) return 0;
-  return Math.round((doneCount / total) * 100);
-}
+// Was a local copy; the shared one additionally caps at 100.
+export { progressPercent };
 
 export function countDoneInParameter(
   param: BookParameterWithChildren,

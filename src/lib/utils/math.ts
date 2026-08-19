@@ -19,3 +19,14 @@ export function calculatePercentile(
   // Percentile = (number of worse values / total) * 100
   return Math.round((worseCount / allValues.length) * 100);
 }
+
+/**
+ * Completion as a whole percent, for progress bars and rings.
+ *
+ * Returns 0 rather than NaN or a negative when there is nothing to complete, and
+ * caps at 100 so a stale count that exceeds the total cannot overflow a bar.
+ */
+export function progressPercent(done: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.min(100, Math.round((done / total) * 100));
+}
