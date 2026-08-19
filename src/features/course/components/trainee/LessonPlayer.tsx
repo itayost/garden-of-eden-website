@@ -61,10 +61,18 @@ export function LessonPlayer({
     if (position <= 0 || position === lastReportedRef.current) return;
     lastReportedRef.current = position;
 
-    const result = await updateLessonProgress(lessonId, position);
-    if (result.success && result.completed && !completedRef.current) {
-      completedRef.current = true;
-      onCompletedChange?.(true);
+    try {
+      const result = await updateLessonProgress(lessonId, position);
+      if (result.success && result.completed && !completedRef.current) {
+        completedRef.current = true;
+        onCompletedChange?.(true);
+      }
+    } catch (error) {
+      // A dropped connection must not surface as an unhandled rejection, and the
+      // position has to be retryable — otherwise one failed tick silently loses
+      // everything watched until the next second boundary.
+      console.error("updateLessonProgress call failed:", error);
+      lastReportedRef.current = 0;
     }
   }, [lessonId, onCompletedChange]);
 
@@ -75,13 +83,19 @@ export function LessonPlayer({
     let cancelled = false;
 
     const load = async () => {
-      const result = await getLessonPlaybackUrl(lessonId, quality);
-      if (cancelled) return;
-      if (result.url) {
-        setSrc(result.url);
-        setError(null);
-      } else {
-        setError(result.error ?? "לא ניתן לנגן את השיעור");
+      try {
+        const result = await getLessonPlaybackUrl(lessonId, quality);
+        if (cancelled) return;
+        if (result.url) {
+          setSrc(result.url);
+          setError(null);
+        } else {
+          setError(result.error ?? "לא ניתן לנגן את השיעור");
+        }
+      } catch (cause) {
+        // Without this the spinner would spin forever on a dropped request.
+        console.error("getLessonPlaybackUrl call failed:", cause);
+        if (!cancelled) setError("לא ניתן לנגן את השיעור כרגע");
       }
     };
 
@@ -94,7 +108,10 @@ export function LessonPlayer({
   // Report on a timer while playing, and flush on tab-hide or unmount.
   useEffect(() => {
     const timer = setInterval(() => {
-      if (!videoRef.current?.paused) void report();
+      // `videoRef.current?.paused` is undefined before the element mounts, which
+      // read as "playing" and reported a position for a video nobody had started.
+      const video = videoRef.current;
+      if (video && !video.paused) void report();
     }, REPORT_INTERVAL_MS);
 
     const onHide = () => {

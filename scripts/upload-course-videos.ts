@@ -27,6 +27,8 @@ import { loadEnvLocal, getAdminClient } from "./import-utils.ts";
 const DRY_RUN = process.argv.includes("--dry-run");
 const BUCKET = "course-videos";
 const UPLOAD_ATTEMPTS = 3;
+/** Objects per storage list() page. */
+const LIST_PAGE_SIZE = 1000;
 
 // ---------------------------------------------------------------------------
 // Shapes of the two input manifests
@@ -138,16 +140,24 @@ async function listExisting(
   const existing = new Map<string, number>();
 
   for (const prefix of prefixes) {
-    const { data, error } = await db.storage
-      .from(BUCKET)
-      .list(prefix, { limit: 1000 });
-    // A missing folder is not an error condition; it just has nothing in it.
-    if (error) throw new Error(`list ${prefix || "/"}: ${error.message}`);
-    for (const entry of data ?? []) {
-      const size = (entry.metadata as { size?: number } | null)?.size;
-      if (typeof size === "number") {
-        existing.set(prefix ? `${prefix}/${entry.name}` : entry.name, size);
+    // Paged: a single list() call is capped, and a truncated page would make
+    // every object past it look new and get re-uploaded on every run.
+    for (let offset = 0; ; offset += LIST_PAGE_SIZE) {
+      const { data, error } = await db.storage
+        .from(BUCKET)
+        .list(prefix, { limit: LIST_PAGE_SIZE, offset });
+      // A missing folder is not an error condition; it just has nothing in it.
+      if (error) throw new Error(`list ${prefix || "/"}: ${error.message}`);
+
+      const entries = data ?? [];
+      for (const entry of entries) {
+        const size = (entry.metadata as { size?: number } | null)?.size;
+        if (typeof size === "number") {
+          existing.set(prefix ? `${prefix}/${entry.name}` : entry.name, size);
+        }
       }
+
+      if (entries.length < LIST_PAGE_SIZE) break;
     }
   }
 

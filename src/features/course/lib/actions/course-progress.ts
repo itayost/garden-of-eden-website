@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { lessonProgressSchema } from "@/lib/validations/course";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { shouldMarkComplete } from "../progress-utils";
+import { grantCourseBadges } from "../grant-course-badges";
 
 interface ProgressResult {
   success: boolean;
@@ -48,6 +50,16 @@ export async function updateLessonProgress(
   } = await supabase.auth.getUser();
   if (!user) {
     return { success: false, completed: false, error: "לא מחובר" };
+  }
+
+  // The player drives this every 15 s, so it is the one write a trainee can
+  // trigger at will. The general limiter (100/min) is far above the ~4/min a
+  // real player produces and fails open, so a Redis outage cannot stop playback
+  // progress being recorded.
+  const rate = await checkRateLimit(user.id, "general");
+  void rate.pending.catch(() => {});
+  if (rate.rateLimited) {
+    return { success: false, completed: false, error: "יותר מדי בקשות, נסה שוב" };
   }
 
   // The lesson row is also the authorisation check: RLS hides drafts and any
@@ -111,6 +123,12 @@ export async function updateLessonProgress(
   if (error) {
     console.error("updateLessonProgress failed:", error);
     return { success: false, completed: alreadyComplete, error: "שמירה נכשלה" };
+  }
+
+  // Badges are granted only on the transition, and never allowed to fail the
+  // write that triggered them.
+  if (stampCompletion) {
+    await grantCourseBadges(supabase, user.id, parsed.data.lesson_id);
   }
 
   return { success: true, completed: nowComplete };
@@ -180,6 +198,8 @@ export async function markLessonComplete(
     console.error("markLessonComplete failed:", error);
     return { success: false, completed: false, error: "שמירה נכשלה" };
   }
+
+  await grantCourseBadges(supabase, user.id, lessonId);
 
   return { success: true, completed: true };
 }

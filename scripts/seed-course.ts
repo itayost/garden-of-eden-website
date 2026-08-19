@@ -66,6 +66,31 @@ function readFlag(name: string, fallback: string): string {
   return value;
 }
 
+/** The title columns this script reads back before overwriting a row. */
+interface PriorTitle {
+  readonly title_he: string | null;
+  readonly needs_title: boolean | null;
+}
+
+/**
+ * Which title to write for a row that may already exist.
+ *
+ * The seed file is regenerated from the source filenames on every run, so its
+ * titles for un-named lessons are placeholders. Once the CMS has cleared
+ * `needs_title` for a row, that row's title is Eden's and must survive a
+ * re-seed; otherwise the seed's title wins (it is either the same generated
+ * placeholder or a real title from the manifest).
+ */
+function titleToKeep(
+  prior: PriorTitle | null,
+  seedTitle: string,
+  seedNeedsTitle: boolean
+): { titleHe: string; needsTitle: boolean } {
+  const named = prior != null && prior.needs_title === false && !!prior.title_he;
+  if (named) return { titleHe: prior.title_he as string, needsTitle: false };
+  return { titleHe: seedTitle, needsTitle: seedNeedsTitle };
+}
+
 async function main(): Promise<void> {
   const seedFile = readFlag(
     "seed",
@@ -111,7 +136,7 @@ async function main(): Promise<void> {
   // placeholder, which the CHECK constraint forbids publishing anyway).
   const { data: priorCourse, error: priorCourseError } = await db
     .from("courses")
-    .select("is_published")
+    .select("is_published, title_he, needs_title")
     .eq("slug", seed.slug)
     .maybeSingle();
 
@@ -119,15 +144,25 @@ async function main(): Promise<void> {
     throw new Error(`read course ${seed.slug}: ${priorCourseError.message}`);
   }
 
-  const coursePublished = Boolean(priorCourse?.is_published) && !seed.needsTitle;
+  // A title the CMS has already settled outranks the generated one. The seed is
+  // rebuilt from filenames every time, so writing its placeholder back would
+  // undo the very renames this script exists to make possible.
+  const courseTitle = titleToKeep(
+    priorCourse as PriorTitle | null,
+    seed.titleHe,
+    seed.needsTitle
+  );
+
+  const coursePublished =
+    Boolean(priorCourse?.is_published) && !courseTitle.needsTitle;
 
   const { data: course, error: courseError } = await db
     .from("courses")
     .upsert(
       {
         slug: seed.slug,
-        title_he: seed.titleHe,
-        needs_title: seed.needsTitle,
+        title_he: courseTitle.titleHe,
+        needs_title: courseTitle.needsTitle,
         // Left unpublished on purpose for a new course: Eden decides when it
         // goes live.
         is_published: coursePublished,
@@ -146,15 +181,40 @@ async function main(): Promise<void> {
   let lessonsWritten = 0;
 
   for (const chapter of seed.chapters) {
+    const { data: priorChapter, error: priorChapterError } = await db
+      .from("course_chapters")
+      .select("title_he, subtitle_he, needs_title")
+      .eq("course_id", course.id)
+      .eq("slug", chapter.slug)
+      .maybeSingle();
+
+    if (priorChapterError) {
+      throw new Error(
+        `read chapter ${chapter.slug}: ${priorChapterError.message}`
+      );
+    }
+
+    const chapterTitle = titleToKeep(
+      priorChapter as PriorTitle | null,
+      chapter.titleHe,
+      chapter.needsTitle
+    );
+    // The seed only ever carries a subtitle for the one chapter whose source
+    // filenames named it; never blank one the CMS has since filled in.
+    const chapterSubtitle =
+      chapter.subtitleHe ??
+      ((priorChapter as { subtitle_he?: string | null } | null)?.subtitle_he ??
+        null);
+
     const { data: chapterRow, error: chapterError } = await db
       .from("course_chapters")
       .upsert(
         {
           course_id: course.id,
           slug: chapter.slug,
-          title_he: chapter.titleHe,
-          subtitle_he: chapter.subtitleHe,
-          needs_title: chapter.needsTitle,
+          title_he: chapterTitle.titleHe,
+          subtitle_he: chapterSubtitle,
+          needs_title: chapterTitle.needsTitle,
           order_index: chapter.orderIndex,
         },
         { onConflict: "course_id,slug" }
@@ -174,7 +234,7 @@ async function main(): Promise<void> {
     // anything behind Eden's back.
     const { data: priorLessons, error: priorLessonError } = await db
       .from("course_lessons")
-      .select("slug, is_published")
+      .select("slug, is_published, title_he, needs_title")
       .eq("chapter_id", chapterRow.id);
 
     if (priorLessonError) {
@@ -183,22 +243,27 @@ async function main(): Promise<void> {
       );
     }
 
-    const priorPublished = new Map(
-      (priorLessons ?? []).map((row) => [row.slug as string, Boolean(row.is_published)])
+    const priorBySlug = new Map(
+      (priorLessons ?? []).map((row) => [
+        row.slug as string,
+        row as { is_published: boolean | null } & PriorTitle,
+      ])
     );
 
     const rows = chapter.lessons.map((lesson) => {
-      const publishable = !lesson.needsTitle && Boolean(lesson.videoPath);
-      const prior = priorPublished.get(lesson.slug);
+      const prior = priorBySlug.get(lesson.slug) ?? null;
+      const title = titleToKeep(prior, lesson.titleHe, lesson.needsTitle);
+      const publishable = !title.needsTitle && Boolean(lesson.videoPath);
+      const priorPublished = prior ? Boolean(prior.is_published) : undefined;
       return {
         chapter_id: chapterRow.id,
         slug: lesson.slug,
-        title_he: lesson.titleHe,
+        title_he: title.titleHe,
         video_path: lesson.videoPath,
         video_path_sd: lesson.videoPathSd,
         duration_sec: lesson.durationSec,
-        needs_title: lesson.needsTitle,
-        is_published: (prior ?? publishable) && publishable,
+        needs_title: title.needsTitle,
+        is_published: (priorPublished ?? publishable) && publishable,
         order_index: lesson.orderIndex,
       };
     });

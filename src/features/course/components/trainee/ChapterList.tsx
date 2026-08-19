@@ -45,7 +45,7 @@ export function ChapterList({ chapters, progress }: ChapterListProps) {
               )}
               aria-hidden="true"
             >
-              {complete ? <Check className="h-4 w-4" /> : index}
+              {complete ? <Check className="h-4 w-4" /> : index + 1}
             </span>
 
             <span className="min-w-0 flex-1">

@@ -1331,7 +1331,16 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      /** Atomically renumber a course's chapters. Admin-only, checked in-function. */
+      reorder_course_chapters: {
+        Args: { p_course_id: string; p_ids: string[] };
+        Returns: undefined;
+      };
+      /** Atomically renumber a chapter's lessons. Admin-only, checked in-function. */
+      reorder_course_lessons: {
+        Args: { p_chapter_id: string; p_ids: string[] };
+        Returns: undefined;
+      };
     };
     Enums: {
       user_role: UserRole;
@@ -1402,4 +1411,7 @@ export type AchievementBadgeType =
   | "book_first_drill"
   | "book_ten_drills"
   | "book_category_complete"
-  | "book_all_drills";
+  | "book_all_drills"
+  | "course_first_lesson"
+  | "course_chapter_complete"
+  | "course_complete";

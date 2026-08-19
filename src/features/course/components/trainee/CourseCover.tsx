@@ -63,7 +63,7 @@ export function CourseCover({
 
         <p className="text-sm text-muted-foreground tabular-nums">
           {chapters.length} פרקים · {lessonCount} שיעורים ·{" "}
-          {formatDuration(totalSeconds)} שעות צפייה
+          {formatDuration(totalSeconds)} זמן צפייה
         </p>
       </div>
     </div>
