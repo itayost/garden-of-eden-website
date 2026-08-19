@@ -10,6 +10,10 @@ import { MotionProvider } from "@/components/MotionProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingTourProvider } from "@/features/onboarding-tour";
 import type { Profile } from "@/types/database";
+import {
+  resolveAccessTier,
+  type AccessOverride,
+} from "@/lib/access/course-access";
 
 export default async function DashboardLayout({
   children,
@@ -26,10 +30,18 @@ export default async function DashboardLayout({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed",
+      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override",
     )
     .eq("id", user.id)
-    .maybeSingle() as unknown as { data: Profile | null };
+    .maybeSingle() as unknown as {
+      data:
+        | (Profile & {
+            arbox_paid_training: boolean;
+            arbox_bought_course: boolean;
+            access_override: AccessOverride;
+          })
+        | null;
+    };
 
   if (
     profile &&
@@ -40,6 +52,14 @@ export default async function DashboardLayout({
     redirect("/onboarding/profile");
   }
 
+  // The middleware is what enforces this; the tier here only decides which nav
+  // items are worth showing.
+  const tier = resolveAccessTier({
+    arboxPaidTraining: profile?.arbox_paid_training ?? false,
+    arboxBoughtCourse: profile?.arbox_bought_course ?? false,
+    accessOverride: profile?.access_override ?? null,
+  });
+
   const cookieStore = await cookies();
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
@@ -48,7 +68,7 @@ export default async function DashboardLayout({
     // celebration respect prefers-reduced-motion.
     <MotionProvider>
     <SidebarProvider defaultOpen={sidebarOpen}>
-      <DashboardSidebar user={user} profile={profile} />
+      <DashboardSidebar user={user} profile={profile} tier={tier} />
       <SidebarInset>
         <AppTopBar
           user={user}
@@ -59,7 +79,7 @@ export default async function DashboardLayout({
         <main className="container mx-auto px-4 pt-6 pb-20 md:pb-8">
           {children}
         </main>
-        <DashboardBottomNav />
+        <DashboardBottomNav tier={tier} />
       </SidebarInset>
       <Suspense fallback={null}>
         <OnboardingTourProvider

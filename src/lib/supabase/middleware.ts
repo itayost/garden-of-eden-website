@@ -1,5 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  COURSE_ONLY_HOME,
+  isPathAllowedForTier,
+  resolveAccessTier,
+  type AccessOverride,
+} from "@/lib/access/course-access";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -48,12 +54,20 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Fetch profile once for all protected-path checks
-  let profile: { profile_completed: boolean; role: string } | null = null;
+  let profile: {
+    profile_completed: boolean;
+    role: string;
+    arbox_paid_training: boolean;
+    arbox_bought_course: boolean;
+    access_override: AccessOverride;
+  } | null = null;
 
   if (user && isProtectedPath) {
     const { data } = await supabase
       .from("profiles")
-      .select("profile_completed, role")
+      .select(
+        "profile_completed, role, arbox_paid_training, arbox_bought_course, access_override"
+      )
       .eq("id", user.id)
       .is("deleted_at", null)
       .maybeSingle();
@@ -74,6 +88,24 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding/profile";
       return NextResponse.redirect(url);
+    }
+
+    // Someone who bought only the digital course sees only the digital course.
+    // Checked here rather than per-page so a new trainee route is restricted by
+    // default instead of leaking until someone remembers to gate it.
+    if (profile) {
+      const tier = resolveAccessTier({
+        arboxPaidTraining: profile.arbox_paid_training,
+        arboxBoughtCourse: profile.arbox_bought_course,
+        accessOverride: profile.access_override,
+      });
+
+      if (!isPathAllowedForTier(tier, request.nextUrl.pathname)) {
+        const url = request.nextUrl.clone();
+        url.pathname = COURSE_ONLY_HOME;
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
     }
   }
 

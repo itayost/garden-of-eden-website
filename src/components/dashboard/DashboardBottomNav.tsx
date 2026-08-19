@@ -9,11 +9,18 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { cn } from "@/lib/utils";
 import { isActivePath } from "@/lib/utils/active-path";
 import { DASHBOARD_NAV } from "@/lib/navigation/dashboard-nav";
-import { splitBottomNav } from "@/lib/navigation/types";
+import { filterNavForTier, splitBottomNav } from "@/lib/navigation/types";
+import type { AccessTier } from "@/lib/access/course-access";
 
-const { main: mainItems, more: moreItems } = splitBottomNav(DASHBOARD_NAV, true);
+interface DashboardBottomNavProps {
+  tier: AccessTier;
+}
 
-export function DashboardBottomNav() {
+export function DashboardBottomNav({ tier }: DashboardBottomNavProps) {
+  const { main: mainItems, more: moreItems } = splitBottomNav(
+    filterNavForTier(DASHBOARD_NAV, tier),
+    true,
+  );
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 

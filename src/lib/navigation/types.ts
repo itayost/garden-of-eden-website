@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { isPathAllowedForTier, type AccessTier } from "@/lib/access/course-access";
 
 export type NavItem = {
   href: string;
@@ -39,4 +40,19 @@ export function derivePageTitles(
     ...Object.fromEntries(items.map((i) => [i.href, i.label])),
     ...extra,
   };
+}
+
+/**
+ * Drop nav items the tier cannot open.
+ *
+ * Cosmetic only -- the middleware is what actually enforces access. This just
+ * stops a course-only trainee being shown links that would bounce them straight
+ * back to the course.
+ */
+export function filterNavForTier(
+  items: NavItem[],
+  tier: AccessTier,
+): NavItem[] {
+  if (tier === "full") return items;
+  return items.filter((item) => isPathAllowedForTier(tier, item.href));
 }

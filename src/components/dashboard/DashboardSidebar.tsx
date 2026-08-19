@@ -12,15 +12,24 @@ import {
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { isActivePath } from "@/lib/utils/active-path";
 import { DASHBOARD_NAV } from "@/lib/navigation/dashboard-nav";
+import { filterNavForTier } from "@/lib/navigation/types";
+import type { AccessTier } from "@/lib/access/course-access";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
 
 type DashboardSidebarProps = {
   user: User;
   profile: Profile | null;
+  /** Decides which nav items this trainee is shown. */
+  tier: AccessTier;
 };
 
-export function DashboardSidebar({ user, profile }: DashboardSidebarProps) {
+export function DashboardSidebar({
+  user,
+  profile,
+  tier,
+}: DashboardSidebarProps) {
+  const navItems = filterNavForTier(DASHBOARD_NAV, tier);
   const pathname = usePathname();
   return (
     <AppSidebar
@@ -31,7 +40,7 @@ export function DashboardSidebar({ user, profile }: DashboardSidebarProps) {
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
-            {DASHBOARD_NAV.map((item) => {
+            {navItems.map((item) => {
               const active = isActivePath(pathname, item.href, item.exact);
               return (
                 <SidebarMenuItem key={item.href}>
