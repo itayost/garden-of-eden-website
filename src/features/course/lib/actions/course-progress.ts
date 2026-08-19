@@ -15,9 +15,62 @@ interface ProgressResult {
 }
 
 interface ExistingProgress {
-  id: string;
   watched_sec: number;
   completed_at: string | null;
+}
+
+/**
+ * The lesson's duration plus this trainee's own progress row, in one round trip.
+ *
+ * `course_lesson_progress` embeds as an array because a trainee who has never
+ * opened the lesson has no row; the lesson itself still comes back either way,
+ * so an empty array means "no progress yet" rather than "no such lesson".
+ */
+interface LessonWithProgress {
+  duration_sec: number;
+  course_lesson_progress: ExistingProgress[];
+}
+
+const LESSON_WITH_PROGRESS =
+  "duration_sec, course_lesson_progress(watched_sec, completed_at)";
+
+/**
+ * Read the lesson and the caller's progress together.
+ *
+ * The embedded filter on `user_id` is required, not merely defensive: staff may
+ * SELECT every trainee's progress, so without it their own write would embed the
+ * whole cohort's rows for that lesson and pick an arbitrary one.
+ */
+async function readLessonWithProgress(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lessonId: string,
+  userId: string
+): Promise<
+  | { ok: true; durationSec: number; existing: ExistingProgress | null }
+  | { ok: false; error: string }
+> {
+  const { data, error } = (await typedFrom(supabase, "course_lessons")
+    .select(LESSON_WITH_PROGRESS)
+    .eq("id", lessonId)
+    .eq("is_published", true)
+    .eq("course_lesson_progress.user_id", userId)
+    .maybeSingle()) as { data: LessonWithProgress | null; error: unknown };
+
+  // A failed read must not be mistaken for "no progress yet": that would send
+  // watched_sec backwards and, worse, clear a completion stamp.
+  if (error) {
+    console.error("readLessonWithProgress failed:", error);
+    return { ok: false, error: "שמירה נכשלה" };
+  }
+  // RLS hides drafts and anything the caller may not read, so a miss here means
+  // "no access" just as much as "no such lesson".
+  if (!data) return { ok: false, error: "שיעור לא נמצא" };
+
+  return {
+    ok: true,
+    durationSec: data.duration_sec ?? 0,
+    existing: data.course_lesson_progress[0] ?? null,
+  };
 }
 
 /**
@@ -62,39 +115,20 @@ export async function updateLessonProgress(
     return { success: false, completed: false, error: "יותר מדי בקשות, נסה שוב" };
   }
 
-  // The lesson row is also the authorisation check: RLS hides drafts and any
-  // lesson the caller may not read, so a miss here means "no access".
-  const { data: lesson } = await typedFrom(supabase, "course_lessons")
-    .select("duration_sec")
-    .eq("id", parsed.data.lesson_id)
-    .eq("is_published", true)
-    .maybeSingle();
-
-  if (!lesson) {
-    return { success: false, completed: false, error: "שיעור לא נמצא" };
+  const read = await readLessonWithProgress(
+    supabase,
+    parsed.data.lesson_id,
+    user.id
+  );
+  if (!read.ok) {
+    return { success: false, completed: false, error: read.error };
   }
 
-  const durationSec: number = lesson.duration_sec ?? 0;
+  const { durationSec, existing } = read;
   const clampedPosition =
     durationSec > 0
       ? Math.min(parsed.data.position_sec, durationSec)
       : parsed.data.position_sec;
-
-  const { data: existing, error: existingError } = (await typedFrom(
-    supabase,
-    "course_lesson_progress"
-  )
-    .select("id, watched_sec, completed_at")
-    .eq("user_id", user.id)
-    .eq("lesson_id", parsed.data.lesson_id)
-    .maybeSingle()) as { data: ExistingProgress | null; error: unknown };
-
-  // A failed read must not be mistaken for "no progress yet": that would send
-  // watched_sec backwards and, worse, clear a completion stamp.
-  if (existingError) {
-    console.error("updateLessonProgress read failed:", existingError);
-    return { success: false, completed: false, error: "שמירה נכשלה" };
-  }
 
   const alreadyComplete = existing?.completed_at != null;
   const nowComplete =
@@ -161,35 +195,16 @@ export async function markLessonComplete(
     return { success: false, completed: false, error: "יותר מדי בקשות, נסה שוב" };
   }
 
-  const { data: lesson } = await typedFrom(supabase, "course_lessons")
-    .select("duration_sec")
-    .eq("id", lessonId)
-    .eq("is_published", true)
-    .maybeSingle();
-
-  if (!lesson) {
-    return { success: false, completed: false, error: "שיעור לא נמצא" };
+  const read = await readLessonWithProgress(supabase, lessonId, user.id);
+  if (!read.ok) {
+    return { success: false, completed: false, error: read.error };
   }
 
-  const { data: existing, error: existingError } = (await typedFrom(
-    supabase,
-    "course_lesson_progress"
-  )
-    .select("id, watched_sec, completed_at")
-    .eq("user_id", user.id)
-    .eq("lesson_id", lessonId)
-    .maybeSingle()) as { data: ExistingProgress | null; error: unknown };
-
-  if (existingError) {
-    console.error("markLessonComplete read failed:", existingError);
-    return { success: false, completed: false, error: "שמירה נכשלה" };
-  }
+  const { durationSec, existing } = read;
 
   if (existing?.completed_at) {
     return { success: true, completed: true };
   }
-
-  const durationSec: number = lesson.duration_sec ?? 0;
 
   const { error } = await typedFrom(supabase, "course_lesson_progress").upsert(
     {
