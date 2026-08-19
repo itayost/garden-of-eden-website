@@ -15,6 +15,7 @@ import { ArrowRight, User, History, FileText } from "lucide-react";
 import { UserEditForm } from "@/components/admin/UserEditForm";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
+import { AccessTierCard } from "@/components/admin/users/AccessTierCard";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
 import { CommunicationHistoryCard } from "@/components/admin/users/CommunicationHistoryCard";
@@ -174,6 +175,18 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               traineeId={userId}
               currentUserId={currentUser.id}
               isAdmin={isAdmin}
+            />
+          )}
+
+          {/* Which content this trainee can reach, and why (admin only) */}
+          {isAdmin && userToEdit.role === "trainee" && (
+            <AccessTierCard
+              userId={userId}
+              arboxPaidTraining={userToEdit.arbox_paid_training}
+              arboxBoughtCourse={userToEdit.arbox_bought_course}
+              accessOverride={userToEdit.access_override}
+              arboxUserId={userToEdit.arbox_user_id}
+              syncedAt={userToEdit.arbox_access_synced_at}
             />
           )}
 

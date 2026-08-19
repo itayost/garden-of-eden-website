@@ -27,6 +27,10 @@ function createProfile(overrides: Partial<Profile> = {}): Profile {
     arbox_user_id: null,
     club: null,
     welcome_message_sent_at: null,
+    arbox_paid_training: false,
+    arbox_bought_course: false,
+    access_override: null,
+    arbox_access_synced_at: null,
     ...overrides,
   };
 }

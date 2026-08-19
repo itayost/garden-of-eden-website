@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { isPathAllowedForTier, type AccessTier } from "@/lib/access/course-access";
 
 export type NavItem = {
   href: string;
@@ -39,4 +40,30 @@ export function derivePageTitles(
     ...Object.fromEntries(items.map((i) => [i.href, i.label])),
     ...extra,
   };
+}
+
+/**
+ * Drop nav items the tier cannot open.
+ *
+ * Cosmetic only -- the middleware is what actually enforces access. This just
+ * stops a course-only trainee being shown links that would bounce them straight
+ * back to the course.
+ */
+export function filterNavForTier(
+  items: NavItem[],
+  tier: AccessTier,
+): NavItem[] {
+  if (tier === "full") return items;
+
+  const allowed = items.filter((item) => isPathAllowedForTier(tier, item.href));
+
+  // None of the pages a course-only trainee can reach is marked mobilePrimary,
+  // so filtering alone would leave splitBottomNav with an empty main bar and
+  // hide their only content page behind the "עוד" sheet. With this few items
+  // they all belong in the bar.
+  return allowed.map((item, index) => ({
+    ...item,
+    mobilePrimary: true,
+    mobileOrder: index + 1,
+  }));
 }

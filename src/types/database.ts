@@ -39,6 +39,10 @@ export interface Database {
           arbox_user_id: number | null;
           club: string | null;
           welcome_message_sent_at: string | null;
+          arbox_paid_training: boolean;
+          arbox_bought_course: boolean;
+          access_override: "full" | "course_only" | null;
+          arbox_access_synced_at: string | null;
         };
         Insert: {
           id: string;
@@ -59,6 +63,10 @@ export interface Database {
           arbox_user_id?: number | null;
           club?: string | null;
           welcome_message_sent_at?: string | null;
+          arbox_paid_training?: boolean;
+          arbox_bought_course?: boolean;
+          access_override?: "full" | "course_only" | null;
+          arbox_access_synced_at?: string | null;
         };
         Update: {
           id?: string;
@@ -79,6 +87,10 @@ export interface Database {
           arbox_user_id?: number | null;
           club?: string | null;
           welcome_message_sent_at?: string | null;
+          arbox_paid_training?: boolean;
+          arbox_bought_course?: boolean;
+          access_override?: "full" | "course_only" | null;
+          arbox_access_synced_at?: string | null;
         };
         Relationships: [];
       };
