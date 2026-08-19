@@ -23,6 +23,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { loadEnvLocal, getAdminClient } from "./import-utils.ts";
+import type {
+  CourseSeed,
+  SeedChapter,
+  SeedLesson,
+} from "./course-content/seed-types.ts";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const BUCKET = "course-videos";
@@ -70,35 +75,6 @@ interface WebManifest {
     readonly durationSec: number;
     readonly renditions: readonly WebRendition[];
   }[];
-}
-
-// ---------------------------------------------------------------------------
-// Shape of the seed file this script emits
-// ---------------------------------------------------------------------------
-export interface SeedLesson {
-  readonly slug: string;
-  readonly titleHe: string;
-  readonly needsTitle: boolean;
-  readonly orderIndex: number;
-  readonly durationSec: number;
-  readonly videoPath: string;
-  readonly videoPathSd: string | null;
-}
-
-export interface SeedChapter {
-  readonly slug: string;
-  readonly titleHe: string;
-  readonly subtitleHe: string | null;
-  readonly needsTitle: boolean;
-  readonly orderIndex: number;
-  readonly lessons: readonly SeedLesson[];
-}
-
-export interface CourseSeed {
-  readonly slug: string;
-  readonly titleHe: string;
-  readonly needsTitle: boolean;
-  readonly chapters: readonly SeedChapter[];
 }
 
 function readFlag(name: string, fallback: string): string {

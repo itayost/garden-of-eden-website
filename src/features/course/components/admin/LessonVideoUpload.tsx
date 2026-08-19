@@ -6,7 +6,10 @@ import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { setLessonVideo } from "@/features/course/lib/actions/admin-course";
-import { COURSE_VIDEO_BUCKET } from "@/features/course/lib/playback-config";
+import {
+  COURSE_VIDEO_BUCKET,
+  cmsVideoPath,
+} from "@/features/course/lib/playback-config";
 
 interface LessonVideoUploadProps {
   lessonId: string;
@@ -83,7 +86,7 @@ export function LessonVideoUpload({
         return;
       }
 
-      const path = `${chapterSlug}/${lessonSlug}.mp4`;
+      const path = cmsVideoPath(chapterSlug, lessonSlug);
       const supabase = createClient();
       const { error: uploadError } = await supabase.storage
         .from(COURSE_VIDEO_BUCKET)

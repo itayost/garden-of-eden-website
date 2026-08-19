@@ -1,8 +1,4 @@
-export {
-  getPublishedCourse,
-  getMyLessonProgress,
-  getPublishedLesson,
-} from "./course-read";
+export { getPublishedCourse, getMyLessonProgress } from "./course-read";
 
 export { updateLessonProgress, markLessonComplete } from "./course-progress";
 

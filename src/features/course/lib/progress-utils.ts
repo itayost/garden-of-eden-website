@@ -1,3 +1,4 @@
+import { progressPercent } from "@/lib/utils/math";
 import type {
   CourseChapterWithLessons,
   LessonProgressMap,
@@ -5,16 +6,14 @@ import type {
   ResumePoint,
 } from "./types";
 
+// Re-exported so course callers have one import for course progress helpers.
+export { progressPercent };
+
 /**
  * Fraction of a lesson that counts as watched. Trainees rarely sit through
  * closing credits, so the last tenth is forgiven.
  */
 export const COMPLETION_RATIO = 0.9;
-
-export function progressPercent(done: number, total: number): number {
-  if (total <= 0) return 0;
-  return Math.min(100, Math.round((done / total) * 100));
-}
 
 export function isLessonDone(
   lessonId: string,

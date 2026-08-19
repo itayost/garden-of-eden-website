@@ -247,34 +247,57 @@ async function updateOneRow(
 }
 
 /**
- * Rename a chapter. Supplying a real title is what clears the placeholder flag,
- * which is in turn what lets its lessons be published.
+ * The one rule the three rename actions share: setting a real title is what
+ * clears `needs_title`, and clearing `needs_title` is what the CHECK constraints
+ * require before the row can be published. Keeping it in one place means the rule
+ * cannot drift between the course, its chapters and its lessons.
+ *
+ * `secondaryColumn` is the row's optional prose (a chapter subtitle, a lesson or
+ * course description). It is only written when the caller actually supplied a
+ * value, so the inline title editor -- which sends a title and nothing else --
+ * cannot blank it.
  */
+async function renameRow(
+  table: "courses" | "course_chapters" | "course_lessons",
+  id: string,
+  titleHe: string,
+  secondaryColumn: "subtitle_he" | "description_he",
+  secondaryValue: string | null | undefined,
+  labels: { context: string; badId: string; notFound: string }
+): Promise<CourseActionResult> {
+  const { error: authError } = await verifyAdmin();
+  if (authError) return { error: authError };
+  if (!isValidUUID(id)) return { error: labels.badId };
+
+  const titleError = validateTitle(titleHe);
+  if (titleError) return { error: titleError };
+
+  const secondary = optionalText(secondaryValue);
+
+  return updateOneRow(
+    table,
+    id,
+    {
+      title_he: titleHe.trim(),
+      ...(secondary.present ? { [secondaryColumn]: secondary.value } : {}),
+      needs_title: false,
+    },
+    labels.context,
+    { notFound: labels.notFound }
+  );
+}
+
+/** Rename a chapter, clearing its placeholder flag. */
 export async function renameChapter(
   chapterId: string,
   titleHe: string,
   subtitleHe?: string | null
 ): Promise<CourseActionResult> {
-  const { error: authError } = await verifyAdmin();
-  if (authError) return { error: authError };
-  if (!isValidUUID(chapterId)) return { error: "מזהה פרק לא תקין" };
-
-  const titleError = validateTitle(titleHe);
-  if (titleError) return { error: titleError };
-
-  const subtitle = optionalText(subtitleHe);
-
-  return updateOneRow(
-    "course_chapters",
-    chapterId,
-    {
-      title_he: titleHe.trim(),
-      ...(subtitle.present ? { subtitle_he: subtitle.value } : {}),
-      needs_title: false,
-    },
-    "renameChapter",
-    { notFound: "הפרק לא נמצא" }
-  );
+  return renameRow("course_chapters", chapterId, titleHe, "subtitle_he", subtitleHe, {
+    context: "renameChapter",
+    badId: "מזהה פרק לא תקין",
+    notFound: "הפרק לא נמצא",
+  });
 }
 
 /** Rename a lesson, clearing its placeholder flag. */
@@ -283,54 +306,24 @@ export async function renameLesson(
   titleHe: string,
   descriptionHe?: string | null
 ): Promise<CourseActionResult> {
-  const { error: authError } = await verifyAdmin();
-  if (authError) return { error: authError };
-  if (!isValidUUID(lessonId)) return { error: "מזהה שיעור לא תקין" };
-
-  const titleError = validateTitle(titleHe);
-  if (titleError) return { error: titleError };
-
-  const description = optionalText(descriptionHe);
-
-  return updateOneRow(
-    "course_lessons",
-    lessonId,
-    {
-      title_he: titleHe.trim(),
-      ...(description.present ? { description_he: description.value } : {}),
-      needs_title: false,
-    },
-    "renameLesson",
-    { notFound: "השיעור לא נמצא" }
-  );
+  return renameRow("course_lessons", lessonId, titleHe, "description_he", descriptionHe, {
+    context: "renameLesson",
+    badId: "מזהה שיעור לא תקין",
+    notFound: "השיעור לא נמצא",
+  });
 }
 
-/** Rename the course itself. */
+/** Rename the course itself, clearing its placeholder flag. */
 export async function renameCourse(
   courseId: string,
   titleHe: string,
   descriptionHe?: string | null
 ): Promise<CourseActionResult> {
-  const { error: authError } = await verifyAdmin();
-  if (authError) return { error: authError };
-  if (!isValidUUID(courseId)) return { error: "מזהה קורס לא תקין" };
-
-  const titleError = validateTitle(titleHe);
-  if (titleError) return { error: titleError };
-
-  const description = optionalText(descriptionHe);
-
-  return updateOneRow(
-    "courses",
-    courseId,
-    {
-      title_he: titleHe.trim(),
-      ...(description.present ? { description_he: description.value } : {}),
-      needs_title: false,
-    },
-    "renameCourse",
-    { notFound: "הקורס לא נמצא" }
-  );
+  return renameRow("courses", courseId, titleHe, "description_he", descriptionHe, {
+    context: "renameCourse",
+    badId: "מזהה קורס לא תקין",
+    notFound: "הקורס לא נמצא",
+  });
 }
 
 // ---------------------------------------------------------------------------

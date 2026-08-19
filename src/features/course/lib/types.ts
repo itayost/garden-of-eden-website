@@ -43,7 +43,6 @@ export interface Course {
   slug: string;
   titleHe: string;
   descriptionHe: string | null;
-  coverUrl: string | null;
   isPublished: boolean;
   needsTitle: boolean;
   orderIndex: number;

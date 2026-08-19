@@ -14,3 +14,21 @@ export const COURSE_VIDEO_BUCKET = "course-videos";
  * the same day.
  */
 export const PLAYBACK_URL_TTL_SEC = 2 * 60 * 60;
+
+/**
+ * Storage key for a video uploaded through the CMS.
+ *
+ * Two key shapes coexist in this bucket, and the difference is meaningful:
+ *
+ *   `{chapter}/{lesson}.720p.mp4` + `.480p.mp4` — produced by
+ *     `scripts/transcode-course.ts`, which derives keys from the source tree, so
+ *     a lesson from the pipeline has two renditions.
+ *   `{chapter}/{lesson}.mp4` — this function. A CMS upload is whatever file Eden
+ *     picked, so there is exactly one rendition and no quality suffix to claim
+ *     otherwise.
+ *
+ * Anything reading a key treats it as opaque; only the writers care.
+ */
+export function cmsVideoPath(chapterSlug: string, lessonSlug: string): string {
+  return `${chapterSlug}/${lessonSlug}.mp4`;
+}

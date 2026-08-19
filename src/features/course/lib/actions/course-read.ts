@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { isValidUUID } from "@/lib/validations/common";
 import type {
   CourseChapterWithLessons,
   CourseLesson,
@@ -18,7 +17,6 @@ interface RawCourse {
   slug: string;
   title_he: string;
   description_he: string | null;
-  cover_url: string | null;
   is_published: boolean;
   needs_title: boolean;
   order_index: number;
@@ -161,7 +159,6 @@ function toCourse(row: RawCourse) {
     slug: row.slug,
     titleHe: row.title_he,
     descriptionHe: row.description_he,
-    coverUrl: row.cover_url,
     isPublished: row.is_published,
     needsTitle: row.needs_title,
     orderIndex: row.order_index,
@@ -199,24 +196,4 @@ export async function getMyLessonProgress(): Promise<LessonProgressMap> {
     };
   }
   return map;
-}
-
-/** A single published lesson, or null when it does not exist or is a draft. */
-export async function getPublishedLesson(
-  lessonId: string
-): Promise<CourseLesson | null> {
-  if (!isValidUUID(lessonId)) return null;
-
-  const supabase = await createClient();
-  const { data, error } = await typedFrom(supabase, "course_lessons")
-    .select("*")
-    .eq("id", lessonId)
-    .eq("is_published", true)
-    .maybeSingle();
-
-  if (error) {
-    console.error("getPublishedLesson failed:", error);
-    return null;
-  }
-  return data ? toLesson(data as RawLesson) : null;
 }
