@@ -45,6 +45,7 @@ export interface WeeklyBand {
   trainer_id: string;
   trainer_name: string;
   location_he: string | null;
+  branch_id: string | null;
   label_he: string | null;
   is_standby: boolean;
   created_by: string;
@@ -63,6 +64,7 @@ export interface WeeklyException {
   start_time: string | null;
   end_time: string | null;
   location_he: string | null;
+  branch_id: string | null;
   label_he: string | null;
   note_he: string | null;
   created_by: string;

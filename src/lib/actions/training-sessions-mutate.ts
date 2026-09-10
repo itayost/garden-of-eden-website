@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -71,6 +72,9 @@ export async function upsertSessionAction(
     return { error: "שגיאה באימות המתאמן" };
   }
   if (!trainee) return { error: "המתאמן אינו קיים או אינו פעיל" };
+
+  const scopeError = await assertTraineeInScope(traineeId);
+  if (scopeError) return { error: scopeError };
 
   const builderName = profile!.full_name ?? "מאמן";
 

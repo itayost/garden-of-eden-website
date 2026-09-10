@@ -6,6 +6,9 @@ import type { PlayerAssessment, AssessmentSectionKey } from "@/types/assessment"
 import { ASSESSMENT_SECTIONS } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
+import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { visibleProfileIds } from "@/features/branches/lib/memberships";
 
 export interface AssessmentQueryParams {
   page: number;
@@ -14,6 +17,7 @@ export interface AssessmentQueryParams {
   ageGroupId?: string;
   position?: string;
   test?: AssessmentSectionKey;
+  branchId?: string;
 }
 
 async function getUserIdsWithSection(
@@ -54,6 +58,15 @@ export async function getAssessmentsPaginated(
   const { error } = await verifyAdminOrTrainer();
   if (error) return empty;
 
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return empty;
+  const visibleIds = await visibleProfileIds(
+    createAdminClient(),
+    scopeResult.data.scope,
+    params.branchId,
+  );
+  if (visibleIds !== null && visibleIds.length === 0) return empty;
+
   const supabase = await createClient();
   const from = params.page * params.pageSize;
 
@@ -61,17 +74,20 @@ export async function getAssessmentsPaginated(
   // assessment count, and the user_id list for the trainees-with-assessments tally.
   // testMatchedIds blocks the profile query, so we want it on the same wave as
   // the counts rather than serialized after them.
+  const totalQuery = supabase
+    .from("player_assessments")
+    .select("*", { count: "exact", head: true })
+    .is("deleted_at", null);
+  const usersQuery = supabase
+    .from("player_assessments")
+    .select("user_id")
+    .is("deleted_at", null);
+
   const [testMatchedIds, totalAssessmentsCount, traineesWithAssessmentsData] =
     await Promise.all([
       params.test ? getUserIdsWithSection(supabase, params.test) : Promise.resolve(null),
-      supabase
-        .from("player_assessments")
-        .select("*", { count: "exact", head: true })
-        .is("deleted_at", null),
-      supabase
-        .from("player_assessments")
-        .select("user_id")
-        .is("deleted_at", null),
+      visibleIds === null ? totalQuery : totalQuery.in("user_id", visibleIds),
+      visibleIds === null ? usersQuery : usersQuery.in("user_id", visibleIds),
     ]);
 
   if (testMatchedIds && testMatchedIds.length === 0) return empty;
@@ -93,6 +109,9 @@ export async function getAssessmentsPaginated(
   }
 
   profileQuery = applyPositionFilter(profileQuery, "position", params.position);
+  if (visibleIds !== null) {
+    profileQuery = profileQuery.in("id", visibleIds);
+  }
 
   if (testMatchedIds) {
     profileQuery = profileQuery.in("id", testMatchedIds);
@@ -109,6 +128,9 @@ export async function getAssessmentsPaginated(
       .ilike("full_name", params.search ? `%${params.search}%` : "%");
 
     ageGroupQuery = applyPositionFilter(ageGroupQuery, "position", params.position);
+    if (visibleIds !== null) {
+      ageGroupQuery = ageGroupQuery.in("id", visibleIds);
+    }
 
     if (testMatchedIds) {
       ageGroupQuery = ageGroupQuery.in("id", testMatchedIds);

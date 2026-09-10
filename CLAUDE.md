@@ -105,6 +105,7 @@ Single public bucket `avatars` stores avatars, meal plan PDFs, and other uploads
 - `TablePagination` — paginated table footer
 - `TableToolbar` with `ToolbarSelect`/`ToolbarCheckbox`/`ToolbarDateRange` — search + filter toolbar, parent owns state, toolbar handles debounce
 - CSV exports in `src/components/admin/exports/` — Hebrew headers, BOM, Papa.unparse
+- `BranchCheckboxGroup` from `src/features/branches/components/` — branch membership picker used by the user create and edit forms
 
 ### Shared Hooks & Utilities
 
@@ -125,6 +126,10 @@ try {
 }
 ```
 
+### Branches
+
+`branches` + `profile_branches` (many-to-many). Trainer scope comes from `getBranchScopeAction()` in `src/lib/actions/shared/` and is applied in server queries through `visibleProfileIds()`; never rely on RLS for it. Schedule pages carry the branch in `?branch=` and hand it to dialogs through `BranchProvider` / `useCurrentBranch()`. Shifts store `branch_id`; rankings take a branch id. See `docs/adr/0006-branches-are-a-table.md`.
+
 ### Migrations
 
 Two formats coexist in `supabase/migrations/`:
@@ -144,6 +149,7 @@ Both work — don't renumber old ones.
 - **RTL in Framer Motion**: `x` translations and CSS `left`/`right` are mirrored. Test both directions.
 - **Nutrition meal plans**: `trainee_meal_plans` uses PDF upload (`pdf_url`, `pdf_path`). The legacy JSONB `meal_plan` column is unused for new entries.
 - **DB trigger auto-creates profiles**: `on_auth_user_created` runs on `auth.users` insert — don't manually insert into `profiles` after `auth.admin.createUser()`.
+- **profile_branches is readable only by its owner and admins**: trainer-facing surfaces read memberships through `src/features/branches/lib/memberships.ts` with the service role, inside actions gated by `verifyAdminOrTrainer()`.
 
 ## Environment Variables
 

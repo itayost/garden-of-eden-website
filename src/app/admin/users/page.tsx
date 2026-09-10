@@ -7,6 +7,15 @@ import { UserDataTable } from "@/components/admin/users/UserDataTable";
 import { UserImportDialog } from "@/components/admin/users/UserImportDialog";
 import { UserExportButton } from "@/components/admin/users/UserExportButton";
 import type { Profile } from "@/types/database";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  branchNamesFor,
+  loadAllBranches,
+  loadBranchIdsByProfile,
+  scopedProfileIds,
+} from "@/features/branches/lib/memberships";
+import { toBranchOption, type ProfileWithBranches } from "@/types/branches";
+import { getBranchScopeAction } from "@/lib/actions/shared";
 
 export const metadata: Metadata = {
   title: "ניהול משתמשים | Garden of Eden",
@@ -18,6 +27,7 @@ interface PageProps {
     role?: string;
     status?: string;
     position?: string;
+    branch?: string;
     deleted?: string;
   }>;
 }
@@ -46,26 +56,53 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
 
   const isAdmin = currentProfile?.role === "admin";
 
-  // Fetch users based on role:
-  // - Admins see ALL users (including soft-deleted)
-  // - Trainers see only trainees
+  // Admins see everyone (including soft-deleted); the branch filter on the
+  // table narrows client-side like the other filters. Trainers see trainees
+  // in their branches only.
+  const adminClient = createAdminClient();
+  const scopeResult = await getBranchScopeAction();
+  // A failed scope read must not widen a trainer's view to the whole academy.
+  if ("error" in scopeResult) redirect("/dashboard");
+  const scopedIds = isAdmin ? null : await scopedProfileIds(adminClient, scopeResult.data.scope);
+
   let query = supabase.from("profiles").select("*");
   if (!isAdmin) {
     query = query.eq("role", "trainee");
   }
-  const { data: users, error } = await query.order("created_at", {
-    ascending: false,
-  });
+  if (scopedIds !== null && scopedIds.length > 0) {
+    query = query.in("id", scopedIds);
+  }
+  // An empty scope is a real answer (the trainer's branches have no members);
+  // skip the query rather than send `.in("id", [])`.
+  const { data: users, error } =
+    scopedIds !== null && scopedIds.length === 0
+      ? { data: [], error: null }
+      : await query.order("created_at", { ascending: false });
 
   if (error) {
     console.error("Failed to fetch users:", error);
   }
 
   const typedUsers = (users || []) as Profile[];
-  const params = await searchParams;
 
-  // Count active (non-deleted) users for display
-  const activeUserCount = typedUsers.filter((u) => !u.deleted_at).length;
+  // Memberships through the service role: the page is gated above, and a
+  // trainer cannot read other users' profile_branches rows through RLS.
+  const [allBranches, membershipMap] = await Promise.all([
+    loadAllBranches(adminClient),
+    loadBranchIdsByProfile(adminClient, typedUsers.map((u) => u.id)),
+  ]);
+  // Inactive branches still resolve to a name so a deactivated branch is
+  // shown on the users that keep it; pickers get active ones only.
+  const allBranchOptions = allBranches.map(toBranchOption);
+  const activeBranchOptions = allBranches.filter((b) => b.is_active).map(toBranchOption);
+
+  const usersWithBranches: ProfileWithBranches[] = typedUsers.map((user) => {
+    const branchIds = membershipMap.get(user.id) ?? [];
+    return { ...user, branchIds, branchNames: branchNamesFor(branchIds, allBranchOptions) };
+  });
+
+  const params = await searchParams;
+  const activeUserCount = usersWithBranches.filter((u) => !u.deleted_at).length;
 
   return (
     <div className="space-y-8">
@@ -82,7 +119,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
         </div>
         <div className="flex items-center gap-2">
           {isAdmin && <UserImportDialog />}
-          <UserExportButton users={typedUsers.filter((u) => !u.deleted_at)} />
+          <UserExportButton users={usersWithBranches.filter((u) => !u.deleted_at)} />
         </div>
       </div>
 
@@ -102,11 +139,13 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
         </CardHeader>
         <CardContent>
           <UserDataTable
-            data={typedUsers}
+            data={usersWithBranches}
+            branches={activeBranchOptions}
             initialSearch={params.q || ""}
             initialRole={params.role || null}
             initialStatus={params.status || null}
             initialPosition={params.position || null}
+            initialBranch={params.branch || null}
             initialShowDeleted={params.deleted === "true"}
             isAdmin={isAdmin}
           />

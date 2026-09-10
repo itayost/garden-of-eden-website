@@ -21,19 +21,24 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadAllBranches } from "@/features/branches/lib/memberships";
+import { toBranchOption } from "@/types/branches";
+import { BranchUrlFilter } from "@/features/branches/components/BranchUrlFilter";
+import { isValidUUID } from "@/lib/validations/common";
 
 export const metadata: Metadata = {
   title: "שעות מאמנים | Garden of Eden",
 };
 
 interface AdminShiftsPageProps {
-  searchParams: Promise<{ month?: string; year?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; branch?: string }>;
 }
 
 export default async function AdminShiftsPage({
   searchParams,
 }: AdminShiftsPageProps) {
-  const { month: monthParam, year: yearParam } = await searchParams;
+  const { month: monthParam, year: yearParam, branch: branchParam } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -71,6 +76,9 @@ export default async function AdminShiftsPage({
   if (!isAdmin) {
     shiftsQuery = shiftsQuery.eq("trainer_id", user.id);
   }
+  if (isAdmin && branchParam && isValidUUID(branchParam)) {
+    shiftsQuery = shiftsQuery.eq("branch_id", branchParam);
+  }
 
   // Run independent fetches in parallel
   const [
@@ -79,6 +87,7 @@ export default async function AdminShiftsPage({
     syncsResult,
     adminRequestsActionResult,
     myRequestsActionResult,
+    allBranches,
   ] = await Promise.all([
     shiftsQuery as Promise<{ data: TrainerShift[] | null }>,
     isAdmin
@@ -101,7 +110,13 @@ export default async function AdminShiftsPage({
       ? getShiftChangeRequestsAction({ status: "all" })
       : Promise.resolve(null),
     isAdmin ? Promise.resolve(null) : getMyShiftChangeRequestsAction(),
+    loadAllBranches(createAdminClient()),
   ]);
+
+  const branchNames: Record<string, string> = Object.fromEntries(
+    allBranches.map((b) => [b.id, b.name_he]),
+  );
+  const activeBranchOptions = allBranches.filter((b) => b.is_active).map(toBranchOption);
 
   const shifts = shiftsResult.data;
 
@@ -135,6 +150,8 @@ export default async function AdminShiftsPage({
       year={year}
       isAdmin={isAdmin}
       trainers={isAdmin ? trainers : undefined}
+      branches={isAdmin ? activeBranchOptions : undefined}
+      branchNames={branchNames}
     />
   );
 
@@ -153,6 +170,12 @@ export default async function AdminShiftsPage({
 
       {isAdmin && failedSyncs.length > 0 && (
         <FailedSyncsBanner failedSyncs={failedSyncs} />
+      )}
+
+      {isAdmin && (
+        <div className="max-w-xs">
+          <BranchUrlFilter branches={activeBranchOptions} />
+        </div>
       )}
 
       {!isAdmin && <MyShiftRequestsList requests={myRequests} />}

@@ -39,6 +39,7 @@ const optionalTime = timeSchema
 
 export const bandSchema = z
   .object({
+    branchId: uuidSchema,
     weekday: weekdaySchema,
     startTime: timeSchema,
     endTime: optionalTime,
@@ -58,6 +59,7 @@ export const bandSchema = z
 
 export const bandUpdateSchema = z
   .object({
+    branchId: uuidSchema,
     bandId: uuidSchema,
     weekday: weekdaySchema,
     startTime: timeSchema,
@@ -81,6 +83,7 @@ export const bandIdSchema = z.object({ bandId: uuidSchema });
  */
 export const exceptionSchema = z
   .object({
+    branchId: uuidSchema,
     exceptionDate: dateSchema,
     trainerId: uuidSchema,
     kind: z.enum(EXCEPTION_KINDS),
@@ -106,10 +109,10 @@ export const exceptionSchema = z
 export const exceptionIdSchema = z.object({ exceptionId: uuidSchema });
 
 /** The day to build a board for, from the weekly schedule. */
-export const buildDaySchema = z.object({ date: dateSchema });
+export const buildDaySchema = z.object({ branchId: uuidSchema, date: dateSchema });
 
 /** The Sunday of the week to seed. The action derives the six days itself. */
-export const buildWeekSchema = z.object({ weekStart: dateSchema });
+export const buildWeekSchema = z.object({ branchId: uuidSchema, weekStart: dateSchema });
 
 export type BandInput = z.input<typeof bandSchema>;
 export type BandUpdateInput = z.input<typeof bandUpdateSchema>;

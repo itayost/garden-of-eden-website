@@ -8,6 +8,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   flexRender,
+  type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -20,11 +21,14 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RoleBadge, StatusBadge } from "@/components/ui/badges";
-import { columns } from "./UserTableColumns";
+import { getUserColumns } from "./UserTableColumns";
+import { BulkBranchAssignBar } from "./BulkBranchAssignBar";
 import { UserTableToolbar } from "./UserTableToolbar";
 import { matchesPositionFilter } from "@/lib/admin/position-filter";
 import { UserTablePagination } from "./UserTablePagination";
-import type { Profile } from "@/types/database";
+import { Badge } from "@/components/ui/badge";
+import { matchesBranchFilter } from "@/lib/admin/branch-filter";
+import type { ProfileWithBranches, BranchOption } from "@/types/branches";
 
 function formatPhone(phone: string | null): string {
   if (!phone) return "";
@@ -38,11 +42,13 @@ function getInitials(name: string | null): string {
 }
 
 interface UserDataTableProps {
-  data: Profile[];
+  data: ProfileWithBranches[];
+  branches: BranchOption[];
   initialSearch?: string;
   initialRole?: string | null;
   initialStatus?: string | null;
   initialPosition?: string | null;
+  initialBranch?: string | null;
   initialShowDeleted?: boolean;
   isAdmin?: boolean;
 }
@@ -54,10 +60,12 @@ interface UserDataTableProps {
  */
 export function UserDataTable({
   data,
+  branches,
   initialSearch = "",
   initialRole = null,
   initialStatus = null,
   initialPosition = null,
+  initialBranch = null,
   initialShowDeleted = false,
   isAdmin = true,
 }: UserDataTableProps) {
@@ -65,12 +73,15 @@ export function UserDataTable({
 
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const columns = useMemo(() => getUserColumns({ selectable: isAdmin }), [isAdmin]);
 
   // Filter state (controlled by toolbar, synced with URL)
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
   const [roleFilter, setRoleFilter] = useState<string | null>(initialRole);
   const [statusFilter, setStatusFilter] = useState<string | null>(initialStatus);
   const [positionFilter, setPositionFilter] = useState<string | null>(initialPosition);
+  const [branchFilter, setBranchFilter] = useState<string | null>(initialBranch);
   const [showDeleted, setShowDeleted] = useState(initialShowDeleted);
 
   // Memoized filtered data based on all criteria
@@ -98,23 +109,34 @@ export function UserDataTable({
       }
 
       if (!matchesPositionFilter(user.position, positionFilter)) return false;
+      if (!matchesBranchFilter(user.branchIds, branchFilter)) return false;
 
       return true;
     });
-  }, [data, globalFilter, roleFilter, statusFilter, positionFilter, showDeleted]);
+  }, [data, globalFilter, roleFilter, statusFilter, positionFilter, branchFilter, showDeleted]);
 
   // Initialize TanStack Table
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { sorting },
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: isAdmin,
+    getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     initialState: { pagination: { pageSize: 10 } },
   });
+
+  // A row ticked before a filter change may no longer be on screen; the bulk
+  // action only touches users the admin can currently see.
+  const selectedUserIds = useMemo(() => {
+    const visible = new Set(filteredData.map((user) => user.id));
+    return Object.keys(rowSelection).filter((id) => rowSelection[id] && visible.has(id));
+  }, [rowSelection, filteredData]);
 
   // Handle row click - navigate to user profile
   const handleRowClick = useCallback(
@@ -141,6 +163,10 @@ export function UserDataTable({
     setPositionFilter(value);
   }, []);
 
+  const handleBranchChange = useCallback((value: string | null) => {
+    setBranchFilter(value);
+  }, []);
+
   const handleShowDeletedChange = useCallback((value: boolean) => {
     setShowDeleted(value);
   }, []);
@@ -153,9 +179,19 @@ export function UserDataTable({
         onRoleChange={handleRoleChange}
         onStatusChange={handleStatusChange}
         onPositionChange={handlePositionChange}
+        onBranchChange={handleBranchChange}
+        branchOptions={branches}
         onShowDeletedChange={handleShowDeletedChange}
         isAdmin={isAdmin}
       />
+
+      {isAdmin && (
+        <BulkBranchAssignBar
+          selectedUserIds={selectedUserIds}
+          branches={branches}
+          onDone={() => setRowSelection({})}
+        />
+      )}
 
       {/* Mobile: Card list */}
       <div className="space-y-2 sm:hidden">
@@ -178,6 +214,11 @@ export function UserDataTable({
                       {user.full_name || "לא צוין"}
                     </span>
                     <RoleBadge role={user.role} />
+                    {user.branchNames.map((name) => (
+                      <Badge key={name} variant="secondary" className="text-[10px]">
+                        {name}
+                      </Badge>
+                    ))}
                   </div>
                   {user.phone && (
                     <p className="text-xs text-muted-foreground" dir="ltr">

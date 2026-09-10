@@ -1,10 +1,11 @@
 "use server";
 
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { deriveOnDuty } from "@/lib/utils/weekly-schedule";
-import { isValidDateRange, isValidDateString } from "@/lib/validations/common";
+import { isValidDateRange, isValidDateString, isValidUUID } from "@/lib/validations/common";
 import type {
   OnDuty,
   WeeklyBand,
@@ -29,13 +30,17 @@ type ExceptionsResult =
  * The whole standing schedule is a few dozen rows — one query beats seven, and
  * the weekly editor renders all of it at once anyway.
  */
-export async function getBandsAction(): Promise<BandsResult> {
+export async function getBandsAction(branchId: string): Promise<BandsResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
+  if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "weekly_schedule_bands")
     .select("*")
+    .eq("branch_id", branchId)
     .order("weekday", { ascending: true })
     .order("start_time", { ascending: true })
     .order("trainer_name", { ascending: true });
@@ -56,9 +61,13 @@ export async function getBandsAction(): Promise<BandsResult> {
 export async function getWeeklyScheduleAction(
   fromDate: string,
   toDate: string,
+  branchId: string,
 ): Promise<WeekResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
+  if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   if (!isValidDateString(fromDate) || !isValidDateString(toDate)) {
     return { error: "תאריך לא תקין" };
@@ -70,11 +79,13 @@ export async function getWeeklyScheduleAction(
   const [bandsResult, exceptionsResult] = await Promise.all([
     typedFrom(supabase, "weekly_schedule_bands")
       .select("*")
+      .eq("branch_id", branchId)
       .order("weekday", { ascending: true })
       .order("start_time", { ascending: true })
       .order("trainer_name", { ascending: true }),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
+      .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .gte("exception_date", fromDate)
       .lte("exception_date", toDate)
       .order("exception_date", { ascending: true })
@@ -105,18 +116,27 @@ export async function getWeeklyScheduleAction(
  * Derivation happens here rather than in the page so every caller gets the same
  * answer; the rule itself lives in lib/utils/weekly-schedule.ts.
  */
-export async function getOnDutyAction(date: string): Promise<OnDutyResult> {
+export async function getOnDutyAction(
+  date: string,
+  branchId: string,
+): Promise<OnDutyResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
+  if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   const supabase = await createClient();
 
   const [bandsResult, exceptionsResult] = await Promise.all([
-    typedFrom(supabase, "weekly_schedule_bands").select("*"),
+    typedFrom(supabase, "weekly_schedule_bands")
+      .select("*")
+      .eq("branch_id", branchId),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
+      .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .eq("exception_date", date),
   ]);
 
@@ -152,9 +172,13 @@ export async function getOnDutyAction(date: string): Promise<OnDutyResult> {
 export async function getExceptionsInRangeAction(
   fromDate: string,
   toDate: string,
+  branchId: string,
 ): Promise<ExceptionsResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
+  if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   if (!isValidDateRange(fromDate, toDate)) {
     return { error: "טווח תאריכים לא תקין" };
@@ -163,6 +187,7 @@ export async function getExceptionsInRangeAction(
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "weekly_schedule_exceptions")
     .select("*")
+    .or(`branch_id.eq.${branchId},kind.eq.absent`)
     .gte("exception_date", fromDate)
     .lte("exception_date", toDate)
     .order("exception_date", { ascending: true })

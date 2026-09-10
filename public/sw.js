@@ -80,6 +80,7 @@ async function processShiftQueue() {
           id: a.id,
           type: a.type,
           clientTimestamp: a.clientTimestamp,
+          branchId: a.branchId ?? null,
         })),
       }),
       credentials: "same-origin",

@@ -24,6 +24,7 @@ function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
     trainer_name: "דין",
     focus_he: "זריזות מהירות טכניקה עם כדור",
     location_he: null,
+    branch_id: null,
     trainees: roster(["נועם חלבי", "יהלי", "איתי"]),
     created_by: "00000000-0000-0000-0000-000000000003",
     created_at: "2026-08-06T05:00:00.000Z",

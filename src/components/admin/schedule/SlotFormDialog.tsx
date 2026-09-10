@@ -1,5 +1,6 @@
 "use client";
 
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, X } from "lucide-react";
@@ -89,6 +90,7 @@ export function SlotFormDialog({
   onDuty,
   contextLabel,
 }: SlotFormDialogProps) {
+  const { branchId } = useCurrentBranch();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -191,6 +193,7 @@ export function SlotFormDialog({
     setLoading(true);
     try {
       const payload = {
+        branchId,
         scheduleDate: slot?.schedule_date ?? date,
         startTime,
         trainerId,

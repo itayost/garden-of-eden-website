@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { branchIdListSchema } from "@/lib/validations/branch";
 import type { Profile } from "@/types/database";
 import type { FieldChange } from "@/types/activity-log";
 
@@ -38,12 +39,17 @@ export const userEditSchema = z.object({
   role: z.enum(["trainee", "trainer", "admin"]),
 
   is_active: z.boolean(),
+
+  branch_ids: branchIdListSchema,
 });
 
 export type UserEditFormData = z.infer<typeof userEditSchema>;
 
 // Helper to extract default values from profile
-export function getUserEditDefaults(profile: Profile): UserEditFormData {
+export function getUserEditDefaults(
+  profile: Profile,
+  branchIds: readonly string[] = [],
+): UserEditFormData {
   return {
     full_name: profile.full_name || "",
     phone: profile.phone || "",
@@ -51,6 +57,7 @@ export function getUserEditDefaults(profile: Profile): UserEditFormData {
     club: profile.club || "",
     role: profile.role,
     is_active: profile.is_active, // No fallback - DB enforces NOT NULL DEFAULT TRUE
+    branch_ids: [...branchIds],
   };
 }
 

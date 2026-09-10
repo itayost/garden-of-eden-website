@@ -7,9 +7,11 @@ import {
 
 const TRAINER = "11111111-1111-4111-8111-111111111111";
 const TRAINEE = "22222222-2222-4222-8222-222222222222";
+const BRANCH = "33333333-3333-4333-8333-333333333333";
 
 function validSlot(overrides: Record<string, unknown> = {}) {
   return {
+    branchId: BRANCH,
     scheduleDate: "2026-08-06",
     startTime: "15:00",
     trainerId: TRAINER,
@@ -95,14 +97,14 @@ describe("slotSchema", () => {
 describe("duplicateDaySchema", () => {
   test("accepts two different valid dates", () => {
     expect(
-      duplicateDaySchema.safeParse({ fromDate: "2026-08-05", toDate: "2026-08-06" })
+      duplicateDaySchema.safeParse({ branchId: BRANCH, fromDate: "2026-08-05", toDate: "2026-08-06" })
         .success,
     ).toBe(true);
   });
 
   test("rejects duplicating a day onto itself", () => {
     expect(
-      duplicateDaySchema.safeParse({ fromDate: "2026-08-06", toDate: "2026-08-06" })
+      duplicateDaySchema.safeParse({ branchId: BRANCH, fromDate: "2026-08-06", toDate: "2026-08-06" })
         .success,
     ).toBe(false);
   });

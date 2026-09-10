@@ -40,6 +40,7 @@ const rosterEntrySchema = z.object({
 });
 
 export const slotSchema = z.object({
+  branchId: uuidSchema,
   scheduleDate: dateSchema,
   startTime: timeSchema,
   trainerId: uuidSchema.nullish().transform((v) => v ?? null),
@@ -71,6 +72,7 @@ export const slotIdSchema = z.object({ slotId: uuidSchema });
 
 export const duplicateDaySchema = z
   .object({
+    branchId: uuidSchema,
     fromDate: dateSchema,
     toDate: dateSchema,
   })

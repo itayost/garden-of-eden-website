@@ -24,6 +24,14 @@ import {
 import { useConnectionStatus } from "@/hooks/use-connection-status";
 import { useShiftQueueSync } from "@/hooks/use-shift-queue-sync";
 import { ConnectionBanner } from "./ConnectionBanner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { BranchOption } from "@/types/branches";
 
 interface ShiftStatusCardProps {
   // shift_period is absent on optimistic pending shifts: the period is
@@ -33,6 +41,8 @@ interface ShiftStatusCardProps {
     start_time: string;
     shift_period?: ShiftPeriod;
   } | null;
+  /** Active branches the trainer belongs to. More than one means they must pick. */
+  branchOptions: BranchOption[];
 }
 
 function formatElapsed(startTime: string): string {
@@ -50,7 +60,7 @@ function getHoursElapsed(startTime: string): number {
   return (Date.now() - start.getTime()) / (1000 * 60 * 60);
 }
 
-export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
+export function ShiftStatusCard({ initialShift, branchOptions }: ShiftStatusCardProps) {
   const [activeShift, setActiveShift] = useState(initialShift);
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState(
@@ -58,6 +68,11 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
   );
   const [isSaturday, setIsSaturday] = useState(false);
   const [pendingClockOut, setPendingClockOut] = useState(false);
+  // A dual-branch trainer must say where they are; one branch needs no choice.
+  const [branchId, setBranchId] = useState<string | null>(
+    branchOptions.length === 1 ? branchOptions[0].id : null,
+  );
+  const needsBranchChoice = branchOptions.length > 1;
   const router = useRouter();
 
   // Connection & queue sync
@@ -168,12 +183,16 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
   }, [activeShift, isConnected, router]);
 
   const handleClockIn = useCallback(async () => {
+    if (needsBranchChoice && !branchId) {
+      toast.error("יש לבחור סניף לפני תחילת המשמרת");
+      return;
+    }
     setLoading(true);
     const clientTimestamp = new Date().toISOString();
 
     if (!isConnected) {
       // Queue for later sync
-      enqueueShiftAction("clock_in", clientTimestamp);
+      enqueueShiftAction("clock_in", clientTimestamp, branchId);
       // Optimistic UI — show as active with the timestamp
       setActiveShift({ id: `pending-${Date.now()}`, start_time: clientTimestamp });
       toast.info("המשמרת תסונכרן כשהחיבור יחזור");
@@ -182,7 +201,7 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
     }
 
     try {
-      const result = await clockInAction(clientTimestamp);
+      const result = await clockInAction(clientTimestamp, branchId);
       if (result.error) {
         toast.error(result.error);
       } else {
@@ -191,13 +210,13 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
       }
     } catch {
       // Network failed mid-request — queue it
-      enqueueShiftAction("clock_in", clientTimestamp);
+      enqueueShiftAction("clock_in", clientTimestamp, branchId);
       setActiveShift({ id: `pending-${Date.now()}`, start_time: clientTimestamp });
       toast.info("אין חיבור - המשמרת תסונכרן כשהחיבור יחזור");
     }
 
     setLoading(false);
-  }, [isConnected, router]);
+  }, [isConnected, router, branchId, needsBranchChoice]);
 
   const handleClockOut = useCallback(async () => {
     setLoading(true);
@@ -324,19 +343,35 @@ export function ShiftStatusCard({ initialShift }: ShiftStatusCardProps) {
                   </p>
                 </div>
               ) : (
-                <Button
-                  onClick={handleClockIn}
-                  disabled={loading || isSyncing}
-                  size="lg"
-                  className="min-w-[140px]"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                  ) : (
-                    <PlayCircle className="h-4 w-4 ml-2" />
+                <div className="flex flex-col items-stretch gap-2">
+                  {needsBranchChoice && (
+                    <Select value={branchId ?? ""} onValueChange={setBranchId}>
+                      <SelectTrigger className="min-w-[140px]" aria-label="סניף">
+                        <SelectValue placeholder="בחר סניף" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branchOptions.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.nameHe}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
-                  התחל משמרת
-                </Button>
+                  <Button
+                    onClick={handleClockIn}
+                    disabled={loading || isSyncing || (needsBranchChoice && !branchId)}
+                    size="lg"
+                    className="min-w-[140px]"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 me-2 animate-spin" />
+                    ) : (
+                      <PlayCircle className="h-4 w-4 me-2" />
+                    )}
+                    התחל משמרת
+                  </Button>
+                </div>
               )}
             </div>
           </div>

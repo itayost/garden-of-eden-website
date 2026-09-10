@@ -5,6 +5,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { userEditSchema, type UserEditFormData, getFieldChanges, getActionType } from "@/lib/validations/user-edit";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID, formatPhoneToInternational } from "@/lib/validations/common";
+import {
+  branchNamesFor,
+  loadBranchIdsByProfile,
+  loadBranchOptions,
+  replaceProfileBranches,
+} from "@/features/branches/lib/memberships";
+import { branchFieldChange } from "@/lib/branches/branch-change";
+import type { BranchScope } from "@/lib/branches/branch-scope";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { isTraineeInScope, OUT_OF_SCOPE_TRAINEE_ERROR } from "@/features/branches/lib/memberships";
 
 type ActionResult =
   | { success: true; userId?: string; message?: string }
@@ -40,7 +50,7 @@ export async function updateUserAction(
     };
   }
 
-  const { full_name, phone, birthdate, club, role, is_active } = validated.data;
+  const { full_name, phone, birthdate, club, role, is_active, branch_ids } = validated.data;
   const adminClient = createAdminClient();
 
   try {
@@ -55,6 +65,7 @@ export async function updateUserAction(
       return { error: "משתמש לא נמצא" };
     }
 
+    let trainerScope: BranchScope | null = null;
     // 5. Trainers can only edit trainees, and cannot change role/is_active
     if (callerProfile?.role === "trainer") {
       if (targetProfile.role !== "trainee") {
@@ -63,6 +74,12 @@ export async function updateUserAction(
       if (role !== targetProfile.role || is_active !== targetProfile.is_active) {
         return { error: "מאמנים לא יכולים לשנות תפקיד או סטטוס" };
       }
+      const scopeResult = await getBranchScopeAction();
+      if ("error" in scopeResult) return { error: scopeResult.error };
+      if (!(await isTraineeInScope(adminClient, scopeResult.data.scope, userId))) {
+        return { error: OUT_OF_SCOPE_TRAINEE_ERROR };
+      }
+      trainerScope = scopeResult.data.scope;
     }
 
     // 6. Prevent self-modification of role or is_active
@@ -72,8 +89,30 @@ export async function updateUserAction(
       }
     }
 
-    // 7. Detect changes
-    const changes = getFieldChanges(targetProfile, validated.data);
+    // 7. Detect changes, including branch memberships
+    const [membershipMap, branchOptions] = await Promise.all([
+      loadBranchIdsByProfile(adminClient, [userId]),
+      loadBranchOptions(adminClient),
+    ]);
+    const originalBranchIds = membershipMap.get(userId) ?? [];
+    // A trainer may only toggle their own branches: memberships outside the
+    // trainer's scope are carried over untouched, whatever the form sent.
+    const nextBranchIds =
+      trainerScope && trainerScope.kind === "branches"
+        ? [
+            ...originalBranchIds.filter((id) => !trainerScope.ids.includes(id)),
+            ...branch_ids.filter((id) => trainerScope.ids.includes(id)),
+          ]
+        : branch_ids;
+    const branchChange = branchFieldChange(
+      branchNamesFor(originalBranchIds, branchOptions),
+      branchNamesFor(nextBranchIds, branchOptions),
+    );
+
+    const changes = [
+      ...getFieldChanges(targetProfile, validated.data),
+      ...(branchChange ? [branchChange] : []),
+    ];
     if (changes.length === 0) {
       return { success: true, message: "לא בוצעו שינויים" };
     }
@@ -115,6 +154,18 @@ export async function updateUserAction(
     if (profileError) {
       console.error("Profile update error:", profileError);
       return { error: "שגיאה בעדכון הפרופיל" };
+    }
+
+    // 9b. Branch memberships. Trainers may set these on trainees (the
+    // trainer-edits-trainee rule in step 5 already holds here).
+    if (branchChange) {
+      const { error: branchError } = await replaceProfileBranches(
+        adminClient,
+        userId,
+        nextBranchIds,
+        { stampAdmin: true },
+      );
+      if (branchError) return { error: branchError };
     }
 
     // 10. Log activity

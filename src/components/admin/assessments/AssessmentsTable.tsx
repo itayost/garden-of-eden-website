@@ -27,11 +27,14 @@ import type { AssessmentSectionKey, PlayerAssessment } from "@/types/assessment"
 import type { Profile } from "@/types/database";
 import { getAssessmentsPaginated } from "@/lib/actions/admin-assessments-list";
 import { positionFilterOptions, POSITION_FILTER_ALL } from "@/lib/admin/position-filter";
+import { BRANCH_FILTER_ALL, buildBranchFilterOptions } from "@/lib/admin/branch-filter";
+import type { BranchOption } from "@/types/branches";
 
 interface AssessmentsTableProps {
   initialProfiles: Profile[];
   initialAssessmentsByUser: Record<string, PlayerAssessment[]>;
   initialTotal: number;
+  branches: BranchOption[];
 }
 
 const PAGE_SIZE = 20;
@@ -63,12 +66,14 @@ interface FilterValues {
   ageGroup: string;
   position: string;
   test: string;
+  branch: string;
 }
 
 export function AssessmentsTable({
   initialProfiles,
   initialAssessmentsByUser,
   initialTotal,
+  branches,
 }: AssessmentsTableProps) {
   const [profiles, setProfiles] = useState(initialProfiles);
   const [assessmentsByUser, setAssessmentsByUser] = useState(initialAssessmentsByUser);
@@ -83,6 +88,10 @@ export function AssessmentsTable({
     "test",
     parseAsString.withDefault(TEST_FILTER_ALL),
   );
+  const [branch, setBranch] = useQueryState(
+    "branch",
+    parseAsString.withDefault(BRANCH_FILTER_ALL),
+  );
   const [page, setPage] = useState(0);
   const [isPending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
@@ -93,6 +102,7 @@ export function AssessmentsTable({
     ageGroup,
     position,
     test,
+    branch,
   };
 
   const fetchData = useCallback((filters: FilterValues) => {
@@ -106,6 +116,7 @@ export function AssessmentsTable({
         position:
           filters.position !== POSITION_FILTER_ALL ? filters.position : undefined,
         test: filters.test !== TEST_FILTER_ALL ? asSectionKey(filters.test) : undefined,
+        branchId: filters.branch !== BRANCH_FILTER_ALL ? filters.branch : undefined,
       });
       if (currentRequestId === requestIdRef.current) {
         setProfiles(result.profiles);
@@ -139,6 +150,12 @@ export function AssessmentsTable({
     fetchData({ ...currentFilters, page: 0, test: value });
   };
 
+  const handleBranchChange = (value: string) => {
+    setBranch(value === BRANCH_FILTER_ALL ? null : value);
+    setPage(0);
+    fetchData({ ...currentFilters, page: 0, branch: value });
+  };
+
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     fetchData({ ...currentFilters, page: newPage });
@@ -170,6 +187,16 @@ export function AssessmentsTable({
               options={testFilterOptions}
               placeholder="מבדק"
             />
+            {branches.length > 0 && (
+              <ToolbarSelect
+                value={branch || BRANCH_FILTER_ALL}
+                onValueChange={handleBranchChange}
+                options={buildBranchFilterOptions(branches).filter(
+                  (o) => o.value !== "none",
+                )}
+                placeholder="סניף"
+              />
+            )}
           </>
         }
         actions={

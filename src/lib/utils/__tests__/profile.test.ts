@@ -31,6 +31,7 @@ function createProfile(overrides: Partial<Profile> = {}): Profile {
     arbox_bought_course: false,
     access_override: null,
     arbox_access_synced_at: null,
+    branches_set_by_admin_at: null,
     ...overrides,
   };
 }

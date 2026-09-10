@@ -43,6 +43,7 @@ export interface Database {
           arbox_bought_course: boolean;
           access_override: "full" | "course_only" | null;
           arbox_access_synced_at: string | null;
+          branches_set_by_admin_at: string | null;
         };
         Insert: {
           id: string;
@@ -67,6 +68,7 @@ export interface Database {
           arbox_bought_course?: boolean;
           access_override?: "full" | "course_only" | null;
           arbox_access_synced_at?: string | null;
+          branches_set_by_admin_at?: string | null;
         };
         Update: {
           id?: string;
@@ -91,6 +93,7 @@ export interface Database {
           arbox_bought_course?: boolean;
           access_override?: "full" | "course_only" | null;
           arbox_access_synced_at?: string | null;
+          branches_set_by_admin_at?: string | null;
         };
         Relationships: [];
       };
@@ -1153,6 +1156,7 @@ export interface Database {
           flagged_for_review: boolean;
           other_purpose_minutes: number;
           other_purpose_category: string | null;
+          branch_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1167,6 +1171,7 @@ export interface Database {
           flagged_for_review?: boolean;
           other_purpose_minutes?: number;
           other_purpose_category?: string | null;
+          branch_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1181,6 +1186,7 @@ export interface Database {
           flagged_for_review?: boolean;
           other_purpose_minutes?: number;
           other_purpose_category?: string | null;
+          branch_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };

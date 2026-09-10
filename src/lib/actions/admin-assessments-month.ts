@@ -9,6 +9,9 @@ import {
 } from "@/types/assessment";
 import type { PlayerAssessment, AssessmentMonthStatus, SectionCompleteness } from "@/types/assessment";
 import type { Profile } from "@/types/database";
+import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { visibleProfileIds } from "@/features/branches/lib/memberships";
 
 export interface AssessmentMonthParams {
   month: number;      // 1–12
@@ -16,6 +19,7 @@ export interface AssessmentMonthParams {
   search?: string;
   ageGroupId?: string;
   statusFilter?: AssessmentMonthStatus | 'all';
+  branchId?: string;
   page: number;       // 0-based: page 0 = first page
   pageSize: number;
 }
@@ -49,6 +53,15 @@ export async function getAssessmentsByMonth(
   const { error } = await verifyAdminOrTrainer();
   if (error) return empty;
 
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return empty;
+  const visibleIds = await visibleProfileIds(
+    createAdminClient(),
+    scopeResult.data.scope,
+    params.branchId,
+  );
+  if (visibleIds !== null && visibleIds.length === 0) return empty;
+
   // Validate inputs
   if (params.month < 1 || params.month > 12 || params.year < 2000 || params.year > 2100) {
     return empty;
@@ -75,6 +88,9 @@ export async function getAssessmentsByMonth(
 
     if (params.search) {
       profileQuery = profileQuery.ilike("full_name", `%${params.search}%`);
+    }
+    if (visibleIds !== null) {
+      profileQuery = profileQuery.in("id", visibleIds);
     }
 
     const { data: allProfiles } = (await profileQuery) as unknown as {

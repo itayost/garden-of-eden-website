@@ -4,8 +4,49 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
-import type { RetentionReportData } from "@/lib/arbox/retention";
+import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { visibleTraineePhones } from "@/features/branches/lib/memberships";
+import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import type { RetentionEntry, RetentionReportData } from "@/lib/arbox/retention";
 import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
+
+/**
+ * Retention rows are keyed by Arbox phone, so a trainer's branch scope is a
+ * set of phones. Null means no restriction (admins, unassigned trainers).
+ */
+async function callerVisiblePhones(): Promise<Set<string> | null | { error: string }> {
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return { error: scopeResult.error };
+  return visibleTraineePhones(createAdminClient(), scopeResult.data.scope);
+}
+
+function scopeReport(
+  report: RetentionReportData,
+  visible: Set<string> | null,
+): RetentionReportData {
+  if (visible === null) return report;
+  const keep = (entry: RetentionEntry) => {
+    const phone = normalizePhone(entry.phone);
+    return phone !== null && visible.has(phone);
+  };
+  return {
+    monthly: report.monthly.filter(keep),
+    pro: report.pro.filter(keep),
+    training_card: report.training_card.filter(keep),
+  };
+}
+
+/** Trainers may annotate or reassign only customers inside their branches. */
+async function assertPhoneInScope(traineePhone: string): Promise<string | null> {
+  const visible = await callerVisiblePhones();
+  if (visible instanceof Set || visible === null) {
+    if (visible === null) return null;
+    const phone = normalizePhone(traineePhone);
+    return phone !== null && visible.has(phone) ? null : "הלקוח אינו בסניף שלך";
+  }
+  return visible.error;
+}
 import { isPastReportMonth } from "@/lib/utils/retention-month-list";
 import { checkRateLimit, isAdminExempt } from "@/lib/rate-limit";
 import {
@@ -54,7 +95,10 @@ export async function getRetentionReport(
 
   if (!data) return null;
 
-  return data.data as unknown as RetentionReportData;
+  const visible = await callerVisiblePhones();
+  if (!(visible instanceof Set) && visible !== null) return null;
+
+  return scopeReport(data.data as unknown as RetentionReportData, visible);
 }
 
 export async function getRetentionNotes(
@@ -100,6 +144,9 @@ export async function upsertRetentionNote(
 ): Promise<{ error: string | null }> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
+
+  const scopeError = await assertPhoneInScope(traineePhone);
+  if (scopeError) return { error: scopeError };
 
   const parsed = upsertNoteSchema.safeParse({
     reportMonth,
@@ -171,6 +218,9 @@ export async function setRetentionTrainer(
 ): Promise<{ error: string | null }> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
+
+  const scopeError = await assertPhoneInScope(traineePhone);
+  if (scopeError) return { error: scopeError };
 
   const parsed = setTrainerSchema.safeParse({
     reportMonth,
@@ -271,7 +321,11 @@ export async function refreshRetentionReport(
 
   try {
     const { data, refreshedAt } = await persistRetentionReport(parsed.data);
-    return { error: null, data, refreshedAt };
+    const visible = await callerVisiblePhones();
+    if (!(visible instanceof Set) && visible !== null) {
+      return { error: visible.error, data: null, refreshedAt: null };
+    }
+    return { error: null, data: scopeReport(data, visible), refreshedAt };
   } catch (err) {
     console.error("[RetentionRefresh] Failed:", err);
     const message = err instanceof Error ? err.message : "";

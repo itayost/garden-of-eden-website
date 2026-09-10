@@ -4,11 +4,11 @@ import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
-import type { Profile } from "@/types/database";
+import type { ProfileWithBranches } from "@/types/branches";
 
 interface UserExportButtonProps {
   /** Users to export (should be the current filtered view) */
-  users: Profile[];
+  users: ProfileWithBranches[];
   /** Optional button variant */
   variant?: "default" | "outline" | "secondary" | "ghost";
 }
@@ -30,6 +30,7 @@ export function UserExportButton({ users, variant = "outline" }: UserExportButto
       "שם": user.full_name || "",
       "טלפון": formatPhoneForExport(user.phone),
       "תפקיד": roleToHebrew(user.role),
+      "סניף": user.branchNames.join(", "),
       "סטטוס": user.is_active ? "פעיל" : "לא פעיל",
       "תאריך הצטרפות": formatDate(user.created_at),
     }));

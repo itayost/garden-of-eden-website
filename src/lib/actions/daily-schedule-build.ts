@@ -2,6 +2,7 @@
 
 import { verifyAdmin } from "@/lib/actions/shared";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
+import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { addDays } from "@/lib/utils/iso-date";
@@ -31,8 +32,14 @@ type BuildWeekResult =
  * Standby is already excluded: deriveOnDuty splits it out, and onDuty.bands
  * holds only what someone decided is happening.
  */
-function slotRowsFor(date: string, onDuty: OnDuty, userId: string) {
+function slotRowsFor(
+  date: string,
+  onDuty: OnDuty,
+  userId: string,
+  branchId: string,
+) {
   return onDuty.bands.map((band) => ({
+    branch_id: branchId,
     schedule_date: date,
     start_time: band.startTime,
     trainer_id: band.trainerId,
@@ -78,11 +85,15 @@ export async function buildDayFromWeeklyScheduleAction(
     };
   }
 
-  const { date } = validated.data;
+  const { branchId, date } = validated.data;
   const supabase = await createClient();
+
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
 
   const { data: targetExisting } = await typedFrom(supabase, "daily_schedule_slots")
     .select("id")
+    .eq("branch_id", branchId)
     .eq("schedule_date", date)
     .limit(1);
 
@@ -91,9 +102,10 @@ export async function buildDayFromWeeklyScheduleAction(
   }
 
   const [bandsResult, exceptionsResult] = await Promise.all([
-    typedFrom(supabase, "weekly_schedule_bands").select("*"),
+    typedFrom(supabase, "weekly_schedule_bands").select("*").eq("branch_id", branchId),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
+      .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .eq("exception_date", date),
   ]);
 
@@ -115,7 +127,7 @@ export async function buildDayFromWeeklyScheduleAction(
     return { error: "אין שיבוץ בלוח השבועי ליום זה" };
   }
 
-  const rows = slotRowsFor(date, onDuty, user!.id);
+  const rows = slotRowsFor(date, onDuty, user!.id, branchId);
 
   // One insert, unlike duplicateDayAction's loop: there is no roster to attach
   // per row, so the whole build is a single statement and either all of it
@@ -171,18 +183,23 @@ export async function buildWeekFromWeeklyScheduleAction(
     };
   }
 
-  const { weekStart } = validated.data;
+  const { branchId, weekStart } = validated.data;
   const weekEnd = addDays(weekStart, 6);
   const supabase = await createClient();
+
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
 
   const [slotsResult, bandsResult, exceptionsResult] = await Promise.all([
     typedFrom(supabase, "daily_schedule_slots")
       .select(SLOT_SELECT_WITH_TRAINEES)
+      .eq("branch_id", branchId)
       .gte("schedule_date", weekStart)
       .lte("schedule_date", weekEnd),
-    typedFrom(supabase, "weekly_schedule_bands").select("*"),
+    typedFrom(supabase, "weekly_schedule_bands").select("*").eq("branch_id", branchId),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
+      .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .gte("exception_date", weekStart)
       .lte("exception_date", weekEnd),
   ]);
@@ -212,7 +229,7 @@ export async function buildWeekFromWeeklyScheduleAction(
   }
 
   const rows = buildable.flatMap((day) =>
-    slotRowsFor(day.date, day.onDuty, user!.id),
+    slotRowsFor(day.date, day.onDuty, user!.id, branchId),
   );
 
   const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")

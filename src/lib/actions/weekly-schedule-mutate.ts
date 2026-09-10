@@ -2,6 +2,7 @@
 
 import { verifyAdmin } from "@/lib/actions/shared";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
+import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -76,16 +77,20 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
     };
   }
 
-  const { weekday, startTime, endTime, trainerId, location, label, isStandby } =
+  const { branchId, weekday, startTime, endTime, trainerId, location, label, isStandby } =
     validated.data;
 
   const trainerResult = await resolveActiveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
+
   const supabase = await createClient();
 
   const { data: created, error } = await typedFrom(supabase, "weekly_schedule_bands")
     .insert({
+      branch_id: branchId,
       weekday,
       start_time: startTime,
       end_time: endTime,
@@ -123,7 +128,7 @@ export async function updateBandAction(
     };
   }
 
-  const { bandId, weekday, startTime, endTime, trainerId, location, label, isStandby } =
+  const { branchId, bandId, weekday, startTime, endTime, trainerId, location, label, isStandby } =
     validated.data;
   const supabase = await createClient();
 
@@ -139,8 +144,12 @@ export async function updateBandAction(
   const trainerResult = await resolveActiveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
+
   const { data: updated, error } = await typedFrom(supabase, "weekly_schedule_bands")
     .update({
+      branch_id: branchId,
       weekday,
       start_time: startTime,
       end_time: endTime,
@@ -211,11 +220,14 @@ export async function createExceptionAction(
     };
   }
 
-  const { exceptionDate, trainerId, kind, startTime, endTime, location, label, note } =
+  const { branchId, exceptionDate, trainerId, kind, startTime, endTime, location, label, note } =
     validated.data;
 
   const trainerResult = await resolveActiveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
+
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
 
   const supabase = await createClient();
 
@@ -224,6 +236,7 @@ export async function createExceptionAction(
     "weekly_schedule_exceptions",
   )
     .insert({
+      branch_id: branchId,
       exception_date: exceptionDate,
       trainer_id: trainerId,
       trainer_name: trainerResult.name,

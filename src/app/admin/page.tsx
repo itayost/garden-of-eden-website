@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, FileText, Video, Activity, Salad } from "lucide-react";
 import { ShiftStatusCard } from "@/components/admin/shifts/ShiftStatusCard";
 import type { Profile } from "@/types/database";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadMemberBranchOptions } from "@/features/branches/lib/memberships";
 
 export const metadata: Metadata = {
   title: "ניהול | Garden of Eden",
@@ -35,6 +37,12 @@ export default async function AdminDashboardPage() {
         .is("end_time", null)
         .maybeSingle()
     : { data: null };
+
+  // Which branches the clock-in card may offer. One branch needs no choice.
+  const branchOptions =
+    user && (profile?.role === "trainer" || profile?.role === "admin")
+      ? await loadMemberBranchOptions(createAdminClient(), user.id)
+      : [];
 
   // Fetch stats
   const [
@@ -117,7 +125,7 @@ export default async function AdminDashboardPage() {
 
       {/* Shift Status Card - shown to trainers and admins */}
       {(profile?.role === "trainer" || profile?.role === "admin") && (
-        <ShiftStatusCard initialShift={activeShift || null} />
+        <ShiftStatusCard initialShift={activeShift || null} branchOptions={branchOptions} />
       )}
 
       {/* Stats Grid */}

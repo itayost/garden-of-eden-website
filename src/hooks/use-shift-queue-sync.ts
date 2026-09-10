@@ -63,7 +63,7 @@ export function useShiftQueueSync(): ShiftQueueSyncState {
       try {
         const result =
           action.type === "clock_in"
-            ? await clockInAction(action.clientTimestamp)
+            ? await clockInAction(action.clientTimestamp, action.branchId ?? null)
             : await clockOutAction(action.clientTimestamp);
 
         if (result.error) {

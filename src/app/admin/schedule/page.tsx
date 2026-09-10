@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { ScheduleDayView } from "@/components/admin/schedule/ScheduleDayView";
+import { Card, CardContent } from "@/components/ui/card";
+import { BranchProvider } from "@/features/branches/components/BranchContext";
+import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { allowedBranches, resolveRequestedBranch } from "@/lib/branches/resolve-branch";
 import { getScheduleAction } from "@/lib/actions/daily-schedule";
 import { getSlotFormOptionsAction } from "@/lib/actions/schedule-options";
 import { getSessionSummariesAction } from "@/lib/actions/training-sessions";
@@ -15,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; branch?: string }>;
 }
 
 export default async function SchedulePage({ searchParams }: PageProps) {
@@ -27,16 +32,41 @@ export default async function SchedulePage({ searchParams }: PageProps) {
   const date =
     params.date && isValidDateString(params.date) ? params.date : israelToday();
 
+  // The branch on screen: a valid in-scope ?branch= wins, anything else falls
+  // back to the first branch the caller may see, as a bad ?date= does.
+  const [scopeResult, branchOptions] = await Promise.all([
+    getBranchScopeAction(),
+    listActiveBranchOptionsAction(),
+  ]);
+  if ("error" in scopeResult) redirect("/dashboard");
+  const scope = scopeResult.data.scope;
+  const branches = allowedBranches(scope, branchOptions);
+  const branchId = resolveRequestedBranch({
+    requested: params.branch,
+    scope,
+    branches: branchOptions,
+  });
+
+  if (!branchId) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          אין סניפים פעילים לתצוגה
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Both roles edit slots, so both need the pick-lists that feed the slot form
   // (a trainer cannot read trainee rows through RLS, hence the dedicated
   // action). Session summaries feed the per-trainee built/not-built
   // indicators. isAdmin now gates only whole-day duplication.
   const [scheduleResult, summariesResult, optionsResult, onDutyResult] =
     await Promise.all([
-      getScheduleAction(date),
+      getScheduleAction(date, branchId),
       getSessionSummariesAction(date),
-      getSlotFormOptionsAction(),
-      getOnDutyAction(date),
+      getSlotFormOptionsAction(branchId),
+      getOnDutyAction(date, branchId),
     ]);
 
   // A load error must not render as an empty day: "אין לוח" invites the admin
@@ -56,7 +86,8 @@ export default async function SchedulePage({ searchParams }: PageProps) {
   const onDuty = "success" in onDutyResult ? onDutyResult.data : null;
 
   return (
-    <ScheduleDayView
+    <BranchProvider value={{ branchId, branches, canSwitch: branches.length > 1 }}>
+      <ScheduleDayView
       date={date}
       today={israelToday()}
       slots={slots}
@@ -67,6 +98,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
       trainers={options.trainers}
       trainees={options.trainees}
       onDuty={onDuty}
-    />
+      />
+    </BranchProvider>
   );
 }

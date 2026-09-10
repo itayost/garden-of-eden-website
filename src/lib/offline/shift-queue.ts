@@ -19,6 +19,7 @@ export interface QueuedShiftAction {
   id: string;
   type: ShiftActionType;
   clientTimestamp: string; // ISO 8601 — when the trainer tapped the button
+  branchId?: string | null;
   queuedAt: number; // Date.now() — when added to queue
   retryCount: number;
 }
@@ -142,12 +143,14 @@ export async function idbGetAll(): Promise<QueuedShiftAction[]> {
 
 export function enqueueShiftAction(
   type: ShiftActionType,
-  clientTimestamp: string
+  clientTimestamp: string,
+  branchId: string | null = null,
 ): QueuedShiftAction {
   const action: QueuedShiftAction = {
     id: generateId(),
     type,
     clientTimestamp,
+    branchId,
     queuedAt: Date.now(),
     retryCount: 0,
   };
@@ -240,6 +243,7 @@ export function sendBeaconSync(): void {
     actions: actions.map((a) => ({
       type: a.type,
       clientTimestamp: a.clientTimestamp,
+      branchId: a.branchId ?? null,
     })),
   });
 

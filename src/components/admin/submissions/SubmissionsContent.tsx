@@ -63,9 +63,11 @@ const PAGE_SIZE = 20;
 export function PreWorkoutContent({
   initialItems,
   initialTotal,
+  branchId,
 }: {
   initialItems: PreWorkoutForm[];
   initialTotal: number;
+  branchId?: string;
 }) {
   const [items, setItems] = useState(initialItems);
   const [total, setTotal] = useState(initialTotal);
@@ -97,6 +99,7 @@ export function PreWorkoutContent({
           startDate: newStartDate || undefined,
           endDate: newEndDate || undefined,
           position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
+          branchId,
         };
         const result = await getPreWorkoutPaginated(params);
         if (currentRequestId === requestIdRef.current) {
@@ -105,7 +108,7 @@ export function PreWorkoutContent({
         }
       });
     },
-    []
+    [branchId],
   );
 
   const handleSearchChange = (v: string) => {
@@ -255,9 +258,11 @@ export function PreWorkoutContent({
 export function PostWorkoutContent({
   initialItems,
   initialTotal,
+  branchId,
 }: {
   initialItems: PostWorkoutWithTrainer[];
   initialTotal: number;
+  branchId?: string;
 }) {
   const [items, setItems] = useState(initialItems);
   const [total, setTotal] = useState(initialTotal);
@@ -289,6 +294,7 @@ export function PostWorkoutContent({
           startDate: newStartDate || undefined,
           endDate: newEndDate || undefined,
           position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
+          branchId,
         };
         const result = await getPostWorkoutPaginated(params);
         if (currentRequestId === requestIdRef.current) {
@@ -297,7 +303,7 @@ export function PostWorkoutContent({
         }
       });
     },
-    []
+    [branchId],
   );
 
   const handleSearchChange = (v: string) => {
@@ -450,9 +456,11 @@ export function PostWorkoutContent({
 export function NutritionContent({
   initialItems,
   initialTotal,
+  branchId,
 }: {
   initialItems: NutritionFormWithProfile[];
   initialTotal: number;
+  branchId?: string;
 }) {
   const [items, setItems] = useState(initialItems);
   const [total, setTotal] = useState(initialTotal);
@@ -481,6 +489,7 @@ export function NutritionContent({
           startDate: newStartDate || undefined,
           endDate: newEndDate || undefined,
           position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
+          branchId,
         };
         const result = await getNutritionPaginated(params);
         if (currentRequestId === requestIdRef.current) {
@@ -489,7 +498,7 @@ export function NutritionContent({
         }
       });
     },
-    []
+    [branchId],
   );
 
   const handleStartDateChange = (v: string) => {
@@ -630,9 +639,11 @@ export function NutritionContent({
 export function MentalContent({
   initialItems,
   initialTotal,
+  branchId,
 }: {
   initialItems: MentalQuestionnaireWithProfile[];
   initialTotal: number;
+  branchId?: string;
 }) {
   const [items, setItems] = useState(initialItems);
   const [total, setTotal] = useState(initialTotal);
@@ -664,6 +675,7 @@ export function MentalContent({
           startDate: newStartDate || undefined,
           endDate: newEndDate || undefined,
           position: newPosition !== POSITION_FILTER_ALL ? newPosition : undefined,
+          branchId,
         };
         const result = await getMentalPaginated(params);
         if (currentRequestId === requestIdRef.current) {
@@ -672,7 +684,7 @@ export function MentalContent({
         }
       });
     },
-    []
+    [branchId],
   );
 
   const handleSearchChange = (v: string) => {

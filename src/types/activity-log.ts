@@ -59,6 +59,8 @@ export const FIELD_LABELS_HE: Record<string, string> = {
   is_active: "סטטוס",
   position: "עמדה",
   avatar_url: "תמונת פרופיל",
+  club: "מועדון",
+  branches: "סניפים",
 };
 
 // Hebrew labels for role values

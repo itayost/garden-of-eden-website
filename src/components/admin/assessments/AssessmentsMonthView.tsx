@@ -29,6 +29,8 @@ import { AssessmentStatusBadge } from "./AssessmentStatusBadge";
 import { AssessmentSectionPopover } from "./AssessmentSectionPopover";
 import { AssessmentDetailDialog } from "./AssessmentDetailDialog";
 import { getAssessmentsByMonth } from "@/lib/actions/admin-assessments-month";
+import { BRANCH_FILTER_ALL, buildBranchFilterOptions } from "@/lib/admin/branch-filter";
+import type { BranchOption } from "@/types/branches";
 import type { AssessmentMonthResult } from "@/lib/actions/admin-assessments-month";
 import type { AssessmentMonthStatus } from "@/types/assessment";
 import type { Profile } from "@/types/database";
@@ -37,6 +39,7 @@ import type { PlayerAssessment } from "@/types/assessment";
 interface AssessmentsMonthViewProps {
   month: number;
   year: number;
+  branches: BranchOption[];
 }
 
 const PAGE_SIZE = 20;
@@ -73,7 +76,7 @@ const MONTHS_HE = [
   "דצמבר",
 ];
 
-export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps) {
+export function AssessmentsMonthView({ month, year, branches }: AssessmentsMonthViewProps) {
   const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
   const [ageGroup, setAgeGroup] = useQueryState(
     "age",
@@ -82,6 +85,10 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
   const [astatus, setAstatus] = useQueryState(
     "astatus",
     parseAsString.withDefault("all")
+  );
+  const [branch, setBranch] = useQueryState(
+    "branch",
+    parseAsString.withDefault(BRANCH_FILTER_ALL)
   );
 
   const [page, setPage] = useState(0);
@@ -106,6 +113,7 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
           search: search || undefined,
           ageGroupId: ageGroup !== "all" ? ageGroup : undefined,
           statusFilter: (astatus as AssessmentMonthStatus | "all") || "all",
+          branchId: branch !== BRANCH_FILTER_ALL ? branch : undefined,
           page: currentPage,
           pageSize: PAGE_SIZE,
         });
@@ -117,7 +125,7 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
         setData(result);
       });
     },
-    [month, year, search, ageGroup, astatus]
+    [month, year, search, ageGroup, astatus, branch]
   );
 
   // Fetch on mount and when month/year/filters/page change
@@ -142,6 +150,11 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
 
   const handleAgeGroupChange = (v: string) => {
     void setAgeGroup(v === "all" ? null : v);
+    setPage(0);
+  };
+
+  const handleBranchChange = (v: string) => {
+    void setBranch(v === BRANCH_FILTER_ALL ? null : v);
     setPage(0);
   };
 
@@ -248,12 +261,24 @@ export function AssessmentsMonthView({ month, year }: AssessmentsMonthViewProps)
             onSearchChange={handleSearchChange}
             searchPlaceholder="חיפוש לפי שם..."
             filters={
-              <ToolbarSelect
-                value={ageGroup || "all"}
-                onValueChange={handleAgeGroupChange}
-                options={ageGroupOptions}
-                placeholder="קבוצת גיל"
-              />
+              <>
+                <ToolbarSelect
+                  value={ageGroup || "all"}
+                  onValueChange={handleAgeGroupChange}
+                  options={ageGroupOptions}
+                  placeholder="קבוצת גיל"
+                />
+                {branches.length > 0 && (
+                  <ToolbarSelect
+                    value={branch || BRANCH_FILTER_ALL}
+                    onValueChange={handleBranchChange}
+                    options={buildBranchFilterOptions(branches).filter(
+                      (o) => o.value !== "none",
+                    )}
+                    placeholder="סניף"
+                  />
+                )}
+              </>
             }
             actions={<MonthPicker />}
           />

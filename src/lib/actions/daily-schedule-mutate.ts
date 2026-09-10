@@ -2,6 +2,8 @@
 
 import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
+import { assertBranchReadable, assertBranchWritable } from "@/lib/actions/shared/assert-branch";
+import { listProfileIdsInBranches } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -78,6 +80,7 @@ async function resolveTrainerName(
  */
 async function verifyRosterTrainees(
   trainees: { traineeId: string | null; name: string }[],
+  branchId: string,
 ): Promise<{ error: string | null }> {
   const ids = trainees
     .map((entry) => entry.traineeId)
@@ -86,13 +89,17 @@ async function verifyRosterTrainees(
   // An all-free-text roster is legitimate — those names have no account.
   if (ids.length === 0) return { error: null };
 
-  const { data, error } = await createAdminClient()
-    .from("profiles")
-    .select("id")
-    .in("id", ids)
-    .eq("role", "trainee")
-    .eq("is_active", true)
-    .is("deleted_at", null);
+  const db = createAdminClient();
+  const [{ data, error }, members] = await Promise.all([
+    db
+      .from("profiles")
+      .select("id")
+      .in("id", ids)
+      .eq("role", "trainee")
+      .eq("is_active", true)
+      .is("deleted_at", null),
+    listProfileIdsInBranches(db, [branchId]),
+  ]);
 
   if (error) {
     console.error("Verify roster trainees error:", error);
@@ -103,6 +110,13 @@ async function verifyRosterTrainees(
   // id resolved to a distinct active trainee.
   if ((data?.length ?? 0) !== ids.length) {
     return { error: "אחד המתאמנים ברשימה אינו קיים או אינו פעיל" };
+  }
+
+  // The pick-list only offers this branch's trainees; a direct call must not
+  // roster someone from another branch.
+  const memberSet = new Set(members);
+  if (!ids.every((id) => memberSet.has(id))) {
+    return { error: "אחד המתאמנים ברשימה אינו בסניף הזה" };
   }
 
   return { error: null };
@@ -171,18 +185,22 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
     };
   }
 
-  const { scheduleDate, startTime, trainerId, focus, location, trainees } =
+  const { branchId, scheduleDate, startTime, trainerId, focus, location, trainees } =
     validated.data;
   const supabase = await createClient();
 
   const trainerResult = await resolveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
-  const rosterCheck = await verifyRosterTrainees(trainees);
+  const rosterCheck = await verifyRosterTrainees(trainees, branchId);
   if (rosterCheck.error) return { error: rosterCheck.error };
+
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
 
   const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")
     .insert({
+      branch_id: branchId,
       schedule_date: scheduleDate,
       start_time: startTime,
       trainer_id: trainerId,
@@ -236,25 +254,36 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     };
   }
 
-  const { slotId, scheduleDate, startTime, trainerId, focus, location, trainees } =
+  const { branchId, slotId, scheduleDate, startTime, trainerId, focus, location, trainees } =
     validated.data;
   const supabase = await createClient();
 
-  const { data: existing } = await typedFrom(supabase, "daily_schedule_slots")
-    .select("id")
+  const { data: existing } = (await typedFrom(supabase, "daily_schedule_slots")
+    .select("id, branch_id")
     .eq("id", slotId)
-    .maybeSingle();
+    .maybeSingle()) as { data: { id: string; branch_id: string | null } | null };
 
   if (!existing) return { error: "הסלוט לא נמצא" };
+
+  // The slot's current branch must be the caller's too, or a trainer could
+  // pull another branch's slot into their own by rewriting branch_id.
+  if (existing.branch_id) {
+    const currentCheck = await assertBranchReadable(existing.branch_id);
+    if (currentCheck.error) return { error: currentCheck.error };
+  }
 
   const trainerResult = await resolveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
-  const rosterCheck = await verifyRosterTrainees(trainees);
+  const rosterCheck = await verifyRosterTrainees(trainees, branchId);
   if (rosterCheck.error) return { error: rosterCheck.error };
+
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
 
   const { data: updated, error } = await typedFrom(supabase, "daily_schedule_slots")
     .update({
+      branch_id: branchId,
       schedule_date: scheduleDate,
       start_time: startTime,
       trainer_id: trainerId,
@@ -287,6 +316,16 @@ export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
   if (!validated.success) return { error: "מזהה סלוט לא תקין" };
 
   const supabase = await createClient();
+
+  const { data: target } = (await typedFrom(supabase, "daily_schedule_slots")
+    .select("id, branch_id")
+    .eq("id", validated.data.slotId)
+    .maybeSingle()) as { data: { id: string; branch_id: string | null } | null };
+  if (!target) return { error: "הסלוט לא נמצא" };
+  if (target.branch_id) {
+    const scopeCheck = await assertBranchReadable(target.branch_id);
+    if (scopeCheck.error) return { error: scopeCheck.error };
+  }
 
   // Roster rows cascade with the slot. The .select() is not decoration: a
   // delete that RLS rejects returns no error and zero rows, which would
@@ -334,11 +373,15 @@ export async function duplicateDayAction(
     };
   }
 
-  const { fromDate, toDate } = validated.data;
+  const { branchId, fromDate, toDate } = validated.data;
   const supabase = await createClient();
+
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
 
   const { data: targetExisting } = await typedFrom(supabase, "daily_schedule_slots")
     .select("id")
+    .eq("branch_id", branchId)
     .eq("schedule_date", toDate)
     .limit(1);
 
@@ -351,6 +394,7 @@ export async function duplicateDayAction(
     "daily_schedule_slots",
   )
     .select(SLOT_SELECT_WITH_TRAINEES)
+    .eq("branch_id", branchId)
     .eq("schedule_date", fromDate)
     .order("start_time", { ascending: true });
 
@@ -368,12 +412,14 @@ export async function duplicateDayAction(
   const wipeTargetDay = async () => {
     await typedFrom(supabase, "daily_schedule_slots")
       .delete()
+      .eq("branch_id", branchId)
       .eq("schedule_date", toDate);
   };
 
   for (const slot of slots) {
     const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")
       .insert({
+        branch_id: branchId,
         schedule_date: toDate,
         start_time: slot.start_time,
         trainer_id: slot.trainer_id,
