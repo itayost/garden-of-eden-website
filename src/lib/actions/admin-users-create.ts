@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { userCreateSchema, type CreateUserInput } from "@/lib/validations/user-create";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { formatPhoneToInternational } from "@/lib/validations/common";
+import { replaceProfileBranches, loadBranchOptions, branchNamesFor } from "@/features/branches/lib/memberships";
 
 type ActionResult =
   | { success: true; userId?: string; message?: string }
@@ -32,7 +33,7 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
     };
   }
 
-  const { full_name, phone } = validated.data;
+  const { full_name, phone, branch_ids } = validated.data;
   // Trainers can only create trainees
   const role = callerProfile?.role === "admin" ? validated.data.role : "trainee";
 
@@ -80,6 +81,23 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
       // Profile update failed, but user was created - log but continue
     }
 
+    // 5b. Branch memberships. An explicit choice on create counts as a
+    // hand-edit, so the Arbox sync will not overwrite it.
+    let branchNames: string[] = [];
+    if (branch_ids.length > 0) {
+      const { error: branchError } = await replaceProfileBranches(
+        adminClient,
+        authData.user.id,
+        branch_ids,
+        { stampAdmin: true },
+      );
+      if (branchError) {
+        console.error("Create user branch error:", branchError);
+      } else {
+        branchNames = branchNamesFor(branch_ids, await loadBranchOptions(adminClient));
+      }
+    }
+
     // 6. Log activity
     await adminClient.from("activity_logs").insert({
       user_id: authData.user.id,
@@ -89,6 +107,9 @@ export async function createUserAction(input: CreateUserInput): Promise<ActionRe
       changes: [
         { field: "role", old_value: null, new_value: role },
         { field: "full_name", old_value: null, new_value: full_name },
+        ...(branchNames.length > 0
+          ? [{ field: "branches", old_value: null, new_value: branchNames.join(", ") }]
+          : []),
       ],
     });
 

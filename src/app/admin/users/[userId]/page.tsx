@@ -24,6 +24,9 @@ import { ClipPlaybackCard } from "@/components/admin/ClipPlaybackCard";
 import { RadarStatsChartWrapper } from "./RadarStatsChartWrapper";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
 import type { Profile, UserRole } from "@/types/database";
+import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
+import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 interface UserEditPageProps {
   params: Promise<{ userId: string }>;
@@ -75,6 +78,14 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   if (!isAdmin && userToEdit.role !== "trainee") {
     redirect("/admin/users");
   }
+
+  // Memberships read through the service role: a trainer cannot read another
+  // user's profile_branches rows through RLS, and this page is already gated.
+  const [branches, membershipMap] = await Promise.all([
+    listActiveBranchOptionsAction(),
+    loadBranchIdsByProfile(createAdminClient(), [userId]),
+  ]);
+  const initialBranchIds = membershipMap.get(userId) ?? [];
 
   // Compute player ratings for radar chart (trainees only)
   let stats: {
@@ -156,7 +167,12 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <UserEditForm user={userToEdit} currentUserRole={currentProfile?.role as UserRole} />
+              <UserEditForm
+                user={userToEdit}
+                currentUserRole={currentProfile?.role as UserRole}
+                branches={branches}
+                initialBranchIds={initialBranchIds}
+              />
             </CardContent>
           </Card>
 

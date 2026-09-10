@@ -5,6 +5,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { userEditSchema, type UserEditFormData, getFieldChanges, getActionType } from "@/lib/validations/user-edit";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID, formatPhoneToInternational } from "@/lib/validations/common";
+import {
+  branchNamesFor,
+  loadBranchIdsByProfile,
+  loadBranchOptions,
+  replaceProfileBranches,
+} from "@/features/branches/lib/memberships";
+import { branchFieldChange } from "@/lib/branches/branch-change";
 
 type ActionResult =
   | { success: true; userId?: string; message?: string }
@@ -40,7 +47,7 @@ export async function updateUserAction(
     };
   }
 
-  const { full_name, phone, birthdate, club, role, is_active } = validated.data;
+  const { full_name, phone, birthdate, club, role, is_active, branch_ids } = validated.data;
   const adminClient = createAdminClient();
 
   try {
@@ -72,8 +79,21 @@ export async function updateUserAction(
       }
     }
 
-    // 7. Detect changes
-    const changes = getFieldChanges(targetProfile, validated.data);
+    // 7. Detect changes, including branch memberships
+    const [membershipMap, branchOptions] = await Promise.all([
+      loadBranchIdsByProfile(adminClient, [userId]),
+      loadBranchOptions(adminClient),
+    ]);
+    const originalBranchIds = membershipMap.get(userId) ?? [];
+    const branchChange = branchFieldChange(
+      branchNamesFor(originalBranchIds, branchOptions),
+      branchNamesFor(branch_ids, branchOptions),
+    );
+
+    const changes = [
+      ...getFieldChanges(targetProfile, validated.data),
+      ...(branchChange ? [branchChange] : []),
+    ];
     if (changes.length === 0) {
       return { success: true, message: "לא בוצעו שינויים" };
     }
@@ -115,6 +135,18 @@ export async function updateUserAction(
     if (profileError) {
       console.error("Profile update error:", profileError);
       return { error: "שגיאה בעדכון הפרופיל" };
+    }
+
+    // 9b. Branch memberships. Trainers may set these on trainees (the
+    // trainer-edits-trainee rule in step 5 already holds here).
+    if (branchChange) {
+      const { error: branchError } = await replaceProfileBranches(
+        adminClient,
+        userId,
+        branch_ids,
+        { stampAdmin: true },
+      );
+      if (branchError) return { error: branchError };
     }
 
     // 10. Log activity

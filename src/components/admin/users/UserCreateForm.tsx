@@ -29,12 +29,15 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, UserPlus } from "lucide-react";
+import { BranchCheckboxGroup } from "@/features/branches/components/BranchCheckboxGroup";
+import type { BranchOption } from "@/types/branches";
 
 interface UserCreateFormProps {
   isAdmin?: boolean;
+  branches: BranchOption[];
 }
 
-export function UserCreateForm({ isAdmin = true }: UserCreateFormProps) {
+export function UserCreateForm({ isAdmin = true, branches }: UserCreateFormProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -44,6 +47,7 @@ export function UserCreateForm({ isAdmin = true }: UserCreateFormProps) {
       full_name: "",
       phone: "",
       role: "trainee",
+      branch_ids: [],
     },
   });
 
@@ -118,6 +122,28 @@ export function UserCreateForm({ isAdmin = true }: UserCreateFormProps) {
               <FormDescription>
                 פורמט: 0501234567 או +972501234567
               </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Branches */}
+        <FormField
+          control={form.control}
+          name="branch_ids"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>סניפים</FormLabel>
+              <FormControl>
+                <BranchCheckboxGroup
+                  branches={branches}
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                  disabled={loading}
+                  idPrefix="create-branch"
+                />
+              </FormControl>
+              <FormDescription>אפשר לבחור סניף אחד או את שניהם</FormDescription>
               <FormMessage />
             </FormItem>
           )}

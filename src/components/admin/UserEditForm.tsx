@@ -32,19 +32,23 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import type { Profile, UserRole } from "@/types/database";
+import { BranchCheckboxGroup } from "@/features/branches/components/BranchCheckboxGroup";
+import type { BranchOption } from "@/types/branches";
 
 interface UserEditFormProps {
   user: Profile;
   currentUserRole: UserRole;
+  branches: BranchOption[];
+  initialBranchIds: string[];
 }
 
-export function UserEditForm({ user, currentUserRole }: UserEditFormProps) {
+export function UserEditForm({ user, currentUserRole, branches, initialBranchIds }: UserEditFormProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const form = useForm<UserEditFormData>({
     resolver: zodResolver(userEditSchema),
-    defaultValues: getUserEditDefaults(user),
+    defaultValues: getUserEditDefaults(user, initialBranchIds),
   });
 
   const onSubmit = async (data: UserEditFormData) => {
@@ -150,6 +154,28 @@ export function UserEditForm({ user, currentUserRole }: UserEditFormProps) {
                   disabled={loading}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Branches */}
+        <FormField
+          control={form.control}
+          name="branch_ids"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>סניפים</FormLabel>
+              <FormControl>
+                <BranchCheckboxGroup
+                  branches={branches}
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                  disabled={loading}
+                  idPrefix="edit-branch"
+                />
+              </FormControl>
+              <FormDescription>אפשר לבחור סניף אחד או את שניהם</FormDescription>
               <FormMessage />
             </FormItem>
           )}

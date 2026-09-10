@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowRight, UserPlus } from "lucide-react";
 import { UserCreateForm } from "@/components/admin/users/UserCreateForm";
+import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
 
 export default async function AdminCreateUserPage() {
   const supabase = await createClient();
@@ -35,6 +36,7 @@ export default async function AdminCreateUserPage() {
   }
 
   const isAdmin = profile?.role === "admin";
+  const branches = await listActiveBranchOptionsAction();
 
   return (
     <div className="space-y-6">
@@ -68,7 +70,7 @@ export default async function AdminCreateUserPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UserCreateForm isAdmin={isAdmin} />
+          <UserCreateForm isAdmin={isAdmin} branches={branches} />
         </CardContent>
       </Card>
     </div>
