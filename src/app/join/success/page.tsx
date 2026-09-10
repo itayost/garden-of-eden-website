@@ -1,5 +1,8 @@
 import { isValidUUID } from "@/lib/validations/common";
 import { OrderStatusPoller } from "@/features/enrollment/components/OrderStatusPoller";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "התשלום התקבל", robots: { index: false, follow: false } };
 
 interface PageProps {
   searchParams: Promise<{ order?: string }>;

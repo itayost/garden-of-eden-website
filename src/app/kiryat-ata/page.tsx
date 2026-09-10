@@ -13,14 +13,10 @@ import {
 import { MotionProvider } from "@/components/MotionProvider";
 import { loadKiryatAtaCatalog } from "@/features/enrollment/lib/catalog";
 import { KIRYAT_ATA_LANDING } from "../../../content/landing-kiryat-ata";
+import { BRANCH_SEO, branchMetadata } from "../../../content/seo";
+import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 
-export const metadata: Metadata = {
-  title: "Garden of Eden - אקדמיית כדורגל בקריית אתא | הרשמה ותשלום באתר",
-  description:
-    "אימוני כדורגל מקצועיים בקריית אתא בקבוצות קטנות, עם ליווי מנטלי ותזונתי. בוחרים מסלול, נרשמים ומשלמים באתר.",
-  keywords: ["אקדמיית כדורגל", "כדורגל קריית אתא", "אימוני כדורגל לילדים", "garden of eden", "קריית אתא"],
-  alternates: { canonical: "/kiryat-ata" },
-};
+export const metadata: Metadata = branchMetadata(BRANCH_SEO.kiryat_ata);
 
 /**
  * The קריית אתא landing page: the Haifa page's sections with branch copy,
@@ -33,6 +29,10 @@ export default async function KiryatAtaPage() {
   return (
     <MotionProvider>
       <main className="bg-[#F5F5F0]">
+        <LocalBusinessJsonLd
+          seo={BRANCH_SEO.kiryat_ata}
+          offers={products.map((p) => ({ name: p.name_he, price: p.price_ils, description: p.blurb_he }))}
+        />
         <Navbar
           otherBranch={{ label: "סניף חיפה", href: "/" }}
           ctaHref="#services"
