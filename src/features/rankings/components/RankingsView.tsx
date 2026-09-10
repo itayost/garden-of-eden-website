@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, RefreshCw } from "lucide-react";
 import { AgeGroupFilter } from "./AgeGroupFilter";
+import { BranchFilter } from "./BranchFilter";
+import type { BranchOption } from "@/types/branches";
 import { CategoryLeaderCards } from "./CategoryLeaderCards";
 import { LeaderboardTable } from "./LeaderboardTable";
 import { GroupStatisticsCard } from "./GroupStatisticsCard";
@@ -39,6 +41,10 @@ interface RankingsViewProps {
   userAgeGroupId?: string | null;
   /** Trainee's own age group label in Hebrew */
   userAgeGroupLabel?: string | null;
+  /** Branches this viewer may pick. A trainee gets their own branches only. */
+  branchOptions: BranchOption[];
+  /** Staff may also rank the whole academy. */
+  showAllBranchesOption: boolean;
 }
 
 export function RankingsView({
@@ -46,6 +52,8 @@ export function RankingsView({
   currentUserId,
   isTrainee = false,
   userAgeGroupLabel,
+  branchOptions,
+  showAllBranchesOption,
 }: RankingsViewProps) {
   const [data, setData] = useState<RankingsData>(initialData);
   const [isPending, startTransition] = useTransition();
@@ -58,7 +66,7 @@ export function RankingsView({
 
     const currentRequestId = ++requestIdRef.current;
     startTransition(async () => {
-      const newData = await getRankingsData(ageGroupId, data.selectedCategory);
+      const newData = await getRankingsData(ageGroupId, data.selectedCategory, data.selectedBranch);
       // Only update if this is still the latest request
       if (currentRequestId === requestIdRef.current) {
         setData(newData);
@@ -69,8 +77,22 @@ export function RankingsView({
   const handleCategorySelect = (category: RankingCategory) => {
     const currentRequestId = ++requestIdRef.current;
     startTransition(async () => {
-      const newData = await getRankingsData(data.selectedAgeGroup, category);
+      const newData = await getRankingsData(data.selectedAgeGroup, category, data.selectedBranch);
       // Only update if this is still the latest request
+      if (currentRequestId === requestIdRef.current) {
+        setData(newData);
+      }
+    });
+  };
+
+  const handleBranchChange = (branchId: string) => {
+    const currentRequestId = ++requestIdRef.current;
+    startTransition(async () => {
+      const newData = await getRankingsData(
+        data.selectedAgeGroup,
+        data.selectedCategory,
+        branchId,
+      );
       if (currentRequestId === requestIdRef.current) {
         setData(newData);
       }
@@ -93,6 +115,14 @@ export function RankingsView({
         <div className="flex items-center gap-4">
           {isPending && (
             <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+          {(branchOptions.length > 1 || showAllBranchesOption) && (
+            <BranchFilter
+              selectedBranch={data.selectedBranch}
+              options={branchOptions}
+              showAllOption={showAllBranchesOption}
+              onBranchChange={handleBranchChange}
+            />
           )}
           {isTrainee ? (
             // Trainees see only their age group (no filter control)

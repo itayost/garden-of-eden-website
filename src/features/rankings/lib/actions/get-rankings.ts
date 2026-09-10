@@ -13,6 +13,10 @@ import type {
   SubMetricRanking,
 } from "../../types";
 import { RANKING_CATEGORIES } from "../config/categories";
+import { ALL_BRANCHES } from "../config/branches";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { listProfileIdsInBranches } from "@/features/branches/lib/memberships";
+import { isValidUUID } from "@/lib/validations/common";
 import {
   getLatestAssessmentPerUser,
   calculateRankings,
@@ -34,6 +38,8 @@ export interface RankingsData {
   currentUserRank: RankingEntry | null;
   selectedCategory: RankingCategory;
   selectedAgeGroup: string;
+  /** A branch id, or ALL_BRANCHES when ranking the whole academy. */
+  selectedBranch: string;
   availableAgeGroups: AgeGroupOption[];
   /** Per-test breakdown of the selected category (for the expandable view). */
   subMetricBreakdown: SubMetricRanking[];
@@ -48,7 +54,8 @@ export interface RankingsData {
  */
 export async function getRankingsData(
   ageGroupId: string = "all",
-  category: RankingCategory = "sprint"
+  category: RankingCategory = "sprint",
+  branchId: string = ALL_BRANCHES,
 ): Promise<RankingsData> {
   const supabase = await createClient();
 
@@ -57,22 +64,35 @@ export async function getRankingsData(
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch all trainee profiles with birthdates
-  const { data: profiles, error: profilesError } = (await supabase
+  // A branch slices the trainee set before anything is ranked. An unknown
+  // branch, or one with no members, falls back to the whole academy so nobody
+  // sees an empty page during rollout.
+  let memberIds: string[] | null = null;
+  if (branchId !== ALL_BRANCHES && isValidUUID(branchId)) {
+    const ids = await listProfileIdsInBranches(createAdminClient(), [branchId]);
+    memberIds = ids.length > 0 ? ids : null;
+  }
+  const effectiveBranch = memberIds === null ? ALL_BRANCHES : branchId;
+
+  let profilesQuery = supabase
     .from("profiles")
     .select("id, full_name, birthdate")
-    .eq("role", "trainee")) as {
+    .eq("role", "trainee");
+  if (memberIds !== null) {
+    profilesQuery = profilesQuery.in("id", memberIds);
+  }
+  const { data: profiles, error: profilesError } = (await profilesQuery) as {
     data: { id: string; full_name: string | null; birthdate: string | null }[] | null;
     error: Error | null;
   };
 
   if (profilesError) {
     console.error("Error fetching profiles:", profilesError);
-    return createEmptyRankingsData(category, ageGroupId);
+    return createEmptyRankingsData(category, ageGroupId, effectiveBranch);
   }
 
   if (!profiles || profiles.length === 0) {
-    return createEmptyRankingsData(category, ageGroupId);
+    return createEmptyRankingsData(category, ageGroupId, effectiveBranch);
   }
 
   // Build user names map and filter by age group
@@ -97,7 +117,7 @@ export async function getRankingsData(
       : profiles.filter((p) => userAgeGroups.get(p.id) === ageGroupId).map((p) => p.id);
 
   if (filteredUserIds.length === 0) {
-    return createEmptyRankingsData(category, ageGroupId);
+    return createEmptyRankingsData(category, ageGroupId, effectiveBranch);
   }
 
   // Fetch all assessments for filtered users
@@ -111,11 +131,11 @@ export async function getRankingsData(
 
   if (assessmentsError) {
     console.error("Error fetching assessments:", assessmentsError);
-    return createEmptyRankingsData(category, ageGroupId);
+    return createEmptyRankingsData(category, ageGroupId, effectiveBranch);
   }
 
   if (!assessments || assessments.length === 0) {
-    return createEmptyRankingsData(category, ageGroupId);
+    return createEmptyRankingsData(category, ageGroupId, effectiveBranch);
   }
 
   // Get latest assessment per user
@@ -217,6 +237,7 @@ export async function getRankingsData(
     currentUserRank,
     selectedCategory: category,
     selectedAgeGroup: ageGroupId,
+    selectedBranch: effectiveBranch,
     availableAgeGroups,
     subMetricBreakdown,
   };
@@ -227,7 +248,8 @@ export async function getRankingsData(
  */
 function createEmptyRankingsData(
   category: RankingCategory,
-  ageGroupId: string
+  ageGroupId: string,
+  branchId: string,
 ): RankingsData {
   return {
     categoryLeaders: Object.entries(RANKING_CATEGORIES).map(([catId, config]) => ({
@@ -243,6 +265,7 @@ function createEmptyRankingsData(
     currentUserRank: null,
     selectedCategory: category,
     selectedAgeGroup: ageGroupId,
+    selectedBranch: branchId,
     availableAgeGroups: [{ id: "all", label: "כל הגילאים" }],
     subMetricBreakdown: [],
   };
