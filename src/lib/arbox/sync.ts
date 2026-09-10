@@ -1,6 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAllArboxUsers, fetchArboxBirthdays, type ArboxUser } from "./client";
 import { normalizePhone } from "./normalize-phone";
+import { matchArboxBranch } from "@/lib/branches/arbox-branch-match";
+import { loadAllBranches, replaceProfileBranches } from "@/features/branches/lib/memberships";
+import type { Branch } from "@/types/branches";
 
 export type SyncResult = {
   created: number;
@@ -15,9 +18,38 @@ export type BirthdaySyncResult = {
   errors: number;
 };
 
+/**
+ * Fills a profile's branch from Arbox when nobody has set it by hand.
+ *
+ * Dormant today: every Arbox client carries the same location name and no
+ * branch claims it, so matchArboxBranch returns null and nothing is written.
+ * The day Eden splits Arbox and sets a branch's Arbox name, new signups land
+ * in the right branch on the next nightly run. Hand-edited profiles
+ * (branches_set_by_admin_at set) are never touched.
+ */
+async function applyArboxBranch(
+  supabase: ReturnType<typeof createAdminClient>,
+  profileId: string,
+  setByAdminAt: string | null,
+  locationName: string | null,
+  branches: readonly Branch[],
+): Promise<void> {
+  if (setByAdminAt) return;
+  const branch = matchArboxBranch(locationName, branches);
+  if (!branch) return;
+
+  const { error } = await replaceProfileBranches(supabase, profileId, [branch.id], {
+    stampAdmin: false,
+  });
+  if (error) {
+    console.error(`[Arbox Sync] Branch fill failed for profile ${profileId}:`, error);
+  }
+}
+
 async function processArboxUser(
   supabase: ReturnType<typeof createAdminClient>,
-  arboxUser: ArboxUser
+  arboxUser: ArboxUser,
+  branches: readonly Branch[],
 ): Promise<"created" | "updated" | "skipped" | "error"> {
   const phone = normalizePhone(arboxUser.phone);
 
@@ -28,7 +60,7 @@ async function processArboxUser(
 
   const { data: existing, error: lookupError } = await supabase
     .from("profiles")
-    .select("id, full_name, arbox_user_id")
+    .select("id, full_name, arbox_user_id, branches_set_by_admin_at")
     .or(orClause)
     .maybeSingle();
 
@@ -45,6 +77,14 @@ async function processArboxUser(
     const updates: Record<string, unknown> = {};
     if (!existing.arbox_user_id) updates.arbox_user_id = arboxUser.user_id;
     if (!existing.full_name && arboxUser.full_name) updates.full_name = arboxUser.full_name;
+
+    await applyArboxBranch(
+      supabase,
+      existing.id,
+      existing.branches_set_by_admin_at ?? null,
+      arboxUser.location_name,
+      branches,
+    );
 
     if (Object.keys(updates).length === 0) return "skipped";
 
@@ -100,6 +140,8 @@ async function processArboxUser(
     return "error";
   }
 
+  await applyArboxBranch(supabase, authData.user.id, null, arboxUser.location_name, branches);
+
   return "created";
 }
 
@@ -108,11 +150,12 @@ export async function syncArboxUsers(): Promise<SyncResult> {
   const supabase = createAdminClient();
 
   console.log("[Arbox Sync] Fetching all Arbox users...");
+  const branches = await loadAllBranches(supabase);
   const users = await fetchAllArboxUsers();
   console.log(`[Arbox Sync] Processing ${users.length} Arbox users...`);
 
   for (const user of users) {
-    const outcome = await processArboxUser(supabase, user);
+    const outcome = await processArboxUser(supabase, user, branches);
     if (outcome === "error") result.errors++;
     else result[outcome]++;
   }
