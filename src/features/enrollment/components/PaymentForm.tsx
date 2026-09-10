@@ -14,6 +14,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormRequiredLegend,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { detectBrand, formatCardNumber } from "@/lib/payments/card";
@@ -90,12 +91,13 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submit)} className="space-y-5" autoComplete="on">
+        <FormRequiredLegend />
         <FormField
           control={form.control}
           name="holderName"
           render={({ field: f }) => (
             <FormItem>
-              <FormLabel>שם בעל הכרטיס</FormLabel>
+              <FormLabel required>שם בעל הכרטיס</FormLabel>
               <FormControl>
                 <Input {...f} className={field} autoComplete="cc-name" disabled={loading} />
               </FormControl>
@@ -108,7 +110,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
           name="holderId"
           render={({ field: f }) => (
             <FormItem>
-              <FormLabel>ת.ז של בעל הכרטיס</FormLabel>
+              <FormLabel required>ת.ז של בעל הכרטיס</FormLabel>
               <FormControl>
                 <Input {...f} className={`${field} text-right`} inputMode="numeric" dir="ltr" disabled={loading} />
               </FormControl>
@@ -121,7 +123,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
           name="cardNumber"
           render={({ field: f }) => (
             <FormItem>
-              <FormLabel className="flex items-center justify-between">
+              <FormLabel required className="flex items-center justify-between">
                 <span>מספר כרטיס</span>
                 {BRAND_LABEL[brand] && (
                   <span className="text-xs font-normal text-black/50">{BRAND_LABEL[brand]}</span>
@@ -153,7 +155,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
             name="expMonth"
             render={({ field: f }) => (
               <FormItem>
-                <FormLabel>חודש</FormLabel>
+                <FormLabel required>חודש</FormLabel>
                 <FormControl>
                   <select {...f} value={String(f.value ?? "")} className={select} autoComplete="cc-exp-month" disabled={loading}>
                     <option value="">MM</option>
@@ -171,7 +173,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
             name="expYear"
             render={({ field: f }) => (
               <FormItem>
-                <FormLabel>שנה</FormLabel>
+                <FormLabel required>שנה</FormLabel>
                 <FormControl>
                   <select {...f} value={String(f.value ?? "")} className={select} autoComplete="cc-exp-year" disabled={loading}>
                     <option value="">YYYY</option>
@@ -189,7 +191,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
             name="cvv"
             render={({ field: f }) => (
               <FormItem>
-                <FormLabel>CVV</FormLabel>
+                <FormLabel required>CVV</FormLabel>
                 <FormControl>
                   <Input
                     {...f}
@@ -213,7 +215,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
             name="installments"
             render={({ field: f }) => (
               <FormItem>
-                <FormLabel>תשלומים</FormLabel>
+                <FormLabel required>תשלומים</FormLabel>
                 <FormControl>
                   <select {...f} value={String(f.value ?? 1)} className={select} disabled={loading}>
                     {Array.from({ length: MAX_INSTALLMENTS }, (_, i) => i + 1).map((n) => (
