@@ -7,3 +7,6 @@ export type { AdminVerifyResult, TrainerVerifyResult } from "./verify-admin";
 
 export { verifyUserAccess } from "./verify-user-access";
 export type { UserAccessResult } from "./verify-user-access";
+
+export { getBranchScopeAction } from "./branch-scope";
+export type { BranchScopeData } from "./branch-scope";
