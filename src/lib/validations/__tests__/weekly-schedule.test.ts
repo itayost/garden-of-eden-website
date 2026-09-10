@@ -6,9 +6,11 @@ import {
 } from "@/lib/validations/weekly-schedule";
 
 const TRAINER = "11111111-1111-4111-8111-111111111111";
+const BRANCH = "33333333-3333-4333-8333-333333333333";
 
 function validBand(overrides: Record<string, unknown> = {}) {
   return {
+    branchId: BRANCH,
     weekday: 0,
     startTime: "15:00",
     endTime: "18:00",
@@ -22,6 +24,7 @@ function validBand(overrides: Record<string, unknown> = {}) {
 
 function validException(overrides: Record<string, unknown> = {}) {
   return {
+    branchId: BRANCH,
     exceptionDate: "2026-08-16",
     trainerId: TRAINER,
     kind: "absent",
