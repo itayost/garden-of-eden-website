@@ -75,13 +75,23 @@ export async function POST(request: NextRequest) {
     const transactionId = event.transactions?.[0]?.id ?? event.id ?? null;
 
     const { data: order } = (await typedFrom(db, "orders")
-      .select("id, status")
+      .select("id, status, amount_ils")
       .eq("id", orderId)
-      .maybeSingle()) as { data: { id: string; status: string } | null };
+      .maybeSingle()) as { data: { id: string; status: string; amount_ils: number } | null };
     if (!order) return finish("order not found");
     if (order.status === "paid") return finish(null);
 
-    const { error: updateError } = await typedFrom(db, "orders")
+    // Morning fixes the price on its side, but a partial capture or an edited
+    // form must not hand out a full plan.
+    const paidAmount = Number(event.total ?? event.transactions?.[0]?.total ?? NaN);
+    if (Number.isFinite(paidAmount) && paidAmount !== Number(order.amount_ils)) {
+      return finish(`amount mismatch: paid ${paidAmount}, order ${order.amount_ils}`);
+    }
+
+    // Claim the order: only the delivery whose update touched a row goes on
+    // to fulfill, so two concurrent deliveries cannot both create a plan. A
+    // checkout the cron already expired is still a real payment.
+    const { data: claimed, error: updateError } = (await typedFrom(db, "orders")
       .update({
         status: "paid",
         paid_at: new Date().toISOString(),
@@ -89,11 +99,13 @@ export async function POST(request: NextRequest) {
         raw_webhook: payload,
       })
       .eq("id", orderId)
-      .eq("status", "pending");
+      .in("status", ["pending", "expired"])
+      .select("id")) as { data: { id: string }[] | null; error: { code?: string; message: string } | null };
     if (updateError) {
       if (updateError.code === "23505") return finish("transaction id already used");
       return finish(`order update failed: ${updateError.message}`);
     }
+    if (!claimed || claimed.length === 0) return finish("order already claimed");
 
     const result = await fulfillOrder(db, orderId);
     if (!result.ok) return finish(`fulfillment: ${result.error}`);

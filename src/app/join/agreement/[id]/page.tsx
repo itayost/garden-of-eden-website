@@ -1,3 +1,4 @@
+import { planTokenSecret } from "@/lib/plans/token-secret";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -15,7 +16,7 @@ interface PageProps {
 export default async function AgreementPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { t } = await searchParams;
-  const secret = process.env.PLAN_RENEWAL_TOKEN_SECRET ?? "";
+  const secret = planTokenSecret();
   if (!isValidUUID(id) || !t || !verifyAgreementToken(id, t, secret)) notFound();
 
   const { data } = (await typedFrom(createAdminClient(), "enrollment_agreements")

@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { cache } from "react";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
@@ -10,8 +10,8 @@ import { loadPlansWithUsage } from "../queries";
 /**
  * Plan status and a medical flag for a set of trainees, for roster chips and
  * the users list. Service role: a trainer cannot read trainee_plans or the
- * health columns through RLS. Gated on verifyAdminOrTrainer; callers only
- * pass ids they are already allowed to display.
+ * health columns through RLS. Server-only on purpose: it takes ids the
+ * calling page already scoped, so it must never be reachable as an action.
  */
 export const loadPlanStatusesForStaff = cache(
   async (profileIds: readonly string[]): Promise<Record<string, StaffPlanBadge>> => {

@@ -1,3 +1,4 @@
+import { planTokenSecret } from "@/lib/plans/token-secret";
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,11 +19,12 @@ function localPhone(e164: string): string {
 
 /**
  * A valid token opens the form for the same product with the last agreement's
- * details filled in. The declarations and the signature are never prefilled:
- * the agreement is per purchase.
+ * details filled in. The declarations, the signature, and the parent's ID
+ * number are never prefilled: the agreement is per purchase, and the link
+ * travels over WhatsApp.
  */
 export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill | null> {
-  const secret = process.env.PLAN_RENEWAL_TOKEN_SECRET ?? "";
+  const secret = planTokenSecret();
   const verified = verifyRenewalToken(token, secret, Math.floor(Date.now() / 1000));
   if (!verified) return null;
 
@@ -50,7 +52,6 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
 
   const prefill: Partial<EnrollmentInput> = {
     parentName: agreement?.parent_name ?? profile?.guardian_name ?? "",
-    parentIdNumber: agreement?.parent_id_number ?? "",
     payerPhone: localPhone(agreement?.parent_phone ?? profile?.guardian_phone ?? ""),
     loginPhone: localPhone(profile?.phone ?? ""),
     email: agreement?.parent_email ?? "",

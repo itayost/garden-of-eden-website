@@ -72,10 +72,21 @@ export async function fulfillFromInput(
 
     const { data: profile } = await db
       .from("profiles")
-      .select("full_name, birthdate")
+      .select(
+        "full_name, birthdate, role, guardian_name, guardian_phone, medical_notes, emergency_contact_name, emergency_contact_phone, photo_consent",
+      )
       .eq("id", profileId)
       .single();
 
+    // A paid order must never turn a trainer or admin into a trainee. The
+    // checkout refuses staff phones up front; this is the backstop.
+    if (profile && profile.role !== "trainee") {
+      throw new Error(`login phone belongs to a ${profile.role} account`);
+    }
+
+    // Existing values win: a renewal or a second plan must not let whoever
+    // paid rewrite the guardian, medical notes, or emergency contact that
+    // staff may have corrected. Staff edit those on the trainee page.
     const { error: profileError } = await db
       .from("profiles")
       .update({
@@ -83,12 +94,14 @@ export async function fulfillFromInput(
         birthdate: profile?.birthdate || order.child_birthdate,
         role: "trainee",
         profile_completed: true,
-        guardian_name: order.parent_name,
-        guardian_phone: order.payer_phone,
-        medical_notes: agreement?.medical_notes ?? null,
-        emergency_contact_name: agreement?.emergency_contact_name ?? null,
-        emergency_contact_phone: agreement?.emergency_contact_phone ?? null,
-        photo_consent: agreement?.photo_consent ?? null,
+        guardian_name: profile?.guardian_name ?? order.parent_name,
+        guardian_phone: profile?.guardian_phone ?? order.payer_phone,
+        medical_notes: profile?.medical_notes ?? agreement?.medical_notes ?? null,
+        emergency_contact_name:
+          profile?.emergency_contact_name ?? agreement?.emergency_contact_name ?? null,
+        emergency_contact_phone:
+          profile?.emergency_contact_phone ?? agreement?.emergency_contact_phone ?? null,
+        photo_consent: profile?.photo_consent ?? agreement?.photo_consent ?? null,
       })
       .eq("id", profileId);
     if (profileError) throw new Error(`profile update failed: ${profileError.message}`);

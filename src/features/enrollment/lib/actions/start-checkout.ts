@@ -1,5 +1,7 @@
 "use server";
 
+import { phoneVariants } from "@/lib/plans/phone-variants";
+import { planTokenSecret } from "@/lib/plans/token-secret";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { waitUntil } from "@vercel/functions";
@@ -47,11 +49,24 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
 
   const db = createAdminClient();
 
+  // The login phone may already be a trainee (renewal, second plan) but never
+  // a staff account: fulfillment would otherwise rewrite it.
+  const { data: owner } = await db
+    .from("profiles")
+    .select("role")
+    .in("phone", phoneVariants(data.loginPhone))
+    .is("deleted_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (owner && owner.role !== "trainee") {
+    return { error: "מספר הטלפון להתחברות שייך לחשבון צוות. השתמשו במספר אחר." };
+  }
+
   // A renewal token names the plan being renewed; an invalid one simply makes
   // this a fresh purchase for the same phone.
   let renewalOfPlanId: string | null = null;
   if (data.renewalToken) {
-    const secret = process.env.PLAN_RENEWAL_TOKEN_SECRET ?? "";
+    const secret = planTokenSecret();
     const verified = verifyRenewalToken(data.renewalToken, secret, Math.floor(Date.now() / 1000));
     renewalOfPlanId = verified?.planId ?? null;
   }

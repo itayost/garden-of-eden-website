@@ -1,3 +1,4 @@
+import { planTokenSecret } from "@/lib/plans/token-secret";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -59,7 +60,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
     }
   }
 
-  const secret = process.env.PLAN_RENEWAL_TOKEN_SECRET ?? "";
+  const secret = planTokenSecret();
   const agreementUrl = agreement
     ? `${SITE_URL}/join/agreement/${agreement.id}?t=${signAgreementToken(agreement.id, secret)}`
     : `${SITE_URL}/join`;
