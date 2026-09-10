@@ -353,6 +353,44 @@ Environment variables, all required at startup through `src/lib/env.ts`:
 Sandbox first: no production key enters Vercel until a sandbox payment has
 round-tripped through the webhook and created an account.
 
+## Section 5a: Payment pivot to Isracard (2026-09-10, after the first build)
+
+Decided with the owner after Sections 1 to 5 were implemented:
+
+- **Card charge moves to Isracard.** Isracard has no hosted page, so the site
+  gets its own card page at `/join/pay/[orderId]`. The parent reaches it from
+  the enrollment form (order row already inserted, status `pending`) and from
+  every renewal link. Card fields post to a server route over TLS; the server
+  calls Isracard once, stores only the transaction id, approval number, and
+  last four digits, and never logs or persists the PAN or CVV. PCI scope is
+  SAQ A-EP or D and sits with the business; if Isracard's docs offer a
+  tokenization iframe or JS SDK, that variant is preferred.
+- **Success path.** An approved charge runs the same claim-and-fulfill code
+  the Morning webhook used: `orders` moves `pending` to `paid` in one
+  conditional update, `fulfillOrder` creates the account and plan, then the
+  server creates the Morning document (type 320, חשבונית מס קבלה, payment
+  type credit card with the Isracard reference) and stores its id and url on
+  the order. WhatsApp confirmation follows. Morning's OAuth client stays;
+  `/payments/form` and the `payment/received` webhook go away once the card
+  page ships. `document/created` may stay as a fallback for the url.
+- **Failure path.** A declined charge leaves the order `pending` and shows the
+  Isracard reason on the card page; the parent may retry on the same order.
+  The daily cron still expires orders untouched for 24 hours.
+- **Renewal** stays month by month from a signed link; no card token is kept.
+- **Cancellation policy** lives at `/cancellation-policy`, drafted to חוק
+  הגנת הצרכן, linked from the landing footer, the terms, and the enrollment
+  declaration. Eden reviews the text before the draft suffix comes off.
+- **Two landing pages.** `/` stays the Haifa page; `/kiryat-ata` reuses its
+  sections with branch copy and price cards read from `plan_products`, and
+  every הצטרפו leads to `/join`.
+
+Blocked until Isracard sends the API documentation after reviewing the site.
+What the site needs to show for that review: business name, phone, email,
+and registration number (`content/cancellation-policy.ts`), terms, privacy,
+cancellation policy, prices in ILS including VAT, and a description of the
+service. The registration number and the קריית אתא address are still owed by
+the owner.
+
 ## Section 6: Error handling
 
 - Signature mismatch: 401, nothing stored.
