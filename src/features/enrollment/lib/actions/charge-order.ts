@@ -34,7 +34,16 @@ async function clientIp(): Promise<string> {
 export async function chargeOrderAction(input: CardPaymentInput): Promise<ChargeResult> {
   const limit = await checkRateLimit(`ip:${await clientIp()}`, "payment");
   waitUntil(limit.pending);
-  if (limit.rateLimited) return { error: "יותר מדי ניסיונות. נסו שוב בעוד שעה." };
+  if (limit.rateLimited) {
+    // limit 0 means the limiter itself is unavailable (no Redis): say so
+    // rather than blame the parent for attempts they never made.
+    return {
+      error:
+        limit.limit === 0
+          ? "מערכת התשלום אינה זמינה כרגע. נסו שוב בעוד מספר דקות או כתבו לנו בוואטסאפ."
+          : "יותר מדי ניסיונות. נסו שוב בעוד שעה.",
+    };
+  }
 
   const parsed = cardPaymentSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "פרטי הכרטיס לא תקינים" };
