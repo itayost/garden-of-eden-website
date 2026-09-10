@@ -1,6 +1,7 @@
 "use server";
 
 import { phoneVariants } from "@/lib/plans/phone-variants";
+import { isMorningConfigured } from "@/lib/morning/config";
 import { planTokenSecret } from "@/lib/plans/token-secret";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -37,6 +38,12 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
   const limit = await checkRateLimit(`ip:${ip}`, "payment");
   waitUntil(limit.pending);
   if (limit.rateLimited) return { error: "יותר מדי ניסיונות. נסו שוב בעוד שעה." };
+
+  // The landing page is live before the payment provider is: say so in
+  // Hebrew instead of failing after the parent typed the whole agreement.
+  if (!isMorningConfigured()) {
+    return { error: "התשלום באתר ייפתח בקרוב. בינתיים אפשר להירשם בוואטסאפ 052-577-9446." };
+  }
 
   const validated = enrollmentSchema.safeParse(input);
   if (!validated.success) {

@@ -23,6 +23,15 @@ export interface MorningConfig {
   documentType: number;
 }
 
+/** True once the three Morning secrets are set; the checkout refuses politely until then. */
+export function isMorningConfigured(): boolean {
+  return Boolean(
+    process.env.MORNING_CLIENT_ID?.trim() &&
+      process.env.MORNING_CLIENT_SECRET?.trim() &&
+      process.env.MORNING_WEBHOOK_SECRET?.trim(),
+  );
+}
+
 export function getMorningConfig(): MorningConfig {
   const env = process.env.MORNING_ENV === "production" ? "production" : "sandbox";
   const clientId = process.env.MORNING_CLIENT_ID?.trim();

@@ -168,8 +168,9 @@ GROW_USER_ID, GROW_PAGE_CODE, GROW_API_URL, GROW_WEBHOOK_SECRET, GROW_PROCESS_TO
 REMOVEBG_API_KEY
 UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
 CRON_SECRET
-MORNING_ENV, MORNING_CLIENT_ID, MORNING_CLIENT_SECRET, MORNING_WEBHOOK_SECRET, PLAN_RENEWAL_TOKEN_SECRET
 ```
+
+`PLAN_RENEWAL_TOKEN_SECRET` signs renewal and agreement links and must be set in production; the app starts without it but those links throw. Optional until the payment provider is wired: `MORNING_ENV`, `MORNING_CLIENT_ID`, `MORNING_CLIENT_SECRET`, `MORNING_WEBHOOK_SECRET`. Without them `/join` shows a Hebrew notice instead of a payment page.
 
 Startup validation in `src/lib/env.ts` (called via `src/instrumentation.ts`) fails fast if any required var is missing.
 
