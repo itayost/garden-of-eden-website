@@ -5,13 +5,16 @@ import {
   CalendarRange,
   ClipboardCheck,
   Clock,
+  CreditCard,
   Dumbbell,
   FileText,
   GraduationCap,
   LayoutDashboard,
   ListChecks,
   MapPin,
+  Receipt,
   RefreshCw,
+  ShieldAlert,
   Target,
   Users,
   UserPlus,
@@ -32,6 +35,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     label: "שחקנים",
     items: [
       { href: "/admin/users", label: "משתמשים", icon: Users, mobilePrimary: true, mobileOrder: 2 },
+      { href: "/admin/plans", label: "מסלולים", icon: CreditCard, adminOnly: true, mobileOrder: 6 },
       { href: "/admin/assessments", label: "מבדקים", icon: Target, mobilePrimary: true, mobileOrder: 3 },
       { href: "/admin/nutrition", label: "תזונה", icon: Utensils, mobileOrder: 5 },
       { href: "/admin/submissions", label: "שאלונים", icon: FileText, mobilePrimary: true, mobileOrder: 4 },
@@ -55,6 +59,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
       { href: "/admin/tasks", label: "משימות", icon: ListChecks, mobileOrder: 5 },
       { href: "/admin/end-of-shift", label: "דוח משמרת", icon: ClipboardCheck, mobileOrder: 3 },
       { href: "/admin/shifts", label: "שעות עבודה", icon: Clock, mobileOrder: 4 },
+      { href: "/admin/safety", label: "נוהל בטיחות", icon: ShieldAlert, mobileOrder: 6 },
     ],
   },
   {
@@ -62,6 +67,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/leads", label: "לידים", icon: UserPlus, mobileOrder: 1 },
       { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw, mobileOrder: 6 },
+      { href: "/admin/orders", label: "הזמנות", icon: Receipt, adminOnly: true, mobileOrder: 7 },
     ],
   },
   {
@@ -76,4 +82,5 @@ export const ADMIN_NAV_FLAT: NavItem[] = ADMIN_NAV_SECTIONS.flatMap((s) => s.ite
 
 export const ADMIN_PAGE_TITLES = derivePageTitles(ADMIN_NAV_FLAT, {
   "/admin/reports/generate": "סיכום שחקן",
+  "/admin/plans/products": "קטלוג מסלולים",
 });
