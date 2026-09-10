@@ -36,6 +36,7 @@ import {
   toLocalTimeValue as toLocalTime,
 } from "./ShiftPeriodSelect";
 import type { TrainerShift } from "@/types/database";
+import type { BranchOption } from "@/types/branches";
 
 export interface ShiftFormTrainer {
   id: string;
@@ -46,6 +47,7 @@ interface ShiftFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trainers: ShiftFormTrainer[];
+  branches: BranchOption[];
   editShift?: TrainerShift;
 }
 
@@ -53,12 +55,14 @@ export function ShiftFormDialog({
   open,
   onOpenChange,
   trainers,
+  branches,
   editShift,
 }: ShiftFormDialogProps) {
   const router = useRouter();
   const isEdit = !!editShift;
 
   const [trainerId, setTrainerId] = useState(editShift?.trainer_id ?? "");
+  const [branchId, setBranchId] = useState<string>(editShift?.branch_id ?? "");
   const [shiftPeriod, setShiftPeriod] = useState<ShiftPeriod>(
     editShift?.shift_period ?? "regular"
   );
@@ -78,6 +82,7 @@ export function ShiftFormDialog({
   const resetForm = () => {
     if (!isEdit) {
       setTrainerId("");
+      setBranchId("");
       setShiftPeriod("regular");
       setDate("");
       setStartTime("");
@@ -132,12 +137,14 @@ export function ShiftFormDialog({
             startTime: startISO,
             endTime: endISO,
             shiftPeriod,
+            branchId: branchId || null,
           })
         : await adminCreateShiftAction({
             trainerId,
             startTime: startISO,
             endTime: endISO,
             shiftPeriod,
+            branchId: branchId || null,
           });
 
       if (result.error) {
@@ -199,6 +206,26 @@ export function ShiftFormDialog({
               </Select>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label>סניף</Label>
+            <Select
+              value={branchId || "none"}
+              onValueChange={(v) => setBranchId(v === "none" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="ללא סניף" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">ללא סניף</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.nameHe}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <ShiftPeriodSelect
             id="shift-period"

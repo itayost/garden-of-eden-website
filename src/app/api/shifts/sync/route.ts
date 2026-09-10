@@ -3,10 +3,13 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { inferShiftPeriod, isSaturdayInIsrael } from "@/lib/utils/israel-time";
 import { resolveTimestamp } from "@/lib/utils/resolve-timestamp";
 import { MAX_SHIFT_HOURS } from "@/lib/constants/shifts";
+import { pickClockInBranch } from "@/lib/branches/clock-in-branch";
+import { isValidUUID } from "@/lib/validations/common";
 
 interface SyncAction {
   type: "clock_in" | "clock_out";
   clientTimestamp: string;
+  branchId?: string | null;
 }
 
 /**
@@ -52,6 +55,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "No actions" }, { status: 400 });
   }
 
+  const { data: membershipRows } = (await typedFrom(supabase, "profile_branches")
+    .select("branch_id")
+    .eq("profile_id", user.id)) as { data: { branch_id: string }[] | null };
+  const ownBranchIds = (membershipRows ?? []).map((row) => row.branch_id);
+
   // Cap at 10 actions per request to prevent abuse
   const toProcess = actions.slice(0, 10);
   const results: { type: string; status: string; error?: string }[] = [];
@@ -96,6 +104,15 @@ export async function POST(request: Request) {
         continue;
       }
 
+      const requestedBranch =
+        typeof action.branchId === "string" && isValidUUID(action.branchId)
+          ? action.branchId
+          : null;
+      const pick = pickClockInBranch(ownBranchIds, requestedBranch);
+      // A replayed clock-in must never be dropped over its branch: record it
+      // without one rather than lose the hours.
+      const branchId = pick.ok ? pick.branchId : null;
+
       // Classify from the resolved timestamp: these actions were queued
       // offline and are replaying now, so now() is the wrong clock to use.
       const { error: insertError } = await supabase
@@ -105,6 +122,7 @@ export async function POST(request: Request) {
           trainer_name: (profile.full_name as string) || "מאמן",
           start_time: timestamp.value,
           shift_period: inferShiftPeriod(new Date(timestamp.value)),
+          branch_id: branchId,
         });
 
       if (insertError) {

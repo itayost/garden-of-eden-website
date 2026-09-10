@@ -37,6 +37,7 @@ import {
   ShiftFormDialog,
   type ShiftFormTrainer,
 } from "@/components/admin/shifts/ShiftFormDialog";
+import type { BranchOption } from "@/types/branches";
 import { EditShiftRequestDialog } from "@/components/admin/shifts/EditShiftRequestDialog";
 import { ShiftOtherPurposeDialog } from "@/components/admin/shifts/ShiftOtherPurposeDialog";
 import { splitShiftMinutes } from "@/lib/utils/shift-other-purpose";
@@ -49,6 +50,10 @@ interface TrainerShiftsViewProps {
   year: number;
   isAdmin: boolean;
   trainers?: ShiftFormTrainer[];
+  /** Active branches for the admin shift form. */
+  branches?: BranchOption[];
+  /** branch id -> Hebrew name, for the badge on each shift row. */
+  branchNames: Record<string, string>;
 }
 
 interface TrainerSummary {
@@ -143,6 +148,8 @@ export function TrainerShiftsView({
   year,
   isAdmin,
   trainers = [],
+  branches,
+  branchNames,
 }: TrainerShiftsViewProps) {
   const router = useRouter();
   const [expandedTrainer, setExpandedTrainer] = useState<string | null>(null);
@@ -372,6 +379,11 @@ export function TrainerShiftsView({
                                   בוקר
                                 </Badge>
                               )}
+                              {shift.branch_id && branchNames[shift.branch_id] && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {branchNames[shift.branch_id]}
+                                </Badge>
+                              )}
                               {shift.auto_ended && (
                                 <Badge variant="outline" className="text-xs">אוטומטי</Badge>
                               )}
@@ -564,6 +576,11 @@ export function TrainerShiftsView({
                                   בוקר
                                 </Badge>
                               )}
+                              {shift.branch_id && branchNames[shift.branch_id] && (
+                                <Badge variant="secondary" className="ms-2 text-xs">
+                                  {branchNames[shift.branch_id]}
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="font-mono text-sm">
                               {shift.end_time
@@ -703,6 +720,7 @@ export function TrainerShiftsView({
             open={showCreateDialog}
             onOpenChange={setShowCreateDialog}
             trainers={trainers}
+            branches={branches ?? []}
           />
           <ShiftFormDialog
             key={editingShift?.id ?? "edit"}
@@ -711,6 +729,7 @@ export function TrainerShiftsView({
               if (!open) setEditingShift(null);
             }}
             trainers={trainers}
+            branches={branches ?? []}
             editShift={editingShift ?? undefined}
           />
         </>

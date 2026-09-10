@@ -19,13 +19,26 @@ import {
   normalizeShiftPeriod,
 } from "@/lib/validations/shift-change-requests";
 import { validateOtherPurpose } from "@/lib/utils/shift-other-purpose";
+import { pickClockInBranch } from "@/lib/branches/clock-in-branch";
 
 type ActionResult =
   | { error: string; success?: never }
   | { success: true; error?: never };
 
+/** The caller's own memberships, readable through RLS with the user client. */
+async function loadOwnBranchIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<string[]> {
+  const { data } = (await typedFrom(supabase, "profile_branches")
+    .select("branch_id")
+    .eq("profile_id", userId)) as { data: { branch_id: string }[] | null };
+  return (data ?? []).map((row) => row.branch_id);
+}
+
 export async function clockInAction(
-  clientTimestamp?: string
+  clientTimestamp?: string,
+  branchId?: string | null,
 ): Promise<ActionResult> {
   const result = await verifyAdminOrTrainer();
   if (result.error) return { error: result.error };
@@ -51,6 +64,10 @@ export async function clockInAction(
     return { error: "כבר יש לך משמרת פעילה" };
   }
 
+  if (branchId && !isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const pick = pickClockInBranch(await loadOwnBranchIds(supabase, user.id), branchId);
+  if (!pick.ok) return { error: "הסניף אינו בסניפים שלך" };
+
   const timestamp = resolveTimestamp(clientTimestamp);
   if ("error" in timestamp) return { error: timestamp.error };
 
@@ -63,6 +80,7 @@ export async function clockInAction(
       trainer_name: profile.full_name || "מאמן",
       start_time: timestamp.value,
       shift_period: inferShiftPeriod(new Date(timestamp.value)),
+      branch_id: pick.branchId,
     });
 
   if (insertError) {
@@ -248,8 +266,10 @@ export async function adminCreateShiftAction(data: {
   startTime: string;
   endTime: string;
   shiftPeriod?: ShiftPeriod;
+  branchId?: string | null;
 }): Promise<ActionResult> {
   if (!isValidUUID(data.trainerId)) return { error: "מזהה מאמן לא תקין" };
+  if (data.branchId && !isValidUUID(data.branchId)) return { error: "מזהה סניף לא תקין" };
 
   const { error } = await verifyAdmin();
   if (error) return { error };
@@ -307,6 +327,7 @@ export async function adminCreateShiftAction(data: {
       start_time: data.startTime,
       end_time: data.endTime,
       shift_period: shiftPeriod,
+      branch_id: data.branchId ?? null,
     });
 
   if (insertError) {
@@ -323,8 +344,10 @@ export async function adminEditShiftAction(data: {
   startTime: string;
   endTime: string;
   shiftPeriod?: ShiftPeriod;
+  branchId?: string | null;
 }): Promise<ActionResult> {
   if (!isValidUUID(data.shiftId)) return { error: "מזהה משמרת לא תקין" };
+  if (data.branchId && !isValidUUID(data.branchId)) return { error: "מזהה סניף לא תקין" };
 
   const { error } = await verifyAdmin();
   if (error) return { error };
@@ -391,6 +414,7 @@ export async function adminEditShiftAction(data: {
       start_time: data.startTime,
       end_time: data.endTime,
       shift_period: shiftPeriod,
+      ...(data.branchId !== undefined && { branch_id: data.branchId }),
     })
     .eq("id", data.shiftId);
 
