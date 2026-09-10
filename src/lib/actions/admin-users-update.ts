@@ -12,6 +12,8 @@ import {
   replaceProfileBranches,
 } from "@/features/branches/lib/memberships";
 import { branchFieldChange } from "@/lib/branches/branch-change";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { isTraineeInScope, OUT_OF_SCOPE_TRAINEE_ERROR } from "@/features/branches/lib/memberships";
 
 type ActionResult =
   | { success: true; userId?: string; message?: string }
@@ -69,6 +71,11 @@ export async function updateUserAction(
       }
       if (role !== targetProfile.role || is_active !== targetProfile.is_active) {
         return { error: "מאמנים לא יכולים לשנות תפקיד או סטטוס" };
+      }
+      const scopeResult = await getBranchScopeAction();
+      if ("error" in scopeResult) return { error: scopeResult.error };
+      if (!(await isTraineeInScope(adminClient, scopeResult.data.scope, userId))) {
+        return { error: OUT_OF_SCOPE_TRAINEE_ERROR };
       }
     }
 

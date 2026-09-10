@@ -12,6 +12,9 @@ import type {
 } from "@/types/assessment";
 import { writeRatingSnapshot } from "../snapshot";
 import { grantAssessmentBadges } from "@/features/achievements/lib/actions/grant-assessment-badges";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isTraineeInScope, OUT_OF_SCOPE_TRAINEE_ERROR } from "@/features/branches/lib/memberships";
 
 interface AssessmentInsertInput {
   user_id: string;
@@ -48,6 +51,14 @@ interface RecordResult {
   error?: string;
 }
 
+/** Trainers may write assessments only for trainees in their branches. */
+async function assertTraineeInScope(traineeId: string): Promise<string | null> {
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return scopeResult.error;
+  const inScope = await isTraineeInScope(createAdminClient(), scopeResult.data.scope, traineeId);
+  return inScope ? null : OUT_OF_SCOPE_TRAINEE_ERROR;
+}
+
 /**
  * The single sanctioned way to insert a new player_assessments row.
  * After insert: writes a rating snapshot and grants any earned badges.
@@ -59,6 +70,9 @@ export async function recordAssessment(
 ): Promise<RecordResult> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError || !user) return { success: false, error: authError ?? "unauthorized" };
+
+  const scopeError = await assertTraineeInScope(input.user_id);
+  if (scopeError) return { success: false, error: scopeError };
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "player_assessments")
@@ -93,6 +107,15 @@ export async function updateAssessment(
   if (authError || !user) return { success: false, error: authError ?? "unauthorized" };
 
   const supabase = await createClient();
+  const { data: existing } = (await typedFrom(supabase, "player_assessments")
+    .select("user_id")
+    .eq("id", assessmentId)
+    .maybeSingle()) as { data: { user_id: string } | null };
+  if (!existing) return { success: false, error: "מבדק לא נמצא" };
+
+  const scopeError = await assertTraineeInScope(existing.user_id);
+  if (scopeError) return { success: false, error: scopeError };
+
   const { data, error } = await typedFrom(supabase, "player_assessments")
     .update({ ...patch, assessed_by: user.id })
     .eq("id", assessmentId)
