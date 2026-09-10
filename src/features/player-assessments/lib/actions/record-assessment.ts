@@ -12,9 +12,7 @@ import type {
 } from "@/types/assessment";
 import { writeRatingSnapshot } from "../snapshot";
 import { grantAssessmentBadges } from "@/features/achievements/lib/actions/grant-assessment-badges";
-import { getBranchScopeAction } from "@/lib/actions/shared";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { isTraineeInScope, OUT_OF_SCOPE_TRAINEE_ERROR } from "@/features/branches/lib/memberships";
+import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 
 interface AssessmentInsertInput {
   user_id: string;
@@ -49,14 +47,6 @@ interface RecordResult {
   success: boolean;
   data?: PlayerAssessment;
   error?: string;
-}
-
-/** Trainers may write assessments only for trainees in their branches. */
-async function assertTraineeInScope(traineeId: string): Promise<string | null> {
-  const scopeResult = await getBranchScopeAction();
-  if ("error" in scopeResult) return scopeResult.error;
-  const inScope = await isTraineeInScope(createAdminClient(), scopeResult.data.scope, traineeId);
-  return inScope ? null : OUT_OF_SCOPE_TRAINEE_ERROR;
 }
 
 /**

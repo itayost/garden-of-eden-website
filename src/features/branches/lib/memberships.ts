@@ -2,6 +2,8 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { isValidUUID } from "@/lib/validations/common";
+import { normalizePhone } from "@/lib/arbox/normalize-phone";
 import { isInBranchScope, type BranchScope } from "@/lib/branches/branch-scope";
 import type { Branch, BranchOption } from "@/types/branches";
 import { toBranchOption } from "@/types/branches";
@@ -92,11 +94,42 @@ export async function visibleProfileIds(
   filterBranchId: string | undefined,
 ): Promise<string[] | null> {
   const scoped = await scopedProfileIds(db, scope);
-  if (!filterBranchId) return scoped;
+  // A hand-typed ?branch= that is not a uuid is ignored, not sent to Postgres.
+  if (!filterBranchId || !isValidUUID(filterBranchId)) return scoped;
 
   const members = await listProfileIdsInBranches(db, [filterBranchId]);
   if (scoped === null) return members;
   return scoped.filter((id) => members.includes(id));
+}
+
+/**
+ * Normalized phones of the trainees a scope may see, or null for no
+ * restriction. Retention rows come from Arbox keyed by phone, not profile id.
+ */
+export async function visibleTraineePhones(
+  db: SupabaseClient,
+  scope: BranchScope,
+): Promise<Set<string> | null> {
+  const ids = await scopedProfileIds(db, scope);
+  if (ids === null) return null;
+  if (ids.length === 0) return new Set();
+
+  const { data, error } = await db
+    .from("profiles")
+    .select("phone")
+    .in("id", ids)
+    .not("phone", "is", null);
+
+  if (error) {
+    console.error("visibleTraineePhones error:", error);
+    return new Set();
+  }
+
+  return new Set(
+    (data ?? [])
+      .map((row) => normalizePhone(row.phone))
+      .filter((phone): phone is string => phone !== null),
+  );
 }
 
 /** True when the caller's scope covers this trainee. */

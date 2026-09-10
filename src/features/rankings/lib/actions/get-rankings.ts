@@ -64,6 +64,10 @@ export async function getRankingsData(
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Nothing below the login gate should touch the service role: an
+  // unauthenticated call gets the empty shape and no membership read.
+  if (!user) return createEmptyRankingsData(category, ageGroupId, ALL_BRANCHES);
+
   // A branch slices the trainee set before anything is ranked. An unknown
   // branch, or one with no members, falls back to the whole academy so nobody
   // sees an empty page during rollout.

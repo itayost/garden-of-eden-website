@@ -131,10 +131,12 @@ export function UserDataTable({
     initialState: { pagination: { pageSize: 10 } },
   });
 
-  const selectedUserIds = useMemo(
-    () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
-    [rowSelection],
-  );
+  // A row ticked before a filter change may no longer be on screen; the bulk
+  // action only touches users the admin can currently see.
+  const selectedUserIds = useMemo(() => {
+    const visible = new Set(filteredData.map((user) => user.id));
+    return Object.keys(rowSelection).filter((id) => rowSelection[id] && visible.has(id));
+  }, [rowSelection, filteredData]);
 
   // Handle row click - navigate to user profile
   const handleRowClick = useCallback(

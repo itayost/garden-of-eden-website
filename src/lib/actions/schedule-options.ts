@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
 import { isValidUUID } from "@/lib/validations/common";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listProfileIdsInBranches } from "@/features/branches/lib/memberships";
@@ -32,6 +33,8 @@ export const getSlotFormOptionsAction = cache(
     const { error: authError } = await verifyAdminOrTrainer();
     if (authError) return { error: authError };
     if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+    const scopeCheck = await assertBranchReadable(branchId);
+    if (scopeCheck.error) return { error: scopeCheck.error };
 
     const supabase = createAdminClient();
     const memberIds = await listProfileIdsInBranches(supabase, [branchId]);

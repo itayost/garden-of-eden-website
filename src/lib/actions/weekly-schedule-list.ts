@@ -1,6 +1,7 @@
 "use server";
 
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { deriveOnDuty } from "@/lib/utils/weekly-schedule";
@@ -33,6 +34,8 @@ export async function getBandsAction(branchId: string): Promise<BandsResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "weekly_schedule_bands")
@@ -63,6 +66,8 @@ export async function getWeeklyScheduleAction(
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   if (!isValidDateString(fromDate) || !isValidDateString(toDate)) {
     return { error: "תאריך לא תקין" };
@@ -80,7 +85,7 @@ export async function getWeeklyScheduleAction(
       .order("trainer_name", { ascending: true }),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
-      .eq("branch_id", branchId)
+      .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .gte("exception_date", fromDate)
       .lte("exception_date", toDate)
       .order("exception_date", { ascending: true })
@@ -120,6 +125,8 @@ export async function getOnDutyAction(
 
   if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
   if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   const supabase = await createClient();
 
@@ -129,7 +136,7 @@ export async function getOnDutyAction(
       .eq("branch_id", branchId),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
-      .eq("branch_id", branchId)
+      .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .eq("exception_date", date),
   ]);
 
@@ -170,6 +177,8 @@ export async function getExceptionsInRangeAction(
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   if (!isValidDateRange(fromDate, toDate)) {
     return { error: "טווח תאריכים לא תקין" };
@@ -178,7 +187,7 @@ export async function getExceptionsInRangeAction(
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "weekly_schedule_exceptions")
     .select("*")
-    .eq("branch_id", branchId)
+    .or(`branch_id.eq.${branchId},kind.eq.absent`)
     .gte("exception_date", fromDate)
     .lte("exception_date", toDate)
     .order("exception_date", { ascending: true })

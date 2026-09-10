@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { isValidUUID } from "@/lib/validations/common";
 import {
   extractTraineeNotes,
@@ -32,6 +33,9 @@ export async function getTraineeNotes(
   if (authError) {
     return { error: authError, data: [] };
   }
+
+  const scopeError = await assertTraineeInScope(traineeId);
+  if (scopeError) return { error: scopeError, data: [] };
 
   const supabase = await createClient();
 
@@ -109,6 +113,9 @@ export async function deleteTraineeNote(
 
   const { error: authError, user, profile } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
+
+  const scopeError = await assertTraineeInScope(traineeId);
+  if (scopeError) return { error: scopeError };
 
   const supabase = await createClient();
 
@@ -191,6 +198,9 @@ export async function editTraineeNote(
 
   const { error: authError, user, profile } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
+
+  const scopeError = await assertTraineeInScope(traineeId);
+  if (scopeError) return { error: scopeError };
 
   const supabase = await createClient();
 

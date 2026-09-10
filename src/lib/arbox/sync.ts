@@ -2,7 +2,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAllArboxUsers, fetchArboxBirthdays, type ArboxUser } from "./client";
 import { normalizePhone } from "./normalize-phone";
 import { matchArboxBranch } from "@/lib/branches/arbox-branch-match";
-import { loadAllBranches, replaceProfileBranches } from "@/features/branches/lib/memberships";
+import {
+  loadAllBranches,
+  loadBranchIdsByProfile,
+  replaceProfileBranches,
+} from "@/features/branches/lib/memberships";
 import type { Branch } from "@/types/branches";
 
 export type SyncResult = {
@@ -37,6 +41,11 @@ async function applyArboxBranch(
   if (setByAdminAt) return;
   const branch = matchArboxBranch(locationName, branches);
   if (!branch) return;
+
+  // Idempotent: a profile already in exactly this branch is left alone, so a
+  // nightly run costs no writes once memberships have settled.
+  const current = (await loadBranchIdsByProfile(supabase, [profileId])).get(profileId) ?? [];
+  if (current.length === 1 && current[0] === branch.id) return;
 
   const { error } = await replaceProfileBranches(supabase, profileId, [branch.id], {
     stampAdmin: false,

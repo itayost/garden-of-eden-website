@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Brain, FileText, Salad, ClipboardCheck } from "lucide-react";
@@ -35,14 +36,22 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
   // Trainers see forms from their branches only. Admins (and an unassigned
   // trainer, who fails open) get a branch filter that narrows the same way.
   const scopeResult = await getBranchScopeAction();
-  const scope = "success" in scopeResult ? scopeResult.data.scope : { kind: "all" as const };
+  // A failed scope read must not widen a trainer's view to the whole academy.
+  if ("error" in scopeResult) redirect("/dashboard");
+  const scope = scopeResult.data.scope;
   const showBranchFilter = scope.kind === "all";
   const visibleIds = await visibleProfileIds(createAdminClient(), scope, branch);
   const branches = showBranchFilter ? await listActiveBranchOptionsAction() : [];
+  // PostgREST rejects `in.()`; an empty visible set means "nothing", so the
+  // filter uses an id that cannot match instead of an empty list.
+  const NO_MATCH = "00000000-0000-4000-8000-000000000000";
   const narrow = <T,>(q: T): T =>
     visibleIds === null
       ? q
-      : (q as { in: (c: string, v: string[]) => T }).in("user_id", visibleIds);
+      : (q as { in: (c: string, v: string[]) => T }).in(
+          "user_id",
+          visibleIds.length === 0 ? [NO_MATCH] : visibleIds,
+        );
 
   // Fetch page 0 for each tab + exact counts (much less data than .limit(200))
   const [
@@ -120,6 +129,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
 
         <TabsContent value="pre-workout">
           <PreWorkoutContent
+            key={branch ?? "all"}
             initialItems={preWorkout || []}
             initialTotal={preWorkoutCount || 0}
             branchId={branch}
@@ -128,6 +138,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
 
         <TabsContent value="post-workout">
           <PostWorkoutContent
+            key={branch ?? "all"}
             initialItems={postWorkout || []}
             initialTotal={postWorkoutCount || 0}
             branchId={branch}
@@ -136,6 +147,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
 
         <TabsContent value="nutrition">
           <NutritionContent
+            key={branch ?? "all"}
             initialItems={nutrition || []}
             initialTotal={nutritionCount || 0}
             branchId={branch}
@@ -151,6 +163,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
 
         <TabsContent value="mental">
           <MentalContent
+            key={branch ?? "all"}
             initialItems={mental || []}
             initialTotal={mentalCount || 0}
             branchId={branch}

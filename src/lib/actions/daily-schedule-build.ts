@@ -105,7 +105,7 @@ export async function buildDayFromWeeklyScheduleAction(
     typedFrom(supabase, "weekly_schedule_bands").select("*").eq("branch_id", branchId),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
-      .eq("branch_id", branchId)
+      .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .eq("exception_date", date),
   ]);
 
@@ -199,7 +199,7 @@ export async function buildWeekFromWeeklyScheduleAction(
     typedFrom(supabase, "weekly_schedule_bands").select("*").eq("branch_id", branchId),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
-      .eq("branch_id", branchId)
+      .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .gte("exception_date", weekStart)
       .lte("exception_date", weekEnd),
   ]);

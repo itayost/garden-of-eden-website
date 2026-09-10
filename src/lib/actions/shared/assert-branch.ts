@@ -30,3 +30,19 @@ export async function assertBranchWritable(
   if (!data) return { error: "הסניף לא נמצא או אינו פעיל" };
   return { error: null };
 }
+
+/**
+ * A read may target a branch only when it is in the caller's scope. Unlike
+ * assertBranchWritable this does not require the branch to be active: a
+ * deactivated branch's history is still readable by whoever belonged to it.
+ */
+export async function assertBranchReadable(
+  branchId: string,
+): Promise<{ error: string | null }> {
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return { error: scopeResult.error };
+  if (!isInBranchScope(scopeResult.data.scope, [branchId])) {
+    return { error: "הסניף אינו בסניפים שלך" };
+  }
+  return { error: null };
+}

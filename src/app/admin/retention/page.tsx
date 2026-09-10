@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import {
   getRetentionReportMonths,
   getRetentionReport,
@@ -61,7 +62,9 @@ export default async function RetentionPage() {
   // Retention rows come from Arbox keyed by phone, so a trainer's scope maps
   // their visible trainees to phones and the client filters the entries.
   const scopeResult = await getBranchScopeAction();
-  const scope = "success" in scopeResult ? scopeResult.data.scope : { kind: "all" as const };
+  // A failed scope read must not widen a trainer's view to the whole academy.
+  if ("error" in scopeResult) redirect("/dashboard");
+  const scope = scopeResult.data.scope;
   const scopedIds = await scopedProfileIds(adminClient, scope);
   const visiblePhones =
     scopedIds === null

@@ -29,6 +29,11 @@ export const getBranchScopeAction = cache(async (): Promise<BranchScopeResult> =
   const { error, user, profile } = await verifyAdminOrTrainer();
   if (error) return { error };
 
+  // Admins skip the read: their scope is "all" whatever they belong to.
+  if (profile!.role === "admin") {
+    return { success: true, data: { scope: ALL_BRANCHES_SCOPE, memberBranchIds: [] } };
+  }
+
   const supabase = await createClient();
   const { data, error: readError } = (await typedFrom(supabase, "profile_branches")
     .select("branch_id")
@@ -43,10 +48,7 @@ export const getBranchScopeAction = cache(async (): Promise<BranchScopeResult> =
   }
 
   const memberBranchIds = (data ?? []).map((row) => row.branch_id);
-  const scope =
-    profile!.role === "admin"
-      ? ALL_BRANCHES_SCOPE
-      : resolveBranchScope(profile!.role, memberBranchIds);
+  const scope = resolveBranchScope(profile!.role, memberBranchIds);
 
   return { success: true, data: { scope, memberBranchIds } };
 });

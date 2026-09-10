@@ -12,6 +12,7 @@ import {
   replaceProfileBranches,
 } from "@/features/branches/lib/memberships";
 import { branchFieldChange } from "@/lib/branches/branch-change";
+import type { BranchScope } from "@/lib/branches/branch-scope";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { isTraineeInScope, OUT_OF_SCOPE_TRAINEE_ERROR } from "@/features/branches/lib/memberships";
 
@@ -64,6 +65,7 @@ export async function updateUserAction(
       return { error: "משתמש לא נמצא" };
     }
 
+    let trainerScope: BranchScope | null = null;
     // 5. Trainers can only edit trainees, and cannot change role/is_active
     if (callerProfile?.role === "trainer") {
       if (targetProfile.role !== "trainee") {
@@ -77,6 +79,7 @@ export async function updateUserAction(
       if (!(await isTraineeInScope(adminClient, scopeResult.data.scope, userId))) {
         return { error: OUT_OF_SCOPE_TRAINEE_ERROR };
       }
+      trainerScope = scopeResult.data.scope;
     }
 
     // 6. Prevent self-modification of role or is_active
@@ -92,9 +95,18 @@ export async function updateUserAction(
       loadBranchOptions(adminClient),
     ]);
     const originalBranchIds = membershipMap.get(userId) ?? [];
+    // A trainer may only toggle their own branches: memberships outside the
+    // trainer's scope are carried over untouched, whatever the form sent.
+    const nextBranchIds =
+      trainerScope && trainerScope.kind === "branches"
+        ? [
+            ...originalBranchIds.filter((id) => !trainerScope.ids.includes(id)),
+            ...branch_ids.filter((id) => trainerScope.ids.includes(id)),
+          ]
+        : branch_ids;
     const branchChange = branchFieldChange(
       branchNamesFor(originalBranchIds, branchOptions),
-      branchNamesFor(branch_ids, branchOptions),
+      branchNamesFor(nextBranchIds, branchOptions),
     );
 
     const changes = [
@@ -150,7 +162,7 @@ export async function updateUserAction(
       const { error: branchError } = await replaceProfileBranches(
         adminClient,
         userId,
-        branch_ids,
+        nextBranchIds,
         { stampAdmin: true },
       );
       if (branchError) return { error: branchError };

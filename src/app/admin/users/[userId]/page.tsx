@@ -27,6 +27,9 @@ import type { Profile, UserRole } from "@/types/database";
 import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { allowedBranches } from "@/lib/branches/resolve-branch";
+import { isTraineeInScope } from "@/features/branches/lib/memberships";
 
 interface UserEditPageProps {
   params: Promise<{ userId: string }>;
@@ -81,10 +84,21 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
 
   // Memberships read through the service role: a trainer cannot read another
   // user's profile_branches rows through RLS, and this page is already gated.
-  const [branches, membershipMap] = await Promise.all([
+  const adminClient = createAdminClient();
+  const [activeBranches, membershipMap, scopeResult] = await Promise.all([
     listActiveBranchOptionsAction(),
-    loadBranchIdsByProfile(createAdminClient(), [userId]),
+    loadBranchIdsByProfile(adminClient, [userId]),
+    getBranchScopeAction(),
   ]);
+  if ("error" in scopeResult) redirect("/admin/users");
+  const scope = scopeResult.data.scope;
+
+  // A trainer reaches only trainees in their branches, and may toggle only
+  // those branches on the form; the action preserves the rest.
+  if (!isAdmin && !(await isTraineeInScope(adminClient, scope, userId))) {
+    redirect("/admin/users");
+  }
+  const branches = allowedBranches(scope, activeBranches);
   const initialBranchIds = membershipMap.get(userId) ?? [];
 
   // Compute player ratings for radar chart (trainees only)

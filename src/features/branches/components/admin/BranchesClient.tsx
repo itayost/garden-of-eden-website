@@ -163,7 +163,9 @@ export function BranchesClient({ initialBranches }: BranchesClientProps) {
         </Button>
       </div>
 
-      <BranchDialog open={addOpen} onClose={() => setAddOpen(false)} onSaved={refresh} />
+      {addOpen && (
+        <BranchDialog open onClose={() => setAddOpen(false)} onSaved={refresh} />
+      )}
 
       {editBranch && (
         <BranchDialog

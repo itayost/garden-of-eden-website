@@ -8,10 +8,14 @@ import { UserImportDialog } from "@/components/admin/users/UserImportDialog";
 import { UserExportButton } from "@/components/admin/users/UserExportButton";
 import type { Profile } from "@/types/database";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { loadAllBranches, loadBranchIdsByProfile, branchNamesFor } from "@/features/branches/lib/memberships";
+import {
+  branchNamesFor,
+  loadAllBranches,
+  loadBranchIdsByProfile,
+  scopedProfileIds,
+} from "@/features/branches/lib/memberships";
 import { toBranchOption, type ProfileWithBranches } from "@/types/branches";
 import { getBranchScopeAction } from "@/lib/actions/shared";
-import { scopedProfileIds } from "@/features/branches/lib/memberships";
 
 export const metadata: Metadata = {
   title: "ניהול משתמשים | Garden of Eden",
@@ -57,19 +61,23 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   // in their branches only.
   const adminClient = createAdminClient();
   const scopeResult = await getBranchScopeAction();
-  const scope = "success" in scopeResult ? scopeResult.data.scope : { kind: "all" as const };
-  const scopedIds = isAdmin ? null : await scopedProfileIds(adminClient, scope);
+  // A failed scope read must not widen a trainer's view to the whole academy.
+  if ("error" in scopeResult) redirect("/dashboard");
+  const scopedIds = isAdmin ? null : await scopedProfileIds(adminClient, scopeResult.data.scope);
 
   let query = supabase.from("profiles").select("*");
   if (!isAdmin) {
     query = query.eq("role", "trainee");
   }
-  if (scopedIds !== null) {
+  if (scopedIds !== null && scopedIds.length > 0) {
     query = query.in("id", scopedIds);
   }
-  const { data: users, error } = await query.order("created_at", {
-    ascending: false,
-  });
+  // An empty scope is a real answer (the trainer's branches have no members);
+  // skip the query rather than send `.in("id", [])`.
+  const { data: users, error } =
+    scopedIds !== null && scopedIds.length === 0
+      ? { data: [], error: null }
+      : await query.order("created_at", { ascending: false });
 
   if (error) {
     console.error("Failed to fetch users:", error);

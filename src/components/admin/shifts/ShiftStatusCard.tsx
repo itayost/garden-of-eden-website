@@ -365,9 +365,9 @@ export function ShiftStatusCard({ initialShift, branchOptions }: ShiftStatusCard
                     className="min-w-[140px]"
                   >
                     {loading ? (
-                      <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+                      <Loader2 className="h-4 w-4 me-2 animate-spin" />
                     ) : (
-                      <PlayCircle className="h-4 w-4 ml-2" />
+                      <PlayCircle className="h-4 w-4 me-2" />
                     )}
                     התחל משמרת
                   </Button>

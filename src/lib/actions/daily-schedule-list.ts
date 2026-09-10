@@ -1,6 +1,7 @@
 "use server";
 
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidDateString, isValidUUID } from "@/lib/validations/common";
@@ -22,6 +23,8 @@ export async function getScheduleAction(
 
   if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
   if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "daily_schedule_slots")
@@ -61,6 +64,8 @@ export async function getSlotsForWeekAction(
 
   if (!isValidDateString(weekStart)) return { error: "תאריך לא תקין" };
   if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
 
   const supabase = await createClient();
   // idx_schedule_slots_date is (schedule_date, start_time), so the range scan
