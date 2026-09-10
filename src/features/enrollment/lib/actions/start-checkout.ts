@@ -1,7 +1,6 @@
 "use server";
 
 import { phoneVariants } from "@/lib/plans/phone-variants";
-import { isMorningConfigured } from "@/lib/morning/config";
 import { planTokenSecret } from "@/lib/plans/token-secret";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -9,7 +8,6 @@ import { waitUntil } from "@vercel/functions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createPaymentForm } from "@/lib/morning/client";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import { verifyRenewalToken } from "@/lib/plans/renewal-token";
 import { israelToday } from "@/lib/utils/tasks";
@@ -19,8 +17,6 @@ import { loadProductById } from "../catalog";
 
 type StartResult = { error: string };
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.edengarden.co.il";
-
 async function clientIp(): Promise<string> {
   const h = await headers();
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -28,7 +24,7 @@ async function clientIp(): Promise<string> {
 
 /**
  * Validates the agreement, records a pending order and the signed agreement,
- * asks Morning for a payment page, and sends the parent there.
+ * and sends the parent to the site's own card page for that order.
  *
  * Unauthenticated by design: the parent has no account yet. The payment rate
  * limit (10 an hour per IP, fails closed) is the abuse guard.
@@ -38,12 +34,6 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
   const limit = await checkRateLimit(`ip:${ip}`, "payment");
   waitUntil(limit.pending);
   if (limit.rateLimited) return { error: "יותר מדי ניסיונות. נסו שוב בעוד שעה." };
-
-  // The landing page is live before the payment provider is: say so in
-  // Hebrew instead of failing after the parent typed the whole agreement.
-  if (!isMorningConfigured()) {
-    return { error: "התשלום באתר ייפתח בקרוב. בינתיים אפשר להירשם בוואטסאפ 052-577-9446." };
-  }
 
   const validated = enrollmentSchema.safeParse(input);
   if (!validated.success) {
@@ -140,24 +130,5 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
     return { error: "שגיאה בשמירת ההסכם" };
   }
 
-  const form = await createPaymentForm({
-    orderId: order.id,
-    description: `${product.name_he} - ${data.childName}`,
-    amountIls: product.price_ils,
-    client: { name: data.parentName, mobile: data.payerPhone, email: data.email },
-    successUrl: `${SITE_URL}/join/success?order=${order.id}`,
-    failureUrl: `${SITE_URL}/join/failed?order=${order.id}`,
-    notifyUrl: `${SITE_URL}/api/webhooks/morning/notify`,
-  });
-
-  if ("error" in form) {
-    await typedFrom(db, "orders").update({ status: "failed" }).eq("id", order.id);
-    return { error: `${form.error}. אפשר לפנות אלינו בוואטסאפ.` };
-  }
-
-  await typedFrom(db, "orders")
-    .update({ morning_payment_url: form.url })
-    .eq("id", order.id);
-
-  redirect(form.url);
+  redirect(`/join/pay/${order.id}`);
 }

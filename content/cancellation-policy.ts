@@ -8,14 +8,16 @@ export const CANCELLATION_POLICY_VERSION = "2026-09-draft";
 
 /** The business as it must appear on the page for the acquirer's review. */
 export const BUSINESS_DETAILS = {
-  name_he: "גארדן אוף עדן - אקדמיית כדורגל",
+  name_he: "גארדן אוף עדן",
   name_en: "Garden of Eden Soccer Academy",
+  owner: "עדן בן חמו",
+  legal_form: "עוסק מורשה",
+  registration_number: "558644365" as string | null,
+  address: "דרך חיפה 18, קריית אתא",
   phone: "052-577-9446",
   phone_e164: "+972525779446",
-  email: "gardenofeden22250@gmail.com",
+  email: "Gardenkrayot@gmail.com",
   city: "חיפה וקריית אתא",
-  /** ח.פ. / ע.מ. Set when Eden supplies it; rendered only when present. */
-  registration_number: null as string | null,
 } as const;
 
 export interface PolicySection {
@@ -65,7 +67,7 @@ export const CANCELLATION_SECTIONS: readonly PolicySection[] = [
   {
     title: "איך מבטלים",
     items: [
-      "בהודעת וואטסאפ או בשיחה לטלפון 052-577-9446, בדוא\"ל gardenofeden22250@gmail.com, או בדואר רשום לכתובת העסק.",
+      "בהודעת וואטסאפ או בשיחה לטלפון 052-577-9446, בדוא\"ל Gardenkrayot@gmail.com, או בדואר רשום לכתובת העסק: דרך חיפה 18, קריית אתא.",
       "בהודעה יש לציין: שם ההורה, שם החניך, טלפון, המסלול שנרכש ומועד הרכישה. נשלח אישור קבלה של הודעת הביטול עם מספר אסמכתא.",
       "ההחזר יבוצע לאמצעי התשלום שבו בוצעה העסקה, בתוך 14 ימים מקבלת הודעת הביטול. עסקה שבוצעה בכרטיס אשראי תזוכה באותו כרטיס.",
     ],

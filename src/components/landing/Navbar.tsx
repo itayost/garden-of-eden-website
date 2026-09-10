@@ -19,7 +19,19 @@ export interface BranchLink {
   href: string;
 }
 
-export function Navbar({ otherBranch }: { otherBranch?: BranchLink } = {}) {
+interface NavbarProps {
+  otherBranch?: BranchLink;
+  /** WhatsApp by default; "#services" scrolls to the plans on the same page. */
+  ctaHref?: string;
+  ctaLabel?: string;
+}
+
+export function Navbar({
+  otherBranch,
+  ctaHref = "https://wa.me/972525779446",
+  ctaLabel = "התחילו עכשיו",
+}: NavbarProps = {}) {
+  const ctaIsAnchor = ctaHref.startsWith("#");
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("#");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -127,9 +139,15 @@ export function Navbar({ otherBranch }: { otherBranch?: BranchLink } = {}) {
               className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-0 rounded-full px-4"
               asChild
             >
-              <a href="https://wa.me/972525779446" target="_blank" rel="noopener noreferrer">
-                התחילו עכשיו
-              </a>
+              {ctaIsAnchor ? (
+                <a href={ctaHref} onClick={(e) => handleNavClick(e, ctaHref)}>
+                  {ctaLabel}
+                </a>
+              ) : (
+                <a href={ctaHref} target="_blank" rel="noopener noreferrer">
+                  {ctaLabel}
+                </a>
+              )}
             </Button>
           </div>
 
@@ -199,9 +217,15 @@ export function Navbar({ otherBranch }: { otherBranch?: BranchLink } = {}) {
                   className="bg-[#CDEA68] hover:bg-[#bdd85c] text-black rounded-full px-8 py-6 text-lg font-medium"
                   asChild
                 >
-                  <a href="https://wa.me/972525779446" target="_blank" rel="noopener noreferrer">
-                    התחילו עכשיו
-                  </a>
+                  {ctaIsAnchor ? (
+                    <a href={ctaHref} onClick={(e) => handleNavClick(e, ctaHref)}>
+                      {ctaLabel}
+                    </a>
+                  ) : (
+                    <a href={ctaHref} target="_blank" rel="noopener noreferrer">
+                      {ctaLabel}
+                    </a>
+                  )}
                 </Button>
               </motion.div>
             </div>

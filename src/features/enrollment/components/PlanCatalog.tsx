@@ -25,7 +25,7 @@ export function PlanCatalog({ products, selectedId, onSelect }: PlanCatalogProps
   return (
     <div className="space-y-3">
     <p className="text-sm text-black/60">המחירים בשקלים חדשים וכוללים מע&quot;מ.</p>
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {products.map((product) => {
         const selected = product.id === selectedId;
         return (
@@ -35,7 +35,7 @@ export function PlanCatalog({ products, selectedId, onSelect }: PlanCatalogProps
             onClick={() => onSelect(product)}
             aria-pressed={selected}
             className={cn(
-              "flex h-full flex-col rounded-3xl border bg-white p-6 text-start transition-all",
+              "flex h-full flex-col rounded-2xl border bg-white p-4 text-start transition-all sm:p-6",
               selected
                 ? "border-2 border-[#CDEA68] shadow-lg"
                 : "border-black/10 hover:border-black/20 hover:shadow-md",
@@ -45,8 +45,8 @@ export function PlanCatalog({ products, selectedId, onSelect }: PlanCatalogProps
             {product.blurb_he && (
               <p className="mt-1 text-sm text-black/50">{product.blurb_he}</p>
             )}
-            <div className="mt-4 flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-black">
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0">
+              <span className="text-2xl font-bold text-black sm:text-3xl">
                 ₪{product.price_ils.toLocaleString("he-IL")}
               </span>
               <span className="text-sm text-black/40">{periodLabel(product)}</span>
@@ -56,11 +56,11 @@ export function PlanCatalog({ products, selectedId, onSelect }: PlanCatalogProps
                 {product.gift_he}
               </p>
             )}
-            <div className="mt-auto pt-5">
+            <div className="mt-auto pt-4">
               <Button
                 type="button"
                 variant={selected ? "default" : "outline"}
-                className="w-full"
+                className="h-11 w-full rounded-full"
                 tabIndex={-1}
               >
                 {selected ? <Check className="h-4 w-4 me-2" /> : null}

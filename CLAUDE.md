@@ -170,7 +170,7 @@ UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
 CRON_SECRET
 ```
 
-`PLAN_RENEWAL_TOKEN_SECRET` signs renewal and agreement links and must be set in production; the app starts without it but those links throw. Optional until the payment provider is wired: `MORNING_ENV`, `MORNING_CLIENT_ID`, `MORNING_CLIENT_SECRET`, `MORNING_WEBHOOK_SECRET`. Without them `/join` shows a Hebrew notice instead of a payment page.
+`PLAN_RENEWAL_TOKEN_SECRET` signs renewal and agreement links and must be set in production; the app starts without it but those links throw. The card is charged on `/join/pay/[orderId]` through the adapter in `src/lib/payments/isracard.ts` (`ISRACARD_API_URL`, `ISRACARD_TERMINAL_ID`, `ISRACARD_API_KEY`; refuses politely until set), and Morning only issues the document. Optional until the payment provider is wired: `MORNING_ENV`, `MORNING_CLIENT_ID`, `MORNING_CLIENT_SECRET`, `MORNING_WEBHOOK_SECRET`. Without them `/join` shows a Hebrew notice instead of a payment page.
 
 Startup validation in `src/lib/env.ts` (called via `src/instrumentation.ts`) fails fast if any required var is missing.
 

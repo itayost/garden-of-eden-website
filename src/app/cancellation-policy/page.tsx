@@ -39,12 +39,16 @@ export default function CancellationPolicyPage() {
             <dl className="grid gap-2 sm:grid-cols-[auto_1fr] sm:gap-x-6">
               <dt className="text-gray-500">שם העסק</dt>
               <dd>{BUSINESS_DETAILS.name_he}</dd>
+              <dt className="text-gray-500">בעלים</dt>
+              <dd>{BUSINESS_DETAILS.owner}</dd>
               {BUSINESS_DETAILS.registration_number && (
                 <>
-                  <dt className="text-gray-500">מספר עוסק</dt>
+                  <dt className="text-gray-500">{BUSINESS_DETAILS.legal_form}</dt>
                   <dd dir="ltr" className="text-right">{BUSINESS_DETAILS.registration_number}</dd>
                 </>
               )}
+              <dt className="text-gray-500">כתובת</dt>
+              <dd>{BUSINESS_DETAILS.address}</dd>
               <dt className="text-gray-500">טלפון</dt>
               <dd>
                 <a href={`tel:${BUSINESS_DETAILS.phone_e164}`} className="underline">

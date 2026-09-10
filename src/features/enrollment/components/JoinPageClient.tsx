@@ -50,7 +50,7 @@ export function JoinPageClient({
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       {renewalToken && initialProductId === null && (
         <p className="rounded-2xl border bg-white p-4 text-sm text-black/70">
           הפרטים מולאו מההרשמה הקודמת. בחרו את המסלול הבא, אשרו את ההצהרות וחתמו שוב.
@@ -88,8 +88,8 @@ export function JoinPageClient({
         </p>
       )}
       {selected && (
-        <section id="enroll" className="rounded-3xl border bg-white p-6 sm:p-8">
-          <h2 className="mb-6 text-2xl font-bold">הסכם התקשרות והרשמה</h2>
+        <section id="enroll" className="space-y-4">
+          <h2 className="text-xl font-bold sm:text-2xl">הסכם התקשרות והרשמה</h2>
           <EnrollmentForm
             key={selected.id}
             product={selected}
