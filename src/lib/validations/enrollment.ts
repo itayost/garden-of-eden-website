@@ -20,6 +20,8 @@ const optionalText = (max: number) =>
     .max(max, `הטקסט ארוך מדי (מקסימום ${max} תווים)`)
     .transform((v) => (v === "" ? null : v));
 
+const SINGLE_LINE = /^[^\r\n\t]+$/;
+
 const mustBeTrue = (message: string) =>
   z.boolean().refine((v) => v === true, { message });
 
@@ -33,7 +35,7 @@ export const enrollmentSchema = z
     productId: z.string().regex(UUID_REGEX, "מסלול לא תקין"),
     renewalToken: z.string().max(200).optional(),
 
-    parentName: z.string().trim().min(2, "נדרש שם ההורה").max(100, "שם ארוך מדי"),
+    parentName: z.string().trim().min(2, "נדרש שם ההורה").max(100, "שם ארוך מדי").regex(SINGLE_LINE, "שם בשורה אחת"),
     parentIdNumber: z
       .string()
       .trim()
@@ -47,7 +49,7 @@ export const enrollmentSchema = z
       .or(z.literal(""))
       .transform((v) => (v === "" ? null : v)),
 
-    childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי"),
+    childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי").regex(SINGLE_LINE, "שם בשורה אחת"),
     childBirthdate: z
       .string()
       .refine((date) => {
@@ -62,7 +64,8 @@ export const enrollmentSchema = z
       .string()
       .trim()
       .min(2, "נדרש שם איש קשר לחירום")
-      .max(100, "שם ארוך מדי"),
+      .max(100, "שם ארוך מדי")
+      .regex(SINGLE_LINE, "שם בשורה אחת"),
     emergencyContactPhone: phoneField,
 
     declaresHealthy: mustBeTrue("יש לאשר את הצהרת הבריאות"),
@@ -72,7 +75,7 @@ export const enrollmentSchema = z
       .enum(["yes", "no"], { message: "יש לבחור לגבי צילום" })
       .transform((v) => v === "yes"),
 
-    signatureName: z.string().trim().min(2, "נדרשת חתימה").max(100, "שם ארוך מדי"),
+    signatureName: z.string().trim().min(2, "נדרשת חתימה").max(100, "שם ארוך מדי").regex(SINGLE_LINE, "שם בשורה אחת"),
   })
   .refine((v) => v.signatureName === v.parentName, {
     message: "החתימה חייבת להיות זהה לשם ההורה",

@@ -15,9 +15,10 @@ export interface PaidReference {
 }
 
 /**
- * Moves one order from pending (or expired: a checkout the cron gave up on
- * but the parent finished) to paid, in a single conditional update. The
- * caller that gets a row back owns fulfillment; anyone else lost the race.
+ * Moves one order to paid in a single conditional update: from charging (the
+ * site's own card page, which claims first), or from pending / expired (a
+ * hosted-page webhook, where the provider already charged). The caller that
+ * gets a row back owns fulfillment; anyone else lost the race.
  */
 export async function markOrderPaid(
   db: SupabaseClient,
@@ -37,7 +38,7 @@ export async function markOrderPaid(
       provider_response: ref.raw ?? null,
     })
     .eq("id", orderId)
-    .in("status", ["pending", "expired"])
+    .in("status", ["pending", "charging", "expired"])
     .select("id")) as { data: { id: string }[] | null; error: { code?: string; message: string } | null };
   if (error) {
     if (error.code === "23505") return { claimed: false, error: "transaction id already used" };

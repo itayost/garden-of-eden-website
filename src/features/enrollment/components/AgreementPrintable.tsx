@@ -20,6 +20,10 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
 
 const ddmmyyyy = (iso: string) => iso.split("-").reverse().join("/");
 
+/** The link travels over WhatsApp; the full number stays in the database. */
+const maskIdNumber = (id: string) =>
+  id.length > 3 ? `${"*".repeat(id.length - 3)}${id.slice(-3)}` : id;
+
 export function AgreementPrintable({ agreement }: { agreement: EnrollmentAgreement }) {
   return (
     <article className="mx-auto max-w-3xl space-y-8 rounded-3xl border bg-white p-6 print:border-0 sm:p-10">
@@ -32,7 +36,7 @@ export function AgreementPrintable({ agreement }: { agreement: EnrollmentAgreeme
 
       <Block title="פרטי ההורה / האפוטרופוס">
         <Field label="שם מלא" value={agreement.parent_name} />
-        <Field label="מספר ת.ז" value={agreement.parent_id_number} />
+        <Field label="מספר ת.ז" value={maskIdNumber(agreement.parent_id_number)} />
         <Field label="טלפון נייד" value={agreement.parent_phone} />
         <Field label='דוא"ל' value={agreement.parent_email} />
       </Block>

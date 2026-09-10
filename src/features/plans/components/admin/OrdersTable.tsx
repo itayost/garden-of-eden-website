@@ -20,6 +20,7 @@ import type { OrderStatus } from "@/types/plans";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "ממתין לתשלום",
+  charging: "בחיוב",
   paid: "שולם",
   failed: "נכשל",
   expired: "פג",

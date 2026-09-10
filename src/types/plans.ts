@@ -24,7 +24,8 @@ export interface PlanProduct {
   updated_at: string;
 }
 
-export type OrderStatus = "pending" | "paid" | "failed" | "expired";
+/** charging: the card is at the acquirer; a second submit finds nothing to claim. */
+export type OrderStatus = "pending" | "charging" | "paid" | "failed" | "expired";
 
 export interface Order {
   id: string;

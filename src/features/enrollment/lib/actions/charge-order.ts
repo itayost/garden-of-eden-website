@@ -11,6 +11,7 @@ import { isMorningConfigured } from "@/lib/morning/config";
 import { createInvoiceReceipt } from "@/lib/morning/documents";
 import { israelToday } from "@/lib/utils/tasks";
 import { cardPaymentSchema, type CardPaymentInput } from "@/lib/validations/card-payment";
+import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import type { Order, PlanProduct } from "@/types/plans";
 import { fulfillOrder } from "../fulfillment";
 import { markOrderPaid } from "../mark-paid";
@@ -56,15 +57,53 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
     .maybeSingle()) as { data: Order | null };
   if (!order) return { error: "ההזמנה לא נמצאה" };
   if (order.status === "paid") return { ok: true };
+  if (order.status === "charging") return { error: "התשלום כבר בטיפול. המתינו רגע." };
   if (order.status === "failed") return { error: "ההזמנה בוטלה. התחילו הרשמה חדשה." };
 
+  // An expired order may be paid, but only for a product that is still on
+  // sale at the price the order captured.
   const { data: product } = (await typedFrom(db, "plan_products")
-    .select("name_he")
+    .select("id, name_he, price_ils, is_active, once_per_trainee")
     .eq("id", order.product_id)
-    .maybeSingle()) as { data: Pick<PlanProduct, "name_he"> | null };
-  const description = `${product?.name_he ?? "מסלול"} - ${order.child_name}`;
+    .maybeSingle()) as {
+    data: Pick<PlanProduct, "id" | "name_he" | "price_ils" | "is_active" | "once_per_trainee"> | null;
+  };
+  if (!product || !product.is_active || Number(product.price_ils) !== Number(order.amount_ils)) {
+    return { error: "המסלול או המחיר השתנו. התחילו הרשמה חדשה." };
+  }
+  if (product.once_per_trainee) {
+    const { count } = await typedFrom(db, "orders")
+      .select("id", { count: "exact", head: true })
+      .eq("login_phone", order.login_phone)
+      .eq("status", "paid")
+      .eq("product_id", product.id);
+    if (!isIntroPackEligible(product, count ?? 0)) {
+      return { error: "חבילת ההיכרות כבר נרכשה למספר הזה. בחרו מסלול אחר." };
+    }
+  }
+  const description = `${product.name_he} - ${order.child_name}`;
 
-  const charge = await chargeCard({
+  // Claim the order before the card goes anywhere: a double tap, a second
+  // tab, or a retry after a timeout finds nothing to claim and stops here
+  // instead of charging twice.
+  const { data: claimedRows, error: claimError } = (await typedFrom(db, "orders")
+    .update({ status: "charging" })
+    .eq("id", order.id)
+    .in("status", ["pending", "expired"])
+    .select("id")) as { data: { id: string }[] | null; error: { message: string } | null };
+  if (claimError) return { error: "שגיאה זמנית. נסו שוב." };
+  if (!claimedRows || claimedRows.length === 0) return { error: "התשלום כבר בטיפול. המתינו רגע." };
+
+  const releaseToPending = async () => {
+    await typedFrom(db, "orders")
+      .update({ status: "pending" })
+      .eq("id", order.id)
+      .eq("status", "charging");
+  };
+
+  let charge;
+  try {
+    charge = await chargeCard({
     orderId: order.id,
     amountIls: Number(order.amount_ils),
     installments: data.installments,
@@ -78,8 +117,20 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
       holderId: data.holderId,
     },
     payer: { name: order.parent_name, phone: order.payer_phone, email: order.email },
-  });
-  if (!charge.ok) return { error: charge.message };
+    });
+  } catch (error) {
+    // The acquirer may or may not have captured. Keep the row in charging
+    // so an admin reconciles it; never let the parent retry blind.
+    console.error(`[charge-order] order ${order.id} charge threw:`, error instanceof Error ? error.message : error);
+    await typedFrom(db, "orders")
+      .update({ fulfillment_error: "charge threw; reconcile with the acquirer" })
+      .eq("id", order.id);
+    return { error: "התשלום לא אושר. אל תנסו שוב לפני שדיברתם איתנו בוואטסאפ 052-577-9446." };
+  }
+  if (!charge.ok) {
+    await releaseToPending();
+    return { error: charge.message };
+  }
 
   const brand = detectBrand(data.cardNumber);
   const claim = await markOrderPaid(db, order.id, {

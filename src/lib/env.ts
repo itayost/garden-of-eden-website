@@ -33,6 +33,8 @@ const optionalServerVars = [
   // Required by the renewal and agreement links; planTokenSecret() throws
   // at the point of use, so a missing value cannot fail open.
   "PLAN_RENEWAL_TOKEN_SECRET",
+  "KV_REST_API_URL",
+  "KV_REST_API_TOKEN",
   "MORNING_CLIENT_ID",
   "MORNING_CLIENT_SECRET",
   "MORNING_WEBHOOK_SECRET",
@@ -55,6 +57,17 @@ export function validateEnv(): void {
   if (missing.length > 0) {
     throw new Error(
       `Missing required environment variables:\n${missing.map((v) => `  - ${v}`).join("\n")}\n\nSee .env.local.example for reference.`
+    );
+  }
+
+  // The payment limiter fails closed without Redis, which would refuse every
+  // card charge in production. Either naming convention counts.
+  const hasRedis =
+    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
+    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  if (process.env.VERCEL_ENV === "production" && !hasRedis) {
+    throw new Error(
+      "No Redis configured: set UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN (Upstash integration).",
     );
   }
 
