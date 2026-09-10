@@ -26,14 +26,15 @@ async function clientIp(): Promise<string> {
  * Validates the agreement, records a pending order and the signed agreement,
  * and sends the parent to the site's own card page for that order.
  *
- * Unauthenticated by design: the parent has no account yet. The payment rate
- * limit (10 an hour per IP, fails closed) is the abuse guard.
+ * Unauthenticated by design: the parent has no account yet. No money moves
+ * here, only an order row, so the general limiter (fails open when Redis is
+ * missing) is enough; the card charge has the strict one.
  */
 export async function startCheckoutAction(input: EnrollmentInput): Promise<StartResult> {
   const ip = await clientIp();
-  const limit = await checkRateLimit(`ip:${ip}`, "payment");
+  const limit = await checkRateLimit(`ip:${ip}`, "general");
   waitUntil(limit.pending);
-  if (limit.rateLimited) return { error: "יותר מדי ניסיונות. נסו שוב בעוד שעה." };
+  if (limit.rateLimited) return { error: "יותר מדי ניסיונות. נסו שוב בעוד דקה." };
 
   const validated = enrollmentSchema.safeParse(input);
   if (!validated.success) {
