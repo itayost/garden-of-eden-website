@@ -3,6 +3,16 @@
 import { motion } from "framer-motion";
 import { MessageCircle, Phone, MapPin, Clock, Bus } from "lucide-react";
 
+export interface ContactLocation {
+  address: string | null;
+  mapEmbedUrl: string | null;
+  hours: string | null;
+  whatsapp: string;
+  phoneDisplay: string;
+  transport: readonly { origin: string; route: string }[];
+  moovitUrl: string | null;
+}
+
 const transportRoutes = [
   { origin: "ממרכז הכרמל", route: "אוטובוס קו 3" },
   { origin: "ממרכזית לב המפרץ", route: "אוטובוס קו 115" },
@@ -10,29 +20,42 @@ const transportRoutes = [
   { origin: "מנהריה", route: "רכבת לחוף הכרמל → קו 115 → תחנת המלך שלמה" },
 ];
 
-export function Contact() {
+const HAIFA: ContactLocation = {
+  address: "שלמה המלך 57, חיפה",
+  mapEmbedUrl:
+    "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3353.273065290644!2d34.95703687613971!3d32.81152907364922!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151dbb7b675e66cb%3A0x7a93f87c703bd9f7!2z15LXkNeo15PXnyDXkNeV16Ig16LXk9efIEdhcmRlbiBPZiBFZGVu!5e0!3m2!1sen!2sus!4v1769599490398!5m2!1sen!2sus",
+  hours: "א׳-ה׳ 08:00-21:00",
+  whatsapp: "972525779446",
+  phoneDisplay: "052-577-9446",
+  transport: transportRoutes,
+  moovitUrl:
+    "https://moovitapp.com/tripplan/israel-1/poi/Garden%20of%20Eden%2C%20%D7%A9%D7%9C%D7%9E%D7%94%20%D7%94%D7%9E%D7%9C%D7%9A%2057/t/he?customerId=4908&ref=16&metroSeoName=Israel&tll=32.81152907364922_34.95703787613971",
+};
+
+export function Contact({ location = HAIFA }: { location?: ContactLocation } = {}) {
+  const hasMap = Boolean(location.mapEmbedUrl);
   return (
     <section id="contact" className="py-20 bg-[#F5F5F0]">
       <div className="container mx-auto px-6">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left - Google Maps */}
+        <div className={`grid gap-12 items-center ${hasMap ? "lg:grid-cols-2" : "max-w-3xl mx-auto"}`}>
+          {hasMap && (
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
             <div className="aspect-[4/3] rounded-3xl overflow-hidden relative bg-[#1a1a1a]">
-              {/* Google Maps Embed - Garden of Eden location */}
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3353.273065290644!2d34.95703687613971!3d32.81152907364922!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x151dbb7b675e66cb%3A0x7a93f87c703bd9f7!2z15LXkNeo15PXnyDXkNeV16Ig16LXk9efIEdhcmRlbiBPZiBFZGVu!5e0!3m2!1sen!2sus!4v1769599490398!5m2!1sen!2sus"
+                src={location.mapEmbedUrl ?? undefined}
                 className="absolute inset-0 w-full h-full border-0"
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Garden of Eden - שלמה המלך 57, חיפה"
+                title={`Garden of Eden - ${location.address ?? ""}`}
               />
             </div>
           </motion.div>
+          )}
 
           {/* Right - Contact form */}
           <motion.div
@@ -51,7 +74,7 @@ export function Contact() {
             {/* Contact info */}
             <div className="grid grid-cols-2 gap-4">
               <a
-                href="https://wa.me/972525779446"
+                href={`https://wa.me/${location.whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10 hover:border-[#CDEA68]/50 transition-colors group"
@@ -66,7 +89,7 @@ export function Contact() {
               </a>
 
               <a
-                href="tel:+972525779446"
+                href={`tel:+${location.whatsapp}`}
                 className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10 hover:border-[#CDEA68]/50 transition-colors group"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center">
@@ -74,36 +97,40 @@ export function Contact() {
                 </div>
                 <div>
                   <span className="text-black/50 text-xs block">טלפון</span>
-                  <span className="text-black font-medium text-sm">052-577-9446</span>
+                  <span className="text-black font-medium text-sm">{location.phoneDisplay}</span>
                 </div>
               </a>
 
+              {location.hours && (
               <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10">
                 <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center">
                   <Clock className="w-5 h-5 text-[#CDEA68]" />
                 </div>
                 <div>
                   <span className="text-black/50 text-xs block">שעות פעילות</span>
-                  <span className="text-black font-medium text-sm">א׳-ה׳ 08:00-21:00</span>
+                  <span className="text-black font-medium text-sm">{location.hours}</span>
                 </div>
               </div>
+              )}
 
+              {location.address && (
               <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10">
                 <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center">
                   <MapPin className="w-5 h-5 text-[#CDEA68]" />
                 </div>
                 <div>
                   <span className="text-black/50 text-xs block">מיקום</span>
-                  <span className="text-black font-medium text-sm">שלמה המלך 57, חיפה</span>
+                  <span className="text-black font-medium text-sm">{location.address}</span>
                 </div>
               </div>
+              )}
             </div>
 
-            {/* Transportation directions */}
+            {location.transport.length > 0 && (
             <div className="mt-8">
               <h3 className="text-lg font-bold text-black mb-4">דרכי הגעה בתחבורה ציבורית</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {transportRoutes.map((item) => (
+                {location.transport.map((item) => (
                   <div key={item.origin} className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-black/10">
                     <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center flex-shrink-0">
                       <Bus className="w-5 h-5 text-[#CDEA68]" />
@@ -116,9 +143,9 @@ export function Contact() {
                 ))}
               </div>
 
-              {/* Moovit Button */}
+              {location.moovitUrl && (
               <a
-                href="https://moovitapp.com/tripplan/israel-1/poi/Garden%20of%20Eden%2C%20%D7%A9%D7%9C%D7%9E%D7%94%20%D7%94%D7%9E%D7%9C%D7%9A%2057/t/he?customerId=4908&ref=16&metroSeoName=Israel&tll=32.81152907364922_34.95703787613971"
+                href={location.moovitUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-4 flex items-center justify-center gap-2 w-full p-4 bg-[#50af4c] hover:bg-[#45a041] text-white font-medium rounded-2xl transition-colors"
@@ -128,7 +155,9 @@ export function Contact() {
                 </svg>
                 נווט עם Moovit
               </a>
+              )}
             </div>
+            )}
           </motion.div>
         </div>
       </div>

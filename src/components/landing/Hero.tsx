@@ -2,9 +2,30 @@
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, MessageCircle } from "lucide-react";
 
-export function Hero() {
+export interface HeroProps {
+  eyebrow?: string;
+  titleStart?: string;
+  titleAccent?: string;
+  titleEnd?: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  /** External (WhatsApp) by default; an internal path renders a Link. */
+  ctaHref?: string;
+}
+
+export function Hero({
+  eyebrow,
+  titleStart = "גלה את הפוטנציאל שלך",
+  titleAccent = "מרכז האימונים",
+  titleEnd = "שלנו",
+  subtitle = "הצטרפו לקהילה שלנו היום וגלו את הפוטנציאל המלא שלכם עם מאמנים מומחים, ציוד מתקדם ותוכניות מנוי גמישות",
+  ctaLabel = "הצטרפו עכשיו",
+  ctaHref = "https://wa.me/972525779446",
+}: HeroProps = {}) {
+  const internalCta = ctaHref.startsWith("/");
   const scrollToAbout = () => {
     const element = document.getElementById("about");
     if (element) {
@@ -36,16 +57,19 @@ export function Hero() {
             transition={{ duration: 0.8 }}
             className="max-w-2xl"
           >
+            {eyebrow && (
+              <span className="mb-4 inline-block rounded-full bg-[#CDEA68] px-3 py-1 text-xs font-medium text-black">
+                {eyebrow}
+              </span>
+            )}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1] mb-6">
-              גלה את הפוטנציאל שלך
+              {titleStart}
               <br />
-              <span className="text-white">ב</span>
-              <span className="text-[#CDEA68]">מרכז האימונים</span> שלנו
+              {eyebrow ? null : <span className="text-white">ב</span>}
+              <span className="text-[#CDEA68]">{titleAccent}</span> {titleEnd}
             </h1>
 
-            <p className="text-white/70 text-lg mb-8 max-w-md">
-              הצטרפו לקהילה שלנו היום וגלו את הפוטנציאל המלא שלכם עם מאמנים מומחים, ציוד מתקדם ותוכניות מנוי גמישות
-            </p>
+            <p className="text-white/70 text-lg mb-8 max-w-md">{subtitle}</p>
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4">
@@ -53,10 +77,17 @@ export function Hero() {
                 className="bg-[#CDEA68] hover:bg-[#bdd85c] text-black font-medium rounded-full px-6 py-5"
                 asChild
               >
-                <a href="https://wa.me/972525779446" target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="w-4 h-4 ml-2" />
-                  הצטרפו עכשיו
-                </a>
+                {internalCta ? (
+                  <Link href={ctaHref}>
+                    {ctaLabel}
+                    <ArrowLeft className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <a href={ctaHref} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="w-4 h-4" />
+                    {ctaLabel}
+                  </a>
+                )}
               </Button>
 
               <Button
