@@ -8,6 +8,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   flexRender,
+  type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -20,7 +21,8 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RoleBadge, StatusBadge } from "@/components/ui/badges";
-import { columns } from "./UserTableColumns";
+import { getUserColumns } from "./UserTableColumns";
+import { BulkBranchAssignBar } from "./BulkBranchAssignBar";
 import { UserTableToolbar } from "./UserTableToolbar";
 import { matchesPositionFilter } from "@/lib/admin/position-filter";
 import { UserTablePagination } from "./UserTablePagination";
@@ -71,6 +73,8 @@ export function UserDataTable({
 
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const columns = useMemo(() => getUserColumns({ selectable: isAdmin }), [isAdmin]);
 
   // Filter state (controlled by toolbar, synced with URL)
   const [globalFilter, setGlobalFilter] = useState(initialSearch);
@@ -116,13 +120,21 @@ export function UserDataTable({
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { sorting },
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: isAdmin,
+    getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     initialState: { pagination: { pageSize: 10 } },
   });
+
+  const selectedUserIds = useMemo(
+    () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
+    [rowSelection],
+  );
 
   // Handle row click - navigate to user profile
   const handleRowClick = useCallback(
@@ -170,6 +182,14 @@ export function UserDataTable({
         onShowDeletedChange={handleShowDeletedChange}
         isAdmin={isAdmin}
       />
+
+      {isAdmin && (
+        <BulkBranchAssignBar
+          selectedUserIds={selectedUserIds}
+          branches={branches}
+          onDone={() => setRowSelection({})}
+        />
+      )}
 
       {/* Mobile: Card list */}
       <div className="space-y-2 sm:hidden">

@@ -6,6 +6,7 @@ import { RoleBadge, StatusBadge } from "@/components/ui/badges";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { ProfileWithBranches } from "@/types/branches";
 import { NO_BRANCH_LABEL_HE } from "@/types/branches";
 
@@ -35,7 +36,28 @@ function getInitials(name: string | null): string {
     .toUpperCase();
 }
 
-export const columns: ColumnDef<ProfileWithBranches>[] = [
+const selectColumn: ColumnDef<ProfileWithBranches> = {
+  id: "select",
+  header: ({ table }) => (
+    <Checkbox
+      checked={table.getIsAllPageRowsSelected()}
+      onCheckedChange={(value) => table.toggleAllPageRowsSelected(value === true)}
+      aria-label="בחר את כל השורות בעמוד"
+      onClick={(e) => e.stopPropagation()}
+    />
+  ),
+  cell: ({ row }) => (
+    <Checkbox
+      checked={row.getIsSelected()}
+      onCheckedChange={(value) => row.toggleSelected(value === true)}
+      aria-label="בחר שורה"
+      onClick={(e) => e.stopPropagation()}
+    />
+  ),
+  enableSorting: false,
+};
+
+const baseColumns: ColumnDef<ProfileWithBranches>[] = [
   {
     id: "avatar",
     header: "",
@@ -128,3 +150,12 @@ export const columns: ColumnDef<ProfileWithBranches>[] = [
     enableSorting: false,
   },
 ];
+
+/** The row-selection column is admin-only: it feeds the bulk branch assign bar. */
+export function getUserColumns({
+  selectable,
+}: {
+  selectable: boolean;
+}): ColumnDef<ProfileWithBranches>[] {
+  return selectable ? [selectColumn, ...baseColumns] : baseColumns;
+}

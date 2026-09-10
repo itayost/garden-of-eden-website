@@ -14,3 +14,5 @@ export { createUserAction } from "./admin-users-create";
 export { updateUserAction } from "./admin-users-update";
 export { softDeleteUserAction } from "./admin-users-delete";
 export { bulkCreateUsersAction, type BulkImportResult } from "./admin-users-bulk";
+export { bulkAssignBranchAction } from "./admin-users-branches";
+export type { BulkAssignBranchInput } from "./admin-users-branches";
