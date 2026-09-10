@@ -1,5 +1,6 @@
 import { loadKiryatAtaCatalog } from "@/features/enrollment/lib/catalog";
 import { JoinPageClient } from "@/features/enrollment/components/JoinPageClient";
+import { loadRenewalPrefill } from "@/features/plans/lib/actions/renewal-prefill";
 
 interface PageProps {
   searchParams: Promise<{ product?: string; renew?: string }>;
@@ -8,6 +9,8 @@ interface PageProps {
 export default async function JoinPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const products = await loadKiryatAtaCatalog();
+  // An invalid token falls through to a normal, unprefilled page.
+  const renewal = params.renew ? await loadRenewalPrefill(params.renew) : null;
 
   return (
     <div className="space-y-10">
@@ -21,8 +24,9 @@ export default async function JoinPage({ searchParams }: PageProps) {
       </header>
       <JoinPageClient
         products={products}
-        initialProductId={params.product ?? null}
-        renewalToken={params.renew ?? null}
+        initialProductId={renewal?.productId ?? params.product ?? null}
+        renewalToken={renewal ? (params.renew ?? null) : null}
+        prefill={renewal?.prefill}
       />
     </div>
   );
