@@ -1,5 +1,6 @@
 "use client";
 
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -57,6 +58,7 @@ export function ExceptionFormDialog({
   defaultDate,
   canEdit,
 }: ExceptionFormDialogProps) {
+  const { branchId } = useCurrentBranch();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -81,6 +83,7 @@ export function ExceptionFormDialog({
     setLoading(true);
     try {
       const result = await createExceptionAction({
+        branchId,
         exceptionDate,
         trainerId,
         kind,

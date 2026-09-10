@@ -1,5 +1,6 @@
 "use client";
 
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarRange, Loader2 } from "lucide-react";
@@ -36,6 +37,7 @@ export function BuildDayButton({
   bandCount,
   compact = false,
 }: BuildDayButtonProps) {
+  const { branchId } = useCurrentBranch();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ export function BuildDayButton({
   const handleBuild = async () => {
     setLoading(true);
     try {
-      const result = await buildDayFromWeeklyScheduleAction({ date: targetDate });
+      const result = await buildDayFromWeeklyScheduleAction({ date: targetDate, branchId });
       if ("error" in result) {
         toast.error(result.error);
         return;

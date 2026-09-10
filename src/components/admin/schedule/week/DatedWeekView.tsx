@@ -6,6 +6,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { addDays, shortDate } from "@/lib/utils/iso-date";
 import {
@@ -63,6 +64,7 @@ export function DatedWeekView({
   loadError,
   templateFailed,
 }: DatedWeekViewProps) {
+  const { branchId } = useCurrentBranch();
   const [slotContext, setSlotContext] = useState<SlotFormContext | null>(null);
   const [slotOpen, setSlotOpen] = useState(false);
   const [exceptionDate, setExceptionDate] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export function DatedWeekView({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" asChild aria-label="שבוע קודם">
-            <Link href={`/admin/weekly-schedule?week=${addDays(weekStart, -7)}`}>
+            <Link href={`/admin/weekly-schedule?week=${addDays(weekStart, -7)}&branch=${branchId}`}>
               <ChevronRight className="h-4 w-4" />
             </Link>
           </Button>
@@ -132,14 +134,14 @@ export function DatedWeekView({
           </div>
 
           <Button variant="outline" size="icon" asChild aria-label="שבוע הבא">
-            <Link href={`/admin/weekly-schedule?week=${addDays(weekStart, 7)}`}>
+            <Link href={`/admin/weekly-schedule?week=${addDays(weekStart, 7)}&branch=${branchId}`}>
               <ChevronLeft className="h-4 w-4" />
             </Link>
           </Button>
 
           {!isCurrentWeek && (
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/admin/weekly-schedule">חזרה לשבוע הזה</Link>
+              <Link href={`/admin/weekly-schedule?branch=${branchId}`}>חזרה לשבוע הזה</Link>
             </Button>
           )}
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CopyPlus, Loader2 } from "lucide-react";
@@ -33,6 +34,7 @@ export function DuplicateDayButton({
   targetDate,
   targetHasSlots,
 }: DuplicateDayButtonProps) {
+  const { branchId } = useCurrentBranch();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [fromDate, setFromDate] = useState(addDays(targetDate, -1));
@@ -41,7 +43,7 @@ export function DuplicateDayButton({
   const handleDuplicate = async () => {
     setLoading(true);
     try {
-      const result = await duplicateDayAction({ fromDate, toDate: targetDate });
+      const result = await duplicateDayAction({ fromDate, toDate: targetDate, branchId });
       if ("error" in result) {
         toast.error(result.error);
         return;

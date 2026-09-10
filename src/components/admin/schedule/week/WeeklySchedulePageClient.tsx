@@ -5,6 +5,8 @@ import { CalendarDays, CalendarRange } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
+import { BranchSwitcher } from "@/features/branches/components/BranchSwitcher";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import type { Week } from "@/lib/utils/schedule-week";
 import type { WeeklyBand, WeeklyException } from "@/types/weekly-schedule";
@@ -52,16 +54,18 @@ export function WeeklySchedulePageClient({
   slotsError,
   templateError,
 }: WeeklySchedulePageClientProps) {
+  const { branchId } = useCurrentBranch();
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 px-1">
           <CalendarRange className="h-4 w-4 text-muted-foreground" />
           <span className="font-display text-xl">לוח שבועי</span>
+          <BranchSwitcher />
         </div>
 
         <Button variant="outline" asChild>
-          <Link href="/admin/schedule">
+          <Link href={`/admin/schedule?branch=${branchId}`}>
             <CalendarDays className="h-4 w-4" />
             ללוח היומי
           </Link>

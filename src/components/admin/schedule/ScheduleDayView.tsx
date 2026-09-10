@@ -6,6 +6,8 @@ import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
+import { BranchSwitcher } from "@/features/branches/components/BranchSwitcher";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { hebrewWeekday } from "@/lib/utils/date";
 import { addDays, shortDate } from "@/lib/utils/iso-date";
@@ -53,6 +55,7 @@ export function ScheduleDayView({
   trainees,
   onDuty,
 }: ScheduleDayViewProps) {
+  const { branchId } = useCurrentBranch();
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ScheduleSlot | null>(null);
   // Remount counter so create/edit dialogs initialize from fresh props.
@@ -85,7 +88,7 @@ export function ScheduleDayView({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" asChild aria-label="יום קודם">
-            <Link href={`/admin/schedule?date=${addDays(date, -1)}`}>
+            <Link href={`/admin/schedule?date=${addDays(date, -1)}&branch=${branchId}`}>
               <ChevronRight className="h-4 w-4" />
             </Link>
           </Button>
@@ -103,16 +106,18 @@ export function ScheduleDayView({
           </div>
 
           <Button variant="outline" size="icon" asChild aria-label="יום הבא">
-            <Link href={`/admin/schedule?date=${addDays(date, 1)}`}>
+            <Link href={`/admin/schedule?date=${addDays(date, 1)}&branch=${branchId}`}>
               <ChevronLeft className="h-4 w-4" />
             </Link>
           </Button>
 
           {date !== today && (
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/admin/schedule">חזרה להיום</Link>
+              <Link href={`/admin/schedule?branch=${branchId}`}>חזרה להיום</Link>
             </Button>
           )}
+
+          <BranchSwitcher />
         </div>
 
         {/*

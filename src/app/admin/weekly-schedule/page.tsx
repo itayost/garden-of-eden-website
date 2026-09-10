@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { WeeklySchedulePageClient } from "@/components/admin/schedule/week/WeeklySchedulePageClient";
+import { Card, CardContent } from "@/components/ui/card";
+import { BranchProvider } from "@/features/branches/components/BranchContext";
+import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { allowedBranches, resolveRequestedBranch } from "@/lib/branches/resolve-branch";
 import { getSlotsForWeekAction } from "@/lib/actions/daily-schedule";
 import { getSlotFormOptionsAction } from "@/lib/actions/schedule-options";
 import {
@@ -31,7 +36,7 @@ const EXCEPTION_WINDOW_DAYS = 60;
 const MAX_WEEK_OFFSET_DAYS = 364;
 
 interface PageProps {
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; branch?: string }>;
 }
 
 export default async function WeeklySchedulePage({ searchParams }: PageProps) {
@@ -55,6 +60,29 @@ export default async function WeeklySchedulePage({ searchParams }: PageProps) {
   const weekStart = inRange ? startOfWeek(raw) : defaultWeekStart(today);
   const weekEnd = addDays(weekStart, 6);
 
+  const [scopeResult, branchOptions] = await Promise.all([
+    getBranchScopeAction(),
+    listActiveBranchOptionsAction(),
+  ]);
+  if ("error" in scopeResult) redirect("/dashboard");
+  const scope = scopeResult.data.scope;
+  const branches = allowedBranches(scope, branchOptions);
+  const branchId = resolveRequestedBranch({
+    requested: params.branch,
+    scope,
+    branches: branchOptions,
+  });
+
+  if (!branchId) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          אין סניפים פעילים לתצוגה
+        </CardContent>
+      </Card>
+    );
+  }
+
   // The exceptions panel stays anchored to today whatever week is on screen: a
   // list that changed as you paged through weeks would stop answering "what is
   // coming up". A week back so an exception written for yesterday does not
@@ -68,10 +96,10 @@ export default async function WeeklySchedulePage({ searchParams }: PageProps) {
   // is quietly missing people is worse than one they cannot use.
   const [slotsResult, templateResult, weekExceptionsResult, optionsResult] =
     await Promise.all([
-      getSlotsForWeekAction(weekStart),
-      getWeeklyScheduleAction(panelFromDate, panelToDate),
-      getExceptionsInRangeAction(weekStart, weekEnd),
-      getSlotFormOptionsAction(""),
+      getSlotsForWeekAction(weekStart, branchId),
+      getWeeklyScheduleAction(panelFromDate, panelToDate, branchId),
+      getExceptionsInRangeAction(weekStart, weekEnd, branchId),
+      getSlotFormOptionsAction(branchId),
     ]);
 
   // Each failure degrades on its own. Slots failing must not render as a week
@@ -108,7 +136,8 @@ export default async function WeeklySchedulePage({ searchParams }: PageProps) {
   });
 
   return (
-    <WeeklySchedulePageClient
+    <BranchProvider value={{ branchId, branches, canSwitch: branches.length > 1 }}>
+      <WeeklySchedulePageClient
       week={week}
       weekStart={weekStart}
       bands={bands}
@@ -120,6 +149,7 @@ export default async function WeeklySchedulePage({ searchParams }: PageProps) {
       trainees={options.trainees}
       slotsError={slotsError}
       templateError={templateError}
-    />
+      />
+    </BranchProvider>
   );
 }

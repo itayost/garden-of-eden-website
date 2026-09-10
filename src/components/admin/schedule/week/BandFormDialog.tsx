@@ -1,5 +1,6 @@
 "use client";
 
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -53,6 +54,7 @@ export function BandFormDialog({
   band,
   trainers,
 }: BandFormDialogProps) {
+  const { branchId } = useCurrentBranch();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -77,6 +79,7 @@ export function BandFormDialog({
     setLoading(true);
     try {
       const payload = {
+        branchId,
         weekday: day,
         startTime,
         endTime,
