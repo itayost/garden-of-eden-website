@@ -1,4 +1,5 @@
 import type { Profile } from "@/types/database";
+import type { StaffPlanBadge } from "@/types/plans";
 
 /** One physical academy location. Mirrors the branches table. */
 export interface Branch {
@@ -22,6 +23,8 @@ export interface BranchOption {
 export type ProfileWithBranches = Profile & {
   branchIds: string[];
   branchNames: string[];
+  /** Plan status and medical flag; absent for staff and for trainees with neither. */
+  planBadge?: StaffPlanBadge;
 };
 
 export const NO_BRANCH_LABEL_HE = "ללא סניף";

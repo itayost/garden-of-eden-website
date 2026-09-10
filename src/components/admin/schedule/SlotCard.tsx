@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Dumbbell, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Dumbbell, HeartPulse, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -24,6 +24,14 @@ import { deleteSlotAction } from "@/lib/actions/daily-schedule";
 import { trainerColor } from "@/lib/utils/trainer-color";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { SessionSummary } from "@/types/training-session";
+import type { StaffPlanBadge } from "@/types/plans";
+import { HealthSheet } from "@/features/plans/components/HealthSheet";
+
+/** Only the states that need a trainer's attention get a chip. */
+const PLAN_CHIP: Partial<Record<StaffPlanBadge["status"], { label: string; className: string }>> = {
+  expired: { label: "פג", className: "bg-destructive text-white" },
+  ending_soon: { label: "מסתיים", className: "bg-amber-500 text-black" },
+};
 
 interface SlotCardProps {
   slot: ScheduleSlot;
@@ -31,6 +39,8 @@ interface SlotCardProps {
   date: string;
   /** trainee_id -> session summary for this day. */
   sessionSummaries: Record<string, SessionSummary>;
+  /** trainee_id -> plan status and medical flag. */
+  planBadges: Record<string, StaffPlanBadge>;
   /** True when the viewing trainer is this slot's trainer — highlighted. */
   isMine: boolean;
   onEdit: () => void;
@@ -44,11 +54,13 @@ export function SlotCard({
   slot,
   date,
   sessionSummaries,
+  planBadges,
   isMine,
   onEdit,
 }: SlotCardProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [healthFor, setHealthFor] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const palette = trainerColor(slot.trainer_id);
 
@@ -159,9 +171,11 @@ export function SlotCard({
 
               const summary = sessionSummaries[trainee.trainee_id];
               const completed = Boolean(summary?.completed_at);
+              const badge = planBadges[trainee.trainee_id];
+              const chip = badge?.endsOn ? PLAN_CHIP[badge.status] : undefined;
               return (
+                <span key={trainee.id} className="inline-flex items-center gap-0.5">
                 <Link
-                  key={trainee.id}
                   href={`/admin/schedule/session/${trainee.trainee_id}?date=${date}&slot=${slot.id}`}
                   aria-label={
                     summary
@@ -188,12 +202,42 @@ export function SlotCard({
                     {summary ? ` (${summary.exerciseCount})` : ""}
                   </Badge>
                 </Link>
+                {chip && (
+                  <span
+                    className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold", chip.className)}
+                    title={badge.sessionsLeft !== null ? `${badge.sessionsLeft} אימונים נותרו` : undefined}
+                  >
+                    {chip.label}
+                  </span>
+                )}
+                {badge?.hasMedicalNotes && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setHealthFor({ id: trainee.trainee_id!, name: trainee.trainee_name })
+                    }
+                    className="rounded-full p-0.5 text-amber-600 hover:bg-amber-100"
+                    aria-label={`מידע רפואי של ${trainee.trainee_name}`}
+                  >
+                    <HeartPulse className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                </span>
               );
             })}
           </div>
           )}
         </CardContent>
       </Card>
+
+      {healthFor && (
+        <HealthSheet
+          traineeId={healthFor.id}
+          traineeName={healthFor.name}
+          open
+          onOpenChange={(open) => !open && setHealthFor(null)}
+        />
+      )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

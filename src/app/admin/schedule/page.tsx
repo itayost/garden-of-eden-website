@@ -14,6 +14,7 @@ import { getOnDutyAction } from "@/lib/actions/weekly-schedule";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidDateString } from "@/lib/validations/common";
+import { loadPlanStatusesForStaff } from "@/features/plans/lib/actions/staff-plan-badges";
 
 export const metadata: Metadata = {
   title: "לוח יומי | Garden of Eden",
@@ -85,6 +86,19 @@ export default async function SchedulePage({ searchParams }: PageProps) {
   // hide, instead of asserting that nobody is scheduled.
   const onDuty = "success" in onDutyResult ? onDutyResult.data : null;
 
+  // Plan and medical flags for everyone on today's board. Roster ids come
+  // from a branch-scoped schedule, so they are already in scope.
+  const rosterIds = Array.from(
+    new Set(
+      slots.flatMap((slot) =>
+        slot.trainees
+          .map((t) => t.trainee_id)
+          .filter((id): id is string => id !== null),
+      ),
+    ),
+  );
+  const planBadges = await loadPlanStatusesForStaff(rosterIds);
+
   return (
     <BranchProvider value={{ branchId, branches, canSwitch: branches.length > 1 }}>
       <ScheduleDayView
@@ -98,6 +112,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
       trainers={options.trainers}
       trainees={options.trainees}
       onDuty={onDuty}
+      planBadges={planBadges}
       />
     </BranchProvider>
   );

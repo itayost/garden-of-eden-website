@@ -80,6 +80,15 @@ export interface TraineePlan {
 /** Derived, never stored. */
 export type PlanStatus = "active" | "ending_soon" | "expired" | "cancelled";
 
+/** What a roster chip or the users list needs to know about one trainee. */
+export interface StaffPlanBadge {
+  status: PlanStatus;
+  sessionsLeft: number | null;
+  /** Empty when the trainee has no plan and only carries medical notes. */
+  endsOn: string;
+  hasMedicalNotes: boolean;
+}
+
 export const PLAN_STATUS_LABELS_HE: Record<PlanStatus, string> = {
   active: "פעיל",
   ending_soon: "מסתיים בקרוב",

@@ -14,6 +14,7 @@ import { addDays, shortDate } from "@/lib/utils/iso-date";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { SessionSummary } from "@/types/training-session";
 import type { OnDuty } from "@/types/weekly-schedule";
+import type { StaffPlanBadge } from "@/types/plans";
 import { BuildDayButton } from "./BuildDayButton";
 import { CopyWhatsAppButton } from "./CopyWhatsAppButton";
 import { DuplicateDayButton } from "./DuplicateDayButton";
@@ -41,6 +42,8 @@ interface ScheduleDayViewProps {
    * — the strip and the build button hide rather than claim nobody is on.
    */
   onDuty: OnDuty | null;
+  /** trainee_id -> plan status and medical flag, for the roster chips. */
+  planBadges: Record<string, StaffPlanBadge>;
 }
 
 export function ScheduleDayView({
@@ -54,6 +57,7 @@ export function ScheduleDayView({
   trainers,
   trainees,
   onDuty,
+  planBadges,
 }: ScheduleDayViewProps) {
   const { branchId } = useCurrentBranch();
   const [formOpen, setFormOpen] = useState(false);
@@ -205,6 +209,7 @@ export function ScheduleDayView({
                     slot={slot}
                     date={date}
                     sessionSummaries={sessionSummaries}
+                    planBadges={planBadges}
                     isMine={slot.trainer_id === currentUserId}
                     onEdit={() => openEdit(slot)}
                   />
