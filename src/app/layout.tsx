@@ -70,9 +70,13 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
-  title: "Garden of Eden - אקדמיית הכדורגל עם מעטפת מלאה | חיפה",
-  description: "אקדמיית כדורגל מקצועית בחיפה עם מעטפת מלאה: אימוני כדורגל, אימוני אתלטיות, ליווי מנטלי, ליווי תזונה, אנליסט כדורגל וניהול קריירה.",
-  keywords: ["אקדמיית כדורגל", "כדורגל חיפה", "אימוני אתלטיות", "ליווי מנטלי", "תזונת ספורטאים", "אנליסט כדורגל", "ניהול קריירה", "garden of eden", "שחקנים צעירים"],
+  title: {
+    default: "Garden of Eden - אקדמיית כדורגל",
+    template: "%s | Garden of Eden",
+  },
+  description:
+    "אקדמיית כדורגל מקצועית בחיפה ובקריית אתא: אימוני כדורגל ואתלטיות, ליווי מנטלי ותזונה, אנליסט כדורגל וניהול קריירה.",
+  keywords: ["אקדמיית כדורגל", "אימוני כדורגל", "garden of eden", "שחקנים צעירים", "חיפה", "קריית אתא"],
   authors: [{ name: "Garden of Eden" }],
   creator: "Garden of Eden",
   metadataBase: new URL("https://www.edengarden.co.il"),
@@ -89,10 +93,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "he_IL",
-    url: "https://www.edengarden.co.il",
     siteName: "Garden of Eden",
-    title: "Garden of Eden - אקדמיית הכדורגל עם מעטפת מלאה | חיפה",
-    description: "אקדמיית כדורגל מקצועית בחיפה: אימוני כדורגל ואתלטיות, ליווי מנטלי ותזונה, אנליסט כדורגל וניהול קריירה.",
+    title: "Garden of Eden - אקדמיית כדורגל",
+    description:
+      "אקדמיית כדורגל מקצועית בחיפה ובקריית אתא: אימוני כדורגל ואתלטיות, ליווי מנטלי ותזונה, אנליסט כדורגל וניהול קריירה.",
     images: [
       {
         url: "/og-image.png",
@@ -104,8 +108,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Garden of Eden - אקדמיית הכדורגל עם מעטפת מלאה",
-    description: "אקדמיית כדורגל מקצועית בחיפה: אימוני כדורגל ואתלטיות, ליווי מנטלי ותזונה, אנליסט וניהול קריירה.",
+    title: "Garden of Eden - אקדמיית כדורגל",
+    description:
+      "אקדמיית כדורגל מקצועית בחיפה ובקריית אתא: אימוני כדורגל ואתלטיות, ליווי מנטלי ותזונה, אנליסט וניהול קריירה.",
     images: ["/og-image.png"],
   },
   robots: {

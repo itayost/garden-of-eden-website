@@ -6,6 +6,7 @@ import { MessageCircle } from "lucide-react";
 export const metadata: Metadata = {
   title: "הרשמה לסניף קריית אתא | Garden of Eden",
   description: "בחירת מסלול אימונים, חתימה על הסכם ההרשמה ותשלום מאובטח.",
+  alternates: { canonical: "/join" },
 };
 
 /**
