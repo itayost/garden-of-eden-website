@@ -145,7 +145,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel>שם מלא</FormLabel>
                   <FormControl>
-                    <Input {...field} className="h-12 rounded-xl text-base" disabled={loading} />
+                    <Input {...field} autoComplete="section-parent name" className="h-12 rounded-xl text-base" disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -158,7 +158,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel>מספר ת.ז</FormLabel>
                   <FormControl>
-                    <Input {...field} inputMode="numeric" dir="ltr" className="h-12 rounded-xl text-base text-right" disabled={loading} />
+                    <Input {...field} autoComplete="off" inputMode="numeric" dir="ltr" className="h-12 rounded-xl text-base text-right" disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -171,7 +171,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel>טלפון נייד (לתשלום ולקבלה)</FormLabel>
                   <FormControl>
-                    <Input {...field} inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" placeholder="0501234567" disabled={loading} />
+                    <Input {...field} type="tel" autoComplete="section-parent tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" placeholder="0501234567" disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -184,7 +184,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel>טלפון וואטסאפ של החניך (להתחברות לאפליקציה)</FormLabel>
                   <FormControl>
-                    <Input {...field} inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" placeholder="0521234567" disabled={loading} />
+                    <Input {...field} type="tel" autoComplete="section-child tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" placeholder="0521234567" disabled={loading} />
                   </FormControl>
                   <FormDescription>קוד ההתחברות נשלח למספר הזה בוואטסאפ</FormDescription>
                   <FormMessage />
@@ -198,7 +198,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem className="sm:col-span-2">
                   <FormLabel>דוא&quot;ל (לקבלת החשבונית)</FormLabel>
                   <FormControl>
-                    <Input {...field} value={field.value ?? ""} type="email" dir="ltr" className="h-12 rounded-xl text-base text-right" disabled={loading} />
+                    <Input {...field} autoComplete="section-parent email" value={field.value ?? ""} type="email" dir="ltr" className="h-12 rounded-xl text-base text-right" disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -217,7 +217,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel>שם מלא</FormLabel>
                   <FormControl>
-                    <Input {...field} className="h-12 rounded-xl text-base" disabled={loading} />
+                    <Input {...field} autoComplete="section-child name" className="h-12 rounded-xl text-base" disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -230,7 +230,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel>תאריך לידה</FormLabel>
                   <FormControl>
-                    <Input {...field} className="h-12 rounded-xl text-base" type="date" max={today} disabled={loading} />
+                    <Input {...field} autoComplete="section-child bday" className="h-12 rounded-xl text-base" type="date" max={today} disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -284,7 +284,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel>שם מלא</FormLabel>
                   <FormControl>
-                    <Input {...field} className="h-12 rounded-xl text-base" disabled={loading} />
+                    <Input {...field} autoComplete="section-emergency name" className="h-12 rounded-xl text-base" disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -297,7 +297,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel>טלפון</FormLabel>
                   <FormControl>
-                    <Input {...field} inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" disabled={loading} />
+                    <Input {...field} type="tel" autoComplete="section-emergency tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" disabled={loading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -370,7 +370,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               <FormItem>
                 <FormLabel>שם ההורה כחתימה</FormLabel>
                 <FormControl>
-                  <Input {...field} className="h-12 rounded-xl text-base" placeholder="הקלידו את שמכם המלא" disabled={loading} />
+                  <Input {...field} autoComplete="section-parent name" className="h-12 rounded-xl text-base" placeholder="הקלידו את שמכם המלא" disabled={loading} />
                 </FormControl>
                 <FormDescription>הקלדת השם מהווה חתימה דיגיטלית על ההסכם</FormDescription>
                 <FormMessage />
@@ -386,7 +386,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               <span className="block text-[11px] text-black/50">{product.name_he}</span>
               <span className="text-lg font-bold">{priceLabel}</span>
             </div>
-        <Button type="submit" size="lg" className="h-12 w-full rounded-full text-base" disabled={loading}>
+        <Button type="submit" size="lg" className="h-12 min-w-0 flex-1 rounded-full text-base" disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
           {loading ? "מעבירים לתשלום..." : `המשך לתשלום ${priceLabel}`}
         </Button>

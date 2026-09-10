@@ -1,10 +1,10 @@
 /**
  * מדיניות ביטול עסקה, drafted to חוק הגנת הצרכן, התשמ"א-1981 (סעיפים 13ג,
- * 14ג, 14ה) and תקנות הגנת הצרכן (ביטול עסקה), התשע"א-2010. Eden reviews the
- * text before the "-draft" suffix comes off. The version is shown on the page
- * so a parent can tell which text they agreed to.
+ * 14ג, 14ה) and תקנות הגנת הצרכן (ביטול עסקה), התשע"א-2010. Approved by the
+ * owner on 2026-09-10. The version is shown on the page so a parent can tell
+ * which text they agreed to.
  */
-export const CANCELLATION_POLICY_VERSION = "2026-09-draft";
+export const CANCELLATION_POLICY_VERSION = "2026-09";
 
 /** The business as it must appear on the page for the acquirer's review. */
 export const BUSINESS_DETAILS = {
