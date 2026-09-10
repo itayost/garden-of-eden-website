@@ -33,7 +33,11 @@ export default async function KiryatAtaPage() {
   return (
     <MotionProvider>
       <main className="bg-[#F5F5F0]">
-        <Navbar otherBranch={{ label: "סניף חיפה", href: "/" }} />
+        <Navbar
+          otherBranch={{ label: "סניף חיפה", href: "/" }}
+          ctaHref="#services"
+          ctaLabel="הצטרפו עכשיו"
+        />
         <Hero
           eyebrow={hero.eyebrow}
           titleStart={hero.titleStart}
