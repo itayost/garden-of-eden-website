@@ -133,6 +133,7 @@ try {
 ### קריית אתא signup
 
 `/join` sells `plan_products`, records an `orders` row and a signed `enrollment_agreements` row, and sends the parent to Morning's hosted payment page. Only the signed webhook at `src/app/api/webhooks/morning/route.ts` marks an order paid; `src/features/enrollment/lib/fulfillment.ts` then creates the account, the branch link, and the `trainee_plans` row, and is safe to rerun. Plan state is derived by `resolvePlanStatus()` in `src/lib/plans/`, never stored. Spec: `docs/superpowers/specs/2026-09-10-kiryat-ata-signup-design.md`.
+Reminders: `/api/cron/plan-reminders` runs daily; `dueReminderMilestone()` decides what is due and the `reminded_*_at` columns stop repeats. Renewal links are `/join?renew=<token>` signed with `PLAN_RENEWAL_TOKEN_SECRET`.
 
 ### Migrations
 
