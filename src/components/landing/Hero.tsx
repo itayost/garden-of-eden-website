@@ -26,14 +26,16 @@ export function Hero({
   ctaHref = "https://wa.me/972525779446",
 }: HeroProps = {}) {
   const internalCta = ctaHref.startsWith("/");
-  const scrollToAbout = () => {
-    const element = document.getElementById("about");
+  const anchorCta = ctaHref.startsWith("#");
+  const scrollToId = (id: string) => {
+    const element = document.getElementById(id);
     if (element) {
       const offset = 80;
       const top = element.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top, behavior: "smooth" });
     }
   };
+  const scrollToAbout = () => scrollToId("about");
 
   return (
     <section className="relative">
@@ -77,7 +79,18 @@ export function Hero({
                 className="bg-[#CDEA68] hover:bg-[#bdd85c] text-black font-medium rounded-full px-6 py-5"
                 asChild
               >
-                {internalCta ? (
+                {anchorCta ? (
+                  <a
+                    href={ctaHref}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToId(ctaHref.slice(1));
+                    }}
+                  >
+                    {ctaLabel}
+                    <ArrowLeft className="w-4 h-4" />
+                  </a>
+                ) : internalCta ? (
                   <Link href={ctaHref}>
                     {ctaLabel}
                     <ArrowLeft className="w-4 h-4" />

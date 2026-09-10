@@ -2,9 +2,9 @@
  * תקנון סניף קריית אתא.
  *
  * The version string is stored on every signed agreement, so changing the
- * text means bumping it. "-draft" marks text the owner has not approved yet.
+ * text means bumping it. Approved by the owner on 2026-09-10.
  */
-export const TERMS_VERSION = "2026-09-draft";
+export const TERMS_VERSION = "2026-09";
 
 export interface TermsSection {
   title: string;

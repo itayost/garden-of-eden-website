@@ -236,8 +236,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
 
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
           <div className="mx-auto flex max-w-2xl items-center gap-3">
-            <div className="hidden sm:block" />
-            <Button type="submit" size="lg" className="h-12 w-full rounded-full text-base" disabled={loading}>
+            <Button type="submit" size="lg" className="h-12 min-w-0 flex-1 rounded-full text-base" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <Lock className="h-4 w-4 me-2" />}
               {loading ? "מחייבים..." : `תשלום מאובטח ${priceLabel}`}
             </Button>

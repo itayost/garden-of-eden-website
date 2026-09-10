@@ -9,6 +9,7 @@ import { isValidIsraeliId } from "@/lib/validations/israeli-id";
 const phoneField = z
   .string()
   .trim()
+  .min(1, "נדרש מספר טלפון")
   .regex(PHONE_REGEX_IL, "מספר טלפון לא תקין (פורמט: 0501234567)")
   .transform(formatPhoneToInternational);
 

@@ -16,7 +16,7 @@ export const KIRYAT_ATA_LANDING = {
     subtitle:
       "אימוני כדורגל מקצועיים בקבוצות קטנות, עם מעטפת מנטלית ותזונתית. נרשמים ומשלמים כאן באתר, ומתחילים.",
     ctaLabel: "הצטרפו עכשיו",
-    ctaHref: "/join",
+    ctaHref: "#services",
   },
   services: {
     title: "מסלולי האימונים בקריית אתא",
