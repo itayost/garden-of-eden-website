@@ -40,6 +40,8 @@ left. חיפה keeps running on Arbox and is out of scope.
 | Session counting | Roster presence on the daily board counts automatically. A trainee on a slot dated inside the plan window uses one session |
 | Expiry | Reminders only. Nothing is blocked; the app shows the status |
 | Integration | Morning end to end. Grow stays dormant |
+| Enrollment agreement | Digital, inside the signup form: the agreement's fields become form fields, the declarations become checkboxes, the parent types their name as a signature, and the accepted text, timestamp, and IP are stored. No PDF upload |
+| Safety protocol | An internal staff page in the admin area with the protocol, emergency numbers, and the branch manager's phone, linked from the daily board. Each trainee's medical notes and emergency contact are shown to trainers |
 
 ## Section 1: Data model
 
@@ -126,10 +128,49 @@ count.
 | `received_at`, `processed_at` timestamptz | |
 | `error` text null | |
 
+### `enrollment_agreements`
+
+The digital הסכם התקשרות והרשמה, one row per accepted agreement.
+
+| Column | Notes |
+|---|---|
+| `id` uuid pk | |
+| `order_id` uuid null, `profile_id` uuid null | Order for online signups; profile set by fulfillment. Manual grants create one too |
+| `agreement_version` text | The version of the agreement text and תקנון the parent saw, e.g. `2026-09` |
+| `parent_name`, `parent_id_number`, `parent_phone`, `parent_email` | The parent block. `parent_id_number` is the only place the ID number is stored |
+| `child_name`, `child_birthdate`, `medical_notes` text null | "אלרגיות / מגבלות רפואיות ידועות" |
+| `plan_name`, `plan_price_ils`, `plan_start_on`, `payment_method` | The plan block as it stood when signed; `payment_method` is `כרטיס אשראי` online, free text for manual grants |
+| `emergency_contact_name`, `emergency_contact_phone` | |
+| `declares_healthy`, `accepts_terms`, `authorizes_payment` boolean | All three must be true to submit |
+| `photo_consent` boolean | The yes or no choice on the form |
+| `signature_name` text | The parent's typed name, must equal `parent_name` |
+| `signed_at` timestamptz, `signed_ip` text | |
+| `created_at` | |
+
+The parent's copy: a printable page `/join/agreement/<id>?t=<token>` rendering
+the same layout as the PDF with the stored values, linked from the
+confirmation WhatsApp. The staff countersignature line on the paper form is
+dropped; the stored record is the countersign.
+
+RLS: no policies for authenticated users except admin SELECT. All writes
+through the service role. Trainers never read this table; they get the
+medical and emergency fields from `profiles`.
+
 ### `profiles`
 
-Adds `guardian_name text null` and `guardian_phone text null`. Both go in
-`enforce_profile_column_guard()` so a trainee cannot change who gets billed.
+Adds:
+
+- `guardian_name`, `guardian_phone` text null: who gets billed and reminded
+- `medical_notes` text null, `emergency_contact_name`, `emergency_contact_phone` text null: copied from the agreement so trainers can see them without touching the agreement table
+- `photo_consent` boolean null: null means never asked (every existing trainee)
+
+All six go in `enforce_profile_column_guard()`: a trainee cannot change who
+gets billed or rewrite a consent the parent gave.
+
+### `branches`
+
+Adds `manager_phone text null`, editable on the branches page, shown on the
+safety protocol page as "מנהל המתחם".
 
 ### RLS
 
@@ -145,13 +186,31 @@ Adds `guardian_name text null` and `guardian_phone text null`. Both go in
 ### Public page
 
 `/join` (Hebrew, RTL, no login). Lists active קריית אתא products from
-`plan_products`. Picking one opens the signup form:
+`plan_products`. Picking one opens the signup form, which is the enrollment
+agreement in digital form, in the same four blocks as the paper:
 
-- parent name, payer phone, WhatsApp login phone, child name, child
-  birthdate, email (optional, for the receipt), terms checkbox
-- a renewal link prefills every field and locks the product
+1. ההורה: parent name, ID number (validated with the Israeli check digit),
+   payer phone, email (optional, for the receipt). The WhatsApp login phone
+   sits here too, labelled as the child's login.
+2. החניך: child name, birthdate, allergies and medical limits (free text,
+   optional).
+3. המסלול: shown, not typed: product name, price, start date (today), payment
+   method כרטיס אשראי.
+4. איש קשר לחירום: name and phone.
 
-The existing landing page and its חיפה prices are untouched.
+Then the declarations, each a required checkbox except the last which is a
+yes or no: healthy to train, read the תקנון (linked, opens in a sheet), authorize
+payment, photo consent. A typed signature field must match the parent name.
+Submitting records `signed_at` and the client IP.
+
+A renewal link prefills every field from the last agreement, locks the
+product, and still requires the declarations and signature again: the
+agreement is per purchase.
+
+The existing landing page and its חיפה prices are untouched. The תקנון text
+is a Markdown file in the repo (`content/terms-kiryat-ata.md`), rendered on
+`/join/terms` and inside the form; its version string is what
+`agreement_version` records.
 
 ### Start checkout
 
@@ -257,6 +316,20 @@ is blocked.
   controls, next to the access-tier card.
 - Users list and the daily board roster chips: a status badge (פעיל, מסתיים
   בקרוב, פג תוקף) for trainees with a plan, read through the service role.
+- Medical and emergency data for trainers: a roster chip with `medical_notes`
+  shows a small warning icon; tapping it opens a sheet with the notes and the
+  emergency contact as a tap-to-call link. The trainee detail page shows the
+  same in a "בריאות וחירום" card, editable by admins and trainers (a parent
+  can also tell the trainer about a new allergy at the field).
+- `/admin/safety`: the נוהל בטיחות וחירום as a page, in the same seven
+  sections as the PDF, with the emergency numbers (מד"א 101, משטרה 100,
+  כבאות 102) and the current branch's `manager_phone` as tap-to-call links.
+  Linked from the daily board header. Content lives in
+  `content/safety-protocol.md`; the incident report form the protocol
+  mentions is a printable checklist on the same page, not a database feature.
+- Agreements for admins: the user detail page links to each stored agreement
+  rendered as the printable page, and `/admin/orders` shows whether an order
+  has one.
 
 ## Section 5: Morning integration
 
@@ -307,6 +380,11 @@ Pure functions, no mocks, in `__tests__` next to the code:
 - `verifyMorningSignature` with a known secret and body.
 - renewal token sign and verify, including expiry.
 - catalog seed: seven slugs, prices and durations match the sheet.
+- `isValidIsraeliId` check digit: valid ids, wrong digit, short ids padded
+  with leading zeros.
+- agreement Zod schema: all three declarations required, signature must equal
+  the parent name after trimming, photo consent accepts both answers.
+- `agreementVersion` reads the version line from the תקנון Markdown.
 
 Manual, in the Morning sandbox: new signup, renewal from a reminder link,
 failed payment, replayed webhook, manual cash grant, intro pack refused twice.
@@ -326,3 +404,6 @@ failed payment, replayed webhook, manual cash grant, intro pack refused twice.
 - The business type, which decides the document type.
 - Two Meta-approved WhatsApp templates: plan confirmed, plan reminder.
 - Final Hebrew copy for `/join`.
+- The תקנון text the agreement refers to (cancellation, refunds, renewal
+  terms). The agreement cannot go live without it.
+- The branch manager's phone for the protocol page.
