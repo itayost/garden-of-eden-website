@@ -23,6 +23,8 @@ function periodLabel(product: PlanProduct): string {
 
 export function PlanCatalog({ products, selectedId, onSelect }: PlanCatalogProps) {
   return (
+    <div className="space-y-3">
+    <p className="text-sm text-black/60">המחירים בשקלים חדשים וכוללים מע&quot;מ.</p>
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {products.map((product) => {
         const selected = product.id === selectedId;
@@ -68,6 +70,7 @@ export function PlanCatalog({ products, selectedId, onSelect }: PlanCatalogProps
           </button>
         );
       })}
+    </div>
     </div>
   );
 }

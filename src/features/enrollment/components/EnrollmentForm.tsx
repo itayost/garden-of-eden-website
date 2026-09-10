@@ -303,7 +303,11 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
             </DeclarationField>
             <DeclarationField control={form.control} name="acceptsTerms">
               <span>
-                אני מאשר/ת כי קראתי את <TermsSheet /> במלואו, הבנתי את תנאיו, לרבות מדיניות ביטולים, החזרים וחיוב, ואני מסכים/ה להם.
+                אני מאשר/ת כי קראתי את <TermsSheet /> ואת{" "}
+                <a href="/cancellation-policy" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                  מדיניות ביטול העסקה
+                </a>{" "}
+                במלואם, הבנתי את תנאיהם, לרבות החזרים וחיוב, ואני מסכים/ה להם.
               </span>
             </DeclarationField>
             <DeclarationField control={form.control} name="authorizesPayment">
