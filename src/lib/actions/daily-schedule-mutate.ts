@@ -2,6 +2,7 @@
 
 import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
+import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -171,7 +172,7 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
     };
   }
 
-  const { scheduleDate, startTime, trainerId, focus, location, trainees } =
+  const { branchId, scheduleDate, startTime, trainerId, focus, location, trainees } =
     validated.data;
   const supabase = await createClient();
 
@@ -181,8 +182,12 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
   const rosterCheck = await verifyRosterTrainees(trainees);
   if (rosterCheck.error) return { error: rosterCheck.error };
 
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
+
   const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")
     .insert({
+      branch_id: branchId,
       schedule_date: scheduleDate,
       start_time: startTime,
       trainer_id: trainerId,
@@ -236,7 +241,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     };
   }
 
-  const { slotId, scheduleDate, startTime, trainerId, focus, location, trainees } =
+  const { branchId, slotId, scheduleDate, startTime, trainerId, focus, location, trainees } =
     validated.data;
   const supabase = await createClient();
 
@@ -253,8 +258,12 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const rosterCheck = await verifyRosterTrainees(trainees);
   if (rosterCheck.error) return { error: rosterCheck.error };
 
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
+
   const { data: updated, error } = await typedFrom(supabase, "daily_schedule_slots")
     .update({
+      branch_id: branchId,
       schedule_date: scheduleDate,
       start_time: startTime,
       trainer_id: trainerId,
@@ -334,11 +343,15 @@ export async function duplicateDayAction(
     };
   }
 
-  const { fromDate, toDate } = validated.data;
+  const { branchId, fromDate, toDate } = validated.data;
   const supabase = await createClient();
+
+  const branchCheck = await assertBranchWritable(branchId);
+  if (branchCheck.error) return { error: branchCheck.error };
 
   const { data: targetExisting } = await typedFrom(supabase, "daily_schedule_slots")
     .select("id")
+    .eq("branch_id", branchId)
     .eq("schedule_date", toDate)
     .limit(1);
 
@@ -351,6 +364,7 @@ export async function duplicateDayAction(
     "daily_schedule_slots",
   )
     .select(SLOT_SELECT_WITH_TRAINEES)
+    .eq("branch_id", branchId)
     .eq("schedule_date", fromDate)
     .order("start_time", { ascending: true });
 
@@ -368,12 +382,14 @@ export async function duplicateDayAction(
   const wipeTargetDay = async () => {
     await typedFrom(supabase, "daily_schedule_slots")
       .delete()
+      .eq("branch_id", branchId)
       .eq("schedule_date", toDate);
   };
 
   for (const slot of slots) {
     const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")
       .insert({
+        branch_id: branchId,
         schedule_date: toDate,
         start_time: slot.start_time,
         trainer_id: slot.trainer_id,

@@ -3,7 +3,7 @@
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { isValidDateString } from "@/lib/validations/common";
+import { isValidDateString, isValidUUID } from "@/lib/validations/common";
 import { addDays } from "@/lib/utils/iso-date";
 import { SLOT_SELECT_WITH_TRAINEES, type ScheduleSlot } from "@/types/schedule";
 
@@ -13,15 +13,20 @@ type ScheduleResult = { success: true; data: ScheduleSlot[] } | { error: string 
  * All slots for one day, roster included, ordered by hour.
  * Staff-only; RLS additionally blocks trainees at the DB layer.
  */
-export async function getScheduleAction(date: string): Promise<ScheduleResult> {
+export async function getScheduleAction(
+  date: string,
+  branchId: string,
+): Promise<ScheduleResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
+  if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "daily_schedule_slots")
     .select(SLOT_SELECT_WITH_TRAINEES)
+    .eq("branch_id", branchId)
     .eq("schedule_date", date)
     .order("start_time", { ascending: true })
     .order("created_at", { ascending: true });
@@ -49,17 +54,20 @@ export async function getScheduleAction(date: string): Promise<ScheduleResult> {
  */
 export async function getSlotsForWeekAction(
   weekStart: string,
+  branchId: string,
 ): Promise<ScheduleResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   if (!isValidDateString(weekStart)) return { error: "תאריך לא תקין" };
+  if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
 
   const supabase = await createClient();
   // idx_schedule_slots_date is (schedule_date, start_time), so the range scan
   // and this ordering are the same shape as the single-day read.
   const { data, error } = await typedFrom(supabase, "daily_schedule_slots")
     .select(SLOT_SELECT_WITH_TRAINEES)
+    .eq("branch_id", branchId)
     .gte("schedule_date", weekStart)
     .lte("schedule_date", addDays(weekStart, 6))
     .order("schedule_date", { ascending: true })

@@ -34,6 +34,7 @@ export interface ScheduleSlot {
   trainer_name: string | null;
   focus_he: string | null;
   location_he: string | null;
+  branch_id: string | null;
   trainees: SlotTrainee[];
   created_by: string;
   created_at: string;
