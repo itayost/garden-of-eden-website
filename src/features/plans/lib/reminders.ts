@@ -16,6 +16,35 @@ export interface ReminderRunResult {
 }
 
 const PENDING_ORDER_TTL_HOURS = 24;
+const EXPIRED_ORDER_KEEP_DAYS = 30;
+
+/**
+ * Expired checkouts hold a parent's details with no payment behind them;
+ * after a month they and their unsigned agreements go. Paid orders and
+ * their agreements are kept: the agreement is the contract.
+ */
+async function purgeExpiredOrders(db: ReturnType<typeof createAdminClient>): Promise<number> {
+  const cutoff = new Date(Date.now() - EXPIRED_ORDER_KEEP_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data: stale } = (await typedFrom(db, "orders")
+    .select("id")
+    .eq("status", "expired")
+    .lt("created_at", cutoff)) as { data: { id: string }[] | null };
+  const ids = (stale ?? []).map((o) => o.id);
+  if (ids.length === 0) return 0;
+  const { error: agreementsError } = await typedFrom(db, "enrollment_agreements")
+    .delete()
+    .in("order_id", ids);
+  if (agreementsError) {
+    console.error("[plan-reminders] purge agreements failed:", agreementsError);
+    return 0;
+  }
+  const { error } = await typedFrom(db, "orders").delete().in("id", ids);
+  if (error) {
+    console.error("[plan-reminders] purge orders failed:", error);
+    return 0;
+  }
+  return ids.length;
+}
 
 /** Orders nobody paid within a day stop pretending to be open checkouts. */
 async function expireStaleOrders(db: ReturnType<typeof createAdminClient>): Promise<number> {
@@ -42,6 +71,7 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   const result: ReminderRunResult = { expiredOrders: 0, reminded: 0, failed: 0 };
 
   result.expiredOrders = await expireStaleOrders(db);
+  await purgeExpiredOrders(db);
 
   const { data: activePlans, error } = (await typedFrom(db, "trainee_plans")
     .select("profile_id")

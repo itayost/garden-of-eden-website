@@ -55,6 +55,19 @@ const paymentLimiter = redis
   : null;
 
 /**
+ * Checkout rate limiter: 5 order creations per 10 minutes per key.
+ * Keyed by IP and again by login phone; no money moves, so it fails open.
+ */
+const checkoutLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "10 m"),
+      prefix: "goe:checkout",
+      analytics: true,
+    })
+  : null;
+
+/**
  * General rate limiter: 100 requests per minute
  * Used for standard API endpoints
  */
@@ -90,9 +103,10 @@ const generalLimiter = redis
  */
 export async function checkRateLimit(
   identifier: string,
-  type: "payment" | "general"
+  type: "payment" | "checkout" | "general"
 ): Promise<RateLimitResult> {
-  const limiter = type === "payment" ? paymentLimiter : generalLimiter;
+  const limiter =
+    type === "payment" ? paymentLimiter : type === "checkout" ? checkoutLimiter : generalLimiter;
   const isSensitiveOperation = type === "payment";
 
   // If Redis is unavailable:

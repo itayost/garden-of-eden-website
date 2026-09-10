@@ -34,7 +34,7 @@ export default async function PayPage({ params }: PageProps) {
     data: Pick<Order, "id" | "status" | "amount_ils" | "child_name" | "parent_name" | "product_id"> | null;
   };
   if (!order) notFound();
-  if (order.status === "paid") redirect(`/join/success?order=${order.id}`);
+  if (order.status === "paid" || order.status === "charging") redirect(`/join/success?order=${order.id}`);
   if (order.status === "failed") redirect(`/join/failed?order=${order.id}`);
 
   const { data: product } = (await typedFrom(db, "plan_products")

@@ -27,20 +27,25 @@ async function clientIp(): Promise<string> {
  * and sends the parent to the site's own card page for that order.
  *
  * Unauthenticated by design: the parent has no account yet. No money moves
- * here, only an order row, so the general limiter (fails open when Redis is
- * missing) is enough; the card charge has the strict one.
+ * here, only an order row, so the checkout limiter (5 per 10 minutes per IP
+ * and per login phone, fails open when Redis is missing) is the abuse guard;
+ * the card charge has the strict one.
  */
 export async function startCheckoutAction(input: EnrollmentInput): Promise<StartResult> {
   const ip = await clientIp();
-  const limit = await checkRateLimit(`ip:${ip}`, "general");
+  const limit = await checkRateLimit(`ip:${ip}`, "checkout");
   waitUntil(limit.pending);
-  if (limit.rateLimited) return { error: "יותר מדי ניסיונות. נסו שוב בעוד דקה." };
+  if (limit.rateLimited) return { error: "יותר מדי ניסיונות. נסו שוב בעוד כמה דקות." };
 
   const validated = enrollmentSchema.safeParse(input);
   if (!validated.success) {
     return { error: validated.error.issues[0]?.message ?? "אימות נתונים נכשל" };
   }
   const data = validated.data;
+
+  const phoneLimit = await checkRateLimit(`phone:${data.loginPhone}`, "checkout");
+  waitUntil(phoneLimit.pending);
+  if (phoneLimit.rateLimited) return { error: "יותר מדי ניסיונות למספר הזה. נסו שוב בעוד כמה דקות." };
 
   const product = await loadProductById(data.productId);
   if (!product || !product.is_active) return { error: "המסלול אינו זמין" };
@@ -60,13 +65,21 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
     return { error: "מספר הטלפון להתחברות שייך לחשבון צוות. השתמשו במספר אחר." };
   }
 
-  // A renewal token names the plan being renewed; an invalid one simply makes
-  // this a fresh purchase for the same phone.
+  // A renewal token names the plan being renewed. It only counts when the
+  // plan belongs to the phone on the form; otherwise, or when invalid, this
+  // is a fresh purchase.
   let renewalOfPlanId: string | null = null;
   if (data.renewalToken) {
     const secret = planTokenSecret();
     const verified = verifyRenewalToken(data.renewalToken, secret, Math.floor(Date.now() / 1000));
-    renewalOfPlanId = verified?.planId ?? null;
+    if (verified) {
+      const { data: renewed } = (await typedFrom(db, "trainee_plans")
+        .select("id, profile:profiles!inner(phone)")
+        .eq("id", verified.planId)
+        .maybeSingle()) as { data: { id: string; profile: { phone: string | null } | null } | null };
+      const phone = renewed?.profile?.phone;
+      if (phone && phoneVariants(data.loginPhone).includes(phone)) renewalOfPlanId = renewed.id;
+    }
   }
 
   if (product.once_per_trainee) {
