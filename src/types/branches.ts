@@ -7,6 +7,7 @@ export interface Branch {
   arbox_location_name: string | null;
   is_active: boolean;
   order_index: number;
+  manager_phone: string | null;
   created_at: string;
   updated_at: string;
 }

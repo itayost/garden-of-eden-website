@@ -8,6 +8,7 @@ function branch(overrides: Partial<Branch> & { id: string }): Branch {
     arbox_location_name: null,
     is_active: true,
     order_index: 0,
+    manager_phone: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,

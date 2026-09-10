@@ -44,6 +44,12 @@ export interface Database {
           access_override: "full" | "course_only" | null;
           arbox_access_synced_at: string | null;
           branches_set_by_admin_at: string | null;
+          guardian_name: string | null;
+          guardian_phone: string | null;
+          medical_notes: string | null;
+          emergency_contact_name: string | null;
+          emergency_contact_phone: string | null;
+          photo_consent: boolean | null;
         };
         Insert: {
           id: string;
@@ -69,6 +75,12 @@ export interface Database {
           access_override?: "full" | "course_only" | null;
           arbox_access_synced_at?: string | null;
           branches_set_by_admin_at?: string | null;
+          guardian_name?: string | null;
+          guardian_phone?: string | null;
+          medical_notes?: string | null;
+          emergency_contact_name?: string | null;
+          emergency_contact_phone?: string | null;
+          photo_consent?: boolean | null;
         };
         Update: {
           id?: string;
@@ -94,6 +106,12 @@ export interface Database {
           access_override?: "full" | "course_only" | null;
           arbox_access_synced_at?: string | null;
           branches_set_by_admin_at?: string | null;
+          guardian_name?: string | null;
+          guardian_phone?: string | null;
+          medical_notes?: string | null;
+          emergency_contact_name?: string | null;
+          emergency_contact_phone?: string | null;
+          photo_consent?: boolean | null;
         };
         Relationships: [];
       };
