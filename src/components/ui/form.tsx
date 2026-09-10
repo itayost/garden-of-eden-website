@@ -89,8 +89,10 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
 
 function FormLabel({
   className,
+  required,
+  children,
   ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+}: React.ComponentProps<typeof LabelPrimitive.Root> & { required?: boolean }) {
   const { error, formItemId } = useFormField()
 
   return (
@@ -100,7 +102,26 @@ function FormLabel({
       className={cn("data-[error=true]:text-destructive", className)}
       htmlFor={formItemId}
       {...props}
-    />
+    >
+      {children}
+      {required && (
+        <span aria-hidden="true" className="text-destructive">
+          *
+        </span>
+      )}
+    </Label>
+  )
+}
+
+/** One line above a form so the asterisks explain themselves. */
+function FormRequiredLegend({ className }: { className?: string }) {
+  return (
+    <p className={cn("text-xs text-muted-foreground", className)}>
+      <span aria-hidden="true" className="text-destructive">
+        *
+      </span>{" "}
+      שדה חובה
+    </p>
   )
 }
 
@@ -160,6 +181,7 @@ export {
   Form,
   FormItem,
   FormLabel,
+  FormRequiredLegend,
   FormControl,
   FormDescription,
   FormMessage,

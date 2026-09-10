@@ -15,6 +15,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormRequiredLegend,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,7 +70,7 @@ function DeclarationField({
             />
           </FormControl>
           <div className="space-y-1 leading-snug">
-            <FormLabel className="cursor-pointer font-normal">{children}</FormLabel>
+            <FormLabel required className="cursor-pointer font-normal">{children}</FormLabel>
             <FormMessage />
           </div>
         </FormItem>
@@ -135,6 +136,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submit)} className="space-y-8">
+        <FormRequiredLegend />
         <Section>
           <SectionTitle step={1}>פרטי ההורה / האפוטרופוס</SectionTitle>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -143,7 +145,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="parentName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>שם מלא</FormLabel>
+                  <FormLabel required>שם מלא</FormLabel>
                   <FormControl>
                     <Input {...field} autoComplete="section-parent name" className="h-12 rounded-xl text-base" disabled={loading} />
                   </FormControl>
@@ -156,7 +158,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="parentIdNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>מספר ת.ז</FormLabel>
+                  <FormLabel required>מספר ת.ז</FormLabel>
                   <FormControl>
                     <Input {...field} autoComplete="off" inputMode="numeric" dir="ltr" className="h-12 rounded-xl text-base text-right" disabled={loading} />
                   </FormControl>
@@ -169,7 +171,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="payerPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>טלפון נייד (לתשלום ולקבלה)</FormLabel>
+                  <FormLabel required>טלפון נייד (לתשלום ולקבלה)</FormLabel>
                   <FormControl>
                     <Input {...field} type="tel" autoComplete="section-parent tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" placeholder="0501234567" disabled={loading} />
                   </FormControl>
@@ -182,7 +184,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="loginPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>טלפון וואטסאפ של החניך (להתחברות לאפליקציה)</FormLabel>
+                  <FormLabel required>טלפון וואטסאפ של החניך (להתחברות לאפליקציה)</FormLabel>
                   <FormControl>
                     <Input {...field} type="tel" autoComplete="section-child tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" placeholder="0521234567" disabled={loading} />
                   </FormControl>
@@ -215,7 +217,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="childName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>שם מלא</FormLabel>
+                  <FormLabel required>שם מלא</FormLabel>
                   <FormControl>
                     <Input {...field} autoComplete="section-child name" className="h-12 rounded-xl text-base" disabled={loading} />
                   </FormControl>
@@ -228,7 +230,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="childBirthdate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>תאריך לידה</FormLabel>
+                  <FormLabel required>תאריך לידה</FormLabel>
                   <FormControl>
                     <Input {...field} autoComplete="section-child bday" className="h-12 rounded-xl text-base" type="date" max={today} disabled={loading} />
                   </FormControl>
@@ -282,7 +284,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="emergencyContactName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>שם מלא</FormLabel>
+                  <FormLabel required>שם מלא</FormLabel>
                   <FormControl>
                     <Input {...field} autoComplete="section-emergency name" className="h-12 rounded-xl text-base" disabled={loading} />
                   </FormControl>
@@ -295,7 +297,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="emergencyContactPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>טלפון</FormLabel>
+                  <FormLabel required>טלפון</FormLabel>
                   <FormControl>
                     <Input {...field} type="tel" autoComplete="section-emergency tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" disabled={loading} />
                   </FormControl>
@@ -330,7 +332,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
               name="photoConsent"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel className="font-normal">
+                  <FormLabel required className="font-normal">
                     ידוע לי כי במהלך האימונים עשויים להיות צילומים לצורכי שיתוף ברשתות החברתיות של המועדון.
                   </FormLabel>
                   <div className="grid grid-cols-2 gap-3">
@@ -368,7 +370,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
             name="signatureName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>שם ההורה כחתימה</FormLabel>
+                <FormLabel required>שם ההורה כחתימה</FormLabel>
                 <FormControl>
                   <Input {...field} autoComplete="section-parent name" className="h-12 rounded-xl text-base" placeholder="הקלידו את שמכם המלא" disabled={loading} />
                 </FormControl>
