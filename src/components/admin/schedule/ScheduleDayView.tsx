@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -122,6 +122,12 @@ export function ScheduleDayView({
           )}
 
           <BranchSwitcher />
+
+          <Button variant="ghost" size="icon" asChild aria-label="נוהל בטיחות וחירום">
+            <Link href="/admin/safety">
+              <ShieldAlert className="h-4 w-4 text-destructive" />
+            </Link>
+          </Button>
         </div>
 
         {/*

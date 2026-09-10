@@ -35,6 +35,7 @@ function BranchDialog({ open, branch, onClose, onSaved }: BranchDialogProps) {
   const [pending, startTransition] = useTransition();
   const [nameHe, setNameHe] = useState(branch?.name_he ?? "");
   const [arboxName, setArboxName] = useState(branch?.arbox_location_name ?? "");
+  const [managerPhone, setManagerPhone] = useState(branch?.manager_phone ?? "");
   const [isActive, setIsActive] = useState(branch?.is_active ?? true);
 
   const isEdit = Boolean(branch);
@@ -43,6 +44,7 @@ function BranchDialog({ open, branch, onClose, onSaved }: BranchDialogProps) {
     const input: BranchInput = {
       name_he: nameHe.trim(),
       arbox_location_name: arboxName.trim() || null,
+      manager_phone: managerPhone.trim() || null,
       is_active: isActive,
     };
 
@@ -92,6 +94,19 @@ function BranchDialog({ open, branch, onClose, onSaved }: BranchDialogProps) {
             <p className="text-xs text-muted-foreground">
               כשהשם תואם, הסנכרון הלילי משייך מתאמנים חדשים לסניף הזה אוטומטית.
             </p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="branch-manager-phone">טלפון מנהל הסניף (אופציונלי)</Label>
+            <Input
+              id="branch-manager-phone"
+              dir="ltr"
+              className="text-right"
+              value={managerPhone}
+              onChange={(e) => setManagerPhone(e.target.value)}
+              placeholder="05X-XXXXXXX"
+              disabled={pending}
+            />
+            <p className="text-xs text-muted-foreground">מופיע בנוהל הבטיחות שהצוות רואה.</p>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
