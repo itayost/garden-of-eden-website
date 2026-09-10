@@ -10,6 +10,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   ListChecks,
+  MapPin,
   RefreshCw,
   Target,
   Users,
@@ -61,6 +62,12 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/leads", label: "לידים", icon: UserPlus, mobileOrder: 1 },
       { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw, mobileOrder: 6 },
+    ],
+  },
+  {
+    label: "הגדרות",
+    items: [
+      { href: "/admin/branches", label: "סניפים", icon: MapPin, adminOnly: true, mobileOrder: 9 },
     ],
   },
 ];
