@@ -17,12 +17,16 @@ import { Label } from "@/components/ui/label";
 import { UserPlus, Search } from "lucide-react";
 import Link from "next/link";
 import { positionFilterOptions, POSITION_FILTER_ALL } from "@/lib/admin/position-filter";
+import { BRANCH_FILTER_ALL, buildBranchFilterOptions } from "@/lib/admin/branch-filter";
+import type { BranchOption } from "@/types/branches";
 
 interface UserTableToolbarProps {
   onSearchChange: (value: string) => void;
   onRoleChange: (value: string | null) => void;
   onStatusChange: (value: string | null) => void;
   onPositionChange: (value: string | null) => void;
+  onBranchChange: (value: string | null) => void;
+  branchOptions: BranchOption[];
   onShowDeletedChange: (value: boolean) => void;
   isAdmin?: boolean;
 }
@@ -37,6 +41,8 @@ export function UserTableToolbar({
   onRoleChange,
   onStatusChange,
   onPositionChange,
+  onBranchChange,
+  branchOptions,
   onShowDeletedChange,
   isAdmin = true,
 }: UserTableToolbarProps) {
@@ -45,6 +51,7 @@ export function UserTableToolbar({
   const [role, setRole] = useQueryState("role", parseAsString);
   const [status, setStatus] = useQueryState("status", parseAsString);
   const [position, setPosition] = useQueryState("position", parseAsString);
+  const [branch, setBranch] = useQueryState("branch", parseAsString);
   const [showDeleted, setShowDeleted] = useQueryState(
     "deleted",
     parseAsBoolean.withDefault(false)
@@ -77,6 +84,10 @@ export function UserTableToolbar({
   }, [position, onPositionChange]);
 
   useEffect(() => {
+    onBranchChange(branch);
+  }, [branch, onBranchChange]);
+
+  useEffect(() => {
     onShowDeletedChange(showDeleted);
   }, [showDeleted, onShowDeletedChange]);
 
@@ -106,6 +117,13 @@ export function UserTableToolbar({
     const newPosition = value === POSITION_FILTER_ALL ? null : value;
     setPosition(newPosition);
     onPositionChange(newPosition);
+  };
+
+  // Handle branch filter change
+  const handleBranchChange = (value: string) => {
+    const next = value === BRANCH_FILTER_ALL ? null : value;
+    setBranch(next);
+    onBranchChange(next);
   };
 
   // Handle show deleted toggle
@@ -163,6 +181,20 @@ export function UserTableToolbar({
           </SelectTrigger>
           <SelectContent>
             {positionFilterOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Branch Filter */}
+        <Select value={branch || BRANCH_FILTER_ALL} onValueChange={handleBranchChange}>
+          <SelectTrigger className="w-full md:w-40">
+            <SelectValue placeholder="סניף" />
+          </SelectTrigger>
+          <SelectContent>
+            {buildBranchFilterOptions(branchOptions).map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>

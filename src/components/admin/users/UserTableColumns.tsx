@@ -6,7 +6,8 @@ import { RoleBadge, StatusBadge } from "@/components/ui/badges";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Profile } from "@/types/database";
+import type { ProfileWithBranches } from "@/types/branches";
+import { NO_BRANCH_LABEL_HE } from "@/types/branches";
 
 /**
  * Format phone number for display
@@ -34,7 +35,7 @@ function getInitials(name: string | null): string {
     .toUpperCase();
 }
 
-export const columns: ColumnDef<Profile>[] = [
+export const columns: ColumnDef<ProfileWithBranches>[] = [
   {
     id: "avatar",
     header: "",
@@ -85,6 +86,23 @@ export const columns: ColumnDef<Profile>[] = [
       </Button>
     ),
     cell: ({ row }) => <RoleBadge role={row.getValue("role")} />,
+  },
+  {
+    id: "branches",
+    header: "סניף",
+    cell: ({ row }) =>
+      row.original.branchNames.length === 0 ? (
+        <span className="text-xs text-muted-foreground">{NO_BRANCH_LABEL_HE}</span>
+      ) : (
+        <div className="flex flex-wrap gap-1">
+          {row.original.branchNames.map((name) => (
+            <Badge key={name} variant="secondary" className="text-xs">
+              {name}
+            </Badge>
+          ))}
+        </div>
+      ),
+    enableSorting: false,
   },
   {
     accessorKey: "is_active",
