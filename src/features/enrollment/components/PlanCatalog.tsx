@@ -14,7 +14,8 @@ interface PlanCatalogProps {
 function periodLabel(product: PlanProduct): string {
   if (product.sessions_total !== null) {
     const weeks = Math.round(product.duration_days / 7);
-    return `${product.sessions_total} אימונים, בתוקף ${weeks} שבועות`;
+    const sessions = product.sessions_total === 1 ? "אימון אחד" : `${product.sessions_total} אימונים`;
+    return `${sessions}, בתוקף ${weeks} שבועות`;
   }
   if (product.duration_days === 30) return "לחודש";
   return `ל-${Math.round(product.duration_days / 30)} חודשים`;

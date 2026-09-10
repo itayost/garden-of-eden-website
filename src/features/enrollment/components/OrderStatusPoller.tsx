@@ -24,6 +24,11 @@ export function OrderStatusPoller({ orderId }: { orderId: string }) {
         setView("confirmed");
         return;
       }
+      // Failed or expired will not turn into paid by waiting.
+      if ("status" in result && result.status !== "pending") {
+        setView("timeout");
+        return;
+      }
       if (polls >= MAX_POLLS) {
         setView("timeout");
         return;

@@ -9,12 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toLocalPhone as local } from "@/lib/plans/local-phone";
 import { updateTraineeHealthAction, type TraineeHealth } from "../lib/actions/trainee-health";
 
-function local(phone: string | null): string {
-  if (!phone) return "";
-  return phone.startsWith("+972") ? `0${phone.slice(4)}` : phone;
-}
 
 export function HealthCard({ traineeId, health }: { traineeId: string; health: TraineeHealth }) {
   const router = useRouter();

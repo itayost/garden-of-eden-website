@@ -30,7 +30,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { allowedBranches } from "@/lib/branches/resolve-branch";
 import { isTraineeInScope } from "@/features/branches/lib/memberships";
-import { listPlansAction } from "@/features/plans/lib/actions/admin-plans";
+import { getPlanForProfileAction } from "@/features/plans/lib/actions/admin-plans";
 import { getTraineeHealthAction } from "@/features/plans/lib/actions/trainee-health";
 import { UserPlanCard } from "@/features/plans/components/UserPlanCard";
 import { HealthCard } from "@/features/plans/components/HealthCard";
@@ -131,11 +131,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   const [planRow, health] =
     userToEdit.role === "trainee"
       ? await Promise.all([
-          isAdmin
-            ? listPlansAction({}).then(
-                (rows) => rows.find((r) => r.plan.profile_id === userId) ?? null,
-              )
-            : Promise.resolve(null),
+          isAdmin ? getPlanForProfileAction(userId) : Promise.resolve(null),
           getTraineeHealthAction(userId),
         ])
       : [null, null];

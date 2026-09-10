@@ -47,6 +47,12 @@ export async function retryFulfillmentAction(orderId: string): Promise<ActionRes
   if (!isValidUUID(orderId)) return { error: "מזהה הזמנה לא תקין" };
 
   const db = createAdminClient();
+  const { data: before } = (await typedFrom(db, "orders")
+    .select("fulfilled_at")
+    .eq("id", orderId)
+    .maybeSingle()) as { data: { fulfilled_at: string | null } | null };
+  if (before?.fulfilled_at) return { error: "ההזמנה כבר טופלה" };
+
   const result = await fulfillOrder(db, orderId);
   if (!result.ok) return { error: result.error };
   await notifyOrderFulfilled(db, orderId);

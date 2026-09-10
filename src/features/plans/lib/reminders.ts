@@ -57,6 +57,7 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   const profileIds = Array.from(new Set((activePlans ?? []).map((p) => p.profile_id)));
   const plans = await loadPlansWithUsage(db, profileIds, today);
 
+  if (profileIds.length === 0) return result;
   const { data: profiles } = await db
     .from("profiles")
     .select("id, full_name, guardian_name, guardian_phone")
@@ -84,9 +85,15 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
       continue;
     }
 
-    await typedFrom(db, "trainee_plans")
+    // An unstamped send would repeat tomorrow; count it so someone looks.
+    const { error: stampError } = await typedFrom(db, "trainee_plans")
       .update({ [REMINDED_COLUMN[milestone]]: new Date().toISOString() })
       .eq("id", plan.id);
+    if (stampError) {
+      console.error(`[plan-reminders] stamp failed for plan ${plan.id}:`, stampError);
+      result.failed += 1;
+      continue;
+    }
     result.reminded += 1;
   }
 

@@ -23,6 +23,9 @@ export function JoinPageClient({
   const [selected, setSelected] = useState<PlanProduct | null>(
     products.find((p) => p.id === initialProductId) ?? null,
   );
+  // A renewal link whose product is gone or one-time (the intro pack) still
+  // carries the prefill, but the parent picks the next plan from the catalog.
+  const showCatalog = !renewalToken || initialProductId === null;
 
   // The action redirects to Morning on success and only returns on error.
   const handleSubmit = async (input: EnrollmentInput): Promise<{ error?: string }> => {
@@ -40,14 +43,19 @@ export function JoinPageClient({
 
   return (
     <div className="space-y-10">
-      {!renewalToken && (
+      {renewalToken && initialProductId === null && (
+        <p className="rounded-2xl border bg-white p-4 text-sm text-black/70">
+          הפרטים מולאו מההרשמה הקודמת. בחרו את המסלול הבא, אשרו את ההצהרות וחתמו שוב.
+        </p>
+      )}
+      {showCatalog && (
         <PlanCatalog
           products={products}
           selectedId={selected?.id ?? null}
           onSelect={setSelected}
         />
       )}
-      {renewalToken && selected && (
+      {renewalToken && initialProductId !== null && selected && (
         <p className="rounded-2xl border bg-white p-4 text-sm text-black/70">
           חידוש המסלול <span className="font-bold">{selected.name_he}</span>. הפרטים מולאו
           מההרשמה הקודמת; יש לאשר את ההצהרות ולחתום שוב.

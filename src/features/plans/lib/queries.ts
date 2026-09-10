@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { countSessionsUsedFromRows, resolvePlanStatus } from "@/lib/plans/plan-status";
+import { pickRelevantPlan } from "@/lib/plans/pick-relevant";
 import type { PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
 
 export interface PlanWithUsage {
@@ -42,13 +43,6 @@ async function loadRosterRows(
     return [];
   }
   return data ?? [];
-}
-
-/** Active first, then the one ending last: the plan that matters right now. */
-function pickRelevant(plans: readonly PlanRow[]): PlanRow | null {
-  const active = plans.filter((p) => p.status === "active");
-  const pool = active.length > 0 ? active : plans;
-  return [...pool].sort((a, b) => (a.ends_on < b.ends_on ? 1 : -1))[0] ?? null;
 }
 
 export function toPlanWithUsage(
@@ -101,7 +95,7 @@ export async function loadPlansWithUsage(
 
   const rosterRows = await loadRosterRows(db, [...byProfile.keys()]);
   for (const [profileId, plans] of byProfile) {
-    const relevant = pickRelevant(plans);
+    const relevant = pickRelevantPlan(plans, today);
     if (relevant) result.set(profileId, toPlanWithUsage(relevant, rosterRows, today));
   }
   return result;

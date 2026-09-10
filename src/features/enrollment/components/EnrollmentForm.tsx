@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, type Control, type Resolver } from "react-hook-form";
+import { useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -76,11 +76,12 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
   const today = new Date().toISOString().slice(0, 10);
 
   // The schema transforms phones and the photo answer, so its output type
-  // differs from the field values. The shared FormField wrapper only accepts a
-  // control whose output equals its input, hence the cast: the resolver still
-  // validates with the full schema, and the action re-parses the raw input.
+  // differs from the field values. raw: true makes the resolver validate with
+  // the full schema but hand the untouched field values to onSubmit, which is
+  // what the action re-parses. Without it the parsed output (null email,
+  // boolean photo consent) fails the input schema on the server.
   const form = useForm<EnrollmentInput>({
-    resolver: zodResolver(enrollmentSchema) as unknown as Resolver<EnrollmentInput>,
+    resolver: zodResolver(enrollmentSchema, undefined, { raw: true }),
     defaultValues: {
       productId: product.id,
       renewalToken,

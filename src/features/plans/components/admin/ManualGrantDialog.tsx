@@ -42,7 +42,7 @@ function emptyForm(): ManualGrantInput {
     medicalNotes: "",
     paymentMethod: "cash",
     note: "",
-    startsOn: new Date().toISOString().slice(0, 10),
+    startsOn: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date()),
   };
 }
 

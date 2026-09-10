@@ -1,11 +1,9 @@
 import { Phone, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EMERGENCY_NUMBERS, SAFETY_SECTIONS } from "../../../../content/safety-protocol";
+import { toLocalPhone as localPhone } from "@/lib/plans/local-phone";
 import type { Branch } from "@/types/branches";
 
-function localPhone(phone: string): string {
-  return phone.startsWith("+972") ? `0${phone.slice(4)}` : phone;
-}
 
 /**
  * The staff protocol as a readable page. Emergency numbers and the branch

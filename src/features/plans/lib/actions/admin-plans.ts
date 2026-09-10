@@ -35,7 +35,7 @@ function revalidatePlanSurfaces(profileId?: string): void {
   if (profileId) revalidatePath(`/admin/users/${profileId}`);
 }
 
-/** Every plan in one branch (or all), newest ending first. */
+/** The current plan of every trainee in one branch (or all), newest ending first. */
 export async function listPlansAction(filter: {
   branchId?: string;
   status?: PlanStatus;
@@ -50,7 +50,25 @@ export async function listPlansAction(filter: {
   }
   const { data: rows } = (await query) as { data: { profile_id: string }[] | null };
   const profileIds = Array.from(new Set((rows ?? []).map((r) => r.profile_id)));
+  const all = await loadAdminRows(db, profileIds);
+  return all
+    .filter((row) => !filter.status || row.status === filter.status)
+    .sort((a, b) => (a.plan.ends_on < b.plan.ends_on ? 1 : -1));
+}
 
+/** One trainee's current plan for the user page; null when they have none. */
+export async function getPlanForProfileAction(profileId: string): Promise<AdminPlanRow | null> {
+  const { error } = await verifyAdmin();
+  if (error || !isValidUUID(profileId)) return null;
+  const rows = await loadAdminRows(createAdminClient(), [profileId]);
+  return rows[0] ?? null;
+}
+
+async function loadAdminRows(
+  db: ReturnType<typeof createAdminClient>,
+  profileIds: readonly string[],
+): Promise<AdminPlanRow[]> {
+  if (profileIds.length === 0) return [];
   const [plans, { data: profiles }] = await Promise.all([
     loadPlansWithUsage(db, profileIds, israelToday()),
     db.from("profiles").select("id, full_name, guardian_name, guardian_phone").in("id", profileIds),
@@ -77,9 +95,7 @@ export async function listPlansAction(filter: {
           ? (docByOrder.get(withUsage.plan.order_id) ?? null)
           : null,
       };
-    })
-    .filter((row) => !filter.status || row.status === filter.status)
-    .sort((a, b) => (a.plan.ends_on < b.plan.ends_on ? 1 : -1));
+    });
 }
 
 export async function extendPlanAction(input: {
@@ -92,11 +108,26 @@ export async function extendPlanAction(input: {
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
 
   const db = createAdminClient();
+  const { data: existing } = (await typedFrom(db, "trainee_plans")
+    .select("starts_on")
+    .eq("id", parsed.data.planId)
+    .maybeSingle()) as { data: { starts_on: string } | null };
+  if (!existing) return { error: "המסלול לא נמצא" };
+  if (parsed.data.endsOn < existing.starts_on) {
+    return { error: "תאריך הסיום קודם לתאריך ההתחלה" };
+  }
+
+  // A new end date deserves its own reminders.
   const { data, error } = await typedFrom(db, "trainee_plans")
-    .update({ ends_on: parsed.data.endsOn })
+    .update({
+      ends_on: parsed.data.endsOn,
+      reminded_3_days_at: null,
+      reminded_last_session_at: null,
+      reminded_expired_at: null,
+    })
     .eq("id", parsed.data.planId)
     .select("profile_id");
-  if (error || !data?.length) return { error: "המסלול לא נמצא" };
+  if (error || !data?.length) return { error: "שגיאה בעדכון המסלול" };
   revalidatePlanSurfaces(data[0].profile_id);
   return { success: true };
 }
@@ -119,7 +150,11 @@ export async function addSessionsAction(input: {
   if (plan.sessions_total === null) return { error: "למסלול לפי זמן אין מונה אימונים" };
 
   const { error } = await typedFrom(db, "trainee_plans")
-    .update({ sessions_total: plan.sessions_total + parsed.data.sessions })
+    .update({
+      sessions_total: plan.sessions_total + parsed.data.sessions,
+      reminded_last_session_at: null,
+      reminded_expired_at: null,
+    })
     .eq("id", parsed.data.planId);
   if (error) return { error: "שגיאה בעדכון המסלול" };
   revalidatePlanSurfaces(plan.profile_id);
