@@ -32,6 +32,12 @@ function createProfile(overrides: Partial<Profile> = {}): Profile {
     access_override: null,
     arbox_access_synced_at: null,
     branches_set_by_admin_at: null,
+    guardian_name: null,
+    guardian_phone: null,
+    medical_notes: null,
+    emergency_contact_name: null,
+    emergency_contact_phone: null,
+    photo_consent: null,
     ...overrides,
   };
 }

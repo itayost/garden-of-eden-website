@@ -7,7 +7,7 @@ export default function HomePage() {
   return (
     <MotionProvider>
       <main className="bg-[#F5F5F0]">
-        <Navbar />
+        <Navbar otherBranch={{ label: "סניף קריית אתא", href: "/kiryat-ata" }} />
         <Hero />
         <About />
         <Services />

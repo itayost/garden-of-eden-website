@@ -223,6 +223,24 @@ export function Footer() {
               >
                 מדיניות פרטיות
               </Link>
+              <Link
+                href="/"
+                className="text-white/50 hover:text-white/70 text-sm transition-colors"
+              >
+                סניף חיפה
+              </Link>
+              <Link
+                href="/kiryat-ata"
+                className="text-white/50 hover:text-white/70 text-sm transition-colors"
+              >
+                סניף קריית אתא
+              </Link>
+              <Link
+                href="/cancellation-policy"
+                className="text-white/50 hover:text-white/70 text-sm transition-colors"
+              >
+                מדיניות ביטול
+              </Link>
             </div>
           </div>
         </div>

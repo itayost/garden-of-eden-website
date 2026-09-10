@@ -77,8 +77,18 @@ const faqItems = [
   },
 ];
 
-export function FAQ() {
+interface FAQProps {
+  /** id -> replacement answer for a branch where the Haifa answer does not hold. */
+  overrides?: Record<string, string>;
+  /** ids to leave out for this branch. */
+  omit?: readonly string[];
+}
+
+export function FAQ({ overrides = {}, omit = [] }: FAQProps = {}) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const items = faqItems
+    .filter((item) => !omit.includes(item.id))
+    .map((item) => ({ ...item, answer: overrides[item.id] ?? item.answer }));
 
   const toggleItem = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -105,7 +115,7 @@ export function FAQ() {
 
         {/* FAQ Accordion */}
         <div className="max-w-3xl mx-auto space-y-4">
-          {faqItems.map((item, index) => (
+          {items.map((item, index) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, y: 20 }}

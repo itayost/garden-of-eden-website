@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
 
@@ -59,13 +60,14 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">מדיניות ביטולים</h2>
             <p className="mb-4">
-              ניתן לבטל השתתפות בתוכנית בכפוף לתנאים הבאים:
+              ביטול עסקה והחזר כספי נעשים לפי חוק הגנת הצרכן: ביטול בתוך 14 ימים
+              מיום הרכישה בניכוי דמי ביטול של 5% או 100 ש&quot;ח (הנמוך מביניהם),
+              ביטול מנוי חודשי בכל עת, וביטול כרטיסייה בניכוי האימונים שנוצלו.
             </p>
-            <ul className="list-disc list-inside space-y-2 mr-4">
-              <li>ביטול עד 14 יום לפני תחילת התוכנית - החזר מלא</li>
-              <li>ביטול עד 7 ימים לפני תחילת התוכנית - החזר של 50%</li>
-              <li>ביטול פחות מ-7 ימים לפני תחילת התוכנית - ללא החזר</li>
-            </ul>
+            <p>
+              הנוסח המלא, דרכי הביטול ופרטי העסק מופיעים ב
+              <Link href="/cancellation-policy" className="underline">מדיניות ביטול העסקה</Link>.
+            </p>
           </section>
 
           <section>

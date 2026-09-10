@@ -30,6 +30,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { allowedBranches } from "@/lib/branches/resolve-branch";
 import { isTraineeInScope } from "@/features/branches/lib/memberships";
+import { getPlanForProfileAction } from "@/features/plans/lib/actions/admin-plans";
+import { getTraineeHealthAction } from "@/features/plans/lib/actions/trainee-health";
+import { UserPlanCard } from "@/features/plans/components/UserPlanCard";
+import { HealthCard } from "@/features/plans/components/HealthCard";
 
 interface UserEditPageProps {
   params: Promise<{ userId: string }>;
@@ -122,6 +126,16 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     };
   }
 
+  // Plan rows are admin-only (listPlansAction verifies); health data is
+  // scoped per trainee, so a trainer sees it for their own branch.
+  const [planRow, health] =
+    userToEdit.role === "trainee"
+      ? await Promise.all([
+          isAdmin ? getPlanForProfileAction(userId) : Promise.resolve(null),
+          getTraineeHealthAction(userId),
+        ])
+      : [null, null];
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("he-IL", {
       day: "numeric",
@@ -207,6 +221,10 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               isAdmin={isAdmin}
             />
           )}
+
+          {planRow && <UserPlanCard row={planRow} isAdmin={isAdmin} />}
+
+          {health && <HealthCard traineeId={userId} health={health} />}
 
           {/* Which content this trainee can reach, and why (admin only) */}
           {isAdmin && userToEdit.role === "trainee" && (

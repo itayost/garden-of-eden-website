@@ -14,7 +14,12 @@ const navLinks = [
   { label: "צור קשר", href: "#contact" },
 ];
 
-export function Navbar() {
+export interface BranchLink {
+  label: string;
+  href: string;
+}
+
+export function Navbar({ otherBranch }: { otherBranch?: BranchLink } = {}) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("#");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -112,6 +117,11 @@ export function Navbar() {
             >
               <Link href="/dashboard">לאיזור המתאמנים</Link>
             </Button>
+            {otherBranch && (
+              <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full" asChild>
+                <Link href={otherBranch.href}>{otherBranch.label}</Link>
+              </Button>
+            )}
             <Button
               size="sm"
               className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-0 rounded-full px-4"
@@ -176,6 +186,15 @@ export function Navbar() {
                 >
                   <Link href="/dashboard">לאיזור המתאמנים</Link>
                 </Button>
+                {otherBranch && (
+                  <Button
+                    variant="ghost"
+                    className="text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg font-medium"
+                    asChild
+                  >
+                    <Link href={otherBranch.href}>{otherBranch.label}</Link>
+                  </Button>
+                )}
                 <Button
                   className="bg-[#CDEA68] hover:bg-[#bdd85c] text-black rounded-full px-8 py-6 text-lg font-medium"
                   asChild

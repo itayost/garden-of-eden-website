@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { ProfileWithBranches } from "@/types/branches";
 import { NO_BRANCH_LABEL_HE } from "@/types/branches";
+import { PlanStatusBadge } from "@/features/plans/components/PlanStatusBadge";
 
 /**
  * Format phone number for display
@@ -140,13 +141,25 @@ const baseColumns: ColumnDef<ProfileWithBranches>[] = [
     cell: ({ row }) => <StatusBadge isActive={row.getValue("is_active")} />,
   },
   {
-    id: "payment_status",
-    header: "תשלום",
-    cell: () => (
-      <Badge variant="outline" className="text-muted-foreground">
-        -
-      </Badge>
-    ),
+    id: "plan",
+    header: "מסלול",
+    cell: ({ row }) => {
+      const badge = row.original.planBadge;
+      // endsOn is empty for the medical-only marker: no plan to show.
+      if (!badge || !badge.endsOn) {
+        return <span className="text-xs text-muted-foreground">-</span>;
+      }
+      return (
+        <div className="flex items-center gap-1.5">
+          <PlanStatusBadge status={badge.status} className="text-xs" />
+          {badge.sessionsLeft !== null && (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {badge.sessionsLeft} נותרו
+            </span>
+          )}
+        </div>
+      );
+    },
     enableSorting: false,
   },
 ];

@@ -16,6 +16,7 @@ import {
 } from "@/features/branches/lib/memberships";
 import { toBranchOption, type ProfileWithBranches } from "@/types/branches";
 import { getBranchScopeAction } from "@/lib/actions/shared";
+import { loadPlanStatusesForStaff } from "@/features/plans/lib/actions/staff-plan-badges";
 
 export const metadata: Metadata = {
   title: "ניהול משתמשים | Garden of Eden",
@@ -87,9 +88,12 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
 
   // Memberships through the service role: the page is gated above, and a
   // trainer cannot read other users' profile_branches rows through RLS.
-  const [allBranches, membershipMap] = await Promise.all([
+  const [allBranches, membershipMap, planBadges] = await Promise.all([
     loadAllBranches(adminClient),
     loadBranchIdsByProfile(adminClient, typedUsers.map((u) => u.id)),
+    loadPlanStatusesForStaff(
+      typedUsers.filter((u) => u.role === "trainee").map((u) => u.id),
+    ),
   ]);
   // Inactive branches still resolve to a name so a deactivated branch is
   // shown on the users that keep it; pickers get active ones only.
@@ -98,7 +102,12 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
 
   const usersWithBranches: ProfileWithBranches[] = typedUsers.map((user) => {
     const branchIds = membershipMap.get(user.id) ?? [];
-    return { ...user, branchIds, branchNames: branchNamesFor(branchIds, allBranchOptions) };
+    return {
+      ...user,
+      branchIds,
+      branchNames: branchNamesFor(branchIds, allBranchOptions),
+      planBadge: planBadges[user.id],
+    };
   });
 
   const params = await searchParams;

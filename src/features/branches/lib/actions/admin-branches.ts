@@ -25,6 +25,7 @@ const UNIQUE_VIOLATION = "23505";
 
 function revalidateBranchSurfaces(): void {
   revalidatePath("/admin/branches");
+  revalidatePath("/admin/safety");
   revalidatePath("/admin/users");
 }
 
@@ -75,6 +76,7 @@ export async function createBranchAction(input: BranchInput): Promise<ActionResu
   const { error } = await typedFrom(db, "branches").insert({
     name_he: validated.data.name_he,
     arbox_location_name: validated.data.arbox_location_name,
+    manager_phone: validated.data.manager_phone,
     is_active: validated.data.is_active,
     order_index: (maxOrder?.order_index ?? -1) + 1,
   });
@@ -119,6 +121,7 @@ export async function updateBranchAction(
     .update({
       name_he: validated.data.name_he,
       arbox_location_name: validated.data.arbox_location_name,
+      manager_phone: validated.data.manager_phone,
       is_active: validated.data.is_active,
     })
     .eq("id", id);

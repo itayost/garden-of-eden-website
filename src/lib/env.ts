@@ -30,6 +30,16 @@ const optionalServerVars = [
   "WHATSAPP_WELCOME_TEMPLATE_NAME",
   "LEADS_WEBHOOK_API_KEY",
   "ARBOX_API_KEY",
+  // Required by the renewal and agreement links; planTokenSecret() throws
+  // at the point of use, so a missing value cannot fail open.
+  "PLAN_RENEWAL_TOKEN_SECRET",
+  "MORNING_CLIENT_ID",
+  "MORNING_CLIENT_SECRET",
+  "MORNING_WEBHOOK_SECRET",
+  "MORNING_ENV",
+  "MORNING_DOCUMENT_TYPE",
+  "WHATSAPP_PLAN_CONFIRMED_TEMPLATE_NAME",
+  "WHATSAPP_PLAN_REMINDER_TEMPLATE_NAME",
 ] as const;
 
 /**

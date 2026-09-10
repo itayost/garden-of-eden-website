@@ -29,6 +29,9 @@ import { getOwnNextGame } from "@/features/next-game/lib/actions/next-game";
 import { ClipUploadCard } from "@/components/dashboard/ClipUploadCard";
 import { MentalRecordingsCard } from "@/components/dashboard/MentalRecordingsCard";
 import { getOwnClipWithSignedUrl } from "@/features/clips/lib/actions/clips";
+import { loadOwnPlanWithUsage } from "@/features/plans/lib/queries";
+import { buildRenewalUrl } from "@/features/plans/lib/renewal-link";
+import { MyPlanCard } from "@/features/plans/components/MyPlanCard";
 import type { UserAchievementRow } from "@/types/database";
 
 const MiniRatingChartWrapper = dynamic(
@@ -71,6 +74,8 @@ export default async function DashboardPage() {
     getOwnNextGame(),
     getOwnClipWithSignedUrl(),
   ]);
+
+  const ownPlan = await loadOwnPlanWithUsage(israelToday());
 
   // Calculate goal progress for display
   const goalsWithProgress = (goalsData || []).map(calculateGoalProgress);
@@ -140,6 +145,9 @@ export default async function DashboardPage() {
       </div>
 
       {hasAssessments && <RatingMigrationBanner />}
+      {ownPlan && (
+        <MyPlanCard planWithUsage={ownPlan} renewUrl={buildRenewalUrl(ownPlan.plan.id)} />
+      )}
 
       {/* Player Card Section */}
       {calculatedRatings ? (
