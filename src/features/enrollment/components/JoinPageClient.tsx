@@ -23,9 +23,17 @@ export function JoinPageClient({
   const [selected, setSelected] = useState<PlanProduct | null>(
     products.find((p) => p.id === initialProductId) ?? null,
   );
-  // A renewal link whose product is gone or one-time (the intro pack) still
-  // carries the prefill, but the parent picks the next plan from the catalog.
-  const showCatalog = !renewalToken || initialProductId === null;
+  // Arriving with a product (a landing-page card, a renewal link) opens the
+  // form directly; the catalog only shows when there is nothing chosen yet
+  // or the parent asks to change. A renewal link whose product is gone or
+  // one-time (the intro pack) has no product and starts at the catalog.
+  const [changing, setChanging] = useState(false);
+  const showCatalog = selected === null || changing;
+
+  const choose = (product: PlanProduct) => {
+    setSelected(product);
+    setChanging(false);
+  };
 
   // The action redirects to Morning on success and only returns on error.
   const handleSubmit = async (input: EnrollmentInput): Promise<{ error?: string }> => {
@@ -48,12 +56,30 @@ export function JoinPageClient({
           הפרטים מולאו מההרשמה הקודמת. בחרו את המסלול הבא, אשרו את ההצהרות וחתמו שוב.
         </p>
       )}
-      {showCatalog && (
+      {showCatalog ? (
         <PlanCatalog
           products={products}
           selectedId={selected?.id ?? null}
-          onSelect={setSelected}
+          onSelect={choose}
         />
+      ) : (
+        selected && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white px-5 py-4">
+            <div>
+              <span className="block text-xs text-black/50">המסלול שנבחר</span>
+              <span className="text-lg font-bold">
+                {selected.name_he} · ₪{selected.price_ils.toLocaleString("he-IL")}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setChanging(true)}
+              className="text-sm underline underline-offset-2 text-black/70 hover:text-black"
+            >
+              שינוי מסלול
+            </button>
+          </div>
+        )
       )}
       {renewalToken && initialProductId !== null && selected && (
         <p className="rounded-2xl border bg-white p-4 text-sm text-black/70">
