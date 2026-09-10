@@ -130,6 +130,10 @@ try {
 
 `branches` + `profile_branches` (many-to-many). Trainer scope comes from `getBranchScopeAction()` in `src/lib/actions/shared/` and is applied in server queries through `visibleProfileIds()`; never rely on RLS for it. Schedule pages carry the branch in `?branch=` and hand it to dialogs through `BranchProvider` / `useCurrentBranch()`. Shifts store `branch_id`; rankings take a branch id. See `docs/adr/0006-branches-are-a-table.md`.
 
+### קריית אתא signup
+
+`/join` sells `plan_products`, records an `orders` row and a signed `enrollment_agreements` row, and sends the parent to Morning's hosted payment page. Only the signed webhook at `src/app/api/webhooks/morning/route.ts` marks an order paid; `src/features/enrollment/lib/fulfillment.ts` then creates the account, the branch link, and the `trainee_plans` row, and is safe to rerun. Plan state is derived by `resolvePlanStatus()` in `src/lib/plans/`, never stored. Spec: `docs/superpowers/specs/2026-09-10-kiryat-ata-signup-design.md`.
+
 ### Migrations
 
 Two formats coexist in `supabase/migrations/`:
@@ -162,6 +166,7 @@ GROW_USER_ID, GROW_PAGE_CODE, GROW_API_URL, GROW_WEBHOOK_SECRET, GROW_PROCESS_TO
 REMOVEBG_API_KEY
 UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
 CRON_SECRET
+MORNING_ENV, MORNING_CLIENT_ID, MORNING_CLIENT_SECRET, MORNING_WEBHOOK_SECRET, PLAN_RENEWAL_TOKEN_SECRET
 ```
 
 Startup validation in `src/lib/env.ts` (called via `src/instrumentation.ts`) fails fast if any required var is missing.
