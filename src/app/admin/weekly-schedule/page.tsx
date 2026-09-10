@@ -71,7 +71,7 @@ export default async function WeeklySchedulePage({ searchParams }: PageProps) {
       getSlotsForWeekAction(weekStart),
       getWeeklyScheduleAction(panelFromDate, panelToDate),
       getExceptionsInRangeAction(weekStart, weekEnd),
-      getSlotFormOptionsAction(),
+      getSlotFormOptionsAction(""),
     ]);
 
   // Each failure degrades on its own. Slots failing must not render as a week

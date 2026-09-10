@@ -6,12 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AssessmentsTable } from "./AssessmentsTable";
 import { AssessmentsMonthView } from "./AssessmentsMonthView";
 import type { AssessmentsPaginatedResult } from "@/lib/actions/admin-assessments-list";
+import type { BranchOption } from "@/types/branches";
 
 interface AssessmentsContentProps {
   initialData: AssessmentsPaginatedResult | null;
+  branches: BranchOption[];
 }
 
-export function AssessmentsContent({ initialData }: AssessmentsContentProps) {
+export function AssessmentsContent({ initialData, branches }: AssessmentsContentProps) {
   const [month] = useQueryState("month", parseAsInteger);
   const [year] = useQueryState("year", parseAsInteger);
 
@@ -28,7 +30,7 @@ export function AssessmentsContent({ initialData }: AssessmentsContentProps) {
   return (
     <div className="space-y-6">
       {isMonthView ? (
-        <AssessmentsMonthView month={month} year={effectiveYear} />
+        <AssessmentsMonthView month={month} year={effectiveYear} branches={branches} />
       ) : (
         <>
           {/* Global summary cards — same as before */}
@@ -80,6 +82,7 @@ export function AssessmentsContent({ initialData }: AssessmentsContentProps) {
                 initialProfiles={initialProfiles}
                 initialAssessmentsByUser={initialAssessmentsByUser}
                 initialTotal={total}
+                branches={branches}
               />
             </CardContent>
           </Card>

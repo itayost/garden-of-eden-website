@@ -10,6 +10,8 @@ import type { Profile } from "@/types/database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadAllBranches, loadBranchIdsByProfile, branchNamesFor } from "@/features/branches/lib/memberships";
 import { toBranchOption, type ProfileWithBranches } from "@/types/branches";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { scopedProfileIds } from "@/features/branches/lib/memberships";
 
 export const metadata: Metadata = {
   title: "ניהול משתמשים | Garden of Eden",
@@ -50,12 +52,20 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
 
   const isAdmin = currentProfile?.role === "admin";
 
-  // Fetch users based on role:
-  // - Admins see ALL users (including soft-deleted)
-  // - Trainers see only trainees
+  // Admins see everyone (including soft-deleted); the branch filter on the
+  // table narrows client-side like the other filters. Trainers see trainees
+  // in their branches only.
+  const adminClient = createAdminClient();
+  const scopeResult = await getBranchScopeAction();
+  const scope = "success" in scopeResult ? scopeResult.data.scope : { kind: "all" as const };
+  const scopedIds = isAdmin ? null : await scopedProfileIds(adminClient, scope);
+
   let query = supabase.from("profiles").select("*");
   if (!isAdmin) {
     query = query.eq("role", "trainee");
+  }
+  if (scopedIds !== null) {
+    query = query.in("id", scopedIds);
   }
   const { data: users, error } = await query.order("created_at", {
     ascending: false,
@@ -69,7 +79,6 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
 
   // Memberships through the service role: the page is gated above, and a
   // trainer cannot read other users' profile_branches rows through RLS.
-  const adminClient = createAdminClient();
   const [allBranches, membershipMap] = await Promise.all([
     loadAllBranches(adminClient),
     loadBranchIdsByProfile(adminClient, typedUsers.map((u) => u.id)),

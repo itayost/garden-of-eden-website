@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
 import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
+import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
+import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { CATEGORY_COLUMNS } from "@/lib/utils/trainee-notes";
 import { SHIFT_REPORT_EXPORT_CAP } from "./admin-submissions-constants";
 import type {
@@ -52,6 +54,19 @@ export interface SubmissionQueryParams {
   startDate?: string;
   endDate?: string;
   position?: string;
+  branchId?: string;
+}
+
+/** User ids the caller may see for these params, or null for no restriction. */
+async function visibleUserIdsFor(
+  supabase: ReturnType<typeof createAdminClient>,
+  branchId: string | undefined,
+): Promise<{ ids: string[] | null } | { blocked: true }> {
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return { blocked: true };
+  const ids = await visibleProfileIds(supabase, scopeResult.data.scope, branchId);
+  if (ids !== null && ids.length === 0) return { blocked: true };
+  return { ids };
 }
 
 export async function getPreWorkoutPaginated(
@@ -62,6 +77,9 @@ export async function getPreWorkoutPaginated(
 
   const supabase = createAdminClient();
   const from = params.page * params.pageSize;
+
+  const visible = await visibleUserIdsFor(supabase, params.branchId);
+  if ("blocked" in visible) return { items: [], total: 0 };
 
   let query = supabase
     .from("pre_workout_forms")
@@ -78,6 +96,9 @@ export async function getPreWorkoutPaginated(
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
   }
   query = applyPositionFilter(query, "profile.position", params.position);
+  if (visible.ids !== null) {
+    query = query.in("user_id", visible.ids);
+  }
 
   const { data, count } = (await query.range(
     from,
@@ -99,6 +120,9 @@ export async function getPostWorkoutPaginated(
   const supabase = createAdminClient();
   const from = params.page * params.pageSize;
 
+  const visible = await visibleUserIdsFor(supabase, params.branchId);
+  if ("blocked" in visible) return { items: [], total: 0 };
+
   let query = supabase
     .from("post_workout_forms")
     .select(
@@ -117,6 +141,9 @@ export async function getPostWorkoutPaginated(
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
   }
   query = applyPositionFilter(query, "profile.position", params.position);
+  if (visible.ids !== null) {
+    query = query.in("user_id", visible.ids);
+  }
 
   const { data, count } = (await query.range(
     from,
@@ -138,6 +165,9 @@ export async function getNutritionPaginated(
   const supabase = createAdminClient();
   const from = params.page * params.pageSize;
 
+  const visible = await visibleUserIdsFor(supabase, params.branchId);
+  if ("blocked" in visible) return { items: [], total: 0 };
+
   let query = supabase
     .from("nutrition_forms")
     .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate, position)", { count: "exact" })
@@ -150,6 +180,9 @@ export async function getNutritionPaginated(
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
   }
   query = applyPositionFilter(query, "profile.position", params.position);
+  if (visible.ids !== null) {
+    query = query.in("user_id", visible.ids);
+  }
 
   const { data, count } = (await query.range(
     from,
@@ -171,6 +204,9 @@ export async function getMentalPaginated(
   const supabase = createAdminClient();
   const from = params.page * params.pageSize;
 
+  const visible = await visibleUserIdsFor(supabase, params.branchId);
+  if ("blocked" in visible) return { items: [], total: 0 };
+
   let query = typedFrom(supabase, "mental_questionnaires")
     .select("*, profile:profiles!inner(position)", { count: "exact" })
     .order("submitted_at", { ascending: false });
@@ -185,6 +221,9 @@ export async function getMentalPaginated(
     query = query.lte("submitted_at", params.endDate + "T23:59:59");
   }
   query = applyPositionFilter(query, "profile.position", params.position);
+  if (visible.ids !== null) {
+    query = query.in("user_id", visible.ids);
+  }
 
   const { data, count } = (await query.range(
     from,

@@ -35,7 +35,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
     await Promise.all([
       getScheduleAction(date),
       getSessionSummariesAction(date),
-      getSlotFormOptionsAction(),
+      getSlotFormOptionsAction(""),
       getOnDutyAction(date),
     ]);
 

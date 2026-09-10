@@ -14,18 +14,35 @@ import {
   MentalContent,
 } from "@/components/admin/submissions/SubmissionsContent";
 import { ShiftReportContent } from "@/components/admin/submissions/ShiftReportContent";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { visibleProfileIds } from "@/features/branches/lib/memberships";
+import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
+import { BranchUrlFilter } from "@/features/branches/components/BranchUrlFilter";
 
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
 
 const PAGE_SIZE = 20;
 
 interface AdminSubmissionsPageProps {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; branch?: string }>;
 }
 
 export default async function AdminSubmissionsPage({ searchParams }: AdminSubmissionsPageProps) {
-  const { tab } = await searchParams;
+  const { tab, branch } = await searchParams;
   const supabase = await createClient();
+
+  // Trainers see forms from their branches only. Admins (and an unassigned
+  // trainer, who fails open) get a branch filter that narrows the same way.
+  const scopeResult = await getBranchScopeAction();
+  const scope = "success" in scopeResult ? scopeResult.data.scope : { kind: "all" as const };
+  const showBranchFilter = scope.kind === "all";
+  const visibleIds = await visibleProfileIds(createAdminClient(), scope, branch);
+  const branches = showBranchFilter ? await listActiveBranchOptionsAction() : [];
+  const narrow = <T,>(q: T): T =>
+    visibleIds === null
+      ? q
+      : (q as { in: (c: string, v: string[]) => T }).in("user_id", visibleIds);
 
   // Fetch page 0 for each tab + exact counts (much less data than .limit(200))
   const [
@@ -35,27 +52,28 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
     { data: shiftReports, count: shiftReportsCount },
     { data: mental, count: mentalCount },
   ] = await Promise.all([
-    supabase
-      .from("pre_workout_forms")
-      .select("*", { count: "exact" })
+    narrow(supabase.from("pre_workout_forms").select("*", { count: "exact" }))
       .order("submitted_at", { ascending: false })
       .range(0, PAGE_SIZE - 1) as unknown as { data: PreWorkoutForm[] | null; count: number | null },
-    supabase
-      .from("post_workout_forms")
-      .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)", { count: "exact" })
+    narrow(
+      supabase
+        .from("post_workout_forms")
+        .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)", { count: "exact" }),
+    )
       .order("submitted_at", { ascending: false })
       .range(0, PAGE_SIZE - 1) as unknown as { data: PostWorkoutWithTrainer[] | null; count: number | null },
-    supabase
-      .from("nutrition_forms")
-      .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate)", { count: "exact" })
+    narrow(
+      supabase
+        .from("nutrition_forms")
+        .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate)", { count: "exact" }),
+    )
       .order("submitted_at", { ascending: false })
       .range(0, PAGE_SIZE - 1) as unknown as { data: NutritionFormWithProfile[] | null; count: number | null },
     typedFrom(supabase, "trainer_shift_reports")
       .select("*", { count: "exact" })
       .order("report_date", { ascending: false })
       .range(0, PAGE_SIZE - 1) as unknown as { data: TrainerShiftReport[] | null; count: number | null },
-    typedFrom(supabase, "mental_questionnaires")
-      .select("*", { count: "exact" })
+    narrow(typedFrom(supabase, "mental_questionnaires").select("*", { count: "exact" }))
       .order("submitted_at", { ascending: false })
       .range(0, PAGE_SIZE - 1) as unknown as { data: MentalQuestionnaireWithProfile[] | null; count: number | null },
   ]);
@@ -69,6 +87,11 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
         <p className="text-muted-foreground">
           צפייה בכל השאלונים שהוגשו
         </p>
+        {showBranchFilter && (
+          <div className="mt-4 max-w-xs">
+            <BranchUrlFilter branches={branches} />
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue={defaultTab}>
@@ -99,6 +122,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
           <PreWorkoutContent
             initialItems={preWorkout || []}
             initialTotal={preWorkoutCount || 0}
+            branchId={branch}
           />
         </TabsContent>
 
@@ -106,6 +130,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
           <PostWorkoutContent
             initialItems={postWorkout || []}
             initialTotal={postWorkoutCount || 0}
+            branchId={branch}
           />
         </TabsContent>
 
@@ -113,6 +138,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
           <NutritionContent
             initialItems={nutrition || []}
             initialTotal={nutritionCount || 0}
+            branchId={branch}
           />
         </TabsContent>
 
@@ -127,6 +153,7 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
           <MentalContent
             initialItems={mental || []}
             initialTotal={mentalCount || 0}
+            branchId={branch}
           />
         </TabsContent>
       </Tabs>
