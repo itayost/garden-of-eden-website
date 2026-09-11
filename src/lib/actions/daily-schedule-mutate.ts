@@ -10,8 +10,8 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import {
   duplicateDaySchema,
   slotIdSchema,
-  slotSchema,
-  slotUpdateSchema,
+  slotSchemaWithRosterRule,
+  slotUpdateSchemaWithRosterRule,
   type DuplicateDayInput,
   type SlotInput,
   type SlotUpdateInput,
@@ -177,7 +177,7 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
-  const validated = slotSchema.safeParse(input);
+  const validated = slotSchemaWithRosterRule.safeParse(input);
   if (!validated.success) {
     return {
       error: "אימות נתונים נכשל",
@@ -247,7 +247,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
-  const validated = slotUpdateSchema.safeParse(input);
+  const validated = slotUpdateSchemaWithRosterRule.safeParse(input);
   if (!validated.success) {
     return {
       error: "אימות נתונים נכשל",
@@ -333,10 +333,14 @@ export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
 
   // A projected slot that staff delete must not come back tomorrow morning.
   if (target.band_id) {
-    await typedFrom(supabase, "daily_schedule_slot_tombstones").upsert(
+    const { error: tombstoneError } = await typedFrom(supabase, "daily_schedule_slot_tombstones").upsert(
       { band_id: target.band_id, schedule_date: target.schedule_date, created_by: user!.id },
-      { onConflict: "band_id,schedule_date" },
+      { onConflict: "band_id,schedule_date", ignoreDuplicates: true },
     );
+    if (tombstoneError) {
+      console.error("Tombstone insert error:", tombstoneError);
+      return { error: "שגיאה במחיקת הסלוט" };
+    }
   }
 
   // Roster rows cascade with the slot. The .select() is not decoration: a
@@ -438,6 +442,7 @@ export async function duplicateDayAction(
         trainer_name: slot.trainer_name,
         focus_he: slot.focus_he,
         location_he: slot.location_he,
+        max_trainees: slot.max_trainees,
         created_by: user!.id,
       })
       .select()
@@ -449,12 +454,14 @@ export async function duplicateDayAction(
       return { error: "שגיאה בשכפול היום" };
     }
 
-    if (slot.trainees.length > 0) {
+    // A cancelled booking is not part of the day being copied.
+    const activeRoster = slot.trainees.filter((trainee) => trainee.cancelled_at === null);
+    if (activeRoster.length > 0) {
       const { error: rosterError } = await typedFrom(
         supabase,
         "daily_schedule_slot_trainees",
       ).insert(
-        slot.trainees.map((trainee) => ({
+        activeRoster.map((trainee) => ({
           slot_id: created.id,
           trainee_id: trainee.trainee_id,
           trainee_name: trainee.trainee_name,

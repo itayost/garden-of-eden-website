@@ -70,7 +70,11 @@ export async function materializeBookableSlots(
     // theirs, made ahead of time.
     created_by: band.created_by,
   }));
-  const { data, error } = await typedFrom(db, "daily_schedule_slots").insert(rows).select("id");
+  // Two runs at once (cron and a page load) race on the same rows; the
+  // unique index on (band_id, schedule_date) makes the loser a no-op.
+  const { data, error } = await typedFrom(db, "daily_schedule_slots")
+    .upsert(rows, { onConflict: "band_id,schedule_date", ignoreDuplicates: true })
+    .select("id");
   if (error) {
     console.error(`[materialize] insert failed for branch ${branchId}:`, error.message);
     return { inserted: 0, error: error.message };

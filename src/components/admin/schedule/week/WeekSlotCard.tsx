@@ -85,7 +85,7 @@ export function WeekSlotCard({ slot, isTrainerAbsent, onEdit }: WeekSlotCardProp
       >
         <Users className="h-3 w-3 shrink-0" />
         {rosterCount === 0 ? "הוספת מתאמנים" : rosterLabel(rosterCount)}
-        {seats && <span className="ms-1 text-muted-foreground">· {seats} מקומות</span>}
+        {seats && <span className="ms-1 text-muted-foreground">· {seats} מקומות · הרשמה עצמית</span>}
       </p>
     </button>
   );

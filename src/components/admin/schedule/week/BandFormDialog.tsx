@@ -258,6 +258,7 @@ export function BandFormDialog({
               </Label>
               <p className="text-xs text-muted-foreground">
                 מתאמני הסניף רואים את הסלוטים של הרצועה באפליקציה ונרשמים בעצמם, לפי המסלול שלהם.
+                שינוי שעה או מאמן לא משנה סלוטים שכבר נוצרו; כיבוי ההרשמה סוגר אותם להרשמה מהיום.
               </p>
               {isBookable && (
                 <div className="flex items-center gap-2">

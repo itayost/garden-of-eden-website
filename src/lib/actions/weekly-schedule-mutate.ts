@@ -6,6 +6,7 @@ import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { israelToday } from "@/lib/utils/tasks";
 import {
   bandIdSchema,
   bandSchema,
@@ -171,6 +172,15 @@ export async function updateBandAction(
     console.error("Update band error:", error);
     return { error: "שגיאה בעדכון הרצועה" };
   }
+
+  // Slots already projected from this band keep their time and trainer (a
+  // built day is a record), but they stop taking self-bookings the moment
+  // the band is no longer bookable. Seats follow the band while it is.
+  const { error: seatsError } = await typedFrom(supabase, "daily_schedule_slots")
+    .update({ max_trainees: isBookable ? maxTrainees : null })
+    .eq("band_id", bandId)
+    .gte("schedule_date", israelToday());
+  if (seatsError) console.error("Update projected seats error:", seatsError);
 
   revalidateScheduleSurfaces();
 

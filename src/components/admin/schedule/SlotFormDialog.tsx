@@ -190,7 +190,8 @@ export function SlotFormDialog({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (roster.length === 0) {
+    // A bookable slot may be saved empty; it fills itself.
+    if (roster.length === 0 && maxTrainees === "") {
       toast.error("יש להוסיף לפחות מתאמן אחד");
       return;
     }
@@ -462,6 +463,9 @@ export function SlotFormDialog({
                 max={40}
                 value={maxTrainees}
                 onChange={(event) => setMaxTrainees(event.target.value)}
+                onBlur={() => {
+                  if (maxTrainees === "" || Number(maxTrainees) < 1) setMaxTrainees("1");
+                }}
                 className="w-24"
               />
               {maxTrainees !== "" && roster.length > Number(maxTrainees) && (

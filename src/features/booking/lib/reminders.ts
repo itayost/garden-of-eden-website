@@ -40,11 +40,13 @@ export async function sendBookingReminders(
   const rows = (data ?? []).filter((r) => r.slot && r.trainee_id);
   if (rows.length === 0) return { sent: 0, failed: 0 };
 
-  const { data: profiles } = await db
-    .from("profiles")
-    .select("id, phone")
-    .in("id", rows.map((r) => r.trainee_id!));
-  const phoneById = new Map((profiles ?? []).map((p) => [p.id, p.phone]));
+  // The login phone lives on auth.users; profiles.phone is editable by the
+  // trainee and must not redirect reminders.
+  const phoneById = new Map<string, string>();
+  for (const traineeId of Array.from(new Set(rows.map((r) => r.trainee_id!)))) {
+    const { data } = await db.auth.admin.getUserById(traineeId);
+    if (data.user?.phone) phoneById.set(traineeId, data.user.phone);
+  }
 
   const { data: branches } = (await typedFrom(db, "branches")
     .select("id, name_he")

@@ -116,7 +116,9 @@ export type BookingBlock =
   | "closed"
   | "outside_window"
   | "wrong_branch"
-  | "already_booked";
+  | "already_booked"
+  | "not_found"
+  | "staff_only";
 
 export const BOOKING_BLOCK_LABELS_HE: Record<BookingBlock, string> = {
   no_plan: "כדי להירשם לאימונים צריך מסלול פעיל",
@@ -126,10 +128,12 @@ export const BOOKING_BLOCK_LABELS_HE: Record<BookingBlock, string> = {
   no_sessions_left: "נוצלו כל האימונים בכרטיסייה",
   weekly_cap: `הגעת ל-${WEEKLY_CAP} אימונים השבוע`,
   full: "האימון מלא",
-  closed: "ההרשמה לאימון נסגרה",
+  closed: "ההרשמה נסגרת שעה לפני האימון",
   outside_window: `אפשר להירשם עד ${BOOKING_WINDOW_DAYS} ימים קדימה`,
   wrong_branch: "האימון בסניף אחר",
   already_booked: "כבר נרשמת לאימון הזה",
+  not_found: "האימון לא נמצא",
+  staff_only: "האימון הזה נרשם דרך הצוות בלבד",
 };
 
 export interface EligibilityInput {

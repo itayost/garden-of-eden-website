@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarCheck, Clock, Loader2, MapPin, Users } from "lucide-react";
@@ -17,14 +17,17 @@ import type { BookableSlotView, MyBooking, TraineeScheduleView } from "../lib/ac
 const WEEKDAY_SHORT = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
 const weekdayShort = (iso: string) => WEEKDAY_SHORT[new Date(`${iso}T00:00:00Z`).getUTCDay()];
 
-function costLine(view: TraineeScheduleView): string {
+function costLine(view: TraineeScheduleView, date: string): string {
   const plan = view.plan;
   if (!plan) return "";
   if (plan.sessionsLeft !== null) {
     const left = Math.max(plan.sessionsLeft - 1, 0);
     return `ינוצל אימון אחד מהכרטיסייה, יישארו ${left}`;
   }
-  if (plan.weeklyCap !== null) return `אימון ${plan.weekCount + 1} מתוך ${plan.weeklyCap} השבוע`;
+  if (plan.weeklyCap !== null) {
+    const weekCount = view.days.find((d) => d.date === date)?.weekCount ?? 0;
+    return `אימון ${weekCount + 1} מתוך ${plan.weeklyCap} באותו שבוע`;
+  }
   return "";
 }
 
@@ -39,9 +42,19 @@ export function ScheduleClient({ view }: { view: TraineeScheduleView }) {
   const [selectedDate, setSelectedDate] = useState(firstOpenDay);
   const [toBook, setToBook] = useState<BookableSlotView | null>(null);
   const [toCancel, setToCancel] = useState<MyBooking | null>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
 
-  const day = view.days.find((d) => d.date === selectedDate) ?? { date: selectedDate, slots: [] };
+  useEffect(() => {
+    stripRef.current
+      ?.querySelector<HTMLButtonElement>(`[data-date="${firstOpenDay}"]`)
+      ?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [firstOpenDay]);
+
+  const day =
+    view.days.find((d) => d.date === selectedDate) ??
+    { date: selectedDate, slots: [], weekCount: 0, dayBlock: null };
   const blockedByPlan = view.block !== null;
+  const dayBlock = blockedByPlan ? view.block : day.dayBlock;
 
   const book = (slot: BookableSlotView) =>
     startTransition(async () => {
@@ -107,16 +120,17 @@ export function ScheduleClient({ view }: { view: TraineeScheduleView }) {
 
       <section className="space-y-3">
         <h2 className="text-lg font-bold">הרשמה לאימון</h2>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="ימים">
+        <div ref={stripRef} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="ימים">
           {view.days.map((d) => {
-            const open = d.slots.some((s) => !s.closed && s.seatsTaken < s.maxTrainees);
+            const open = !d.dayBlock && d.slots.some((s) => !s.closed && s.seatsTaken < s.maxTrainees);
             const selected = d.date === selectedDate;
             return (
               <button
                 key={d.date}
+                data-date={d.date}
                 type="button"
-                role="tab"
-                aria-selected={selected}
+                aria-pressed={selected}
+                aria-label={`${hebrewWeekday(d.date)} ${shortDate(d.date)}${open ? ", יש מקומות" : ""}`}
                 onClick={() => setSelectedDate(d.date)}
                 className={cn(
                   "flex w-14 shrink-0 flex-col items-center rounded-xl border py-2 text-sm transition-colors",
@@ -142,7 +156,7 @@ export function ScheduleClient({ view }: { view: TraineeScheduleView }) {
             day.slots.map((slot) => {
               const full = slot.seatsTaken >= slot.maxTrainees;
               const left = slot.maxTrainees - slot.seatsTaken;
-              const disabled = slot.booked || slot.closed || full || blockedByPlan;
+              const disabled = slot.booked || slot.closed || full || dayBlock !== null;
               return (
                 <div key={slot.id} className="flex items-center justify-between gap-3 rounded-2xl border bg-white p-3">
                   <div className="min-w-0 text-sm">
@@ -179,8 +193,8 @@ export function ScheduleClient({ view }: { view: TraineeScheduleView }) {
               );
             })
           )}
-          {blockedByPlan && view.block && (
-            <p className="text-xs text-muted-foreground">{BOOKING_BLOCK_LABELS_HE[view.block]}</p>
+          {dayBlock && day.slots.length > 0 && (
+            <p className="text-xs text-muted-foreground">{BOOKING_BLOCK_LABELS_HE[dayBlock]}</p>
           )}
         </div>
       </section>
@@ -194,7 +208,9 @@ export function ScheduleClient({ view }: { view: TraineeScheduleView }) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
-            {costLine(view) && <p className="rounded-xl bg-muted/40 p-3 text-sm">{costLine(view)}</p>}
+            {toBook && costLine(view, toBook.date) && (
+              <p className="rounded-xl bg-muted/40 p-3 text-sm">{costLine(view, toBook.date)}</p>
+            )}
             <p className="text-xs text-muted-foreground">אפשר לבטל עד 3 שעות לפני האימון. ביטול מאוחר יותר נחשב כאימון שנוצל.</p>
             <Button className="h-12 w-full rounded-full text-base" onClick={() => toBook && book(toBook)} disabled={pending}>
               {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}

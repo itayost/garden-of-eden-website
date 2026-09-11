@@ -11,6 +11,8 @@ import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import {
   BOOKING_BLOCK_LABELS_HE,
+  WEEKLY_CAP,
+  WEEKLY_CAP_KINDS,
   bookingClosed,
   bookingEligibility,
   cancelState,
@@ -31,9 +33,11 @@ type CancelResult = { ok: true; late: boolean } | { error: string };
 
 const RPC_ERRORS: Record<string, { message: string; block: BookingBlock }> = {
   capacity_full: { message: "האימון התמלא רגע לפני", block: "full" },
+  no_sessions_left: { message: BOOKING_BLOCK_LABELS_HE.no_sessions_left, block: "no_sessions_left" },
+  weekly_cap: { message: BOOKING_BLOCK_LABELS_HE.weekly_cap, block: "weekly_cap" },
   already_booked: { message: BOOKING_BLOCK_LABELS_HE.already_booked, block: "already_booked" },
-  slot_not_bookable: { message: "האימון הזה נרשם דרך הצוות בלבד", block: "wrong_branch" },
-  slot_not_found: { message: "האימון לא נמצא", block: "wrong_branch" },
+  slot_not_bookable: { message: BOOKING_BLOCK_LABELS_HE.staff_only, block: "staff_only" },
+  slot_not_found: { message: BOOKING_BLOCK_LABELS_HE.not_found, block: "not_found" },
 };
 
 function blocked(block: BookingBlock): BookResult {
@@ -78,7 +82,8 @@ export async function bookSlotAction(slotId: string): Promise<BookResult> {
     .maybeSingle()) as {
     data: Pick<ScheduleSlot, "id" | "schedule_date" | "start_time" | "branch_id" | "max_trainees"> | null;
   };
-  if (!slot || slot.max_trainees === null || !slot.branch_id) return blocked("wrong_branch");
+  if (!slot) return blocked("not_found");
+  if (slot.max_trainees === null || !slot.branch_id) return blocked("staff_only");
   if (!isWithinBookingWindow(slot.schedule_date, today)) return blocked("outside_window");
   if (bookingClosed(slot.schedule_date, slot.start_time, now)) return blocked("closed");
 
@@ -95,6 +100,7 @@ export async function bookSlotAction(slotId: string): Promise<BookResult> {
   if (rows.some((r) => r.slot_id === slot.id && r.cancelled_at === null)) return blocked("already_booked");
 
   const current = plans.get(user.id) ?? null;
+  if (current && current.plan.branch_id !== slot.branch_id) return blocked("wrong_branch");
   const used = current ? countSessionsUsedFromRows(rows, current.plan, today) : 0;
   const reserved = current ? countReservedFromRows(rows, current.plan, today) : 0;
   const eligibility = bookingEligibility({
@@ -111,10 +117,18 @@ export async function bookSlotAction(slotId: string): Promise<BookResult> {
   const rpcClient = db as unknown as {
     rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
   };
+  // The plan caps are counted again inside the function under a per-trainee
+  // lock, so parallel requests cannot all pass the checks above.
   const { error } = await rpcClient.rpc("book_slot", {
     p_slot_id: slot.id,
     p_trainee_id: user.id,
     p_trainee_name: profile.data.full_name ?? "מתאמן",
+    p_plan_starts: current!.plan.starts_on,
+    p_plan_ends: current!.plan.ends_on,
+    p_sessions_total: current!.plan.sessions_total,
+    p_sessions_used: used,
+    p_weekly_cap: WEEKLY_CAP_KINDS.includes(current!.product.kind) ? WEEKLY_CAP : null,
+    p_today: today,
   });
   if (error) {
     const known = Object.keys(RPC_ERRORS).find((key) => error.message.includes(key));

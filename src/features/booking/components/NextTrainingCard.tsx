@@ -19,7 +19,7 @@ export function NextTrainingCard({ next }: { next: MyBooking | null }) {
             <div className="font-bold">{next ? "האימון הבא" : "עדיין לא נרשמת לאימון השבוע"}</div>
             <div className="text-muted-foreground">
               {next
-                ? `${hebrewWeekday(next.date)} ${shortDate(next.date)} · ${next.time} · ${next.trainerName}`
+                ? `${hebrewWeekday(next.date)} ${shortDate(next.date)} · ${next.time} · ${next.trainerName}${next.location ? ` · ${next.location}` : ""}`
                 : "בחרו יום ושעה שנוחים לכם"}
             </div>
           </div>

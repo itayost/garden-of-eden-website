@@ -67,7 +67,14 @@ export interface TraineeScheduleView {
   /** Why booking is blocked for the plan as a whole, if it is. */
   block: BookingBlock | null;
   bookings: MyBooking[];
-  days: { date: string; slots: BookableSlotView[] }[];
+  days: {
+    date: string;
+    slots: BookableSlotView[];
+    /** Trainings already counted in this day's week. */
+    weekCount: number;
+    /** A day-level reason: the plan does not run that day, or the week is at cap. */
+    dayBlock: BookingBlock | null;
+  }[];
 }
 
 /**
@@ -117,16 +124,23 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
       }
     : null;
 
-  // The plan-level block for today; per-slot blocks (full, closed, week cap
-  // on another week) are decided when booking.
-  const eligibility = bookingEligibility({
-    plan: current?.plan ?? null,
-    productKind: current?.product.kind ?? null,
-    used: current ? countSessionsUsedFromRows(rows, current.plan, today) : 0,
-    reserved: current ? countReservedFromRows(rows, current.plan, today) : 0,
-    weekCount: 0,
-    slotDate: today,
-  });
+  // Plan-wide reasons block the page; date-bound reasons (the plan not
+  // running yet, a week at cap) block only the days they apply to.
+  const used = current ? countSessionsUsedFromRows(rows, current.plan, today) : 0;
+  const reserved = current ? countReservedFromRows(rows, current.plan, today) : 0;
+  const PAGE_BLOCKS: BookingBlock[] = ["no_plan", "plan_cancelled", "addon", "no_sessions_left"];
+  const eligibilityFor = (date: string, weekCount: number) =>
+    bookingEligibility({
+      plan: current?.plan ?? null,
+      productKind: current?.product.kind ?? null,
+      used,
+      reserved,
+      weekCount,
+      slotDate: date,
+    });
+  const pageEligibility = eligibilityFor(current?.plan.starts_on ?? today, 0);
+  const pageBlock =
+    !pageEligibility.ok && PAGE_BLOCKS.includes(pageEligibility.block) ? pageEligibility.block : null;
 
   const bookings: MyBooking[] = rows
     .filter((r) => r.cancelled_at === null && r.schedule_date >= today)
@@ -157,17 +171,23 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
     };
     byDate.set(slot.schedule_date, [...(byDate.get(slot.schedule_date) ?? []), view]);
   }
-  const days = Array.from({ length: BOOKING_WINDOW_DAYS + 1 }, (_, i) => addDays(today, i)).map((date) => ({
-    date,
-    slots: byDate.get(date) ?? [],
-  }));
+  const days = Array.from({ length: BOOKING_WINDOW_DAYS + 1 }, (_, i) => addDays(today, i)).map((date) => {
+    const weekCount = weeklyBookingCount(rows, date, branchId);
+    const e = eligibilityFor(date, weekCount);
+    return {
+      date,
+      slots: byDate.get(date) ?? [],
+      weekCount,
+      dayBlock: e.ok || pageBlock ? null : e.block,
+    };
+  });
 
   return {
     canBook: true,
     branchId,
     today,
     plan,
-    block: eligibility.ok ? null : eligibility.block,
+    block: pageBlock,
     bookings,
     days,
   };

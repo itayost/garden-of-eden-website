@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { israelToday } from "@/lib/utils/tasks";
 import { bookableBranchIds, materializeBookableSlots } from "@/features/booking/lib/materialize";
-import { sendBookingReminders } from "@/features/booking/lib/reminders";
 
 export const maxDuration = 120;
 
 /**
  * Daily at 03:30 Israel (01:30 UTC): project two weeks of bookable slots for
- * every branch that has bookable bands, then remind tomorrow's bookings.
+ * every branch that has bookable bands. Reminders run at 18:00 in their own cron.
  */
 export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
@@ -27,8 +26,7 @@ export async function GET(request: NextRequest) {
     for (const branchId of branches) {
       results.push({ branchId, ...(await materializeBookableSlots(db, branchId, today)) });
     }
-    const reminders = await sendBookingReminders(db, today);
-    return NextResponse.json({ success: true, branches: results, reminders });
+    return NextResponse.json({ success: true, branches: results });
   } catch (error) {
     console.error("[materialize-slots] fatal:", error);
     return NextResponse.json({ error: "Run failed" }, { status: 500 });
