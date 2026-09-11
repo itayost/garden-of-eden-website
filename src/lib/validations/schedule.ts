@@ -46,6 +46,14 @@ export const slotSchema = z.object({
   trainerId: uuidSchema.nullish().transform((v) => v ?? null),
   focus: optionalText(MAX_TEXT_LENGTH),
   location: optionalText(MAX_TEXT_LENGTH),
+  /** Seats for self-booking; null keeps the slot staff-only. */
+  maxTrainees: z
+    .number()
+    .int("מספר מקומות לא תקין")
+    .min(1, "לפחות מקום אחד")
+    .max(MAX_TRAINEES_PER_SLOT, "יותר מדי מקומות")
+    .nullish()
+    .transform((v) => v ?? null),
   trainees: z
     .array(rosterEntrySchema)
     .min(1, "יש להוסיף לפחות מתאמן אחד")

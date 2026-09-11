@@ -136,6 +136,10 @@ try {
 Reminders: `/api/cron/plan-reminders` runs daily; `dueReminderMilestone()` decides what is due and the `reminded_*_at` columns stop repeats. Renewal links are `/join?renew=<token>` signed with `PLAN_RENEWAL_TOKEN_SECRET`.
 Staff payments: `recordManualPayment()` in `src/features/plans/lib/manual-payment.ts` is the one path for cash, transfer, and Bit (paid order with `payment_provider = manual`, an agreement with `signed_at NULL` that the parent signs from `/join/agreement/[id]?t=`, fulfillment, the Morning receipt through `issueOrderInvoice()`, the WhatsApp). Both the new-trainee sheet and the trainee payment sheet call it; trainers may use them for their branch. Staff surfaces: `loadPlanStatusesForStaff()` feeds the plan column on the users list and the פג/מסתיים chips on the daily board (tap opens the plan sheet); health data (medical notes, emergency contact) goes through `src/features/plans/lib/actions/trainee-health.ts`, which is branch-scoped. `/admin/safety` renders `content/safety-protocol.ts` with the branch manager phones.
 
+### Self-booking (קריית אתא)
+
+A weekly band marked `is_bookable` with `max_trainees` is projected into rosterless slots for the next 14 days by `/api/cron/materialize-slots` and on demand (`src/features/booking/lib/materialize.ts`, pure plan in `src/lib/schedule/materialization.ts`); a deleted projected slot leaves a tombstone. Trainees book through `bookSlotAction` / `cancelBookingAction` in `src/features/booking/lib/actions/book.ts`: every rule lives in `src/lib/schedule/booking-rules.ts` (14-day window, 3-hour cancel cutoff, 2 a week for subscription and term plans, sessions net of future bookings for cards) and the seat is taken inside the `book_slot` Postgres function, which locks the slot row. Roster rows carry `source`, `booked_at`, `cancelled_at`, `late_cancel`; a late cancel still counts as a used session. Slot tables stay staff-only under RLS; trainee reads and writes go through server actions with the service role. See ADR-0007.
+
 ### Migrations
 
 Two formats coexist in `supabase/migrations/`:

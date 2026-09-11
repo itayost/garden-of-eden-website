@@ -33,6 +33,7 @@ export const KIRYAT_ATA_LANDING = {
   /** FAQ entries whose Haifa answer does not hold here. */
   faqOverrides: {
     "faq-1": "שעות הפעילות בקריית אתא נקבעות לפי לוח האימונים ומתפרסמות באפליקציה אחרי ההרשמה.",
+    "faq-14": "באפליקציה. אחרי ההרשמה לומדים לוח של שבועיים קדימה, בוחרים אימון ונרשמים בלחיצה, לפי המסלול שרכשתם. ביטול עד 3 שעות לפני האימון.",
   } as Record<string, string>,
   /** Haifa-only FAQ entries: public transport to the Haifa complex. */
   faqOmit: ["faq-7"],

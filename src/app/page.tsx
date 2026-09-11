@@ -20,7 +20,7 @@ export default function HomePage() {
         <Programs />
         <Staff />
         <Testimonials />
-        <FAQ />
+        <FAQ overrides={{ "faq-14": "הצוות משבץ את האימונים בלוח היומי ושולח את השיבוץ בוואטסאפ. אפשר לתאם ישירות עם המאמן." }} />
         <Contact />
         <Footer />
 

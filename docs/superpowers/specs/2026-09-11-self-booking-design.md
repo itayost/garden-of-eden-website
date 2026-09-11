@@ -192,6 +192,16 @@ tombstones, dates)` returning the rows to insert. Existing
 `countSessionsUsedFromRows` tests extended for cancelled and late rows.
 The SQL function is exercised by hand in the sandbox before launch.
 
+## WhatsApp template (for Meta submission)
+
+**booking_reminder** (`WHATSAPP_BOOKING_REMINDER_TEMPLATE_NAME`), Hebrew,
+Utility, four body parameters, no buttons:
+
+> היי {{1}}, תזכורת: מחר בשעה {{2}} יש לך אימון עם {{3}} ב-{{4}}.
+> אם לא תוכלו להגיע, בטלו באפליקציה עד 3 שעות לפני האימון.
+
+Sample values: דני, 16:00, לידור, מגרש קריית אתא.
+
 ## Out of scope
 
 Waitlists, standing weekly registration, trainers editing capacity from

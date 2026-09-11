@@ -185,7 +185,7 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
     };
   }
 
-  const { branchId, scheduleDate, startTime, trainerId, focus, location, trainees } =
+  const { branchId, scheduleDate, startTime, trainerId, focus, location, maxTrainees, trainees } =
     validated.data;
   const supabase = await createClient();
 
@@ -207,6 +207,7 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
       trainer_name: trainerResult.name,
       focus_he: focus,
       location_he: location,
+      max_trainees: maxTrainees,
       created_by: user!.id,
     })
     .select()
@@ -254,7 +255,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     };
   }
 
-  const { branchId, slotId, scheduleDate, startTime, trainerId, focus, location, trainees } =
+  const { branchId, slotId, scheduleDate, startTime, trainerId, focus, location, maxTrainees, trainees } =
     validated.data;
   const supabase = await createClient();
 
@@ -290,6 +291,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
       trainer_name: trainerResult.name,
       focus_he: focus,
       location_he: location,
+      max_trainees: maxTrainees,
     })
     .eq("id", slotId)
     .select()

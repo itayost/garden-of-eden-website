@@ -35,7 +35,8 @@ function rosterLabel(count: number): string {
  */
 export function WeekSlotCard({ slot, isTrainerAbsent, onEdit }: WeekSlotCardProps) {
   const palette = trainerColor(slot.trainer_id);
-  const rosterCount = slot.trainees.length;
+  const rosterCount = slot.trainees.filter((t) => t.cancelled_at === null).length;
+  const seats = slot.max_trainees === null ? null : `${rosterCount}/${slot.max_trainees}`;
   const subtitle = slot.focus_he ?? slot.location_he;
 
   return (
@@ -84,6 +85,7 @@ export function WeekSlotCard({ slot, isTrainerAbsent, onEdit }: WeekSlotCardProp
       >
         <Users className="h-3 w-3 shrink-0" />
         {rosterCount === 0 ? "הוספת מתאמנים" : rosterLabel(rosterCount)}
+        {seats && <span className="ms-1 text-muted-foreground">· {seats} מקומות</span>}
       </p>
     </button>
   );

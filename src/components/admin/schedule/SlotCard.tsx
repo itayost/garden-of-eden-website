@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Dumbbell, HeartPulse, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarCheck, Check, Dumbbell, HeartPulse, MapPin, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -68,6 +68,8 @@ export function SlotCard({
   const [planFor, setPlanFor] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const palette = trainerColor(slot.trainer_id);
+  const active = slot.trainees.filter((t) => t.cancelled_at === null);
+  const lateCancels = slot.trainees.filter((t) => t.cancelled_at !== null && t.late_cancel);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -116,6 +118,18 @@ export function SlotCard({
               {isMine && (
                 <Badge className="bg-forest text-cream hover:bg-forest">שלי</Badge>
               )}
+              {slot.max_trainees !== null && (
+                <span
+                  className={cn(
+                    "flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[11px] tabular-nums",
+                    active.length > slot.max_trainees ? "text-destructive" : "text-muted-foreground",
+                  )}
+                  title="מקומות להרשמה עצמית"
+                >
+                  <Users className="h-3 w-3" />
+                  {active.length}/{slot.max_trainees}
+                </span>
+              )}
             </div>
             {slot.focus_he && (
               <p className="mt-0.5 text-xs italic text-muted-foreground">
@@ -151,7 +165,7 @@ export function SlotCard({
             offers the one action that finishes it, rather than rendering as an
             ordinary slot that happens to look empty.
           */}
-          {slot.trainees.length === 0 ? (
+          {active.length === 0 && lateCancels.length === 0 ? (
             <Button
               variant="outline"
               size="sm"
@@ -163,7 +177,16 @@ export function SlotCard({
             </Button>
           ) : (
           <div className="flex flex-wrap gap-1.5">
-            {slot.trainees.map((trainee) => {
+            {lateCancels.map((trainee) => (
+              <span
+                key={trainee.id}
+                className="rounded-full border border-dashed px-2 py-0.5 text-xs text-muted-foreground line-through"
+                title="ביטול מאוחר: נחשב כאימון שנוצל"
+              >
+                {trainee.trainee_name}
+              </span>
+            ))}
+            {active.map((trainee) => {
               // Free-text names have no account and cannot receive sessions —
               // they stay plain badges.
               if (!trainee.trainee_id) {
@@ -202,6 +225,9 @@ export function SlotCard({
                       <Dumbbell className="h-3 w-3" />
                     ) : (
                       <Plus className="h-3 w-3" />
+                    )}
+                    {trainee.source === "self" && (
+                      <CalendarCheck className="h-3 w-3 opacity-70" aria-label="נרשם בעצמו" />
                     )}
                     {trainee.trainee_name}
                     {summary ? ` (${summary.exerciseCount})` : ""}
