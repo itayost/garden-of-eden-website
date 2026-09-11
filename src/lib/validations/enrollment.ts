@@ -6,23 +6,41 @@ import {
 } from "@/lib/validations/common";
 import { isValidIsraeliId } from "@/lib/validations/israeli-id";
 
-const phoneField = z
+export const phoneField = z
   .string()
   .trim()
   .min(1, "נדרש מספר טלפון")
   .regex(PHONE_REGEX_IL, "מספר טלפון לא תקין (פורמט: 0501234567)")
   .transform(formatPhoneToInternational);
 
-const optionalText = (max: number) =>
+export const optionalText = (max: number) =>
   z
     .string()
     .trim()
     .max(max, `הטקסט ארוך מדי (מקסימום ${max} תווים)`)
     .transform((v) => (v === "" ? null : v));
 
-const SINGLE_LINE = /^[^\r\n\t]+$/;
+export const SINGLE_LINE = /^[^\r\n\t]+$/;
 
-const mustBeTrue = (message: string) =>
+/** Empty becomes null; anything else must be an address. */
+export const emailOrEmpty = z
+  .string()
+  .trim()
+  .email('כתובת דוא"ל לא תקינה')
+  .or(z.literal(""))
+  .transform((v) => (v === "" ? null : v));
+
+/** A trainee's birthdate: a real date and an age between 4 and 25. */
+export const childBirthdateField = z
+  .string()
+  .refine((date) => {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return false;
+    const age = (Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    return age >= 4 && age <= 25;
+  }, "תאריך לידה לא תקין (גיל 4-25)");
+
+export const mustBeTrue = (message: string) =>
   z.boolean().refine((v) => v === true, { message });
 
 /**
@@ -42,22 +60,10 @@ export const enrollmentSchema = z
       .refine(isValidIsraeliId, "מספר תעודת זהות לא תקין"),
     payerPhone: phoneField,
     loginPhone: phoneField,
-    email: z
-      .string()
-      .trim()
-      .email('כתובת דוא"ל לא תקינה')
-      .or(z.literal(""))
-      .transform((v) => (v === "" ? null : v)),
+    email: emailOrEmpty,
 
     childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי").regex(SINGLE_LINE, "שם בשורה אחת"),
-    childBirthdate: z
-      .string()
-      .refine((date) => {
-        const d = new Date(date);
-        if (isNaN(d.getTime())) return false;
-        const age = (Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
-        return age >= 4 && age <= 25;
-      }, "תאריך לידה לא תקין (גיל 4-25)"),
+    childBirthdate: childBirthdateField,
     medicalNotes: optionalText(500),
 
     emergencyContactName: z

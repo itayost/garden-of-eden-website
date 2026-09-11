@@ -17,6 +17,9 @@ import {
 import { toBranchOption, type ProfileWithBranches } from "@/types/branches";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { loadPlanStatusesForStaff } from "@/features/plans/lib/actions/staff-plan-badges";
+import { listSellableProductsAction } from "@/features/plans/lib/actions/staff-payment";
+import { NewTraineeSheet } from "@/features/plans/components/staff/NewTraineeSheet";
+import { isMorningConfigured } from "@/lib/morning/config";
 
 export const metadata: Metadata = {
   title: "ניהול משתמשים | Garden of Eden",
@@ -111,6 +114,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   });
 
   const params = await searchParams;
+  const sellable = await listSellableProductsAction();
   const activeUserCount = usersWithBranches.filter((u) => !u.deleted_at).length;
 
   return (
@@ -126,7 +130,10 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
               : "צפייה וניהול המתאמנים"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {sellable.length > 0 && (
+            <NewTraineeSheet products={sellable} morningConfigured={isMorningConfigured()} isAdmin={isAdmin} />
+          )}
           {isAdmin && <UserImportDialog />}
           <UserExportButton users={usersWithBranches.filter((u) => !u.deleted_at)} />
         </div>

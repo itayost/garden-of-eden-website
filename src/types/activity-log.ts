@@ -12,6 +12,8 @@ export const ACTIVITY_ACTIONS = {
   STATS_UPDATED: "stats_updated",
   ASSESSMENT_CREATED: "assessment_created",
   ASSESSMENT_UPDATED: "assessment_updated",
+  PLAN_GRANTED: "plan_granted",
+  INVOICE_ISSUED: "invoice_issued",
 } as const;
 
 export type ActivityAction =
@@ -48,6 +50,8 @@ export const ACTIVITY_ACTION_LABELS_HE: Record<ActivityAction, string> = {
   stats_updated: "סטטיסטיקות עודכנו",
   assessment_created: "מבדק נוצר",
   assessment_updated: "מבדק עודכן",
+  plan_granted: "מסלול נרשם",
+  invoice_issued: "חשבונית הופקה",
 };
 
 // Hebrew labels for fields

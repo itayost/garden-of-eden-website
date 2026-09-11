@@ -36,6 +36,7 @@ export async function markOrderPaid(
       card_last4: ref.cardLast4,
       installments: ref.installments,
       provider_response: ref.raw ?? null,
+      payment_method: ref.provider === "isracard" ? "card" : undefined,
     })
     .eq("id", orderId)
     .in("status", ["pending", "charging", "expired"])

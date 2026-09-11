@@ -35,7 +35,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     label: "שחקנים",
     items: [
       { href: "/admin/users", label: "משתמשים", icon: Users, mobilePrimary: true, mobileOrder: 2 },
-      { href: "/admin/plans", label: "מסלולים", icon: CreditCard, adminOnly: true, mobileOrder: 6 },
+      { href: "/admin/plans", label: "מסלולים", icon: CreditCard, mobileOrder: 6 },
       { href: "/admin/assessments", label: "מבדקים", icon: Target, mobilePrimary: true, mobileOrder: 3 },
       { href: "/admin/nutrition", label: "תזונה", icon: Utensils, mobileOrder: 5 },
       { href: "/admin/submissions", label: "שאלונים", icon: FileText, mobilePrimary: true, mobileOrder: 4 },

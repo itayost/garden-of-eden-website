@@ -44,6 +44,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
     .select("*")
     .eq("profile_id", plan.profile_id)
+    .not("signed_at", "is", null)
     .order("signed_at", { ascending: false })
     .limit(1)
     .maybeSingle()) as { data: EnrollmentAgreement | null };

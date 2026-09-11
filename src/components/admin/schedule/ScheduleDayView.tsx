@@ -217,6 +217,7 @@ export function ScheduleDayView({
                     sessionSummaries={sessionSummaries}
                     planBadges={planBadges}
                     isMine={slot.trainer_id === currentUserId}
+                    isAdmin={isAdmin}
                     onEdit={() => openEdit(slot)}
                   />
                 ))}
