@@ -12,7 +12,7 @@ const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 const OBJECT_LABEL_LENGTH = 100;
 
 // Every healthy snapshot contains these; a missing one means a partial result.
-const REQUIRED_MARKERS = ['CREATE TABLE public.profiles (', 'CREATE POLICY', '-- ==== Storage ===='];
+const REQUIRED_MARKERS = ['CREATE TABLE public.profiles (', 'CREATE POLICY', '-- bucket '];
 
 const SECRET_PATTERNS = [
   { name: 'JWT', pattern: /eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}/ },

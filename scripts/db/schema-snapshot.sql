@@ -17,8 +17,9 @@ grants as (
   from (
     select c.oid,
       coalesce(r.rolname, 'PUBLIC') as grantee,
-      case when count(*) = (select n from all_privs) then 'ALL'
-           else string_agg(a.privilege_type, ', ' order by a.privilege_type) end as privs
+      -- distinct: aclexplode repeats a privilege once per grantor
+      case when count(distinct a.privilege_type) = (select n from all_privs) then 'ALL'
+           else string_agg(distinct a.privilege_type, ', ' order by a.privilege_type) end as privs
     from pg_class c
     cross join lateral aclexplode(c.relacl) a
     left join pg_roles r on r.oid = a.grantee
@@ -134,7 +135,7 @@ fn_blocks as (
     concat_ws(E'\n',
       rtrim(pg_get_functiondef(p.oid), E'\n') || ';',
       '-- execute: ' || case when p.proacl is null then 'PUBLIC (default)' else coalesce(
-        (select string_agg(coalesce(r.rolname, 'PUBLIC'), ', ' order by coalesce(r.rolname, 'PUBLIC'))
+        (select string_agg(distinct coalesce(r.rolname, 'PUBLIC'), ', ' order by coalesce(r.rolname, 'PUBLIC'))
          from aclexplode(p.proacl) a
          left join pg_roles r on r.oid = a.grantee
          where a.privilege_type = 'EXECUTE'
