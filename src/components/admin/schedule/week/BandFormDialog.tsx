@@ -68,6 +68,8 @@ export function BandFormDialog({
   const [location, setLocation] = useState(band?.location_he ?? "");
   const [label, setLabel] = useState(band?.label_he ?? "");
   const [isStandby, setIsStandby] = useState(band?.is_standby ?? false);
+  const [isBookable, setIsBookable] = useState(band?.is_bookable ?? false);
+  const [maxTrainees, setMaxTrainees] = useState(String(band?.max_trainees ?? 8));
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -87,6 +89,8 @@ export function BandFormDialog({
         location,
         label,
         isStandby,
+        isBookable,
+        maxTrainees: Number(maxTrainees),
       };
 
       const result = band
@@ -239,6 +243,37 @@ export function BandFormDialog({
               <p className="text-xs text-muted-foreground">
                 מוצג בשיבוץ היומי, אך לא נבנה ממנו סלוט — עוד לא הוחלט שהוא מגיע.
               </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-lg border p-3">
+            <Checkbox
+              id="band-bookable"
+              checked={isBookable}
+              onCheckedChange={(checked) => setIsBookable(checked === true)}
+            />
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="band-bookable" className="font-normal">
+                פתוח להרשמה עצמית
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                מתאמני הסניף רואים את הסלוטים של הרצועה באפליקציה ונרשמים בעצמם, לפי המסלול שלהם.
+              </p>
+              {isBookable && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="band-seats" className="text-sm">מקומות</Label>
+                  <Input
+                    id="band-seats"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={40}
+                    value={maxTrainees}
+                    onChange={(event) => setMaxTrainees(event.target.value)}
+                    className="h-9 w-20"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

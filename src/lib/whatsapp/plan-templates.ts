@@ -57,6 +57,35 @@ export async function sendPlanConfirmed(
   );
 }
 
+interface BookingReminderParams {
+  traineeName: string;
+  /** HH:MM */
+  time: string;
+  trainerName: string;
+  place: string;
+}
+
+/**
+ * Meta-approved template WHATSAPP_BOOKING_REMINDER_TEMPLATE_NAME with body
+ * parameters {{1}} trainee, {{2}} time, {{3}} trainer, {{4}} place. Sent
+ * the evening before a self-booked training.
+ */
+export async function sendBookingReminder(
+  phone: string,
+  params: BookingReminderParams,
+): Promise<WhatsAppResult> {
+  const templateName = process.env.WHATSAPP_BOOKING_REMINDER_TEMPLATE_NAME?.trim();
+  if (!templateName) {
+    return { success: false, error: "WHATSAPP_BOOKING_REMINDER_TEMPLATE_NAME not configured" };
+  }
+  const { token, phoneNumberId } = getConfig();
+  return callWhatsAppAPI(
+    phoneNumberId,
+    token,
+    templateMessage(phone, templateName, [params.traineeName, params.time, params.trainerName, params.place]),
+  );
+}
+
 interface PlanReminderParams {
   parentName: string;
   childName: string;

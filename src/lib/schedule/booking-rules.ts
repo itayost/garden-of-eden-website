@@ -58,7 +58,7 @@ export type CancelState = "open" | "late" | "closed";
 export function cancelState(date: string, time: string, now: IsraelNow): CancelState {
   const minutes = minutesUntilSlot(date, time, now);
   if (minutes <= 0) return "closed";
-  if (minutes < CANCEL_CUTOFF_HOURS * 60) return "late";
+  if (minutes <= CANCEL_CUTOFF_HOURS * 60) return "late";
   return "open";
 }
 

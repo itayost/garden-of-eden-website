@@ -77,7 +77,7 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
     };
   }
 
-  const { branchId, weekday, startTime, endTime, trainerId, location, label, isStandby } =
+  const { branchId, weekday, startTime, endTime, trainerId, location, label, isStandby, maxTrainees, isBookable } =
     validated.data;
 
   const trainerResult = await resolveActiveTrainerName(trainerId);
@@ -99,6 +99,8 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
       location_he: location,
       label_he: label,
       is_standby: isStandby,
+      max_trainees: maxTrainees,
+      is_bookable: isBookable,
       created_by: user!.id,
     })
     .select()
@@ -128,7 +130,7 @@ export async function updateBandAction(
     };
   }
 
-  const { branchId, bandId, weekday, startTime, endTime, trainerId, location, label, isStandby } =
+  const { branchId, bandId, weekday, startTime, endTime, trainerId, location, label, isStandby, maxTrainees, isBookable } =
     validated.data;
   const supabase = await createClient();
 
@@ -158,6 +160,8 @@ export async function updateBandAction(
       location_he: location,
       label_he: label,
       is_standby: isStandby,
+      max_trainees: maxTrainees,
+      is_bookable: isBookable,
     })
     .eq("id", bandId)
     .select()

@@ -49,6 +49,10 @@ export const bandSchema = z
     location: optionalText(MAX_TEXT_LENGTH),
     label: optionalText(MAX_TEXT_LENGTH),
     isStandby: z.boolean().default(false),
+    /** Seats per projected slot, for self-booking. */
+    maxTrainees: z.number().int("מספר מקומות לא תקין").min(1, "לפחות מקום אחד").max(40, "עד 40 מקומות").default(8),
+    /** Trainees may book this band's slots themselves. */
+    isBookable: z.boolean().default(false),
   })
   // Mirrors the weekly_bands_end_after_start CHECK. A zero-length band would
   // match no hour at all and read as a data-entry slip, not an open-ended one.
@@ -68,6 +72,10 @@ export const bandUpdateSchema = z
     location: optionalText(MAX_TEXT_LENGTH),
     label: optionalText(MAX_TEXT_LENGTH),
     isStandby: z.boolean().default(false),
+    /** Seats per projected slot, for self-booking. */
+    maxTrainees: z.number().int("מספר מקומות לא תקין").min(1, "לפחות מקום אחד").max(40, "עד 40 מקומות").default(8),
+    /** Trainees may book this band's slots themselves. */
+    isBookable: z.boolean().default(false),
   })
   .refine((v) => v.endTime === null || v.endTime > v.startTime, {
     message: "שעת הסיום חייבת להיות אחרי שעת ההתחלה",

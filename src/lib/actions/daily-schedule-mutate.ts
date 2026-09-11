@@ -309,7 +309,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
 }
 
 export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
-  const { error: authError } = await verifyAdminOrTrainer();
+  const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const validated = slotIdSchema.safeParse({ slotId });
@@ -318,13 +318,23 @@ export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
   const supabase = await createClient();
 
   const { data: target } = (await typedFrom(supabase, "daily_schedule_slots")
-    .select("id, branch_id")
+    .select("id, branch_id, band_id, schedule_date")
     .eq("id", validated.data.slotId)
-    .maybeSingle()) as { data: { id: string; branch_id: string | null } | null };
+    .maybeSingle()) as {
+    data: { id: string; branch_id: string | null; band_id: string | null; schedule_date: string } | null;
+  };
   if (!target) return { error: "הסלוט לא נמצא" };
   if (target.branch_id) {
     const scopeCheck = await assertBranchReadable(target.branch_id);
     if (scopeCheck.error) return { error: scopeCheck.error };
+  }
+
+  // A projected slot that staff delete must not come back tomorrow morning.
+  if (target.band_id) {
+    await typedFrom(supabase, "daily_schedule_slot_tombstones").upsert(
+      { band_id: target.band_id, schedule_date: target.schedule_date, created_by: user!.id },
+      { onConflict: "band_id,schedule_date" },
+    );
   }
 
   // Roster rows cascade with the slot. The .select() is not decoration: a
