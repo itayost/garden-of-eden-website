@@ -78,27 +78,7 @@ export const cancelPlanSchema = z.object({ planId: uuid });
  * A cash or bank-transfer trainee, entered by Eden. Same fields as the public
  * form minus the declarations, which live on the paper she holds.
  */
-export const manualGrantSchema = z.object({
-  productId: uuid,
-  parentName: z.string().trim().min(2, "נדרש שם ההורה").max(100, "שם ארוך מדי"),
-  payerPhone: phone,
-  loginPhone: phone,
-  childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי"),
-  childBirthdate: isoDate,
-  email: z
-    .string()
-    .trim()
-    .email('כתובת דוא"ל לא תקינה')
-    .or(z.literal(""))
-    .transform((v) => (v === "" ? null : v)),
-  emergencyContactName: optionalText(100),
-  emergencyContactPhone: optionalPhone,
-  medicalNotes: optionalText(500),
-  paymentMethod: manualPaymentMethodSchema,
-  note: optionalText(200),
-  startsOn: isoDate,
-});
-export type ManualGrantInput = z.input<typeof manualGrantSchema>;
+
 
 export const productSchema = z.object({
   name_he: z.string().trim().min(1, "נדרש שם").max(80, "שם ארוך מדי"),

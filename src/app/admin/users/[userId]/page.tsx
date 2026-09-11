@@ -126,14 +126,11 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     };
   }
 
-  // Plan rows are admin-only (listPlansAction verifies); health data is
-  // scoped per trainee, so a trainer sees it for their own branch.
+  // Both loaders are branch scoped, so a trainer sees them for their own
+  // trainees only.
   const [planRow, health] =
     userToEdit.role === "trainee"
-      ? await Promise.all([
-          isAdmin ? getPlanForProfileAction(userId) : Promise.resolve(null),
-          getTraineeHealthAction(userId),
-        ])
+      ? await Promise.all([getPlanForProfileAction(userId), getTraineeHealthAction(userId)])
       : [null, null];
 
   const formatDate = (dateStr: string) => {
@@ -222,7 +219,9 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
             />
           )}
 
-          {planRow && <UserPlanCard row={planRow} isAdmin={isAdmin} />}
+          {userToEdit.role === "trainee" && (
+            <UserPlanCard row={planRow} isAdmin={isAdmin} traineeId={userId} />
+          )}
 
           {health && <HealthCard traineeId={userId} health={health} />}
 

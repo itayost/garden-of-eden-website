@@ -26,6 +26,7 @@ import type { ScheduleSlot } from "@/types/schedule";
 import type { SessionSummary } from "@/types/training-session";
 import type { StaffPlanBadge } from "@/types/plans";
 import { HealthSheet } from "@/features/plans/components/HealthSheet";
+import { PlanSheet } from "@/features/plans/components/staff/PlanSheet";
 
 /** Only the states that need a trainer's attention get a chip. */
 const PLAN_CHIP: Partial<Record<StaffPlanBadge["status"], { label: string; className: string }>> = {
@@ -43,6 +44,8 @@ interface SlotCardProps {
   planBadges: Record<string, StaffPlanBadge>;
   /** True when the viewing trainer is this slot's trainer — highlighted. */
   isMine: boolean;
+  /** Admins may edit plans from the plan sheet; everyone may record a payment. */
+  isAdmin: boolean;
   onEdit: () => void;
 }
 
@@ -56,11 +59,13 @@ export function SlotCard({
   sessionSummaries,
   planBadges,
   isMine,
+  isAdmin,
   onEdit,
 }: SlotCardProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [healthFor, setHealthFor] = useState<{ id: string; name: string } | null>(null);
+  const [planFor, setPlanFor] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const palette = trainerColor(slot.trainer_id);
 
@@ -203,12 +208,15 @@ export function SlotCard({
                   </Badge>
                 </Link>
                 {chip && (
-                  <span
+                  <button
+                    type="button"
+                    onClick={() => setPlanFor({ id: trainee.trainee_id!, name: trainee.trainee_name })}
                     className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold", chip.className)}
                     title={badge.sessionsLeft !== null ? `${badge.sessionsLeft} אימונים נותרו` : undefined}
+                    aria-label={`המסלול של ${trainee.trainee_name}: ${chip.label}`}
                   >
                     {chip.label}
-                  </span>
+                  </button>
                 )}
                 {badge?.hasMedicalNotes && (
                   <button
@@ -229,6 +237,16 @@ export function SlotCard({
           )}
         </CardContent>
       </Card>
+
+      {planFor && (
+        <PlanSheet
+          traineeId={planFor.id}
+          traineeName={planFor.name}
+          isAdmin={isAdmin}
+          open
+          onOpenChange={(open) => !open && setPlanFor(null)}
+        />
+      )}
 
       {healthFor && (
         <HealthSheet

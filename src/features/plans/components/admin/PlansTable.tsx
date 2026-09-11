@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FileText, MoreHorizontal } from "lucide-react";
+import { Banknote, FileText, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -16,9 +16,11 @@ import { shortDate } from "@/lib/utils/iso-date";
 import type { AdminPlanRow } from "../../lib/actions/admin-plans";
 import { PlanStatusBadge } from "../PlanStatusBadge";
 import { PlanActionsDialog } from "./PlanActionsDialog";
+import { StaffPaymentSheet } from "../staff/StaffPaymentSheet";
 
-export function PlansTable({ rows }: { rows: AdminPlanRow[] }) {
+export function PlansTable({ rows, isAdmin }: { rows: AdminPlanRow[]; isAdmin: boolean }) {
   const [target, setTarget] = useState<AdminPlanRow | null>(null);
+  const [payFor, setPayFor] = useState<string | null>(null);
 
   if (rows.length === 0) {
     return <p className="py-12 text-center text-muted-foreground">אין מסלולים להצגה</p>;
@@ -36,7 +38,7 @@ export function PlansTable({ rows }: { rows: AdminPlanRow[] }) {
               <TableHead className="text-right">אימונים</TableHead>
               <TableHead className="text-right">תוקף</TableHead>
               <TableHead className="text-right">מקור</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
+              <TableHead className="w-[140px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -85,14 +87,26 @@ export function PlansTable({ rows }: { rows: AdminPlanRow[] }) {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setTarget(row)}
-                    aria-label="פעולות"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPayFor(row.plan.profile_id)}
+                    >
+                      <Banknote className="h-4 w-4 me-1" />
+                      תשלום
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setTarget(row)}
+                        aria-label="פעולות"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -101,6 +115,15 @@ export function PlansTable({ rows }: { rows: AdminPlanRow[] }) {
       </div>
       {target && (
         <PlanActionsDialog key={target.plan.id} row={target} onClose={() => setTarget(null)} />
+      )}
+      {payFor && (
+        <StaffPaymentSheet
+          key={payFor}
+          traineeId={payFor}
+          isAdmin={isAdmin}
+          open
+          onOpenChange={(open) => !open && setPayFor(null)}
+        />
       )}
     </>
   );

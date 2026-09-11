@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { verifyAdmin } from "@/lib/actions/shared";
+import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { allowedBranches } from "@/lib/branches/resolve-branch";
+import { isMorningConfigured } from "@/lib/morning/config";
 import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
 import { BranchUrlFilter } from "@/features/branches/components/BranchUrlFilter";
-import { loadKiryatAtaCatalog } from "@/features/enrollment/lib/catalog";
 import { listPlansAction } from "@/features/plans/lib/actions/admin-plans";
 import { PlansTable } from "@/features/plans/components/admin/PlansTable";
-import { ManualGrantDialog } from "@/features/plans/components/admin/ManualGrantDialog";
+import { NewTraineeSheet } from "@/features/plans/components/staff/NewTraineeSheet";
+import { listSellableProductsAction } from "@/features/plans/lib/actions/staff-payment";
 import { Button } from "@/components/ui/button";
 import { isValidUUID } from "@/lib/validations/common";
 import { PLAN_STATUS_LABELS_HE, type PlanStatus } from "@/types/plans";
@@ -21,17 +23,21 @@ interface PageProps {
 }
 
 export default async function AdminPlansPage({ searchParams }: PageProps) {
-  const { error } = await verifyAdmin();
+  const { error, profile } = await verifyAdminOrTrainer();
   if (error) redirect("/admin");
+  const isAdmin = profile!.role === "admin";
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) redirect("/admin");
 
   const params = await searchParams;
   const status = STATUSES.find((s) => s === params.status);
   const branchId = params.branch && isValidUUID(params.branch) ? params.branch : undefined;
-  const [rows, branches, products] = await Promise.all([
+  const [rows, allBranches, products] = await Promise.all([
     listPlansAction({ branchId, status }),
     listActiveBranchOptionsAction(),
-    loadKiryatAtaCatalog(),
+    listSellableProductsAction(),
   ]);
+  const branches = allowedBranches(scopeResult.data.scope, allBranches);
 
   const statusHref = (s: PlanStatus | undefined) => {
     const query = new URLSearchParams();
@@ -49,13 +55,17 @@ export default async function AdminPlansPage({ searchParams }: PageProps) {
           <p className="text-muted-foreground">מי קנה מה, עד מתי, וכמה אימונים נוצלו</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/admin/plans/products">קטלוג</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/admin/orders">הזמנות</Link>
-          </Button>
-          <ManualGrantDialog products={products} />
+          {isAdmin && (
+            <>
+              <Button variant="outline" asChild>
+                <Link href="/admin/plans/products">קטלוג</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/admin/orders">הזמנות</Link>
+              </Button>
+            </>
+          )}
+          <NewTraineeSheet products={products} morningConfigured={isMorningConfigured()} isAdmin={isAdmin} />
         </div>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -71,7 +81,7 @@ export default async function AdminPlansPage({ searchParams }: PageProps) {
           ))}
         </div>
       </div>
-      <PlansTable rows={rows} />
+      <PlansTable rows={rows} isAdmin={isAdmin} />
     </div>
   );
 }

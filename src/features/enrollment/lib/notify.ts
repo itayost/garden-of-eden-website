@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { signAgreementToken } from "@/lib/plans/agreement-token";
 import { sendWelcomeMessage } from "@/lib/whatsapp/welcome";
+import type { WhatsAppResult } from "@/lib/whatsapp/api";
 import { sendPlanConfirmed } from "@/lib/whatsapp/plan-templates";
 import type { Order, TraineePlan } from "@/types/plans";
 
@@ -20,12 +21,28 @@ function ddmmyyyy(iso: string): string {
  * and the plan confirmation with the agreement link to the parent.
  * Best-effort: a failed send is logged, never thrown; the money already landed.
  */
-export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string): Promise<void> {
+export interface NotifyOutcome {
+  /** Null when the welcome was already sent (or nothing to send). */
+  welcome: WhatsAppResult | null;
+  confirmed: WhatsAppResult | null;
+  /** Where the parent's link points: the signing page until signed, the copy after. */
+  agreementUrl: string | null;
+  sentTo: string | null;
+}
+
+const NOTHING: NotifyOutcome = { welcome: null, confirmed: null, agreementUrl: null, sentTo: null };
+
+/** The parent's link for an agreement id; the same page signs and later displays. */
+export function agreementLink(agreementId: string): string {
+  return `${SITE_URL}/join/agreement/${agreementId}?t=${signAgreementToken(agreementId, planTokenSecret())}`;
+}
+
+export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string): Promise<NotifyOutcome> {
   const { data: order } = (await typedFrom(db, "orders")
     .select("*")
     .eq("id", orderId)
     .maybeSingle()) as { data: Order | null };
-  if (!order || !order.profile_id) return;
+  if (!order || !order.profile_id) return NOTHING;
 
   const [{ data: plan }, { data: agreement }, { data: profile }, { data: product }] =
     await Promise.all([
@@ -48,8 +65,9 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
         .maybeSingle() as Promise<{ data: { name_he: string } | null }>,
     ]);
 
+  let welcome: WhatsAppResult | null = null;
   if (profile && !profile.welcome_message_sent_at) {
-    const welcome = await sendWelcomeMessage(order.login_phone, profile.full_name);
+    welcome = await sendWelcomeMessage(order.login_phone, profile.full_name);
     if (welcome.success) {
       await db
         .from("profiles")
@@ -60,10 +78,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
     }
   }
 
-  const secret = planTokenSecret();
-  const agreementUrl = agreement
-    ? `${SITE_URL}/join/agreement/${agreement.id}?t=${signAgreementToken(agreement.id, secret)}`
-    : `${SITE_URL}/join`;
+  const agreementUrl = agreement ? agreementLink(agreement.id) : `${SITE_URL}/join`;
 
   const confirmed = await sendPlanConfirmed(order.payer_phone, {
     parentName: order.parent_name,
@@ -75,4 +90,5 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
   if (!confirmed.success) {
     console.error(`[notify] plan confirmed failed for order ${order.id}:`, confirmed.error);
   }
+  return { welcome, confirmed, agreementUrl: agreement ? agreementUrl : null, sentTo: order.payer_phone };
 }
