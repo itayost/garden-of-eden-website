@@ -29,6 +29,8 @@ function band(overrides: Partial<WeeklyBand> = {}): WeeklyBand {
     branch_id: null,
     label_he: null,
     is_standby: false,
+    max_trainees: 8,
+    is_bookable: false,
     created_by: LIDOR,
     created_at: "2026-08-01T00:00:00Z",
     updated_at: "2026-08-01T00:00:00Z",

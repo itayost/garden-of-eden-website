@@ -91,3 +91,15 @@ describe("dueReminderMilestone", () => {
     expect(dueReminderMilestone({ ...base, status: "cancelled" }, 0, "2026-09-25")).toBeNull();
   });
 });
+
+describe("countSessionsUsedFromRows with cancellations", () => {
+  it("frees a cancelled booking but keeps a late cancel", () => {
+    const plan = { starts_on: "2026-09-01", ends_on: "2026-09-30", branch_id: "k" };
+    const rows = [
+      { schedule_date: "2026-09-02", branch_id: "k", cancelled_at: null, late_cancel: false },
+      { schedule_date: "2026-09-03", branch_id: "k", cancelled_at: "2026-09-02T00:00:00Z", late_cancel: false },
+      { schedule_date: "2026-09-04", branch_id: "k", cancelled_at: "2026-09-04T13:00:00Z", late_cancel: true },
+    ];
+    expect(countSessionsUsedFromRows(rows, plan, "2026-09-10")).toBe(2);
+  });
+});

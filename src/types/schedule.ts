@@ -10,7 +10,7 @@
 
 /** PostgREST select string for a slot with its roster joined and ordered. */
 export const SLOT_SELECT_WITH_TRAINEES =
-  "*, trainees:daily_schedule_slot_trainees(id, slot_id, trainee_id, trainee_name, order_index)";
+  "*, trainees:daily_schedule_slot_trainees(id, slot_id, trainee_id, trainee_name, order_index, source, booked_at, cancelled_at, late_cancel, reminded_at)";
 
 export interface SlotTrainee {
   id: string;
@@ -22,6 +22,13 @@ export interface SlotTrainee {
   trainee_id: string | null;
   trainee_name: string;
   order_index: number;
+  /** staff typed the name on the board; self = the trainee booked it. */
+  source: "staff" | "self";
+  booked_at: string | null;
+  /** A self-cancel keeps the row so a late cancel can still count as used. */
+  cancelled_at: string | null;
+  late_cancel: boolean;
+  reminded_at: string | null;
 }
 
 export interface ScheduleSlot {
@@ -35,6 +42,10 @@ export interface ScheduleSlot {
   focus_he: string | null;
   location_he: string | null;
   branch_id: string | null;
+  /** The band that projected this slot, when any. */
+  band_id: string | null;
+  /** Seats for self-booking; null means staff-only (every חיפה slot). */
+  max_trainees: number | null;
   trainees: SlotTrainee[];
   created_by: string;
   created_at: string;
