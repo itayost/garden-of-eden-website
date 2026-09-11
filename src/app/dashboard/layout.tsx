@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DASHBOARD_PAGE_TITLES } from "@/lib/navigation/dashboard-nav";
+import { canBookForUser } from "@/features/booking/lib/can-book";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { MotionProvider } from "@/components/MotionProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -60,6 +61,7 @@ export default async function DashboardLayout({
     accessOverride: profile?.access_override ?? null,
   });
 
+  const canBook = profile?.role === "trainee" ? await canBookForUser(user.id) : false;
   const cookieStore = await cookies();
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
@@ -68,7 +70,7 @@ export default async function DashboardLayout({
     // celebration respect prefers-reduced-motion.
     <MotionProvider>
     <SidebarProvider defaultOpen={sidebarOpen}>
-      <DashboardSidebar user={user} profile={profile} tier={tier} />
+      <DashboardSidebar user={user} profile={profile} tier={tier} canBook={canBook} />
       <SidebarInset>
         <AppTopBar
           user={user}
@@ -79,7 +81,7 @@ export default async function DashboardLayout({
         <main className="container mx-auto px-4 pt-6 pb-20 md:pb-8">
           {children}
         </main>
-        <DashboardBottomNav tier={tier} />
+        <DashboardBottomNav tier={tier} canBook={canBook} />
       </SidebarInset>
       <Suspense fallback={null}>
         <OnboardingTourProvider

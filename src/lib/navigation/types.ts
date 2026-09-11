@@ -11,6 +11,8 @@ export type NavItem = {
   // Order within the mobile bottom-nav bar / "עוד" sheet (independent of the
   // sidebar's list order, so both surfaces read one config yet keep their own order).
   mobileOrder?: number;
+  /** Shown only when the viewer has this capability (e.g. a bookable branch). */
+  requires?: "booking";
 };
 
 export type NavSection = {
@@ -30,6 +32,14 @@ export function splitBottomNav(
     main: visible.filter((i) => i.mobilePrimary).sort(byMobileOrder),
     more: visible.filter((i) => !i.mobilePrimary).sort(byMobileOrder),
   };
+}
+
+/** Drop items whose capability the viewer lacks. Cosmetic; the page redirects on its own. */
+export function filterNavForCapabilities(
+  items: NavItem[],
+  capabilities: { booking: boolean },
+): NavItem[] {
+  return items.filter((item) => !item.requires || capabilities[item.requires]);
 }
 
 export function derivePageTitles(
