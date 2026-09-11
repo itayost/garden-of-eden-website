@@ -17,6 +17,7 @@ import type { AdminPlanRow } from "../../lib/actions/admin-plans";
 import { PlanStatusBadge } from "../PlanStatusBadge";
 import { PlanActionsDialog } from "./PlanActionsDialog";
 import { StaffPaymentSheet } from "../staff/StaffPaymentSheet";
+import { AgreementBadge } from "../staff/AgreementBadge";
 
 export function PlansTable({ rows, isAdmin }: { rows: AdminPlanRow[]; isAdmin: boolean }) {
   const [target, setTarget] = useState<AdminPlanRow | null>(null);
@@ -54,7 +55,14 @@ export function PlansTable({ rows, isAdmin }: { rows: AdminPlanRow[]; isAdmin: b
                   {row.guardianName && (
                     <div className="text-xs text-muted-foreground">
                       {row.guardianName}
-                      {row.guardianPhone ? ` · ${row.guardianPhone}` : ""}
+                      {row.guardianPhone ? (
+                        <>
+                          {" · "}
+                          <a href={`tel:${row.guardianPhone}`} className="underline" dir="ltr">
+                            {row.guardianPhone}
+                          </a>
+                        </>
+                      ) : ""}
                     </div>
                   )}
                 </TableCell>
@@ -72,8 +80,11 @@ export function PlansTable({ rows, isAdmin }: { rows: AdminPlanRow[]; isAdmin: b
                 </TableCell>
                 <TableCell>
                   {row.plan.source === "manual"
-                    ? `ידני${row.plan.note ? ` (${row.plan.note})` : ""}`
+                    ? `ידני${row.plan.note ? ` (${row.plan.note})` : ""}${row.receivedByName ? ` · ${row.receivedByName}` : ""}`
                     : "אונליין"}
+                  <div className="mt-1">
+                    <AgreementBadge agreementId={row.agreementId} signed={row.agreementSigned} />
+                  </div>
                   {row.orderDocumentUrl && (
                     <a
                       href={row.orderDocumentUrl}

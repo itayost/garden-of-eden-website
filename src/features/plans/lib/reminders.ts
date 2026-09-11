@@ -5,18 +5,46 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { dueReminderMilestone } from "@/lib/plans/plan-status";
 import { REMINDED_COLUMN, reminderReason } from "@/lib/plans/reminder-copy";
 import { sendPlanReminder } from "@/lib/whatsapp/plan-templates";
-import type { TraineePlan } from "@/types/plans";
+import type { EnrollmentAgreement, TraineePlan } from "@/types/plans";
+import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import { loadPlansWithUsage } from "./queries";
 import { buildRenewalUrl } from "./renewal-link";
 
 export interface ReminderRunResult {
   expiredOrders: number;
+  signReminders: number;
   reminded: number;
   failed: number;
 }
 
 const PENDING_ORDER_TTL_HOURS = 24;
 const EXPIRED_ORDER_KEEP_DAYS = 30;
+const SIGN_REMINDER_AFTER_DAYS = 3;
+
+/**
+ * One nudge to parents who have not signed a staff-opened agreement after
+ * three days: the same confirmation with the signing link, sent once.
+ */
+async function remindUnsignedAgreements(db: ReturnType<typeof createAdminClient>): Promise<number> {
+  const cutoff = new Date(Date.now() - SIGN_REMINDER_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = (await typedFrom(db, "enrollment_agreements")
+    .select("id, order_id")
+    .is("signed_at", null)
+    .is("sign_reminded_at", null)
+    .not("order_id", "is", null)
+    .lt("created_at", cutoff)
+    .limit(50)) as { data: Pick<EnrollmentAgreement, "id" | "order_id">[] | null };
+  let sent = 0;
+  for (const agreement of data ?? []) {
+    const outcome = await notifyOrderFulfilled(db, agreement.order_id!);
+    if (!outcome.confirmed?.success) continue;
+    await typedFrom(db, "enrollment_agreements")
+      .update({ sign_reminded_at: new Date().toISOString() })
+      .eq("id", agreement.id);
+    sent += 1;
+  }
+  return sent;
+}
 
 /**
  * Expired checkouts hold a parent's details with no payment behind them;
@@ -68,10 +96,11 @@ async function expireStaleOrders(db: ReturnType<typeof createAdminClient>): Prom
  */
 export async function runPlanReminders(today: string): Promise<ReminderRunResult> {
   const db = createAdminClient();
-  const result: ReminderRunResult = { expiredOrders: 0, reminded: 0, failed: 0 };
+  const result: ReminderRunResult = { expiredOrders: 0, signReminders: 0, reminded: 0, failed: 0 };
 
   result.expiredOrders = await expireStaleOrders(db);
   await purgeExpiredOrders(db);
+  result.signReminders = await remindUnsignedAgreements(db);
 
   const { data: activePlans, error } = (await typedFrom(db, "trainee_plans")
     .select("profile_id")

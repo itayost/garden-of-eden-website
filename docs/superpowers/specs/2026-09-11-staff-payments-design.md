@@ -181,6 +181,29 @@ All three new surfaces (payment sheet, new-trainee sheet, result) use
 `SheetDialogContent`, which is a bottom sheet on a phone and a dialog on
 desktop, with the header pinned and the body scrolling.
 
+## WhatsApp templates (for Meta submission)
+
+Both are Hebrew, category Utility, five body parameters, no header, no
+buttons (the link is a body parameter so it works for both the signing page
+and the printable copy).
+
+**plan_confirmed** (`WHATSAPP_PLAN_CONFIRMED_TEMPLATE_NAME`)
+
+> היי {{1}}, הרישום של {{2}} למסלול {{3}} בגארדן אוף עדן קריית אתא נקלט.
+> המסלול בתוקף עד {{4}}.
+> לצפייה ולחתימה על הסכם ההרשמה: {{5}}
+> אם משהו לא מדויק, כתבו לנו כאן.
+
+Sample values: רונית, דני, מנוי חודשי, 10/10/2026, https://www.edengarden.co.il/join/agreement/…
+
+**plan_reminder** (`WHATSAPP_PLAN_REMINDER_TEMPLATE_NAME`)
+
+> היי {{1}}, המסלול {{3}} של {{2}} בגארדן אוף עדן {{4}}.
+> לחידוש בכרטיס אשראי: {{5}}
+> אפשר גם לשלם במזומן, בהעברה או בביט אצל הצוות במגרש.
+
+Sample values: רונית, דני, כרטיסיית 10, מסתיים בעוד 3 ימים, https://www.edengarden.co.il/join?renew=…
+
 ## Out of scope
 
 Discounts, partial payments, refunds, invoices for חיפה (Arbox), automatic

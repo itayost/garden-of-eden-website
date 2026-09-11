@@ -15,6 +15,7 @@ import type { AdminPlanRow } from "../lib/actions/admin-plans";
 import { PlanActionsDialog } from "./admin/PlanActionsDialog";
 import { PlanStatusBadge } from "./PlanStatusBadge";
 import { StaffPaymentSheet } from "./staff/StaffPaymentSheet";
+import { AgreementBadge } from "./staff/AgreementBadge";
 
 interface UserPlanCardProps {
   /** Null when the trainee has no plan yet. */
@@ -57,6 +58,16 @@ export function UserPlanCard({ row, isAdmin, traineeId }: UserPlanCardProps) {
                 {shortDate(row.plan.starts_on)} עד {shortDate(row.plan.ends_on)}
               </span>
             </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">הסכם</span>
+              <AgreementBadge agreementId={row.agreementId} signed={row.agreementSigned} />
+            </div>
+            {row.receivedByName && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">נרשם ע&quot;י</span>
+                <span>{row.receivedByName}</span>
+              </div>
+            )}
             {row.orderDocumentUrl && (
               <a href={row.orderDocumentUrl} target="_blank" rel="noreferrer" className="block text-sm underline">
                 חשבונית ב-Morning

@@ -13,7 +13,7 @@ import {
   cancelPlanSchema,
   extendPlanSchema,
 } from "@/lib/validations/plans-admin";
-import type { Order, PlanStatus } from "@/types/plans";
+import type { EnrollmentAgreement, Order, PlanStatus } from "@/types/plans";
 import { loadPlansWithUsage, type PlanWithUsage } from "../queries";
 
 type ActionResult = { success: true } | { error: string };
@@ -23,6 +23,11 @@ export type AdminPlanRow = PlanWithUsage & {
   guardianName: string | null;
   guardianPhone: string | null;
   orderDocumentUrl: string | null;
+  /** The agreement behind the plan's order, and whether the parent has signed it. */
+  agreementId: string | null;
+  agreementSigned: boolean;
+  /** Who took a manual payment. */
+  receivedByName: string | null;
 };
 
 function revalidatePlanSurfaces(profileId?: string): void {
@@ -81,22 +86,32 @@ async function loadAdminRows(
   const orderIds = [...plans.values()]
     .map((p) => p.plan.order_id)
     .filter((id): id is string => id !== null);
+  type OrderBits = Pick<Order, "id" | "morning_document_url" | "received_by"> & {
+    agreements: Pick<EnrollmentAgreement, "id" | "signed_at">[] | null;
+    receiver: { full_name: string | null } | null;
+  };
   const { data: orders } = (orderIds.length
-    ? await typedFrom(db, "orders").select("id, morning_document_url").in("id", orderIds)
-    : { data: [] }) as { data: Pick<Order, "id" | "morning_document_url">[] | null };
-  const docByOrder = new Map((orders ?? []).map((o) => [o.id, o.morning_document_url]));
+    ? await typedFrom(db, "orders")
+        .select(
+          "id, morning_document_url, received_by, agreements:enrollment_agreements(id, signed_at), receiver:profiles!orders_received_by_fkey(full_name)",
+        )
+        .in("id", orderIds)
+    : { data: [] }) as { data: OrderBits[] | null };
+  const byOrder = new Map((orders ?? []).map((o) => [o.id, o]));
 
   return [...plans.entries()]
     .map(([profileId, withUsage]) => {
       const profile = profileById.get(profileId);
+      const bits = withUsage.plan.order_id ? byOrder.get(withUsage.plan.order_id) : undefined;
       return {
         ...withUsage,
         traineeName: profile?.full_name ?? "ללא שם",
         guardianName: profile?.guardian_name ?? null,
         guardianPhone: profile?.guardian_phone ?? null,
-        orderDocumentUrl: withUsage.plan.order_id
-          ? (docByOrder.get(withUsage.plan.order_id) ?? null)
-          : null,
+        orderDocumentUrl: bits?.morning_document_url ?? null,
+        agreementId: bits?.agreements?.[0]?.id ?? null,
+        agreementSigned: Boolean(bits?.agreements?.[0]?.signed_at),
+        receivedByName: bits?.receiver?.full_name ?? null,
       };
     });
 }
