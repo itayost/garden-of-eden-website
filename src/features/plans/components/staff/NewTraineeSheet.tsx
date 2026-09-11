@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { ManualPaymentMethod, NewTraineeInput } from "@/lib/validations/plans-admin";
 import type { PlanProduct } from "@/types/plans";
+import { israelToday } from "@/lib/utils/tasks";
 import { createTraineeWithPaymentAction } from "../../lib/actions/staff-payment";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { DuplicatePrompt } from "./DuplicatePrompt";
@@ -19,7 +20,6 @@ import { PaymentMethodPicker } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
 
-const israelToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date());
 
 interface NewTraineeSheetProps {
   products: PlanProduct[];

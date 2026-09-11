@@ -28,7 +28,8 @@ interface StaffPaymentSheetProps {
   traineeId: string;
   isAdmin: boolean;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  /** `paid` is true when the sheet closes after a recorded payment. */
+  onOpenChange: (open: boolean, paid?: boolean) => void;
 }
 
 /**
@@ -91,7 +92,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
 
   // State resets on close, not in the effect: the next open reloads fresh.
   const close = () => {
-    onOpenChange(false);
+    onOpenChange(false, result !== null);
     if (result) router.refresh();
     setResult(null);
     setDuplicate(null);

@@ -88,6 +88,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                   <div className="text-xs text-muted-foreground">
                     {PAYMENT_METHOD_LABELS_HE[order.payment_method]}
                     {order.reference ? ` · ${order.reference}` : ""}
+                    {order.receivedByName ? ` · נרשם ע"י ${order.receivedByName}` : ""}
                   </div>
                 )}
               </TableCell>

@@ -74,12 +74,6 @@ export const addSessionsSchema = z.object({
 });
 export const cancelPlanSchema = z.object({ planId: uuid });
 
-/**
- * A cash or bank-transfer trainee, entered by Eden. Same fields as the public
- * form minus the declarations, which live on the paper she holds.
- */
-
-
 export const productSchema = z.object({
   name_he: z.string().trim().min(1, "נדרש שם").max(80, "שם ארוך מדי"),
   blurb_he: optionalText(200),
@@ -99,5 +93,4 @@ export const healthSchema = z.object({
   emergencyContactPhone: optionalPhone,
 });
 export type HealthInput = z.input<typeof healthSchema>;
-
 

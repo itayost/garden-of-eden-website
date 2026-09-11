@@ -46,7 +46,6 @@ export function PaymentResult({
   const [invoice, setInvoice] = useState(result.invoice);
   const [whatsapp, setWhatsapp] = useState(result.whatsapp);
   const [pending, startTransition] = useTransition();
-  const agreementId = result.agreementUrl.split("/agreement/")[1]?.split("?")[0] ?? "";
 
   const retryInvoice = () =>
     startTransition(async () => {
@@ -60,7 +59,7 @@ export function PaymentResult({
 
   const resend = () =>
     startTransition(async () => {
-      const r = await resendAgreementLinkAction(agreementId);
+      const r = await resendAgreementLinkAction(result.agreementId);
       if ("error" in r) {
         toast.error(r.error);
         return;
@@ -100,11 +99,13 @@ export function PaymentResult({
           <Line ok={false}>
             <div className="font-medium">החשבונית לא הופקה</div>
             <div className="text-muted-foreground">{invoice.error}</div>
-            {isAdmin && (
+            {isAdmin ? (
               <Button size="sm" variant="outline" onClick={retryInvoice} disabled={pending}>
                 {pending ? <Loader2 className="h-3 w-3 me-1 animate-spin" /> : null}
                 נסה שוב
               </Button>
+            ) : (
+              <div className="text-muted-foreground">המנהל יכול להפיק אותה מחדש מדף ההזמנות.</div>
             )}
           </Line>
         )}

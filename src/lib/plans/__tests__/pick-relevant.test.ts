@@ -72,4 +72,10 @@ describe("toLocalPhone", () => {
     expect(toLocalPhone("0501234567")).toBe("0501234567");
     expect(toLocalPhone(null)).toBe("");
   });
+  it("normalizes every spelling to E.164", async () => {
+    const { toE164 } = await import("../local-phone");
+    expect(toE164("972501234567")).toBe("+972501234567");
+    expect(toE164("0501234567")).toBe("+972501234567");
+    expect(toE164("+972501234567")).toBe("+972501234567");
+  });
 });

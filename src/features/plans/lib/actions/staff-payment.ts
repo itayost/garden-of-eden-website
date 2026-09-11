@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { waitUntil } from "@vercel/functions";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
@@ -12,7 +14,9 @@ import { isMorningConfigured } from "@/lib/morning/config";
 import { phoneVariants } from "@/lib/plans/phone-variants";
 import { renewalStartDate } from "@/lib/plans/plan-status";
 import { israelToday } from "@/lib/utils/tasks";
-import { formatPhoneToInternational, isValidUUID } from "@/lib/validations/common";
+import { isValidUUID } from "@/lib/validations/common";
+import { toE164 } from "@/lib/plans/local-phone";
+import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import {
   newTraineeSchema,
   resendAgreementSchema,
@@ -127,6 +131,12 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
   if (!product) return { error: "המסלול לא נמצא או אינו פעיל" };
   const branchError = await assertBranchWritable(product.branch_id);
   if (branchError.error) return { error: branchError.error };
+  // The sheet only offers the trainee's branches; the server holds trainers
+  // to that too. An admin may sell into a new branch, which also enrolls.
+  if (staff?.role !== "admin") {
+    const memberships = (await loadBranchIdsByProfile(db, [data.traineeId])).get(data.traineeId) ?? [];
+    if (!memberships.includes(product.branch_id)) return { error: "המסלול שייך לסניף שהמתאמן אינו רשום בו" };
+  }
 
   const { data: trainee } = await db
     .from("profiles")
@@ -136,12 +146,23 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
   if (!trainee || trainee.role !== "trainee") return { error: "אפשר לרשום תשלום רק למתאמן" };
   if (!trainee.phone) return { error: "למתאמן אין טלפון להתחברות. הוסיפו טלפון בפרופיל קודם." };
 
+  if (product.once_per_trainee) {
+    const { count } = await typedFrom(db, "orders")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", data.traineeId)
+      .eq("status", "paid")
+      .eq("product_id", product.id);
+    if (!isIntroPackEligible(product, count ?? 0)) {
+      return { error: "חבילת ההיכרות היא לשחקן חדש בלבד ונרכשה כבר. בחרו מסלול אחר." };
+    }
+  }
+
   if (!data.confirmDuplicate) {
     const duplicate = await findRecentDuplicate(db, data.traineeId, product.id);
     if (duplicate) return { duplicate };
   }
 
-  const loginPhone = trainee.phone.startsWith("+") ? trainee.phone : formatPhoneToInternational(trainee.phone);
+  const loginPhone = toE164(trainee.phone);
   const result = await recordManualPayment(db, {
     product: { ...product, price_ils: Number(product.price_ils) },
     trainee: {
@@ -152,7 +173,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     },
     parent: {
       name: trainee.guardian_name ?? "הורה",
-      phone: trainee.guardian_phone ?? loginPhone,
+      phone: trainee.guardian_phone ? toE164(trainee.guardian_phone) : loginPhone,
       email: null,
     },
     health: {
@@ -195,7 +216,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
 
   const { data: owner } = await db
     .from("profiles")
-    .select("id, role")
+    .select("id, role, birthdate")
     .in("phone", phoneVariants(data.loginPhone))
     .is("deleted_at", null)
     .limit(1)
@@ -212,7 +233,12 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
 
   const result = await recordManualPayment(db, {
     product: { ...product, price_ils: Number(product.price_ils) },
-    trainee: { profileId: owner?.id ?? null, loginPhone: data.loginPhone, childName: data.childName, childBirthdate: null },
+    trainee: {
+      profileId: owner?.id ?? null,
+      loginPhone: data.loginPhone,
+      childName: data.childName,
+      childBirthdate: owner?.birthdate ?? null,
+    },
     parent: { name: data.parentName ?? "הורה", phone: data.payerPhone, email: null },
     health: { medicalNotes: null, emergencyContactName: null, emergencyContactPhone: null },
     paymentMethod: data.paymentMethod,
@@ -238,12 +264,17 @@ export async function resendAgreementLinkAction(
 
   const db = createAdminClient();
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("id, order_id, profile_id")
+    .select("id, order_id, profile_id, signed_at")
     .eq("id", agreementId)
-    .maybeSingle()) as { data: Pick<EnrollmentAgreement, "id" | "order_id" | "profile_id"> | null };
+    .maybeSingle()) as { data: Pick<EnrollmentAgreement, "id" | "order_id" | "profile_id" | "signed_at"> | null };
   if (!agreement || !agreement.order_id || !agreement.profile_id) return { error: "ההסכם לא נמצא" };
+  if (agreement.signed_at) return { error: "ההסכם כבר נחתם" };
   const scopeError = await assertTraineeInScope(agreement.profile_id);
   if (scopeError) return { error: scopeError };
+  // One message per agreement per few minutes: a double tap is not two WhatsApps.
+  const limit = await checkRateLimit(`resend:${agreementId}`, "checkout");
+  waitUntil(limit.pending);
+  if (limit.rateLimited) return { error: "הקישור נשלח לפני רגע. נסו שוב בעוד כמה דקות." };
 
   const outcome = await notifyOrderFulfilled(db, agreement.order_id);
   if (!outcome.confirmed?.success) return { error: outcome.confirmed?.error ?? "השליחה נכשלה" };

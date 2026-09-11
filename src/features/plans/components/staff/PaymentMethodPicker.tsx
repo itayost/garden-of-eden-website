@@ -43,7 +43,10 @@ export function PaymentMethodPicker({
                 role="radio"
                 aria-checked={selected}
                 disabled={disabled}
-                onClick={() => onMethodChange(value)}
+                onClick={() => {
+                  onMethodChange(value);
+                  if (value === "cash") onReferenceChange("");
+                }}
                 className={cn(
                   "flex h-16 flex-col items-center justify-center gap-1 rounded-xl border text-sm font-medium transition-colors",
                   selected

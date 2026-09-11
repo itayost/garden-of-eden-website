@@ -94,15 +94,20 @@ export async function fulfillFromInput(
         full_name: profile?.full_name || order.child_name,
         birthdate: profile?.birthdate || order.child_birthdate,
         role: "trainee",
-        profile_completed: true,
+        // A staff signup carries no birthdate until the parent signs; leave the
+        // app's onboarding to ask for what is still missing.
+        profile_completed: Boolean(profile?.birthdate || order.child_birthdate),
         guardian_name: profile?.guardian_name ?? order.parent_name,
         guardian_phone: profile?.guardian_phone ?? order.payer_phone,
         medical_notes: profile?.medical_notes ?? agreement?.medical_notes ?? null,
+        // Empty strings mean "not given yet" on a staff-opened agreement.
         emergency_contact_name:
-          profile?.emergency_contact_name ?? agreement?.emergency_contact_name ?? null,
+          profile?.emergency_contact_name || agreement?.emergency_contact_name || null,
         emergency_contact_phone:
-          profile?.emergency_contact_phone ?? agreement?.emergency_contact_phone ?? null,
-        photo_consent: profile?.photo_consent ?? agreement?.photo_consent ?? null,
+          profile?.emergency_contact_phone || agreement?.emergency_contact_phone || null,
+        // Consent is an answer the parent gives at signing, never a default.
+        photo_consent:
+          profile?.photo_consent ?? (agreement?.signed_at ? agreement.photo_consent : null),
       })
       .eq("id", profileId);
     if (profileError) throw new Error(`profile update failed: ${profileError.message}`);

@@ -42,6 +42,7 @@ export interface ManualPaymentInput {
 export interface ManualPaymentResult {
   ok: true;
   orderId: string;
+  agreementId: string;
   profileId: string;
   planId: string;
   endsOn: string;
@@ -84,6 +85,8 @@ export async function recordManualPayment(
   input: ManualPaymentInput,
 ): Promise<ManualPaymentResult | { ok: false; error: string }> {
   const { product } = input;
+  // Cash has no reference; a leftover from a switched method must not stick.
+  const reference = input.paymentMethod === "cash" ? null : input.reference;
 
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({
@@ -93,7 +96,7 @@ export async function recordManualPayment(
       paid_at: new Date().toISOString(),
       payment_provider: "manual",
       payment_method: input.paymentMethod,
-      reference: input.reference,
+      reference,
       received_by: input.actor.id,
       amount_ils: product.price_ils,
       parent_name: input.parent.name,
@@ -155,7 +158,7 @@ export async function recordManualPayment(
 
   // A chosen start date (new trainee) overrides the chaining default.
   const today = israelToday();
-  const note = `${PAYMENT_METHOD_LABELS_HE[input.paymentMethod]}${input.reference ? ` ${input.reference}` : ""}`;
+  const note = `${PAYMENT_METHOD_LABELS_HE[input.paymentMethod]}${reference ? ` ${reference}` : ""}`;
   const patch =
     input.startsOn && input.startsOn !== today
       ? { starts_on: input.startsOn, ends_on: addDays(input.startsOn, product.duration_days - 1), note }
@@ -163,8 +166,14 @@ export async function recordManualPayment(
   const { data: plan } = (await typedFrom(db, "trainee_plans")
     .update(patch)
     .eq("id", fulfilled.planId)
-    .select("ends_on")
-    .single()) as { data: Pick<TraineePlan, "ends_on"> | null };
+    .select("starts_on, ends_on")
+    .single()) as { data: Pick<TraineePlan, "starts_on" | "ends_on"> | null };
+  // The agreement states the plan's real start, which chaining may have moved.
+  if (plan && plan.starts_on !== agreement.plan_start_on) {
+    await typedFrom(db, "enrollment_agreements")
+      .update({ plan_start_on: plan.starts_on })
+      .eq("id", agreement.id);
+  }
 
   await db.from("activity_logs").insert({
     user_id: fulfilled.profileId,
@@ -175,7 +184,7 @@ export async function recordManualPayment(
       orderId: order.id,
       productId: product.id,
       paymentMethod: input.paymentMethod,
-      reference: input.reference,
+      reference,
       amountIls: Number(product.price_ils),
     },
   });
@@ -188,6 +197,7 @@ export async function recordManualPayment(
   return {
     ok: true,
     orderId: order.id,
+    agreementId: agreement.id,
     profileId: fulfilled.profileId,
     planId: fulfilled.planId,
     endsOn: plan?.ends_on ?? "",

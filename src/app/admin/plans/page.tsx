@@ -65,7 +65,9 @@ export default async function AdminPlansPage({ searchParams }: PageProps) {
               </Button>
             </>
           )}
-          <NewTraineeSheet products={products} morningConfigured={isMorningConfigured()} isAdmin={isAdmin} />
+          {products.length > 0 && (
+            <NewTraineeSheet products={products} morningConfigured={isMorningConfigured()} isAdmin={isAdmin} />
+          )}
         </div>
       </div>
       <div className="flex flex-wrap gap-3">

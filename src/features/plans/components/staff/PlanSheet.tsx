@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/utils/iso-date";
 import { getPlanForProfileAction, type AdminPlanRow } from "../../lib/actions/admin-plans";
 import { PlanStatusBadge } from "../PlanStatusBadge";
+import { AgreementBadge } from "./AgreementBadge";
 import { StaffPaymentSheet } from "./StaffPaymentSheet";
 
 interface PlanSheetProps {
@@ -76,6 +77,14 @@ export function PlanSheet({ traineeId, traineeName, isAdmin, open, onOpenChange 
                 <dd>
                   {shortDate(row.plan.starts_on)} עד {shortDate(row.plan.ends_on)}
                 </dd>
+                {row.agreementId && (
+                  <>
+                    <dt className="text-muted-foreground">הסכם</dt>
+                    <dd>
+                      <AgreementBadge agreementId={row.agreementId} signed={row.agreementSigned} />
+                    </dd>
+                  </>
+                )}
                 {row.guardianPhone && (
                   <>
                     <dt className="text-muted-foreground">הורה</dt>
@@ -99,9 +108,13 @@ export function PlanSheet({ traineeId, traineeName, isAdmin, open, onOpenChange 
         traineeId={traineeId}
         isAdmin={isAdmin}
         open={payOpen}
-        onOpenChange={(v) => {
+        onOpenChange={(v, paid) => {
           setPayOpen(v);
-          if (!v) onOpenChange(false);
+          // A recorded payment ends the visit; a cancel returns to the plan.
+          if (!v && paid) {
+            setRow(undefined);
+            onOpenChange(false);
+          }
         }}
       />
     </>

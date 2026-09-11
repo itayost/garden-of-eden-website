@@ -78,16 +78,19 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
       .eq("id", agreement.profile_id)
       .maybeSingle();
     if (profile) {
-      // The parent's answers fill gaps only; staff corrections stay.
+      // The parent's answers fill gaps (null, empty, or the "הורה" placeholder);
+      // values staff already corrected stay. Consent is the parent's fresh
+      // answer and always wins.
+      const placeholderGuardian = !profile.guardian_name || profile.guardian_name === "הורה";
       await db
         .from("profiles")
         .update({
           birthdate: profile.birthdate ?? data.childBirthdate,
-          guardian_name: profile.guardian_name ?? data.parentName,
-          medical_notes: profile.medical_notes ?? data.medicalNotes,
-          emergency_contact_name: profile.emergency_contact_name ?? data.emergencyContactName,
-          emergency_contact_phone: profile.emergency_contact_phone ?? data.emergencyContactPhone,
-          photo_consent: profile.photo_consent ?? data.photoConsent,
+          guardian_name: placeholderGuardian ? data.parentName : profile.guardian_name,
+          medical_notes: profile.medical_notes || data.medicalNotes,
+          emergency_contact_name: profile.emergency_contact_name || data.emergencyContactName,
+          emergency_contact_phone: profile.emergency_contact_phone || data.emergencyContactPhone,
+          photo_consent: data.photoConsent,
         })
         .eq("id", agreement.profile_id);
     }

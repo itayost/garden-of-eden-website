@@ -25,7 +25,9 @@ const SIGN_REMINDER_AFTER_DAYS = 3;
  * One nudge to parents who have not signed a staff-opened agreement after
  * three days: the same confirmation with the signing link, sent once.
  */
-async function remindUnsignedAgreements(db: ReturnType<typeof createAdminClient>): Promise<number> {
+async function remindUnsignedAgreements(
+  db: ReturnType<typeof createAdminClient>,
+): Promise<{ sent: number; failed: number }> {
   const cutoff = new Date(Date.now() - SIGN_REMINDER_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data } = (await typedFrom(db, "enrollment_agreements")
     .select("id, order_id")
@@ -33,17 +35,25 @@ async function remindUnsignedAgreements(db: ReturnType<typeof createAdminClient>
     .is("sign_reminded_at", null)
     .not("order_id", "is", null)
     .lt("created_at", cutoff)
+    .order("created_at")
     .limit(50)) as { data: Pick<EnrollmentAgreement, "id" | "order_id">[] | null };
   let sent = 0;
+  let failed = 0;
   for (const agreement of data ?? []) {
     const outcome = await notifyOrderFulfilled(db, agreement.order_id!);
-    if (!outcome.confirmed?.success) continue;
+    // An order that never fulfilled has nobody to remind; stamp it so it
+    // stops occupying the batch. A transient send failure retries tomorrow.
+    const unreachable = outcome.sentTo === null;
+    if (!unreachable && !outcome.confirmed?.success) {
+      failed += 1;
+      continue;
+    }
     await typedFrom(db, "enrollment_agreements")
       .update({ sign_reminded_at: new Date().toISOString() })
       .eq("id", agreement.id);
-    sent += 1;
+    if (!unreachable) sent += 1;
   }
-  return sent;
+  return { sent, failed };
 }
 
 /**
@@ -100,7 +110,9 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
 
   result.expiredOrders = await expireStaleOrders(db);
   await purgeExpiredOrders(db);
-  result.signReminders = await remindUnsignedAgreements(db);
+  const signReminders = await remindUnsignedAgreements(db);
+  result.signReminders = signReminders.sent;
+  result.failed += signReminders.failed;
 
   const { data: activePlans, error } = (await typedFrom(db, "trainee_plans")
     .select("profile_id")
