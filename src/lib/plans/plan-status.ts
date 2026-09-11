@@ -37,7 +37,13 @@ type WindowInput = Pick<TraineePlan, "starts_on" | "ends_on" | "branch_id">;
  * Future rosters are plans, not attendance.
  */
 export function countSessionsUsedFromRows(
-  rows: readonly { schedule_date: string; branch_id: string | null }[],
+  rows: readonly {
+    schedule_date: string;
+    branch_id: string | null;
+    /** A self-cancelled booking frees the session unless it was late. */
+    cancelled_at?: string | null;
+    late_cancel?: boolean;
+  }[],
   plan: WindowInput,
   today: string,
 ): number {
@@ -45,6 +51,7 @@ export function countSessionsUsedFromRows(
   return rows.filter(
     (row) =>
       row.branch_id === plan.branch_id &&
+      (row.cancelled_at == null || row.late_cancel === true) &&
       row.schedule_date >= plan.starts_on &&
       row.schedule_date <= last,
   ).length;

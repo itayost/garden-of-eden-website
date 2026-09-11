@@ -11,6 +11,11 @@ function roster(names: string[]): SlotTrainee[] {
     slot_id: "s-1",
     trainee_id: null,
     trainee_name: name,
+    source: "staff" as const,
+    booked_at: null,
+    cancelled_at: null,
+    late_cancel: false,
+    reminded_at: null,
     order_index: index,
   }));
 }
@@ -25,6 +30,8 @@ function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
     focus_he: "זריזות מהירות טכניקה עם כדור",
     location_he: null,
     branch_id: null,
+    band_id: null,
+    max_trainees: null,
     trainees: roster(["נועם חלבי", "יהלי", "איתי"]),
     created_by: "00000000-0000-0000-0000-000000000003",
     created_at: "2026-08-06T05:00:00.000Z",

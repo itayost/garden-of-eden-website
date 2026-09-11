@@ -133,10 +133,15 @@ export function SlotFormDialog({
     setTrainerId(next);
   };
   const [focus, setFocus] = useState(slot?.focus_he ?? "");
+  const [maxTrainees, setMaxTrainees] = useState(
+    slot?.max_trainees === null || slot?.max_trainees === undefined ? "" : String(slot.max_trainees),
+  );
   const [location, setLocation] = useState(slot?.location_he ?? "");
   const [roster, setRoster] = useState<RosterEntry[]>(
     slot
-      ? slot.trainees.map((t) => ({ traineeId: t.trainee_id, name: t.trainee_name }))
+      ? slot.trainees
+          .filter((t) => t.cancelled_at === null)
+          .map((t) => ({ traineeId: t.trainee_id, name: t.trainee_name }))
       : [],
   );
   const [search, setSearch] = useState("");
@@ -185,7 +190,8 @@ export function SlotFormDialog({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (roster.length === 0) {
+    // A bookable slot may be saved empty; it fills itself.
+    if (roster.length === 0 && maxTrainees === "") {
       toast.error("יש להוסיף לפחות מתאמן אחד");
       return;
     }
@@ -199,6 +205,7 @@ export function SlotFormDialog({
         trainerId,
         focus,
         location,
+        maxTrainees: maxTrainees === "" ? null : Number(maxTrainees),
         trainees: roster.map((entry) => ({
           traineeId: entry.traineeId ?? undefined,
           name: entry.name,
@@ -444,6 +451,30 @@ export function SlotFormDialog({
               onChange={(event) => setFocus(event.target.value)}
             />
           </div>
+
+          {slot?.max_trainees !== null && slot?.max_trainees !== undefined && (
+            <div className="space-y-2">
+              <Label htmlFor="slot-seats">מקומות להרשמה עצמית</Label>
+              <Input
+                id="slot-seats"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={40}
+                value={maxTrainees}
+                onChange={(event) => setMaxTrainees(event.target.value)}
+                onBlur={() => {
+                  if (maxTrainees === "" || Number(maxTrainees) < 1) setMaxTrainees("1");
+                }}
+                className="w-24"
+              />
+              {maxTrainees !== "" && roster.length > Number(maxTrainees) && (
+                <p className="text-xs text-destructive">
+                  מעבר לקיבולת ({roster.length}/{maxTrainees}). הצוות רשאי, המתאמנים לא.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="slot-location">מיקום (אופציונלי)</Label>

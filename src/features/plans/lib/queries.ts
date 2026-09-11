@@ -19,6 +19,8 @@ type PlanRow = TraineePlan & { product: Pick<PlanProduct, "name_he" | "kind"> | 
 
 interface RosterRow {
   trainee_id: string;
+  cancelled_at: string | null;
+  late_cancel: boolean;
   slot: { schedule_date: string; branch_id: string | null } | null;
 }
 
@@ -33,7 +35,7 @@ async function loadRosterRows(
 ): Promise<RosterRow[]> {
   if (profileIds.length === 0) return [];
   const { data, error } = (await typedFrom(db, "daily_schedule_slot_trainees")
-    .select("trainee_id, slot:daily_schedule_slots!inner(schedule_date, branch_id)")
+    .select("trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, branch_id)")
     .in("trainee_id", [...profileIds])) as {
     data: RosterRow[] | null;
     error: { message: string } | null;
@@ -52,7 +54,12 @@ export function toPlanWithUsage(
 ): PlanWithUsage {
   const rows = rosterRows
     .filter((r) => r.trainee_id === row.profile_id && r.slot)
-    .map((r) => ({ schedule_date: r.slot!.schedule_date, branch_id: r.slot!.branch_id }));
+    .map((r) => ({
+      schedule_date: r.slot!.schedule_date,
+      branch_id: r.slot!.branch_id,
+      cancelled_at: r.cancelled_at,
+      late_cancel: r.late_cancel,
+    }));
   const sessionsUsed = countSessionsUsedFromRows(rows, row, today);
   return {
     plan: row,

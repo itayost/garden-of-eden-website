@@ -10,8 +10,8 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import {
   duplicateDaySchema,
   slotIdSchema,
-  slotSchema,
-  slotUpdateSchema,
+  slotSchemaWithRosterRule,
+  slotUpdateSchemaWithRosterRule,
   type DuplicateDayInput,
   type SlotInput,
   type SlotUpdateInput,
@@ -177,7 +177,7 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
-  const validated = slotSchema.safeParse(input);
+  const validated = slotSchemaWithRosterRule.safeParse(input);
   if (!validated.success) {
     return {
       error: "אימות נתונים נכשל",
@@ -185,7 +185,7 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
     };
   }
 
-  const { branchId, scheduleDate, startTime, trainerId, focus, location, trainees } =
+  const { branchId, scheduleDate, startTime, trainerId, focus, location, maxTrainees, trainees } =
     validated.data;
   const supabase = await createClient();
 
@@ -207,6 +207,7 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
       trainer_name: trainerResult.name,
       focus_he: focus,
       location_he: location,
+      max_trainees: maxTrainees,
       created_by: user!.id,
     })
     .select()
@@ -246,7 +247,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
-  const validated = slotUpdateSchema.safeParse(input);
+  const validated = slotUpdateSchemaWithRosterRule.safeParse(input);
   if (!validated.success) {
     return {
       error: "אימות נתונים נכשל",
@@ -254,7 +255,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     };
   }
 
-  const { branchId, slotId, scheduleDate, startTime, trainerId, focus, location, trainees } =
+  const { branchId, slotId, scheduleDate, startTime, trainerId, focus, location, maxTrainees, trainees } =
     validated.data;
   const supabase = await createClient();
 
@@ -290,6 +291,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
       trainer_name: trainerResult.name,
       focus_he: focus,
       location_he: location,
+      max_trainees: maxTrainees,
     })
     .eq("id", slotId)
     .select()
@@ -309,7 +311,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
 }
 
 export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
-  const { error: authError } = await verifyAdminOrTrainer();
+  const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const validated = slotIdSchema.safeParse({ slotId });
@@ -318,13 +320,27 @@ export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
   const supabase = await createClient();
 
   const { data: target } = (await typedFrom(supabase, "daily_schedule_slots")
-    .select("id, branch_id")
+    .select("id, branch_id, band_id, schedule_date")
     .eq("id", validated.data.slotId)
-    .maybeSingle()) as { data: { id: string; branch_id: string | null } | null };
+    .maybeSingle()) as {
+    data: { id: string; branch_id: string | null; band_id: string | null; schedule_date: string } | null;
+  };
   if (!target) return { error: "הסלוט לא נמצא" };
   if (target.branch_id) {
     const scopeCheck = await assertBranchReadable(target.branch_id);
     if (scopeCheck.error) return { error: scopeCheck.error };
+  }
+
+  // A projected slot that staff delete must not come back tomorrow morning.
+  if (target.band_id) {
+    const { error: tombstoneError } = await typedFrom(supabase, "daily_schedule_slot_tombstones").upsert(
+      { band_id: target.band_id, schedule_date: target.schedule_date, created_by: user!.id },
+      { onConflict: "band_id,schedule_date", ignoreDuplicates: true },
+    );
+    if (tombstoneError) {
+      console.error("Tombstone insert error:", tombstoneError);
+      return { error: "שגיאה במחיקת הסלוט" };
+    }
   }
 
   // Roster rows cascade with the slot. The .select() is not decoration: a
@@ -426,6 +442,7 @@ export async function duplicateDayAction(
         trainer_name: slot.trainer_name,
         focus_he: slot.focus_he,
         location_he: slot.location_he,
+        max_trainees: slot.max_trainees,
         created_by: user!.id,
       })
       .select()
@@ -437,12 +454,14 @@ export async function duplicateDayAction(
       return { error: "שגיאה בשכפול היום" };
     }
 
-    if (slot.trainees.length > 0) {
+    // A cancelled booking is not part of the day being copied.
+    const activeRoster = slot.trainees.filter((trainee) => trainee.cancelled_at === null);
+    if (activeRoster.length > 0) {
       const { error: rosterError } = await typedFrom(
         supabase,
         "daily_schedule_slot_trainees",
       ).insert(
-        slot.trainees.map((trainee) => ({
+        activeRoster.map((trainee) => ({
           slot_id: created.id,
           trainee_id: trainee.trainee_id,
           trainee_name: trainee.trainee_name,

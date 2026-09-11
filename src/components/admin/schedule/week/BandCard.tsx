@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LifeBuoy, MapPin, Pencil, Trash2 } from "lucide-react";
+import { CalendarCheck, LifeBuoy, MapPin, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -100,6 +100,12 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
               <p className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                 <LifeBuoy className="h-3 w-3 shrink-0" />
                 חיזוק במידת הצורך
+              </p>
+            )}
+            {band.is_bookable && (
+              <p className="flex items-center gap-1 text-[11px] font-medium text-forest">
+                <CalendarCheck className="h-3 w-3 shrink-0" />
+                {band.max_trainees} מקומות · הרשמה עצמית
               </p>
             )}
           </div>

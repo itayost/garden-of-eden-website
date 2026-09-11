@@ -48,6 +48,10 @@ export interface WeeklyBand {
   branch_id: string | null;
   label_he: string | null;
   is_standby: boolean;
+  /** Seats per projected slot. */
+  max_trainees: number;
+  /** Trainees may book this band's slots themselves. */
+  is_bookable: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -92,6 +96,9 @@ export interface OnDutyBand {
   locationHe: string | null;
   labelHe: string | null;
   isStandby: boolean;
+  /** Carried from the band so a built slot knows its seats; extras have none. */
+  maxTrainees: number | null;
+  isBookable: boolean;
 }
 
 /** A trainer the standing week expected, removed by an absence Exception. */

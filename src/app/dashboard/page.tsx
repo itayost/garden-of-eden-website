@@ -32,6 +32,8 @@ import { getOwnClipWithSignedUrl } from "@/features/clips/lib/actions/clips";
 import { loadOwnPlanWithUsage } from "@/features/plans/lib/queries";
 import { buildRenewalUrl } from "@/features/plans/lib/renewal-link";
 import { MyPlanCard } from "@/features/plans/components/MyPlanCard";
+import { NextTrainingCard } from "@/features/booking/components/NextTrainingCard";
+import { loadNextBooking } from "@/features/booking/lib/next-booking";
 import type { UserAchievementRow } from "@/types/database";
 
 const MiniRatingChartWrapper = dynamic(
@@ -75,7 +77,12 @@ export default async function DashboardPage() {
     getOwnClipWithSignedUrl(),
   ]);
 
-  const ownPlan = await loadOwnPlanWithUsage(israelToday());
+  const [ownPlan, booking] = await Promise.all([
+    loadOwnPlanWithUsage(israelToday()),
+    loadNextBooking(user.id),
+  ]);
+  const canBook = booking.canBook;
+  const nextBooking = booking.next;
 
   // Calculate goal progress for display
   const goalsWithProgress = (goalsData || []).map(calculateGoalProgress);
@@ -145,6 +152,7 @@ export default async function DashboardPage() {
       </div>
 
       {hasAssessments && <RatingMigrationBanner />}
+      {canBook && <NextTrainingCard next={nextBooking} />}
       {ownPlan && (
         <MyPlanCard planWithUsage={ownPlan} renewUrl={buildRenewalUrl(ownPlan.plan.id)} />
       )}

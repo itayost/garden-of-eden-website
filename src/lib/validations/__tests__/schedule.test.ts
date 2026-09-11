@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  slotSchemaWithRosterRule,
   duplicateDaySchema,
   slotSchema,
 } from "@/lib/validations/schedule";
@@ -48,8 +49,11 @@ describe("slotSchema", () => {
     expect(result.location).toBe(null);
   });
 
-  test("requires at least one roster entry", () => {
-    expect(slotSchema.safeParse(validSlot({ trainees: [] })).success).toBe(false);
+  test("requires at least one roster entry unless the slot has seats for self-booking", () => {
+    expect(slotSchemaWithRosterRule.safeParse(validSlot({ trainees: [] })).success).toBe(false);
+    expect(
+      slotSchemaWithRosterRule.safeParse(validSlot({ trainees: [], maxTrainees: 8 })).success,
+    ).toBe(true);
   });
 
   test("rejects a whitespace-only roster name", () => {

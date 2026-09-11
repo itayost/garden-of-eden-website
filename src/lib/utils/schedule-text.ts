@@ -20,7 +20,9 @@ function formatTime(time: string): string {
 }
 
 function formatSlot(slot: ScheduleSlot): string {
+  // A cancelled self-booking gave its seat back; it is not on the day's list.
   const names = [...slot.trainees]
+    .filter((trainee) => trainee.cancelled_at === null)
     .sort((a, b) => a.order_index - b.order_index)
     .map((trainee) => trainee.trainee_name)
     .join(", ");

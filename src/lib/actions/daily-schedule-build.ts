@@ -48,6 +48,8 @@ function slotRowsFor(
     // focus field carries. A stretch with no label leaves it for the trainer.
     focus_he: band.labelHe,
     location_he: band.locationHe,
+    band_id: band.source === "band" ? band.id : null,
+    max_trainees: band.isBookable ? band.maxTrainees : null,
     created_by: userId,
   }));
 }

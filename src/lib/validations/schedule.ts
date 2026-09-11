@@ -46,9 +46,16 @@ export const slotSchema = z.object({
   trainerId: uuidSchema.nullish().transform((v) => v ?? null),
   focus: optionalText(MAX_TEXT_LENGTH),
   location: optionalText(MAX_TEXT_LENGTH),
+  /** Seats for self-booking; null keeps the slot staff-only. */
+  maxTrainees: z
+    .number()
+    .int("מספר מקומות לא תקין")
+    .min(1, "לפחות מקום אחד")
+    .max(MAX_TRAINEES_PER_SLOT, "יותר מדי מקומות")
+    .nullish()
+    .transform((v) => v ?? null),
   trainees: z
     .array(rosterEntrySchema)
-    .min(1, "יש להוסיף לפחות מתאמן אחד")
     .max(MAX_TRAINEES_PER_SLOT, "יותר מדי מתאמנים בסלוט")
     // The dialog dedupes, but a direct server-action call must not put the
     // same linked trainee twice in one slot — Phase 2 sessions would attach
@@ -63,6 +70,15 @@ export const slotSchema = z.object({
       { message: "מתאמן מופיע פעמיים ברשימה" },
     ),
 });
+
+/**
+ * A hand-made slot still needs a name: it asserts a group is happening. A
+ * bookable slot (it has seats) may stand empty and fill itself.
+ */
+export const slotSchemaWithRosterRule = slotSchema.refine(
+  (v) => v.trainees.length > 0 || v.maxTrainees !== null,
+  { message: "יש להוסיף לפחות מתאמן אחד", path: ["trainees"] },
+);
 
 export const slotUpdateSchema = slotSchema.extend({
   slotId: uuidSchema,
@@ -84,3 +100,8 @@ export const duplicateDaySchema = z
 export type SlotInput = z.input<typeof slotSchema>;
 export type SlotUpdateInput = z.input<typeof slotUpdateSchema>;
 export type DuplicateDayInput = z.input<typeof duplicateDaySchema>;
+
+export const slotUpdateSchemaWithRosterRule = slotUpdateSchema.refine(
+  (v) => v.trainees.length > 0 || v.maxTrainees !== null,
+  { message: "יש להוסיף לפחות מתאמן אחד", path: ["trainees"] },
+);

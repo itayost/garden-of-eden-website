@@ -47,6 +47,8 @@ function bandToOnDuty(band: WeeklyBand): OnDutyBand {
     locationHe: band.location_he,
     labelHe: band.label_he,
     isStandby: band.is_standby,
+    maxTrainees: band.max_trainees,
+    isBookable: band.is_bookable,
   };
 }
 
@@ -65,6 +67,8 @@ function extraToOnDuty(exception: WeeklyException): OnDutyBand {
     // An extra is something the admin arranged for this date, so it is real
     // work. Standby is a property of the standing week, not of a one-off.
     isStandby: false,
+    maxTrainees: null,
+    isBookable: false,
   };
 }
 

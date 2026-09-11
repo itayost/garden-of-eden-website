@@ -35,6 +35,14 @@
     {
       "path": "/api/cron/plan-reminders",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/materialize-slots",
+      "schedule": "30 1 * * *"
+    },
+    {
+      "path": "/api/cron/booking-reminders",
+      "schedule": "0 15 * * *"
     }
   ]
 }

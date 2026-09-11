@@ -6,6 +6,7 @@ import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { israelToday } from "@/lib/utils/tasks";
 import {
   bandIdSchema,
   bandSchema,
@@ -77,7 +78,7 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
     };
   }
 
-  const { branchId, weekday, startTime, endTime, trainerId, location, label, isStandby } =
+  const { branchId, weekday, startTime, endTime, trainerId, location, label, isStandby, maxTrainees, isBookable } =
     validated.data;
 
   const trainerResult = await resolveActiveTrainerName(trainerId);
@@ -99,6 +100,8 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
       location_he: location,
       label_he: label,
       is_standby: isStandby,
+      max_trainees: maxTrainees,
+      is_bookable: isBookable,
       created_by: user!.id,
     })
     .select()
@@ -128,7 +131,7 @@ export async function updateBandAction(
     };
   }
 
-  const { branchId, bandId, weekday, startTime, endTime, trainerId, location, label, isStandby } =
+  const { branchId, bandId, weekday, startTime, endTime, trainerId, location, label, isStandby, maxTrainees, isBookable } =
     validated.data;
   const supabase = await createClient();
 
@@ -158,6 +161,8 @@ export async function updateBandAction(
       location_he: location,
       label_he: label,
       is_standby: isStandby,
+      max_trainees: maxTrainees,
+      is_bookable: isBookable,
     })
     .eq("id", bandId)
     .select()
@@ -167,6 +172,15 @@ export async function updateBandAction(
     console.error("Update band error:", error);
     return { error: "שגיאה בעדכון הרצועה" };
   }
+
+  // Slots already projected from this band keep their time and trainer (a
+  // built day is a record), but they stop taking self-bookings the moment
+  // the band is no longer bookable. Seats follow the band while it is.
+  const { error: seatsError } = await typedFrom(supabase, "daily_schedule_slots")
+    .update({ max_trainees: isBookable ? maxTrainees : null })
+    .eq("band_id", bandId)
+    .gte("schedule_date", israelToday());
+  if (seatsError) console.error("Update projected seats error:", seatsError);
 
   revalidateScheduleSurfaces();
 

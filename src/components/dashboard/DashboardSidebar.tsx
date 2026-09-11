@@ -12,7 +12,7 @@ import {
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { isActivePath } from "@/lib/utils/active-path";
 import { DASHBOARD_NAV } from "@/lib/navigation/dashboard-nav";
-import { filterNavForTier } from "@/lib/navigation/types";
+import { filterNavForCapabilities, filterNavForTier } from "@/lib/navigation/types";
 import type { AccessTier } from "@/lib/access/course-access";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
@@ -22,14 +22,16 @@ type DashboardSidebarProps = {
   profile: Profile | null;
   /** Decides which nav items this trainee is shown. */
   tier: AccessTier;
+  canBook: boolean;
 };
 
 export function DashboardSidebar({
   user,
   profile,
   tier,
+  canBook,
 }: DashboardSidebarProps) {
-  const navItems = filterNavForTier(DASHBOARD_NAV, tier);
+  const navItems = filterNavForCapabilities(filterNavForTier(DASHBOARD_NAV, tier), { booking: canBook });
   const pathname = usePathname();
   return (
     <AppSidebar
