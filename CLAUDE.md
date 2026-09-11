@@ -68,6 +68,7 @@ npx tsc --noEmit         # Type check
 vercel                  # Preview deployment
 vercel --prod           # Production deployment
 supabase db push        # Push migrations to Supabase
+npm run db:schema       # Refresh supabase/schema.sql from the live DB (read-only)
 ```
 
 ### Run a single test
@@ -148,6 +149,10 @@ Two formats coexist in `supabase/migrations/`:
 - Current: `20260201131812_description.sql` (Supabase timestamp format)
 
 Both work — don't renumber old ones.
+
+### Database schema snapshot
+
+`supabase/schema.sql` is a local, gitignored snapshot of the production database: every `public` table with its columns, constraints, indexes, RLS policies, triggers, and grants, plus views, functions (and who may execute them), enums, storage buckets and policies, and triggers on `auth` tables. It stays out of git because the repo is public. If it is missing or stale, run `npm run db:schema` (a read-only catalog query through `supabase db query --linked`; no Docker, no DB password), then read it instead of querying the cloud. Never edit it by hand. Schema changes still go through `supabase/migrations`, which stay the change history. Where a migration and the snapshot disagree, the snapshot is what production runs.
 
 ## Gotchas
 

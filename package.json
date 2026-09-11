@@ -17,7 +17,8 @@
     "test:e2e:headed": "npx playwright test --headed",
     "test:e2e:ui": "npx playwright test --ui",
     "prepare": "husky",
-    "seed:workouts": "tsx scripts/seed-workout-exercises.ts"
+    "seed:workouts": "tsx scripts/seed-workout-exercises.ts",
+    "db:schema": "node scripts/db/snapshot-schema.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
