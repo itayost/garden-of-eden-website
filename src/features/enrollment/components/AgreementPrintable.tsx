@@ -43,7 +43,7 @@ export function AgreementPrintable({ agreement }: { agreement: EnrollmentAgreeme
 
       <Block title="פרטי החניך/ה">
         <Field label="שם מלא" value={agreement.child_name} />
-        <Field label="תאריך לידה" value={ddmmyyyy(agreement.child_birthdate)} />
+        <Field label="תאריך לידה" value={agreement.child_birthdate ? ddmmyyyy(agreement.child_birthdate) : null} />
         <div className="sm:col-span-2">
           <Field label="אלרגיות / מגבלות רפואיות ידועות" value={agreement.medical_notes} />
         </div>
@@ -77,10 +77,10 @@ export function AgreementPrintable({ agreement }: { agreement: EnrollmentAgreeme
 
       <section className="grid gap-4 sm:grid-cols-2">
         <Field label="שם ההורה + חתימה" value={agreement.signature_name} />
-        <Field label="תאריך" value={new Date(agreement.signed_at).toLocaleDateString("he-IL")} />
+        <Field label="תאריך" value={agreement.signed_at ? new Date(agreement.signed_at).toLocaleDateString("he-IL") : null} />
       </section>
       <p className="text-center text-xs text-muted-foreground">
-        נחתם דיגיטלית בתאריך {new Date(agreement.signed_at).toLocaleString("he-IL")}. Garden of
+        נחתם דיגיטלית בתאריך {agreement.signed_at ? new Date(agreement.signed_at).toLocaleString("he-IL") : ""}. Garden of
         Eden, Boutique Soccer Field
       </p>
     </article>

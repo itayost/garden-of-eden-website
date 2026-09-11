@@ -12,12 +12,11 @@ import {
   cancelPlanSchema,
   extendPlanSchema,
   manualGrantSchema,
-  PAYMENT_METHOD_LABELS_HE,
   type ManualGrantInput,
 } from "@/lib/validations/plans-admin";
 import { fulfillFromInput } from "@/features/enrollment/lib/fulfillment";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
-import type { EnrollmentAgreement, Order, PlanProduct, PlanStatus } from "@/types/plans";
+import { PAYMENT_METHOD_LABELS_HE, type EnrollmentAgreement, type Order, type PlanProduct, type PlanStatus } from "@/types/plans";
 import { loadPlansWithUsage, type PlanWithUsage } from "../queries";
 
 type ActionResult = { success: true } | { error: string };

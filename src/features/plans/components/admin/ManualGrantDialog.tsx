@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { grantPlanAction } from "../../lib/actions/admin-plans";
-import { PAYMENT_METHOD_LABELS_HE, type ManualGrantInput } from "@/lib/validations/plans-admin";
+import { manualPaymentMethodSchema, type ManualGrantInput } from "@/lib/validations/plans-admin";
+import { PAYMENT_METHOD_LABELS_HE } from "@/types/plans";
 import type { PlanProduct } from "@/types/plans";
 
 type TextKey = Exclude<keyof ManualGrantInput, "paymentMethod">;
@@ -46,9 +47,7 @@ function emptyForm(): ManualGrantInput {
   };
 }
 
-const PAYMENT_METHODS = Object.keys(
-  PAYMENT_METHOD_LABELS_HE,
-) as (keyof typeof PAYMENT_METHOD_LABELS_HE)[];
+const PAYMENT_METHODS = manualPaymentMethodSchema.options;
 
 export function ManualGrantDialog({ products }: { products: PlanProduct[] }) {
   const router = useRouter();

@@ -25,6 +25,16 @@ export interface PlanProduct {
 }
 
 /** charging: the card is at the acquirer; a second submit finds nothing to claim. */
+/** How the money arrived. card = the site's own card page; the rest are taken by staff. */
+export type PaymentMethod = "cash" | "transfer" | "bit" | "card";
+
+export const PAYMENT_METHOD_LABELS_HE: Record<PaymentMethod, string> = {
+  cash: "מזומן",
+  transfer: "העברה בנקאית",
+  bit: "ביט",
+  card: "כרטיס אשראי",
+};
+
 export type OrderStatus = "pending" | "charging" | "paid" | "failed" | "expired";
 
 export interface Order {
@@ -38,8 +48,8 @@ export interface Order {
   payer_phone: string;
   login_phone: string;
   child_name: string;
-  /** ISO YYYY-MM-DD. */
-  child_birthdate: string;
+  /** ISO YYYY-MM-DD; null for a staff signup until the parent signs. */
+  child_birthdate: string | null;
   email: string | null;
   profile_id: string | null;
   renewal_of_plan_id: string | null;
@@ -56,6 +66,11 @@ export interface Order {
   card_last4: string | null;
   installments: number;
   provider_response: unknown | null;
+  payment_method: PaymentMethod | null;
+  /** אסמכתא for transfers and Bit. */
+  reference: string | null;
+  /** The staff member who took a manual payment. */
+  received_by: string | null;
   paid_at: string | null;
   fulfilled_at: string | null;
   fulfillment_error: string | null;
@@ -115,7 +130,8 @@ export interface EnrollmentAgreement {
   parent_phone: string;
   parent_email: string | null;
   child_name: string;
-  child_birthdate: string;
+  /** Null until the parent signs a staff-created agreement. */
+  child_birthdate: string | null;
   medical_notes: string | null;
   plan_name: string;
   plan_price_ils: number;
@@ -128,7 +144,9 @@ export interface EnrollmentAgreement {
   authorizes_payment: boolean;
   photo_consent: boolean;
   signature_name: string;
-  signed_at: string;
+  /** Null while the parent has not signed yet. */
+  signed_at: string | null;
+  sign_reminded_at: string | null;
   signed_ip: string | null;
   created_at: string;
 }

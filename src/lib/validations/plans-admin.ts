@@ -26,6 +26,47 @@ const optionalText = (max: number) =>
     .max(max, `הטקסט ארוך מדי (מקסימום ${max} תווים)`)
     .transform((v) => (v === "" ? null : v));
 
+/** What staff may record by hand. Card payments only ever come from the card page. */
+export const manualPaymentMethodSchema = z.enum(["cash", "transfer", "bit"]);
+export type ManualPaymentMethod = z.infer<typeof manualPaymentMethodSchema>;
+
+const singleLine = /^[^\r\n\t]+$/;
+
+/**
+ * A new trainee signed up at the field. Staff type only what the parent
+ * cannot fill in later; birthdate, email, health, and consent come from the
+ * parent on the signing page.
+ */
+export const newTraineeSchema = z.object({
+  productId: uuid,
+  childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי").regex(singleLine, "שם בשורה אחת"),
+  /** The child's WhatsApp: the login phone. */
+  loginPhone: phone,
+  payerPhone: phone,
+  parentName: optionalText(100),
+  paymentMethod: manualPaymentMethodSchema,
+  reference: optionalText(60),
+  startsOn: isoDate,
+  sendWhatsApp: z.boolean(),
+  /** Set after the duplicate prompt; the action refuses a repeat without it. */
+  confirmDuplicate: z.boolean().default(false),
+});
+export type NewTraineeInput = z.input<typeof newTraineeSchema>;
+
+/** A payment for a trainee who already has an account. Chaining decides the start date. */
+export const staffPaymentSchema = z.object({
+  traineeId: uuid,
+  productId: uuid,
+  paymentMethod: manualPaymentMethodSchema,
+  reference: optionalText(60),
+  sendWhatsApp: z.boolean(),
+  confirmDuplicate: z.boolean().default(false),
+});
+export type StaffPaymentInput = z.input<typeof staffPaymentSchema>;
+
+export const issueInvoiceSchema = z.object({ orderId: uuid });
+export const resendAgreementSchema = z.object({ agreementId: uuid });
+
 export const extendPlanSchema = z.object({ planId: uuid, endsOn: isoDate });
 export const addSessionsSchema = z.object({
   planId: uuid,
@@ -53,7 +94,7 @@ export const manualGrantSchema = z.object({
   emergencyContactName: optionalText(100),
   emergencyContactPhone: optionalPhone,
   medicalNotes: optionalText(500),
-  paymentMethod: z.enum(["cash", "transfer", "other"]),
+  paymentMethod: manualPaymentMethodSchema,
   note: optionalText(200),
   startsOn: isoDate,
 });
@@ -79,8 +120,4 @@ export const healthSchema = z.object({
 });
 export type HealthInput = z.input<typeof healthSchema>;
 
-export const PAYMENT_METHOD_LABELS_HE = {
-  cash: "מזומן",
-  transfer: "העברה בנקאית",
-  other: "אחר",
-} as const;
+
