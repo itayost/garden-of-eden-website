@@ -15,8 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/utils/date";
-import { retryFulfillmentAction, type AdminOrderRow } from "../../lib/actions/admin-orders";
-import type { OrderStatus } from "@/types/plans";
+import { issueInvoiceAction, retryFulfillmentAction, type AdminOrderRow } from "../../lib/actions/admin-orders";
+import { PAYMENT_METHOD_LABELS_HE, type OrderStatus } from "@/types/plans";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "ממתין לתשלום",
@@ -38,6 +38,17 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
         return;
       }
       toast.success("ההזמנה הושלמה");
+      router.refresh();
+    });
+
+  const issueInvoice = (orderId: string) =>
+    startTransition(async () => {
+      const result = await issueInvoiceAction(orderId);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("החשבונית הופקה");
       router.refresh();
     });
 
@@ -71,7 +82,15 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                 </div>
               </TableCell>
               <TableCell>{order.productName}</TableCell>
-              <TableCell>₪{order.amount_ils.toLocaleString("he-IL")}</TableCell>
+              <TableCell>
+                ₪{order.amount_ils.toLocaleString("he-IL")}
+                {order.payment_method && (
+                  <div className="text-xs text-muted-foreground">
+                    {PAYMENT_METHOD_LABELS_HE[order.payment_method]}
+                    {order.reference ? ` · ${order.reference}` : ""}
+                  </div>
+                )}
+              </TableCell>
               <TableCell>
                 <Badge variant={order.status === "paid" ? "default" : "outline"}>
                   {STATUS_LABEL[order.status]}
@@ -95,6 +114,17 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap items-center gap-2">
+                  {order.status === "paid" && order.fulfilled_at && !order.morning_document_url && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => issueInvoice(order.id)}
+                      disabled={pending}
+                    >
+                      <FileText className="h-3 w-3 me-1" />
+                      הפק חשבונית
+                    </Button>
+                  )}
                   {order.morning_document_url && (
                     <a
                       href={order.morning_document_url}

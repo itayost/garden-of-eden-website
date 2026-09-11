@@ -7,6 +7,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { fulfillOrder } from "@/features/enrollment/lib/fulfillment";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
+import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import type { MorningWebhookEvent, Order } from "@/types/plans";
 
 export type AdminOrderRow = Order & {
@@ -59,6 +60,22 @@ export async function retryFulfillmentAction(orderId: string): Promise<ActionRes
   revalidatePath("/admin/orders");
   revalidatePath("/admin/plans");
   return { success: true };
+}
+
+/** Issues (or re-issues after a failure) the Morning receipt for a paid order. */
+export async function issueInvoiceAction(orderId: string): Promise<ActionResult & { url?: string | null }> {
+  const { error: authError, user, adminProfile } = await verifyAdmin();
+  if (authError) return { error: authError };
+  if (!isValidUUID(orderId)) return { error: "מזהה הזמנה לא תקין" };
+
+  const outcome = await issueOrderInvoice(createAdminClient(), orderId, {
+    id: user!.id,
+    name: adminProfile?.full_name ?? null,
+  });
+  if (!outcome.ok) return { error: outcome.skipped ? "Morning אינו מוגדר עדיין" : `החשבונית לא הופקה: ${outcome.error}` };
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/plans");
+  return { success: true, url: outcome.url };
 }
 
 /** Deliveries that carried no order we know: money to chase by hand. */

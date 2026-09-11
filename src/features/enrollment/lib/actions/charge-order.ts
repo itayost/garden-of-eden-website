@@ -7,9 +7,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { detectBrand, last4 } from "@/lib/payments/card";
 import { chargeCard } from "@/lib/payments/isracard";
-import { isMorningConfigured } from "@/lib/morning/config";
-import { createInvoiceReceipt } from "@/lib/morning/documents";
-import { israelToday } from "@/lib/utils/tasks";
+import { issueOrderInvoice } from "../invoice";
 import { cardPaymentSchema, type CardPaymentInput } from "@/lib/validations/card-payment";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import type { Order, PlanProduct } from "@/types/plans";
@@ -158,22 +156,7 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
     return { ok: true };
   }
 
-  if (isMorningConfigured()) {
-    const doc = await createInvoiceReceipt({
-      description,
-      amountIls: Number(order.amount_ils),
-      paidOn: israelToday(),
-      client: { name: order.parent_name, phone: order.payer_phone, email: order.email },
-      card: { brand, last4: last4(data.cardNumber), installments: data.installments },
-    });
-    await typedFrom(db, "orders")
-      .update(
-        doc.ok
-          ? { morning_document_id: doc.id, morning_document_url: doc.url }
-          : { fulfillment_error: `invoice: ${doc.error}` },
-      )
-      .eq("id", order.id);
-  }
+  await issueOrderInvoice(db, order.id, { id: null, name: null });
 
   await notifyOrderFulfilled(db, order.id);
   return { ok: true };

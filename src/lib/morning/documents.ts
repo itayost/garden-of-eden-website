@@ -2,28 +2,18 @@ import "server-only";
 
 import { getMorningAccessToken } from "./auth";
 import { getMorningConfig } from "./config";
-import type { CardBrand } from "@/lib/payments/card";
+import { morningPaymentObject, receiptRemarks, type ReceiptPayment } from "./payment-mapping";
 
-/** Morning's card type codes. */
-const CARD_TYPE: Record<CardBrand, number> = {
-  isracard: 1,
-  visa: 2,
-  mastercard: 3,
-  amex: 4,
-  diners: 5,
-  unknown: 0,
-};
-
-export interface InvoiceReceiptInput {
+export interface ReceiptInput {
   description: string;
   amountIls: number;
   /** ISO YYYY-MM-DD, Israel. */
   paidOn: string;
   client: { name: string; phone: string; email: string | null };
-  card: { brand: CardBrand; last4: string; installments: number };
+  payment: ReceiptPayment;
 }
 
-export type InvoiceReceiptResult =
+export type ReceiptResult =
   | { ok: true; id: string; url: string | null }
   | { ok: false; error: string };
 
@@ -47,12 +37,14 @@ async function postDocument(token: string, body: Record<string, unknown>): Promi
 }
 
 /**
- * A חשבונית מס קבלה for a card payment the site already collected. Morning
- * emails it to the client. Best-effort from the caller's side: a failure is
- * logged on the order and retried by hand, the plan is never held back.
+ * A חשבונית מס קבלה for money already collected, by card on the site or by
+ * hand at the field. Morning emails it to the client when there is an email.
+ * Best-effort from the caller's side: a failure is logged on the order and
+ * retried from the orders page, the plan is never held back.
  */
-export async function createInvoiceReceipt(input: InvoiceReceiptInput): Promise<InvoiceReceiptResult> {
+export async function createReceiptDocument(input: ReceiptInput): Promise<ReceiptResult> {
   const { documentType } = getMorningConfig();
+  const remarks = receiptRemarks(input.payment);
   const body = {
     type: documentType,
     lang: "he",
@@ -68,18 +60,8 @@ export async function createInvoiceReceipt(input: InvoiceReceiptInput): Promise<
     income: [
       { description: input.description, quantity: 1, price: input.amountIls, currency: "ILS", vatType: 0 },
     ],
-    payment: [
-      {
-        type: 3,
-        price: input.amountIls,
-        currency: "ILS",
-        date: input.paidOn,
-        cardType: CARD_TYPE[input.card.brand],
-        cardNum: input.card.last4,
-        dealType: input.card.installments > 1 ? 2 : 1,
-        numPayments: input.card.installments,
-      },
-    ],
+    payment: [morningPaymentObject(input.payment, input.amountIls, input.paidOn)],
+    ...(remarks ? { remarks } : {}),
   };
 
   try {
