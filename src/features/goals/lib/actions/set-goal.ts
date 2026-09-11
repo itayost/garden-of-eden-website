@@ -45,7 +45,7 @@ export async function setGoal(params: SetGoalParams): Promise<SetGoalResult> {
     .eq("id", user.id)
     .single()) as { data: Pick<Profile, "role"> | null };
 
-  if (!profile || !["trainer", "admin"].includes(profile.role)) {
+  if (!profile?.role || !["trainer", "admin"].includes(profile.role)) {
     return { success: false, error: "רק מאמנים יכולים להגדיר יעדים" };
   }
 

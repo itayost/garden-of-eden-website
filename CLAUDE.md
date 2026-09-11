@@ -69,6 +69,7 @@ vercel                  # Preview deployment
 vercel --prod           # Production deployment
 supabase db push        # Push migrations to Supabase
 npm run db:schema       # Refresh supabase/schema.sql from the live DB (read-only)
+npm run db:types        # Regenerate src/types/database.generated.ts from the live DB
 ```
 
 ### Run a single test
@@ -94,7 +95,7 @@ All actions use `"use server"` and live in `src/lib/actions/` or `src/features/<
 - `createClient()` from `lib/supabase/server.ts` — **server** components/actions (uses cookies)
 - `createAdminClient()` from `lib/supabase/admin.ts` — **service role**, bypasses RLS
 
-DB helpers in `lib/supabase/helpers.ts`: `insertIntoTable`, `insertAndSelect`, `updateInTable`, `upsertIntoTable`. Use `typedFrom(supabase, "table_name")` instead of `(supabase as any).from()` for tables missing from generated types.
+DB helpers in `lib/supabase/helpers.ts`: `insertIntoTable`, `insertAndSelect`, `updateInTable`, `upsertIntoTable`. Row types come from `src/types/database.generated.ts`, written from production by `npm run db:types` (run it after every migration; never edit the file by hand). Hand-written aliases such as `Profile` live in `src/types/database.ts`. Every table is in the generated types, so new code uses the typed client; `typedFrom(supabase, "table_name")` returns `any` and stays only in older call sites.
 
 ### Storage
 

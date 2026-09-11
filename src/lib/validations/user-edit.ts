@@ -55,7 +55,7 @@ export function getUserEditDefaults(
     phone: profile.phone || "",
     birthdate: profile.birthdate || "",
     club: profile.club || "",
-    role: profile.role,
+    role: profile.role ?? "trainee", // the column default; the column has no NOT NULL yet
     is_active: profile.is_active, // No fallback - DB enforces NOT NULL DEFAULT TRUE
     branch_ids: [...branchIds],
   };

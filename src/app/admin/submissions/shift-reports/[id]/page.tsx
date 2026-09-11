@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/utils/uuid";
-import { CATEGORY_COLUMNS } from "@/lib/utils/trainee-notes";
+import { CATEGORY_COLUMNS, parsePerTrainee } from "@/lib/utils/trainee-notes";
 import {
   Card,
   CardContent,
@@ -114,22 +114,23 @@ function PerTraineeCategoriesSection({
 }: {
   label: string;
   isYes: boolean;
-  perTrainee: Record<string, { details?: string; categories?: string[] }> | null;
+  /** Raw `*_per_trainee` JSONB; validated by parsePerTrainee before rendering. */
+  perTrainee: unknown;
   legacyTraineeIds?: string[] | null;
   legacyDetails?: string | null;
   traineeMap: Map<string, string>;
 }) {
-  const hasPerTraineeData =
-    !!perTrainee && Object.keys(perTrainee).length > 0;
+  const entries = parsePerTrainee(perTrainee);
+  const hasPerTraineeData = entries !== null && Object.keys(entries).length > 0;
 
   return (
     <>
       <FieldRow label={label}>
         <YesNoBadge value={isYes} />
       </FieldRow>
-      {isYes && hasPerTraineeData && (
+      {isYes && entries && hasPerTraineeData && (
         <>
-          {Object.entries(perTrainee!).map(([traineeId, entry]) => (
+          {Object.entries(entries).map(([traineeId, entry]) => (
             <div key={traineeId}>
               <Separator />
               <div className="py-2 space-y-1">
@@ -322,14 +323,16 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
           <Separator />
           <FieldRow label="הוגש">
             <span>
-              {new Date(report.submitted_at).toLocaleDateString("he-IL", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              })}
+              {report.submitted_at
+                ? new Date(report.submitted_at).toLocaleDateString("he-IL", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })
+                : "---"}
             </span>
           </FieldRow>
         </CardContent>

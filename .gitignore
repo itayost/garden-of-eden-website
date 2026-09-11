@@ -65,6 +65,9 @@ scripts/backups/
 supabase/schema.sql
 supabase/schema.sql.tmp
 
+# Partial output left behind if `npm run db:types` fails midway
+src/types/database.generated.ts.tmp
+
 # graphify: local tool output, regenerable. Only the report is committed.
 graphify-out/*
 !graphify-out/GRAPH_REPORT.md

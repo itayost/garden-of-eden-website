@@ -23,6 +23,7 @@ import { NextGameAdminCard } from "@/components/admin/NextGameAdminCard";
 import { ClipPlaybackCard } from "@/components/admin/ClipPlaybackCard";
 import { RadarStatsChartWrapper } from "./RadarStatsChartWrapper";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
+import { parseAccessOverride } from "@/lib/access/course-access";
 import type { Profile, UserRole } from "@/types/database";
 import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
@@ -133,7 +134,8 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
       ? await Promise.all([getPlanForProfileAction(userId), getTraineeHealthAction(userId)])
       : [null, null];
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("he-IL", {
       day: "numeric",
       month: "long",
@@ -231,7 +233,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               userId={userId}
               arboxPaidTraining={userToEdit.arbox_paid_training}
               arboxBoughtCourse={userToEdit.arbox_bought_course}
-              accessOverride={userToEdit.access_override}
+              accessOverride={parseAccessOverride(userToEdit.access_override)}
               arboxUserId={userToEdit.arbox_user_id}
               syncedAt={userToEdit.arbox_access_synced_at}
             />

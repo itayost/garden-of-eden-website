@@ -2,8 +2,28 @@ import { describe, test, expect } from "vitest";
 import {
   COURSE_ONLY_HOME,
   isPathAllowedForTier,
+  parseAccessOverride,
   resolveAccessTier,
 } from "../course-access";
+
+describe("parseAccessOverride", () => {
+  test("the two tiers pass through", () => {
+    expect(parseAccessOverride("full")).toBe("full");
+    expect(parseAccessOverride("course_only")).toBe("course_only");
+  });
+
+  test("no value means no override", () => {
+    expect(parseAccessOverride(null)).toBeNull();
+    expect(parseAccessOverride(undefined)).toBeNull();
+  });
+
+  test("an unrecognised value is ignored rather than trusted", () => {
+    // Falling back to the Arbox-derived tier never locks anyone out on a typo.
+    expect(parseAccessOverride("Full")).toBeNull();
+    expect(parseAccessOverride("admin")).toBeNull();
+    expect(parseAccessOverride("")).toBeNull();
+  });
+});
 
 const NO_PURCHASES = {
   arboxPaidTraining: false,

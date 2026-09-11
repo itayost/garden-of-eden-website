@@ -22,11 +22,15 @@ export function hebrewWeekday(isoDate: string): string {
   return HEBREW_WEEKDAYS[new Date(`${isoDate}T00:00:00Z`).getUTCDay()];
 }
 
+/** Shown in place of a date the database left empty. */
+const MISSING_DATE = "-";
+
 /**
  * Format date in Hebrew locale (he-IL)
- * Example output: "15 בינואר 2024"
+ * Example output: "15 בינואר 2024"; a missing date renders as a dash.
  */
-export function formatDate(date: string | Date): string {
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return MISSING_DATE;
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("he-IL", {
     day: "numeric",
@@ -52,7 +56,8 @@ export function formatDateShort(date: string | Date): string {
  * Format date with time
  * Example output: "15 בינואר 2024, 14:30"
  */
-export function formatDateTime(date: string | Date): string {
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (!date) return MISSING_DATE;
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleString("he-IL", {
     day: "numeric",

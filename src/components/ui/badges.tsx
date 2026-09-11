@@ -2,11 +2,17 @@
 
 import { Badge } from "@/components/ui/badge";
 
+/** Shown in place of a value the database left empty. */
+function MissingValue() {
+  return <span className="text-muted-foreground">-</span>;
+}
+
 /**
  * Role badge component
  * admin = red, trainer = blue, trainee = secondary
+ * A missing role reads as trainee, the column default.
  */
-export function RoleBadge({ role }: { role: string }) {
+export function RoleBadge({ role }: { role: string | null }) {
   switch (role) {
     case "admin":
       return <Badge className="bg-red-500">מנהל</Badge>;
@@ -58,7 +64,8 @@ export function YesNoBadge({ value }: { value: boolean }) {
  * Difficulty level badge (1-10 scale)
  * High (8+) = destructive, Medium (5-7) = default, Low (<5) = secondary
  */
-export function DifficultyBadge({ level }: { level: number }) {
+export function DifficultyBadge({ level }: { level: number | null }) {
+  if (level === null) return <MissingValue />;
   const variant = level >= 8 ? "destructive" : level >= 5 ? "default" : "secondary";
   return <Badge variant={variant}>{level}/10</Badge>;
 }
@@ -67,7 +74,8 @@ export function DifficultyBadge({ level }: { level: number }) {
  * Satisfaction level badge (1-10 scale)
  * High (8+) = green, Medium (5-7) = secondary, Low (<5) = destructive
  */
-export function SatisfactionBadge({ level }: { level: number }) {
+export function SatisfactionBadge({ level }: { level: number | null }) {
+  if (level === null) return <MissingValue />;
   const variant = level >= 8 ? "default" : level >= 5 ? "secondary" : "destructive";
   const className = level >= 8 ? "bg-green-500" : "";
   return <Badge variant={variant} className={className}>{level}/10</Badge>;
@@ -76,7 +84,8 @@ export function SatisfactionBadge({ level }: { level: number }) {
 /**
  * Yes/No badge with "יש/אין" text (for injuries, etc.)
  */
-export function HasBadge({ value }: { value: boolean }) {
+export function HasBadge({ value }: { value: boolean | null }) {
+  if (value === null) return <MissingValue />;
   return value ? (
     <Badge variant="destructive">יש</Badge>
   ) : (

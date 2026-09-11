@@ -18,7 +18,8 @@
     "test:e2e:ui": "npx playwright test --ui",
     "prepare": "husky",
     "seed:workouts": "tsx scripts/seed-workout-exercises.ts",
-    "db:schema": "node scripts/db/snapshot-schema.mjs"
+    "db:schema": "node scripts/db/snapshot-schema.mjs",
+    "db:types": "supabase gen types typescript --linked --schema public --agent no > src/types/database.generated.ts.tmp && mv src/types/database.generated.ts.tmp src/types/database.generated.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

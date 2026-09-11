@@ -50,6 +50,18 @@ describe("formatDateTime", () => {
   });
 });
 
+describe("missing dates", () => {
+  it("formatDate returns a dash for null or undefined", () => {
+    expect(formatDate(null)).toBe("-");
+    expect(formatDate(undefined)).toBe("-");
+  });
+
+  it("formatDateTime returns a dash for null or undefined", () => {
+    expect(formatDateTime(null)).toBe("-");
+    expect(formatDateTime(undefined)).toBe("-");
+  });
+});
+
 describe("formatRelativeTime", () => {
   beforeEach(() => {
     vi.useFakeTimers();

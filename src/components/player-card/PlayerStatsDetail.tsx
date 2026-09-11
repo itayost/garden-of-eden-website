@@ -171,8 +171,8 @@ export function PlayerStatsDetail({ stats, playerName }: PlayerStatsDetailProps)
           <CardContent className="pt-4">
             <div className="text-center">
               <div className="text-sm text-muted-foreground mb-1">דירוג כולל</div>
-              <div className={cn("text-4xl font-bold", getStatColor(stats.overall_rating))}>
-                {stats.overall_rating}
+              <div className={cn("text-4xl font-bold", stats.overall_rating !== null && getStatColor(stats.overall_rating))}>
+                {stats.overall_rating ?? "-"}
               </div>
             </div>
           </CardContent>

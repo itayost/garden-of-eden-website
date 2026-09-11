@@ -17,6 +17,17 @@ export type AccessTier = "full" | "course_only";
 /** A manual decision by an admin. Null means "derive it from Arbox". */
 export type AccessOverride = AccessTier | null;
 
+const ACCESS_TIERS: readonly AccessTier[] = ["full", "course_only"];
+
+/**
+ * Narrows the raw `profiles.access_override` text to an override. An
+ * unrecognised value reads as no override, so a bad value falls back to the
+ * Arbox-derived tier instead of restricting anyone.
+ */
+export function parseAccessOverride(value: string | null | undefined): AccessOverride {
+  return ACCESS_TIERS.find((tier) => tier === value) ?? null;
+}
+
 export interface AccessFacts {
   /** Ever held a `plan` or `session` membership -- active, expired or cancelled. */
   arboxPaidTraining: boolean;

@@ -1,10 +1,41 @@
 import { describe, it, expect } from "vitest";
 import {
   extractTraineeNotes,
+  parsePerTrainee,
   CATEGORY_COLUMNS,
   type ShiftReportForNotes,
 } from "../trainee-notes";
 import type { TrainerShiftReport } from "@/types/database";
+
+describe("parsePerTrainee", () => {
+  it("returns null for anything that is not a JSON object", () => {
+    expect(parsePerTrainee(null)).toBeNull();
+    expect(parsePerTrainee(undefined)).toBeNull();
+    expect(parsePerTrainee("text")).toBeNull();
+    expect(parsePerTrainee(42)).toBeNull();
+    expect(parsePerTrainee([{ details: "x" }])).toBeNull();
+  });
+
+  it("keeps well-formed entries as they are", () => {
+    const value = {
+      "trainee-1": { details: "עבד על בעיטות", categories: ["טכניקה"] },
+      "trainee-2": { details: "הגיע באיחור" },
+    };
+    expect(parsePerTrainee(value)).toEqual(value);
+  });
+
+  it("drops entries that are not objects and fields of the wrong type", () => {
+    const result = parsePerTrainee({
+      "trainee-1": "not an entry",
+      "trainee-2": { details: 7, categories: ["ok", 3, null] },
+      "trainee-3": { categories: "not a list" },
+    });
+    expect(result).toEqual({
+      "trainee-2": { categories: ["ok"] },
+      "trainee-3": {},
+    });
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Compile-time completeness guard.

@@ -102,8 +102,12 @@ function FieldRow({ label, value, children }: { label: string; value?: string | 
   );
 }
 
+// Shown in place of a value the database left empty
+const MISSING_VALUE = <span className="text-muted-foreground">---</span>;
+
 // Format date in Hebrew locale
-function formatDate(dateStr: string) {
+function formatDate(dateStr: string | null) {
+  if (!dateStr) return "---";
   return new Date(dateStr).toLocaleDateString("he-IL", {
     day: "numeric",
     month: "long",
@@ -115,7 +119,8 @@ function formatDate(dateStr: string) {
 }
 
 // Shared badge components
-function YesNoBadge({ value }: { value: boolean }) {
+function YesNoBadge({ value }: { value: boolean | null }) {
+  if (value === null) return MISSING_VALUE;
   return value ? (
     <Badge variant="destructive">יש</Badge>
   ) : (
@@ -123,12 +128,14 @@ function YesNoBadge({ value }: { value: boolean }) {
   );
 }
 
-function DifficultyBadge({ level }: { level: number }) {
+function DifficultyBadge({ level }: { level: number | null }) {
+  if (level === null) return MISSING_VALUE;
   const variant = level >= 8 ? "destructive" : level >= 5 ? "default" : "secondary";
   return <Badge variant={variant}>{level}/10</Badge>;
 }
 
-function SatisfactionBadge({ level }: { level: number }) {
+function SatisfactionBadge({ level }: { level: number | null }) {
+  if (level === null) return MISSING_VALUE;
   const variant = level >= 8 ? "default" : level >= 5 ? "secondary" : "destructive";
   const className = level >= 8 ? "bg-green-500" : "";
   return <Badge variant={variant} className={className}>{level}/10</Badge>;
