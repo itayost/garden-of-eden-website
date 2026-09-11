@@ -68,6 +68,19 @@ const checkoutLimiter = redis
   : null;
 
 /**
+ * Booking rate limiter: 20 bookings or cancels per 10 minutes per user.
+ * A seat is not money, so it fails open.
+ */
+const bookingLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(20, "10 m"),
+      prefix: "goe:booking",
+      analytics: true,
+    })
+  : null;
+
+/**
  * General rate limiter: 100 requests per minute
  * Used for standard API endpoints
  */
@@ -103,10 +116,16 @@ const generalLimiter = redis
  */
 export async function checkRateLimit(
   identifier: string,
-  type: "payment" | "checkout" | "general"
+  type: "payment" | "checkout" | "booking" | "general"
 ): Promise<RateLimitResult> {
   const limiter =
-    type === "payment" ? paymentLimiter : type === "checkout" ? checkoutLimiter : generalLimiter;
+    type === "payment"
+      ? paymentLimiter
+      : type === "checkout"
+        ? checkoutLimiter
+        : type === "booking"
+          ? bookingLimiter
+          : generalLimiter;
   const isSensitiveOperation = type === "payment";
 
   // If Redis is unavailable:

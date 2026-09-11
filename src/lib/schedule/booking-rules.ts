@@ -95,6 +95,16 @@ export function countReservedFromRows(
   ).length;
 }
 
+/** Sessions still bookable on a card: total minus used minus future seats held. Null for time plans. */
+export function countSessionsLeft(
+  plan: Pick<TraineePlan, "sessions_total">,
+  used: number,
+  reserved: number,
+): number | null {
+  if (plan.sessions_total === null) return null;
+  return Math.max(plan.sessions_total - used - reserved, 0);
+}
+
 export type BookingBlock =
   | "no_plan"
   | "plan_cancelled"
