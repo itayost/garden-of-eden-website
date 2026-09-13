@@ -150,7 +150,34 @@ export const CATEGORY_COLUMNS = [
   hasCategories: boolean;
 }>;
 
-type PerTraineeJsonb = Record<string, { details?: string; categories?: string[] }> | null | undefined;
+export type PerTraineeEntry = { details?: string; categories?: string[] };
+export type PerTraineeEntries = Record<string, PerTraineeEntry>;
+
+type PerTraineeJsonb = PerTraineeEntries | null | undefined;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Validates a `*_per_trainee` JSONB value from a shift report. Anything that is
+ * not an object of entries yields null; malformed entries and fields of the
+ * wrong type are dropped rather than trusted.
+ */
+export function parsePerTrainee(value: unknown): PerTraineeEntries | null {
+  if (!isPlainObject(value)) return null;
+  const entries = Object.entries(value).flatMap(([traineeId, raw]) => {
+    if (!isPlainObject(raw)) return [];
+    const entry: PerTraineeEntry = {
+      ...(typeof raw.details === "string" ? { details: raw.details } : {}),
+      ...(Array.isArray(raw.categories)
+        ? { categories: raw.categories.filter((c): c is string => typeof c === "string") }
+        : {}),
+    };
+    return [[traineeId, entry] as const];
+  });
+  return Object.fromEntries(entries);
+}
 
 /**
  * Extract notes relevant to a specific trainee from a list of shift reports.

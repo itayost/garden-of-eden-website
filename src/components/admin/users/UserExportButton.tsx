@@ -80,7 +80,7 @@ function formatPhoneForExport(phone: string | null): string {
 /**
  * Convert role to Hebrew display name
  */
-function roleToHebrew(role: string): string {
+function roleToHebrew(role: string | null): string {
   switch (role) {
     case "admin":
       return "מנהל";
@@ -95,7 +95,8 @@ function roleToHebrew(role: string): string {
 /**
  * Format date for display in CSV
  */
-function formatDate(dateString: string): string {
+function formatDate(dateString: string | null): string {
+  if (!dateString) return "";
   return new Date(dateString).toLocaleDateString("he-IL");
 }
 

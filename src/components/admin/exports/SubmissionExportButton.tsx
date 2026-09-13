@@ -14,7 +14,7 @@ import type {
 type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
 
 /** Base type that all submissions share */
-type AnySubmission = { submitted_at: string; [key: string]: unknown };
+type AnySubmission = { submitted_at: string | null; [key: string]: unknown };
 
 interface SubmissionExportButtonProps {
   formType: "pre_workout" | "post_workout" | "nutrition" | "mental";
@@ -92,8 +92,8 @@ function transformToCSV(
       return (submissions as PostWorkoutWithTrainer[]).map((s) => ({
         "שם מלא": s.full_name,
         "מאמן": s.trainer?.full_name ?? "",
-        "קושי (1-10)": s.difficulty_level,
-        "שביעות רצון (1-10)": s.satisfaction_level,
+        "קושי (1-10)": s.difficulty_level ?? "",
+        "שביעות רצון (1-10)": s.satisfaction_level ?? "",
         "הערות": s.comments ?? "",
         "תאריך אימון": formatDateHebrew(s.training_date),
         "תאריך הגשה": formatDateHebrew(s.submitted_at),
@@ -170,7 +170,8 @@ function formTypeToHebrew(type: string): string {
 /**
  * Format date for display in CSV (DD/MM/YYYY)
  */
-function formatDateHebrew(dateString: string): string {
+function formatDateHebrew(dateString: string | null): string {
+  if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString("he-IL", {
     day: "2-digit",

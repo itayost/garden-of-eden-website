@@ -21,7 +21,7 @@ export function ReportDetailsSection({
     { label: "תאריך לידה", value: profile.birthdate ? formatDate(profile.birthdate) : null },
     { label: "עמדה", value: profile.position },
     { label: "מועדון / קבוצה", value: profile.club },
-    { label: "תאריך הצטרפות", value: formatDate(profile.created_at) },
+    { label: "תאריך הצטרפות", value: profile.created_at ? formatDate(profile.created_at) : null },
     {
       label: "תדירות הגעה בממוצע",
       value: attendance

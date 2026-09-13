@@ -192,7 +192,8 @@ export function ShiftReportExportButton({
   );
 }
 
-function formatDateHebrew(dateString: string): string {
+function formatDateHebrew(dateString: string | null): string {
+  if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString("he-IL", {
     day: "2-digit",

@@ -21,7 +21,7 @@ export interface ReportData {
     readonly club: string | null;
     readonly avatar_url: string | null;
     readonly processed_avatar_url: string | null;
-    readonly created_at: string;
+    readonly created_at: string | null;
   };
   readonly assessments: readonly PlayerAssessment[];
   readonly stats: {
