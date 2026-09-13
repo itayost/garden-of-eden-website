@@ -18,10 +18,19 @@ export default async function EquipmentPage() {
   const loadError = "error" in result ? result.error : null;
 
   return (
-    <EquipmentManager
-      equipment={equipment}
-      loadError={loadError}
-      isAdmin={profile!.role === "admin"}
-    />
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">קטלוג הציוד</h1>
+        <p className="text-muted-foreground">
+          המכשירים במכון, מה כל אחד מודד, ומדבקות ה-QR שלהם
+        </p>
+      </div>
+
+      <EquipmentManager
+        equipment={equipment}
+        loadError={loadError}
+        isAdmin={profile!.role === "admin"}
+      />
+    </div>
   );
 }

@@ -1,15 +1,25 @@
 "use client";
 
 import { useState, useTransition, useCallback, useEffect, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
-import { Plus, Pencil, QrCode } from "lucide-react";
+import { useQueryState, parseAsInteger, parseAsString } from "nuqs";
+import { Plus, Pencil, QrCode, Link2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -23,9 +33,12 @@ import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import { ExerciseForm } from "@/features/workouts/components/ExerciseForm";
 import {
-  listExercises,
-  listSubCategories,
+  bulkLinkEquipment,
+  countUnlinkedExercises,
   deleteExercise,
+  listExercises,
+  listMainCategories,
+  listSubCategories,
 } from "@/features/workouts/lib/actions";
 import {
   MAIN_CATEGORIES,
@@ -49,23 +62,31 @@ const UNLINKED_EQUIPMENT_OPTION = {
   label: "ללא ציוד מקושר",
 };
 
+/** Bulk target meaning "clear the link" rather than "pick a machine". */
+const BULK_UNLINK_VALUE = "__none__";
+
 // ---------------------------------------------------------------------------
 // ExerciseTable
 // ---------------------------------------------------------------------------
 
 export function ExerciseTable() {
-  const searchParams = useSearchParams();
-
-  // Filter & pagination state
-  const [mainCategory, setMainCategory] = useState<string>("");
-  const [subCategory, setSubCategory] = useState<string>("");
-  const [search, setSearch] = useState<string>("");
-  // Seeded from ?equipment=<id>, which is where the count badge on the
-  // equipment catalog links to.
-  const [equipmentId, setEquipmentId] = useState<string>(
-    () => searchParams.get("equipment") ?? "",
+  // Filters live in the URL: a filtered view is then shareable, survives back,
+  // and the ?equipment= deep link from the equipment catalog is just one of them.
+  const [mainCategory, setMainCategory] = useQueryState(
+    "cat",
+    parseAsString.withDefault(""),
   );
-  const [page, setPage] = useState<number>(0);
+  const [subCategory, setSubCategory] = useQueryState(
+    "sub",
+    parseAsString.withDefault(""),
+  );
+  const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
+  const [equipmentId, setEquipmentId] = useQueryState(
+    "equipment",
+    parseAsString.withDefault(""),
+  );
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(0));
+
   const [equipmentOptions, setEquipmentOptions] = useState<Equipment[]>([]);
 
   // Data state
@@ -73,6 +94,15 @@ export function ExerciseTable() {
   const [total, setTotal] = useState<number>(0);
   const [loading, startTransition] = useTransition();
   const [subCategories, setSubCategories] = useState<string[]>([]);
+  const [mainCategories, setMainCategories] =
+    useState<readonly string[]>(MAIN_CATEGORIES);
+  const [unlinkedCount, setUnlinkedCount] = useState(0);
+
+  // Selection is per page: it clears whenever the visible rows change, so a
+  // bulk link can only ever touch rows the admin is looking at.
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkEquipmentId, setBulkEquipmentId] = useState<string>("");
+  const [bulkPending, startBulkTransition] = useTransition();
 
   // Dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -81,6 +111,10 @@ export function ExerciseTable() {
   // ---------------------------------------------------------------------------
   // Data loading
   // ---------------------------------------------------------------------------
+
+  const refreshUnlinkedCount = useCallback(() => {
+    countUnlinkedExercises().then(setUnlinkedCount);
+  }, []);
 
   const load = useCallback(() => {
     startTransition(async () => {
@@ -95,12 +129,17 @@ export function ExerciseTable() {
       );
       setRows(result.rows);
       setTotal(result.total);
+      setSelectedIds([]);
     });
   }, [mainCategory, subCategory, search, equipmentId, page]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    refreshUnlinkedCount();
+  }, [refreshUnlinkedCount]);
 
   // Load sub-categories from the full corpus whenever main category changes
   useEffect(() => {
@@ -112,6 +151,29 @@ export function ExerciseTable() {
       cancelled = true;
     };
   }, [mainCategory]);
+
+  // The categories in use. MAIN_CATEGORIES is only the seed for an empty library.
+  useEffect(() => {
+    let cancelled = false;
+    listMainCategories().then((list) => {
+      if (!cancelled && list.length > 0) setMainCategories(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The catalog powers the equipment filter and the bulk link. Loaded once —
+  // it is a few dozen rows and does not change while the table is open.
+  useEffect(() => {
+    let cancelled = false;
+    listEquipmentAction().then((result) => {
+      if (!cancelled && "success" in result) setEquipmentOptions(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Filter change handlers — reset to page 0
@@ -133,8 +195,18 @@ export function ExerciseTable() {
     setPage(0);
   };
 
+  const handleEquipmentChange = (value: string) => {
+    setEquipmentId(value === "__all__" ? "" : value);
+    setPage(0);
+  };
+
+  const showUnlinked = () => {
+    setEquipmentId(UNLINKED_EQUIPMENT_FILTER);
+    setPage(0);
+  };
+
   // ---------------------------------------------------------------------------
-  // Sub-categories loaded from the full corpus via listSubCategories
+  // Options
   // ---------------------------------------------------------------------------
 
   const subCategoryOptions = [
@@ -144,7 +216,7 @@ export function ExerciseTable() {
 
   const mainCategoryOptions = [
     ALL_MAIN_CATEGORIES_OPTION,
-    ...MAIN_CATEGORIES.map((c) => ({ value: c, label: c })),
+    ...mainCategories.map((c) => ({ value: c, label: c })),
   ];
 
   const equipmentOptionsList = useMemo(
@@ -159,22 +231,46 @@ export function ExerciseTable() {
     [equipmentOptions],
   );
 
-  const handleEquipmentChange = (value: string) => {
-    setEquipmentId(value === "__all__" ? "" : value);
-    setPage(0);
+  // ---------------------------------------------------------------------------
+  // Selection and bulk linking
+  // ---------------------------------------------------------------------------
+
+  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allPageSelected = rows.length > 0 && rows.every((row) => selected.has(row.id));
+
+  const toggleRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
   };
 
-  // The catalog powers the equipment filter. Loaded once — it is a few dozen
-  // rows and does not change while the table is open.
-  useEffect(() => {
-    let cancelled = false;
-    listEquipmentAction().then((result) => {
-      if (!cancelled && "success" in result) setEquipmentOptions(result.data);
+  const togglePage = () => {
+    setSelectedIds(allPageSelected ? [] : rows.map((row) => row.id));
+  };
+
+  const handleBulkLink = () => {
+    if (selectedIds.length === 0 || !bulkEquipmentId) return;
+    startBulkTransition(async () => {
+      const result = await bulkLinkEquipment(
+        selectedIds,
+        bulkEquipmentId === BULK_UNLINK_VALUE ? null : bulkEquipmentId,
+      );
+
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(
+        bulkEquipmentId === BULK_UNLINK_VALUE
+          ? `נותק הקישור מ-${result.updated} תרגילים`
+          : `${result.updated} תרגילים קושרו למכשיר`,
+      );
+      setBulkEquipmentId("");
+      load();
+      refreshUnlinkedCount();
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  };
 
   // ---------------------------------------------------------------------------
   // Form dialog handlers
@@ -193,14 +289,36 @@ export function ExerciseTable() {
   const handleFormSaved = () => {
     setFormOpen(false);
     load();
+    refreshUnlinkedCount();
+  };
+
+  const handleDeleted = () => {
+    load();
+    refreshUnlinkedCount();
   };
 
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
+  const viewingUnlinked = equipmentId === UNLINKED_EQUIPMENT_FILTER;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" aria-busy={loading}>
+      {/* An unlinked exercise is invisible to every QR sticker in the gym, so
+          the count leads rather than hiding one row at a time. */}
+      {unlinkedCount > 0 && !viewingUnlinked && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900 dark:bg-amber-950/40">
+          <p>
+            <span className="font-bold tabular-nums">{unlinkedCount}</span> תרגילים
+            אינם מקושרים למכשיר, כך שסריקת ה-QR שלו לא תגיע אליהם.
+          </p>
+          <Button variant="outline" size="sm" onClick={showUnlinked}>
+            הצג אותם
+          </Button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <TableToolbar
         searchValue={search}
@@ -236,29 +354,95 @@ export function ExerciseTable() {
         }
       />
 
-      {/* Table */}
-      <div className="rounded-md border">
+      {/* Bulk bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2">
+          <span className="text-sm font-medium tabular-nums" aria-live="polite">
+            נבחרו {selectedIds.length}
+          </span>
+          <Select
+            value={bulkEquipmentId}
+            onValueChange={setBulkEquipmentId}
+            disabled={bulkPending}
+          >
+            <SelectTrigger className="w-48" aria-label="מכשיר לקישור">
+              <SelectValue placeholder="קשר למכשיר..." />
+            </SelectTrigger>
+            <SelectContent>
+              {equipmentOptions.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name_he}
+                  {item.is_active ? "" : " (לא פעיל)"}
+                </SelectItem>
+              ))}
+              <SelectItem value={BULK_UNLINK_VALUE}>ניתוק מהמכשיר</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            onClick={handleBulkLink}
+            disabled={bulkPending || !bulkEquipmentId}
+          >
+            <Link2 className="h-4 w-4 ms-2" />
+            החל
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
+            ניקוי הבחירה
+          </Button>
+        </div>
+      )}
+
+      {/* Mobile: card list — six columns cannot fit a phone. */}
+      <div className="space-y-2 md:hidden">
+        {loading && rows.length === 0 ? (
+          <p className="py-12 text-center text-muted-foreground">טוען...</p>
+        ) : rows.length === 0 ? (
+          <p className="py-12 text-center text-muted-foreground">לא נמצאו תרגילים</p>
+        ) : (
+          rows.map((exercise) => (
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              selected={selected.has(exercise.id)}
+              onToggle={() => toggleRow(exercise.id)}
+              onEdit={openEdit}
+              onDeleted={handleDeleted}
+            />
+          ))
+        )}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden rounded-md border md:block">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allPageSelected}
+                  onCheckedChange={togglePage}
+                  disabled={rows.length === 0}
+                  aria-label="בחירת כל התרגילים בעמוד"
+                />
+              </TableHead>
               <TableHead>שם עברית</TableHead>
               <TableHead>שם אנגלית</TableHead>
               <TableHead>קטגוריה</TableHead>
               <TableHead>תת-קטגוריה</TableHead>
               <TableHead>ציוד</TableHead>
-              <TableHead className="w-24">פעולות</TableHead>
+              <TableHead className="w-28">פעולות</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   טוען...
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   לא נמצאו תרגילים
                 </TableCell>
               </TableRow>
@@ -267,10 +451,10 @@ export function ExerciseTable() {
                 <ExerciseRow
                   key={exercise.id}
                   exercise={exercise}
+                  selected={selected.has(exercise.id)}
+                  onToggle={() => toggleRow(exercise.id)}
                   onEdit={openEdit}
-                  onDeleted={() => {
-                    load();
-                  }}
+                  onDeleted={handleDeleted}
                 />
               ))
             )}
@@ -309,18 +493,72 @@ export function ExerciseTable() {
 }
 
 // ---------------------------------------------------------------------------
-// ExerciseRow — extracted to keep the main component focused
+// Row actions, shared by the table row and the mobile card
 // ---------------------------------------------------------------------------
 
-interface ExerciseRowProps {
+interface RowProps {
   exercise: WorkoutExercise;
+  selected: boolean;
+  onToggle: () => void;
   onEdit: (exercise: WorkoutExercise) => void;
   onDeleted: () => void;
 }
 
-function ExerciseRow({ exercise, onEdit, onDeleted }: ExerciseRowProps) {
+function exerciseLabel(exercise: WorkoutExercise): string {
+  return exercise.nameHe ?? exercise.nameEn ?? "ללא שם";
+}
+
+function RowActions({
+  exercise,
+  onEdit,
+  onDeleted,
+}: Pick<RowProps, "exercise" | "onEdit" | "onDeleted">) {
   return (
-    <TableRow>
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onEdit(exercise)}
+        aria-label={`עריכת ${exerciseLabel(exercise)}`}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <DeleteConfirmDialog
+        title={`מחיקת תרגיל: ${exerciseLabel(exercise)}`}
+        description="פעולה זו תמחק את התרגיל לצמיתות ולא ניתן לשחזרו. תרגיל שנמצא בשימוש בתבנית או באימון לא יימחק."
+        successMessage="תרגיל נמחק"
+        errorMessage="שגיאה במחיקת תרגיל"
+        onDelete={() => deleteExercise(exercise.id)}
+        onSuccess={onDeleted}
+        trigger={
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            aria-label={`מחיקת ${exerciseLabel(exercise)}`}
+          >
+            מחק
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ExerciseRow
+// ---------------------------------------------------------------------------
+
+function ExerciseRow({ exercise, selected, onToggle, onEdit, onDeleted }: RowProps) {
+  return (
+    <TableRow data-state={selected ? "selected" : undefined}>
+      <TableCell>
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onToggle}
+          aria-label={`בחירת ${exerciseLabel(exercise)}`}
+        />
+      </TableCell>
       <TableCell className="font-medium">
         {exercise.nameHe ?? <span className="text-muted-foreground text-xs">—</span>}
       </TableCell>
@@ -335,31 +573,41 @@ function ExerciseRow({ exercise, onEdit, onDeleted }: ExerciseRowProps) {
         <EquipmentCell exercise={exercise} />
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(exercise)}
-            aria-label="ערוך תרגיל"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <DeleteConfirmDialog
-            title={`מחיקת תרגיל: ${exercise.nameHe ?? exercise.nameEn ?? "ללא שם"}`}
-            description="פעולה זו תמחק את התרגיל לצמיתות ולא ניתן לשחזרו."
-            successMessage="תרגיל נמחק"
-            errorMessage="שגיאה במחיקת תרגיל"
-            onDelete={() => deleteExercise(exercise.id)}
-            onSuccess={onDeleted}
-            trigger={
-              <Button variant="ghost" size="icon" aria-label="מחק תרגיל">
-                <span className="text-destructive text-sm">מחק</span>
-              </Button>
-            }
-          />
-        </div>
+        <RowActions exercise={exercise} onEdit={onEdit} onDeleted={onDeleted} />
       </TableCell>
     </TableRow>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ExerciseCard — the phone view of the same row
+// ---------------------------------------------------------------------------
+
+function ExerciseCard({ exercise, selected, onToggle, onEdit, onDeleted }: RowProps) {
+  return (
+    <Card className="rounded-2xl py-0">
+      <CardContent className="flex items-start gap-3 px-4 py-3">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onToggle}
+          className="mt-1"
+          aria-label={`בחירת ${exerciseLabel(exercise)}`}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-bold">{exerciseLabel(exercise)}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {exercise.mainCategory}
+            {exercise.subCategory ? ` / ${exercise.subCategory}` : ""}
+          </p>
+          <div className="mt-1.5 text-xs">
+            <EquipmentCell exercise={exercise} />
+          </div>
+        </div>
+        <div className="shrink-0">
+          <RowActions exercise={exercise} onEdit={onEdit} onDeleted={onDeleted} />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -381,7 +629,7 @@ function EquipmentCell({ exercise }: { exercise: WorkoutExercise }) {
           {exercise.equipmentName}
         </span>
         {exercise.equipmentCode && (
-          <span dir="ltr" className="text-start font-mono text-[10px] text-muted-foreground">
+          <span dir="ltr" className="text-start font-mono text-[11px] text-muted-foreground">
             {exercise.equipmentCode}
           </span>
         )}
@@ -391,13 +639,11 @@ function EquipmentCell({ exercise }: { exercise: WorkoutExercise }) {
 
   return (
     <span className="flex flex-col gap-0.5">
-      <span className="w-fit rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+      <span className="w-fit rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
         לא מקושר לציוד
       </span>
       {exercise.equipment && (
-        <span className="text-[10px] text-muted-foreground">
-          {exercise.equipment}
-        </span>
+        <span className="text-[11px] text-muted-foreground">{exercise.equipment}</span>
       )}
     </span>
   );

@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { emptyCell, resizeRowCells, copyCellAcrossWeeks, deriveSubCategories } from "../grid-utils";
+import {
+  emptyCell,
+  resizeRowCells,
+  copyCellAcrossWeeks,
+  deriveSubCategories,
+  deriveMainCategories,
+  normalizeCategoryName,
+  findSimilarCategory,
+} from "../grid-utils";
 
 const cell = (week: number, reps: string) => ({ week, sets: 3, repsHe: reps, loadHe: "70%", notesHe: "" });
 
@@ -45,5 +53,56 @@ describe("deriveSubCategories", () => {
   });
   it("returns all distinct when no main category given", () => {
     expect(deriveSubCategories(ex)).toEqual(["MAS", "ארבע ראשי", "שוקיים"]);
+  });
+});
+
+describe("normalizeCategoryName", () => {
+  it("trims and collapses inner whitespace", () => {
+    expect(normalizeCategoryName("  כוח   מתפרץ  ")).toBe("כוח מתפרץ");
+  });
+  it("returns an empty string when there is nothing usable", () => {
+    expect(normalizeCategoryName("   ")).toBe("");
+    expect(normalizeCategoryName(null)).toBe("");
+    expect(normalizeCategoryName(undefined)).toBe("");
+  });
+});
+
+describe("deriveMainCategories", () => {
+  it("returns distinct sorted categories", () => {
+    const out = deriveMainCategories([
+      { mainCategory: "כוח" },
+      { mainCategory: "אירובי" },
+      { mainCategory: "כוח" },
+    ]);
+    expect(out).toEqual(["אירובי", "כוח"]);
+  });
+  it("normalizes spacing so one category cannot appear twice", () => {
+    expect(deriveMainCategories([{ mainCategory: "כוח  מתפרץ" }, { mainCategory: "כוח מתפרץ" }]))
+      .toEqual(["כוח מתפרץ"]);
+  });
+  it("skips blank categories", () => {
+    expect(deriveMainCategories([{ mainCategory: "  " }, { mainCategory: "אירובי" }]))
+      .toEqual(["אירובי"]);
+  });
+});
+
+describe("findSimilarCategory", () => {
+  const existing = ["כוח - פלג גוף תחתון", "אירובי וסיבולת", "Core"];
+
+  it("matches a name that differs only in spacing", () => {
+    expect(findSimilarCategory("אירובי  וסיבולת", existing)).toBe("אירובי וסיבולת");
+  });
+  it("matches across dash shapes, which read identically to a human", () => {
+    expect(findSimilarCategory("כוח – פלג גוף תחתון", existing)).toBe("כוח - פלג גוף תחתון");
+  });
+  it("matches regardless of case for latin names", () => {
+    expect(findSimilarCategory("core", existing)).toBe("Core");
+  });
+  it("returns null for a name that is already exactly in the list", () => {
+    expect(findSimilarCategory("אירובי וסיבולת", existing)).toBeNull();
+  });
+  it("returns null when nothing is close", () => {
+    expect(findSimilarCategory("קואורדינציה", existing)).toBeNull();
+    expect(findSimilarCategory("   ", existing)).toBeNull();
   });
 });
