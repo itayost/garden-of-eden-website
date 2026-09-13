@@ -178,7 +178,7 @@ export function ExerciseForm({
             <button
               type="button"
               className="text-muted-foreground text-xs underline"
-              onClick={() => chooseCategory(exercise?.mainCategory ?? "")}
+              onClick={() => chooseCategory(normalizeCategoryName(exercise?.mainCategory))}
             >
               בחירה מהרשימה
             </button>

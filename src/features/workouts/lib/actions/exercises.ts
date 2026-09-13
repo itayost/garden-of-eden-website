@@ -454,9 +454,13 @@ export async function bulkLinkEquipment(
   const adminClient = createAdminClient();
 
   try {
-    const { error: updateError } = await typedFrom(adminClient, "workout_exercises")
+    // Selecting back the affected rows: ids the caller sent may no longer exist
+    // (a stale page, or another admin deleting meanwhile), and the toast should
+    // report what actually changed rather than what was asked for.
+    const { data, error: updateError } = (await typedFrom(adminClient, "workout_exercises")
       .update({ equipment_id: equipmentId })
-      .in("id", ids);
+      .in("id", ids)
+      .select("id")) as { data: { id: string }[] | null; error: unknown };
 
     if (updateError) {
       console.error("bulkLinkEquipment error:", updateError);
@@ -464,7 +468,7 @@ export async function bulkLinkEquipment(
     }
 
     revalidatePath(REVALIDATE_PATH);
-    return { success: true, updated: ids.length };
+    return { success: true, updated: data?.length ?? 0 };
   } catch (err) {
     console.error("bulkLinkEquipment error:", err);
     return { error: "שגיאה בקישור התרגילים" };
@@ -475,31 +479,42 @@ export async function bulkLinkEquipment(
 // deleteExercise
 // ---------------------------------------------------------------------------
 
-/** Templates and logged sessions that would lose their exercise. */
+/**
+ * Every table whose `exercise_id` is `ON DELETE CASCADE` against
+ * `workout_exercises`. Each one loses rows silently when an exercise goes, so
+ * each one has to be counted before the delete — a program the exercise sits in
+ * and a trainee's logged performance are as destructive to lose as a template.
+ */
+const EXERCISE_REFERENCE_TABLES = [
+  { table: "session_template_exercises", label: "תבניות" },
+  { table: "training_session_exercises", label: "אימונים" },
+  { table: "workout_program_exercises", label: "תוכניות" },
+  { table: "exercise_logs", label: "דיווחי ביצוע" },
+] as const;
+
+/** The references that would be destroyed, empty when the exercise is unused. */
 async function countExerciseReferences(
   adminClient: ReturnType<typeof createAdminClient>,
   id: string,
-): Promise<{ templates: number; sessions: number } | null> {
-  const { count: templates, error: templatesError } = (await typedFrom(
-    adminClient,
-    "session_template_exercises",
-  )
-    .select("id", { count: "exact", head: true })
-    .eq("exercise_id", id)) as { count: number | null; error: unknown };
+): Promise<{ label: string; count: number }[] | null> {
+  const results = await Promise.all(
+    EXERCISE_REFERENCE_TABLES.map(async ({ table, label }) => {
+      const { count, error } = (await typedFrom(adminClient, table)
+        .select("id", { count: "exact", head: true })
+        .eq("exercise_id", id)) as { count: number | null; error: unknown };
+      return { label, count: count ?? 0, error };
+    }),
+  );
 
-  const { count: sessions, error: sessionsError } = (await typedFrom(
-    adminClient,
-    "training_session_exercises",
-  )
-    .select("id", { count: "exact", head: true })
-    .eq("exercise_id", id)) as { count: number | null; error: unknown };
-
-  if (templatesError || sessionsError) {
-    console.error("countExerciseReferences error:", templatesError ?? sessionsError);
+  const failed = results.find((result) => result.error);
+  if (failed) {
+    console.error("countExerciseReferences error:", failed.error);
     return null;
   }
 
-  return { templates: templates ?? 0, sessions: sessions ?? 0 };
+  return results
+    .filter((result) => result.count > 0)
+    .map(({ label, count }) => ({ label, count }));
 }
 
 export async function deleteExercise(id: string): Promise<ActionResult> {
@@ -511,18 +526,14 @@ export async function deleteExercise(id: string): Promise<ActionResult> {
   const adminClient = createAdminClient();
 
   try {
-    // Deleting a referenced exercise empties rows in templates and in sessions
-    // trainees already logged, so refuse and say where it is used.
+    // Deleting a referenced exercise cascades rows away in templates, programs,
+    // and the sessions and logs trainees already filled, so refuse and say where
+    // it is used.
     const references = await countExerciseReferences(adminClient, id);
     if (!references) return { error: "שגיאה בבדיקת השימוש בתרגיל" };
 
-    if (references.templates > 0 || references.sessions > 0) {
-      const used = [
-        references.templates > 0 ? `${references.templates} תבניות` : null,
-        references.sessions > 0 ? `${references.sessions} אימונים` : null,
-      ]
-        .filter(Boolean)
-        .join(" וב-");
+    if (references.length > 0) {
+      const used = references.map(({ count, label }) => `${count} ${label}`).join(" וב-");
       return { error: `לא ניתן למחוק: התרגיל בשימוש ב-${used}. אפשר לערוך אותו במקום.` };
     }
 
