@@ -60,6 +60,11 @@ next-env.d.ts
 # Keep on disk for rollback, never in git history.
 scripts/backups/
 
+# Local snapshot of the production schema (npm run db:schema). The repo is
+# public, so it stays out of git; regenerate it whenever you need it.
+supabase/schema.sql
+supabase/schema.sql.tmp
+
 # graphify: local tool output, regenerable. Only the report is committed.
 graphify-out/*
 !graphify-out/GRAPH_REPORT.md
