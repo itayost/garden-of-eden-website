@@ -16,6 +16,7 @@ import { LogOut, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 const emptySubscribe = () => () => {};
 
@@ -56,7 +57,8 @@ export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarPro
   };
 
   const title = resolveTitle(pathname);
-  const displayName = profile?.full_name ?? user.phone ?? "משתמש";
+  const localPhone = formatPhoneToLocal(user.phone);
+  const displayName = profile?.full_name || localPhone || "משתמש";
 
   const triggerButton = (
     <Button variant="ghost" className="ms-auto gap-2">
@@ -74,7 +76,7 @@ export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarPro
           <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="text-muted-foreground">
-              {user.phone}
+              <span dir="ltr">{localPhone}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

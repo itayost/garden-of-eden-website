@@ -67,7 +67,7 @@ function LoginForm() {
           <Input
             id="phone"
             type="tel"
-            placeholder="050-123-4567"
+            placeholder="0501234567"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="pe-10 text-lg text-start"

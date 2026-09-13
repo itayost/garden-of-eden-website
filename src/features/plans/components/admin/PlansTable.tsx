@@ -18,6 +18,7 @@ import { PlanStatusBadge } from "../PlanStatusBadge";
 import { PlanActionsDialog } from "./PlanActionsDialog";
 import { StaffPaymentSheet } from "../staff/StaffPaymentSheet";
 import { AgreementBadge } from "../staff/AgreementBadge";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 export function PlansTable({ rows, isAdmin }: { rows: AdminPlanRow[]; isAdmin: boolean }) {
   const [target, setTarget] = useState<AdminPlanRow | null>(null);
@@ -59,7 +60,7 @@ export function PlansTable({ rows, isAdmin }: { rows: AdminPlanRow[]; isAdmin: b
                         <>
                           {" · "}
                           <a href={`tel:${row.guardianPhone}`} className="underline" dir="ltr">
-                            {row.guardianPhone}
+                            {formatPhoneToLocal(row.guardianPhone)}
                           </a>
                         </>
                       ) : ""}

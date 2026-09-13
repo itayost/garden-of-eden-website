@@ -41,13 +41,6 @@ interface TargetRow {
   deleted_at: string | null;
 }
 
-/** Convert any recognizable Israeli phone to local "05XXXXXXXX", or null. */
-function toLocalIsraeliPhone(phone: string | null | undefined): string | null {
-  const e164 = normalizePhone(phone); // "+9725XXXXXXXX" or null
-  if (!e164) return null;
-  return "0" + e164.slice(4); // drop "+972", prepend "0"
-}
-
 async function main(): Promise<void> {
   loadEnvLocal();
   const supabase = getAdminClient();
@@ -214,10 +207,8 @@ async function main(): Promise<void> {
     if (member && member.full_name && member.full_name.trim()) {
       updates.full_name = member.full_name.trim();
       nameFromArbox++;
-      // Link the Arbox id too: the phone below is rewritten to local "05..."
-      // format, which the nightly arbox-sync dedup or-clause cannot match, so
-      // without arbox_user_id the sync would try to re-create these users
-      // every night and fail on the duplicate auth phone.
+      // Link the Arbox id too so future syncs can use the stable provider id
+      // instead of relying only on phone matching.
       if (row.arbox_user_id == null) {
         updates.arbox_user_id = member.user_id;
       }
@@ -226,11 +217,11 @@ async function main(): Promise<void> {
     }
 
     // --- Phone normalization ---
-    const desiredLocal = toLocalIsraeliPhone(row.phone);
-    if (!desiredLocal) {
+    const desiredPhone = normalizePhone(row.phone);
+    if (!desiredPhone) {
       badPhone.push(row);
-    } else if (desiredLocal !== row.phone) {
-      updates.phone = desiredLocal;
+    } else if (desiredPhone !== row.phone) {
+      updates.phone = desiredPhone;
       phoneToNormalize++;
     }
 

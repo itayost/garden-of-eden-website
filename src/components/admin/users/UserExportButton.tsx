@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import type { ProfileWithBranches } from "@/types/branches";
 
 interface UserExportButtonProps {
@@ -28,7 +29,7 @@ export function UserExportButton({ users, variant = "outline" }: UserExportButto
     // Transform users to export format with Hebrew column names
     const csvData = users.map((user) => ({
       "שם": user.full_name || "",
-      "טלפון": formatPhoneForExport(user.phone),
+      "טלפון": formatPhoneToLocal(user.phone),
       "תפקיד": roleToHebrew(user.role),
       "סניף": user.branchNames.join(", "),
       "סטטוס": user.is_active ? "פעיל" : "לא פעיל",
@@ -60,21 +61,6 @@ export function UserExportButton({ users, variant = "outline" }: UserExportButto
       ייצוא ל-CSV ({users.length})
     </Button>
   );
-}
-
-/**
- * Format phone number for export
- * Convert +972 format back to 0XX format for easier reading
- */
-function formatPhoneForExport(phone: string | null): string {
-  if (!phone) return "";
-
-  // Convert +972501234567 to 0501234567
-  if (phone.startsWith("+972")) {
-    return "0" + phone.slice(4);
-  }
-
-  return phone;
 }
 
 /**

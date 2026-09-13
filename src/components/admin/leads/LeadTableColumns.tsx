@@ -6,16 +6,8 @@ import { Button } from "@/components/ui/button";
 import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadTabBadge } from "./LeadTabBadge";
 import { formatRelativeTime } from "@/lib/utils/date";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import type { Lead } from "@/types/leads";
-
-function formatPhone(phone: string | null): string {
-  if (!phone) return "—";
-  if (phone.startsWith("972")) {
-    const local = "0" + phone.slice(3);
-    return local.slice(0, 3) + "-" + local.slice(3);
-  }
-  return phone;
-}
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("he-IL");
@@ -73,7 +65,7 @@ export function getLeadColumns({ showPaidIndicator }: GetLeadColumnsOptions): Co
       header: "טלפון",
       cell: ({ row }) => (
         <span dir="ltr" className="text-right">
-          {formatPhone(row.getValue("phone"))}
+          {formatPhoneToLocal(row.getValue("phone")) || "—"}
         </span>
       ),
       enableSorting: false,

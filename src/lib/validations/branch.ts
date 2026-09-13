@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { PHONE_REGEX_IL, UUID_REGEX } from "@/lib/validations/common";
+import {
+  UUID_REGEX,
+  formatPhoneToInternational,
+  isValidPhoneIL,
+} from "@/lib/validations/common";
 
 /** Trims, then treats an empty string as "no value" so the DB stores NULL. */
 const optionalText = (max: number) =>
@@ -15,9 +19,9 @@ export const branchSchema = z.object({
   name_he: z.string().trim().min(1, "נדרש שם סניף").max(60, "שם ארוך מדי"),
   arbox_location_name: optionalText(120),
   manager_phone: optionalText(20).refine(
-    (v) => v === null || PHONE_REGEX_IL.test(v),
+    (v) => v === null || isValidPhoneIL(v),
     "מספר טלפון לא תקין",
-  ),
+  ).transform((v) => (v === null ? null : formatPhoneToInternational(v))),
   is_active: z.boolean().default(true),
 });
 

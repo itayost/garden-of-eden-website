@@ -1,8 +1,8 @@
 import { z } from "zod";
 import {
-  PHONE_REGEX_IL,
   UUID_REGEX,
   formatPhoneToInternational,
+  isValidPhoneIL,
   isValidDateString,
 } from "@/lib/validations/common";
 
@@ -11,13 +11,12 @@ const isoDate = z.string().refine(isValidDateString, "תאריך לא תקין")
 const phone = z
   .string()
   .trim()
-  .regex(PHONE_REGEX_IL, "מספר טלפון לא תקין")
+  .refine(isValidPhoneIL, "מספר טלפון לא תקין")
   .transform(formatPhoneToInternational);
 const optionalPhone = z
   .string()
   .trim()
-  .regex(PHONE_REGEX_IL, "מספר טלפון לא תקין")
-  .or(z.literal(""))
+  .refine((value) => value === "" || isValidPhoneIL(value), "מספר טלפון לא תקין")
   .transform((v) => (v === "" ? null : formatPhoneToInternational(v)));
 const optionalText = (max: number) =>
   z
@@ -93,4 +92,3 @@ export const healthSchema = z.object({
   emergencyContactPhone: optionalPhone,
 });
 export type HealthInput = z.input<typeof healthSchema>;
-

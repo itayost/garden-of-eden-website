@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   isValidUUID,
   isValidPhoneIL,
+  isValidMobilePhoneIL,
   formatPhoneToInternational,
   formatPhoneToLocal,
   isValidDateString,
@@ -52,6 +53,18 @@ describe("isValidUUID", () => {
   });
 });
 
+describe("isValidMobilePhoneIL", () => {
+  it("accepts local, E.164, and bare mobile spellings", () => {
+    expect(isValidMobilePhoneIL("0501234567")).toBe(true);
+    expect(isValidMobilePhoneIL("+972501234567")).toBe(true);
+    expect(isValidMobilePhoneIL("972501234567")).toBe(true);
+  });
+
+  it("rejects landlines", () => {
+    expect(isValidMobilePhoneIL("0312345678")).toBe(false);
+  });
+});
+
 describe("isValidPhoneIL", () => {
   it("returns true for valid 05X format", () => {
     expect(isValidPhoneIL("0501234567")).toBe(true);
@@ -61,6 +74,15 @@ describe("isValidPhoneIL", () => {
 
   it("returns true for valid +972 format", () => {
     expect(isValidPhoneIL("+972501234567")).toBe(true);
+  });
+
+  it("returns true for the bare 972 format returned by Supabase Auth", () => {
+    expect(isValidPhoneIL("972501234567")).toBe(true);
+  });
+
+  it("accepts common spacing and punctuation", () => {
+    expect(isValidPhoneIL("050-123-4567")).toBe(true);
+    expect(isValidPhoneIL("+972 50 123 4567")).toBe(true);
   });
 
   it("returns false for too short", () => {
@@ -77,6 +99,7 @@ describe("isValidPhoneIL", () => {
 
   it("returns false for letters", () => {
     expect(isValidPhoneIL("050abc4567")).toBe(false);
+    expect(isValidPhoneIL("abc0501234567")).toBe(false);
   });
 
   it("returns false for null", () => {
@@ -101,6 +124,15 @@ describe("formatPhoneToInternational", () => {
     expect(formatPhoneToInternational("+972501234567")).toBe("+972501234567");
   });
 
+  it("adds the plus without dropping a digit from bare 972 format", () => {
+    expect(formatPhoneToInternational("972501234567")).toBe("+972501234567");
+  });
+
+  it("normalizes punctuation and spacing", () => {
+    expect(formatPhoneToInternational("050-123-4567")).toBe("+972501234567");
+    expect(formatPhoneToInternational("+972 50 123 4567")).toBe("+972501234567");
+  });
+
   it("converts any 0-prefix number", () => {
     expect(formatPhoneToInternational("0312345678")).toBe("+972312345678");
   });
@@ -113,6 +145,14 @@ describe("formatPhoneToLocal", () => {
 
   it("keeps already local format", () => {
     expect(formatPhoneToLocal("0501234567")).toBe("0501234567");
+  });
+
+  it("converts bare 972 format to local display", () => {
+    expect(formatPhoneToLocal("972501234567")).toBe("0501234567");
+  });
+
+  it("removes punctuation from a recognizable phone", () => {
+    expect(formatPhoneToLocal("+972 50-123-4567")).toBe("0501234567");
   });
 
   it("returns empty string for null", () => {

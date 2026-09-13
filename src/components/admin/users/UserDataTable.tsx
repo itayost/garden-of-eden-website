@@ -28,13 +28,8 @@ import { matchesPositionFilter } from "@/lib/admin/position-filter";
 import { UserTablePagination } from "./UserTablePagination";
 import { Badge } from "@/components/ui/badge";
 import { matchesBranchFilter } from "@/lib/admin/branch-filter";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import type { ProfileWithBranches, BranchOption } from "@/types/branches";
-
-function formatPhone(phone: string | null): string {
-  if (!phone) return "";
-  if (phone.startsWith("+972")) return "0" + phone.slice(4);
-  return phone;
-}
 
 function getInitials(name: string | null): string {
   if (!name) return "?";
@@ -94,7 +89,9 @@ export function UserDataTable({
       if (globalFilter) {
         const searchLower = globalFilter.toLowerCase();
         const matchesName = user.full_name?.toLowerCase().includes(searchLower);
-        const matchesPhone = user.phone?.includes(globalFilter);
+        const matchesPhone = formatPhoneToLocal(user.phone).includes(
+          formatPhoneToLocal(globalFilter),
+        );
         if (!matchesName && !matchesPhone) return false;
       }
 
@@ -222,7 +219,7 @@ export function UserDataTable({
                   </div>
                   {user.phone && (
                     <p className="text-xs text-muted-foreground" dir="ltr">
-                      {formatPhone(user.phone)}
+                      {formatPhoneToLocal(user.phone)}
                     </p>
                   )}
                 </div>

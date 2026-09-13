@@ -11,6 +11,7 @@ import { getPlanForProfileAction, type AdminPlanRow } from "../../lib/actions/ad
 import { PlanStatusBadge } from "../PlanStatusBadge";
 import { AgreementBadge } from "./AgreementBadge";
 import { StaffPaymentSheet } from "./StaffPaymentSheet";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 interface PlanSheetProps {
   traineeId: string;
@@ -90,7 +91,7 @@ export function PlanSheet({ traineeId, traineeName, isAdmin, open, onOpenChange 
                     <dt className="text-muted-foreground">הורה</dt>
                     <dd>
                       <a href={`tel:${row.guardianPhone}`} className="underline">
-                        {row.guardianName ?? "הורה"}
+                        {row.guardianName ?? "הורה"} · {formatPhoneToLocal(row.guardianPhone)}
                       </a>
                     </dd>
                   </>

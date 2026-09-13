@@ -32,6 +32,19 @@ describe("enrollmentSchema", () => {
     expect(result.data.email).toBe("dana@example.com");
     expect(result.data.medicalNotes).toBeNull();
   });
+  it("accepts Auth and punctuated phone spellings", () => {
+    const result = enrollmentSchema.safeParse({
+      ...valid,
+      payerPhone: "972501234567",
+      loginPhone: "052-123-4567",
+      emergencyContactPhone: "+972 53 123 4567",
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.payerPhone).toBe("+972501234567");
+    expect(result.data.loginPhone).toBe("+972521234567");
+    expect(result.data.emergencyContactPhone).toBe("+972531234567");
+  });
   it("requires each declaration", () => {
     expect(enrollmentSchema.safeParse({ ...valid, declaresHealthy: false }).success).toBe(false);
     expect(enrollmentSchema.safeParse({ ...valid, acceptsTerms: false }).success).toBe(false);

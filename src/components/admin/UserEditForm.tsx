@@ -68,7 +68,7 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
         toast.success("המשתמש עודכן בהצלחה!");
       }
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("שגיאה בעדכון המשתמש");
     } finally {
       setLoading(false);
@@ -104,6 +104,8 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
               <FormLabel>טלפון</FormLabel>
               <FormControl>
                 <Input
+                  type="tel"
+                  inputMode="tel"
                   placeholder="0501234567"
                   dir="ltr"
                   className="text-right"
@@ -112,7 +114,7 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
                   disabled={loading}
                 />
               </FormControl>
-              <FormDescription>פורמט: 0501234567 או +972501234567</FormDescription>
+              <FormDescription>פורמט: 0501234567</FormDescription>
               <FormMessage />
             </FormItem>
           )}

@@ -24,6 +24,7 @@ import { Clipboard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { parseLeadsPaste } from "@/lib/utils/parse-leads-paste";
 import { createLeadsBulk } from "@/lib/actions/admin-leads-bulk";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import {
   LEAD_SOURCES,
   LEAD_SOURCE_LABELS,
@@ -178,7 +179,7 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
                 <ul className="max-h-32 overflow-y-auto text-xs space-y-0.5 border rounded p-2">
                   {parsed.valid.slice(0, 50).map((row, i) => (
                     <li key={`ok-${i}`} className="text-green-800">
-                      {row.name} — <code>{row.phone ?? "ללא טלפון"}</code>
+                      {row.name} — <code>{formatPhoneToLocal(row.phone) || "ללא טלפון"}</code>
                       {row.additional_info && (
                         <span className="text-green-700">
                           {" · "}

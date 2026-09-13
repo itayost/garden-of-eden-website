@@ -72,6 +72,7 @@ import {
   type LeadFlowResponse,
 } from "@/types/leads";
 import type { LeadTab } from "@/types/lead-tabs";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 // Build lookup maps from flow-constants arrays
 const AGE_GROUP_MAP = Object.fromEntries(AGE_GROUPS.map((g) => [g.id, g.title]));
@@ -84,15 +85,6 @@ interface LeadDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   trainers: TrainerOption[];
   tabs: LeadTab[];
-}
-
-function formatPhone(phone: string | null): string {
-  if (!phone) return "—";
-  if (phone.startsWith("972")) {
-    const local = "0" + phone.slice(3);
-    return local.slice(0, 3) + "-" + local.slice(3);
-  }
-  return phone;
 }
 
 export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: LeadDetailSheetProps) {
@@ -140,7 +132,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
       reset({
         id: l.id,
         name: l.name,
-        phone: l.phone ?? "",
+        phone: formatPhoneToLocal(l.phone),
         status: l.status,
         source: l.source,
         tab_id: l.tab_id,
@@ -167,7 +159,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
       reset({
         id: lead.id,
         name: lead.name,
-        phone: lead.phone ?? "",
+        phone: formatPhoneToLocal(lead.phone),
         status: lead.status,
         source: lead.source,
         tab_id: lead.tab_id,
@@ -303,7 +295,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
             )}
           </SheetTitle>
           <SheetDescription>
-            <span dir="ltr">{formatPhone(lead.phone)}</span>
+            <span dir="ltr">{formatPhoneToLocal(lead.phone) || "—"}</span>
             {" · "}
             נוצר {new Date(lead.created_at).toLocaleDateString("he-IL")}
           </SheetDescription>
@@ -406,7 +398,13 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">טלפון</Label>
-                  <Input dir="ltr" placeholder="050-1234567" {...register("phone")} />
+                  <Input
+                    type="tel"
+                    inputMode="tel"
+                    dir="ltr"
+                    placeholder="0501234567"
+                    {...register("phone")}
+                  />
                   {errors.phone && (
                     <p className="text-xs text-destructive">
                       {errors.phone.message}

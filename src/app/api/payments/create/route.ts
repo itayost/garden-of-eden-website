@@ -9,6 +9,7 @@ import {
   type CreatePaymentInput,
 } from "@/lib/validations/payment";
 import type { PaymentInsert } from "@/types/database";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 /**
  * Creates a new payment process and returns the payment URL
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       successUrl: `${baseUrl}/?payment=success`,
       cancelUrl: `${baseUrl}/?payment=cancelled`,
       fullName: body.payerName.trim(),
-      phone: body.payerPhone,
+      phone: formatPhoneToLocal(body.payerPhone),
       email: body.payerEmail || undefined,
       paymentNum: body.paymentNum,
       maxPaymentNum: body.maxPaymentNum,

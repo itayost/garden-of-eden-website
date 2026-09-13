@@ -112,6 +112,8 @@ export function UserCreateForm({ isAdmin = true, branches }: UserCreateFormProps
               <FormLabel>טלפון</FormLabel>
               <FormControl>
                 <Input
+                  type="tel"
+                  inputMode="tel"
                   placeholder="0501234567"
                   dir="ltr"
                   className="text-right"
@@ -119,9 +121,7 @@ export function UserCreateForm({ isAdmin = true, branches }: UserCreateFormProps
                   disabled={loading}
                 />
               </FormControl>
-              <FormDescription>
-                פורמט: 0501234567 או +972501234567
-              </FormDescription>
+              <FormDescription>פורמט: 0501234567</FormDescription>
               <FormMessage />
             </FormItem>
           )}

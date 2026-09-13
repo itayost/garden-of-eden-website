@@ -10,18 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { ProfileWithBranches } from "@/types/branches";
 import { NO_BRANCH_LABEL_HE } from "@/types/branches";
 import { PlanStatusBadge } from "@/features/plans/components/PlanStatusBadge";
-
-/**
- * Format phone number for display
- * Converts +972XXXXXXXXX to 0XXXXXXXXX format
- */
-function formatPhone(phone: string | null): string {
-  if (!phone) return "-";
-  if (phone.startsWith("+972")) {
-    return "0" + phone.slice(4);
-  }
-  return phone;
-}
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 /**
  * Get initials from full name for avatar fallback
@@ -92,7 +81,7 @@ const baseColumns: ColumnDef<ProfileWithBranches>[] = [
     header: "טלפון",
     cell: ({ row }) => (
       <span dir="ltr" className="text-right">
-        {formatPhone(row.getValue("phone"))}
+        {formatPhoneToLocal(row.getValue("phone")) || "-"}
       </span>
     ),
     enableSorting: false,

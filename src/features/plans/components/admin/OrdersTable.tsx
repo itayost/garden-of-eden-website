@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/utils/date";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import { issueInvoiceAction, retryFulfillmentAction, type AdminOrderRow } from "../../lib/actions/admin-orders";
 import { PAYMENT_METHOD_LABELS_HE, type OrderStatus } from "@/types/plans";
 
@@ -78,7 +79,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
               <TableCell>
                 <div className="font-medium">{order.parent_name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {order.child_name} · {order.login_phone}
+                  {order.child_name} · {formatPhoneToLocal(order.login_phone)}
                 </div>
               </TableCell>
               <TableCell>{order.productName}</TableCell>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSafeRedirectUrl } from "@/lib/utils/redirect";
 import { getOtpErrorMessage } from "@/lib/auth/otp-error-messages";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,13 +143,6 @@ export default function VerifyPage() {
     }
   };
 
-  const formatPhone = () => {
-    if (phone.startsWith("+972")) {
-      return "0" + phone.slice(4);
-    }
-    return phone;
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
       <Card className="w-full max-w-md border-[#22C55E]/20">
@@ -158,7 +152,7 @@ export default function VerifyPage() {
           </Link>
           <CardTitle className="text-2xl">אימות קוד</CardTitle>
           <CardDescription>
-            {`הזינו את הקוד שנשלח ב-WhatsApp למספר ${formatPhone()}`}
+            {`הזינו את הקוד שנשלח ב-WhatsApp למספר ${formatPhoneToLocal(phone)}`}
           </CardDescription>
         </CardHeader>
         <CardContent>

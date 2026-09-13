@@ -10,17 +10,19 @@
  */
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Israeli phone number validation regex
- * Accepts: 05XXXXXXXX or +972XXXXXXXXX
- */
-export const PHONE_REGEX_IL = /^0\d{9}$|^\+972\d{9}$/;
+/** Parse a recognizable Israeli phone spelling into canonical E.164. */
+function normalizePhoneValue(phone: string): string | null {
+  const trimmed = phone.trim();
+  if (!/^\+?[\d\s().-]+$/.test(trimmed)) return null;
 
-/**
- * Mobile phone regex (05X format only)
- * Accepts: 05XXXXXXXX
- */
-export const PHONE_REGEX_MOBILE = /^05\d{8}$/;
+  const cleaned = trimmed.replace(/(?!^\+)\D/g, "");
+
+  if (/^\+972\d{9}$/.test(cleaned)) return cleaned;
+  if (/^972\d{9}$/.test(cleaned)) return `+${cleaned}`;
+  if (/^0\d{9}$/.test(cleaned)) return `+972${cleaned.slice(1)}`;
+
+  return null;
+}
 
 /**
  * Validate UUID format
@@ -39,7 +41,16 @@ export function isValidUUID(id: string | null | undefined): id is string {
  */
 export function isValidPhoneIL(phone: string | null | undefined): phone is string {
   if (!phone) return false;
-  return PHONE_REGEX_IL.test(phone);
+  return normalizePhoneValue(phone) !== null;
+}
+
+/** Validate an Israeli mobile number across supported input spellings. */
+export function isValidMobilePhoneIL(
+  phone: string | null | undefined,
+): phone is string {
+  if (!phone) return false;
+  const normalized = normalizePhoneValue(phone);
+  return normalized !== null && /^\+9725\d{8}$/.test(normalized);
 }
 
 /**
@@ -48,8 +59,7 @@ export function isValidPhoneIL(phone: string | null | undefined): phone is strin
  * @returns Phone in +972 format
  */
 export function formatPhoneToInternational(phone: string): string {
-  if (phone.startsWith("+")) return phone;
-  return `+972${phone.slice(1)}`;
+  return normalizePhoneValue(phone) ?? phone.trim();
 }
 
 /**
@@ -82,8 +92,6 @@ export function isValidDateRange(from: string, to: string): boolean {
  */
 export function formatPhoneToLocal(phone: string | null | undefined): string {
   if (!phone) return "";
-  if (phone.startsWith("+972")) {
-    return `0${phone.slice(4)}`;
-  }
-  return phone;
+  const international = normalizePhoneValue(phone);
+  return international ? `0${international.slice(4)}` : phone.trim();
 }

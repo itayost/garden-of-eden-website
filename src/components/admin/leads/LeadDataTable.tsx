@@ -28,6 +28,7 @@ import { LeadCreateDialog } from "./LeadCreateDialog";
 import { TablePagination } from "@/components/admin/TablePagination";
 import { LEAD_UNASSIGNED_VALUE, type Lead, type LeadStatus } from "@/types/leads";
 import { leadPhoneSearchFragment } from "@/lib/validations/leads";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import type { LeadTab } from "@/types/lead-tabs";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
@@ -40,15 +41,6 @@ interface LeadDataTableProps {
   initialStatus?: string | null;
   initialHaifa?: boolean;
   initialAssignedTrainerId?: string | null;
-}
-
-function formatPhone(phone: string | null): string {
-  if (!phone) return "—";
-  if (phone.startsWith("972")) {
-    const local = "0" + phone.slice(3);
-    return local.slice(0, 3) + "-" + local.slice(3);
-  }
-  return phone;
 }
 
 export function LeadDataTable({
@@ -203,7 +195,7 @@ export function LeadDataTable({
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-muted-foreground" dir="ltr">
-                      {formatPhone(lead.phone)}
+                      {formatPhoneToLocal(lead.phone) || "—"}
                     </p>
                     {lead.total_payment && (
                       <Badge variant="outline" className="text-xs px-1.5 py-0">

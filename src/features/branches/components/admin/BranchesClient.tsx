@@ -23,6 +23,7 @@ import {
   type BranchInput,
   type BranchWithCount,
 } from "@/features/branches/lib/actions/admin-branches";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 interface BranchDialogProps {
   open: boolean;
@@ -35,7 +36,9 @@ function BranchDialog({ open, branch, onClose, onSaved }: BranchDialogProps) {
   const [pending, startTransition] = useTransition();
   const [nameHe, setNameHe] = useState(branch?.name_he ?? "");
   const [arboxName, setArboxName] = useState(branch?.arbox_location_name ?? "");
-  const [managerPhone, setManagerPhone] = useState(branch?.manager_phone ?? "");
+  const [managerPhone, setManagerPhone] = useState(
+    formatPhoneToLocal(branch?.manager_phone),
+  );
   const [isActive, setIsActive] = useState(branch?.is_active ?? true);
 
   const isEdit = Boolean(branch);
@@ -99,11 +102,13 @@ function BranchDialog({ open, branch, onClose, onSaved }: BranchDialogProps) {
             <Label htmlFor="branch-manager-phone">טלפון מנהל הסניף (אופציונלי)</Label>
             <Input
               id="branch-manager-phone"
+              type="tel"
+              inputMode="tel"
               dir="ltr"
               className="text-right"
               value={managerPhone}
               onChange={(e) => setManagerPhone(e.target.value)}
-              placeholder="05X-XXXXXXX"
+              placeholder="0501234567"
               disabled={pending}
             />
             <p className="text-xs text-muted-foreground">מופיע בנוהל הבטיחות שהצוות רואה.</p>

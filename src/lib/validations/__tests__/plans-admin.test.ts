@@ -46,6 +46,22 @@ describe("newTraineeSchema", () => {
     expect(parsed.reference).toBe("1234");
   });
 
+  it("normalizes Auth and punctuated phone spellings", () => {
+    const parsed = newTraineeSchema.parse({
+      productId: UUID,
+      childName: "דני כהן",
+      loginPhone: "972521234567",
+      payerPhone: "052-123-4567",
+      parentName: "",
+      paymentMethod: "bit",
+      reference: "",
+      startsOn: "2026-09-11",
+      sendWhatsApp: true,
+    });
+    expect(parsed.loginPhone).toBe("+972521234567");
+    expect(parsed.payerPhone).toBe("+972521234567");
+  });
+
   it("rejects a multi-line child name", () => {
     const result = newTraineeSchema.safeParse({
       productId: UUID,

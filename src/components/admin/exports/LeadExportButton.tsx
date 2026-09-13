@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import { LEAD_SOURCE_LABELS, LEAD_STATUS_LABELS } from "@/types/leads";
 import type { Lead } from "@/types/leads";
 
@@ -24,7 +25,7 @@ export function LeadExportButton({
 
     const csvData = leads.map((lead) => ({
       שם: lead.name,
-      טלפון: formatPhone(lead.phone),
+      טלפון: formatPhoneToLocal(lead.phone),
       טאב: lead.tab?.name ?? "",
       מקור: LEAD_SOURCE_LABELS[lead.source],
       סטטוס: LEAD_STATUS_LABELS[lead.status],
@@ -66,10 +67,4 @@ export function LeadExportButton({
       ייצוא ל-CSV ({leads.length})
     </Button>
   );
-}
-
-function formatPhone(phone: string | null): string {
-  if (!phone) return "";
-  if (phone.startsWith("972")) return "0" + phone.slice(3);
-  return phone;
 }

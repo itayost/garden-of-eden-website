@@ -22,6 +22,7 @@ import {
   type CSVUserRow,
   type CSVValidationResult,
 } from "@/lib/validations/user-import";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import { bulkCreateUsersAction, type BulkImportResult } from "@/lib/actions/admin-users";
 
 interface UserImportDialogProps {
@@ -190,7 +191,9 @@ export function UserImportDialog({ trigger }: UserImportDialogProps) {
                       {validation.valid.map((row, idx) => (
                         <tr key={idx} className="border-t">
                           <td className="px-3 py-2">{row.name}</td>
-                          <td className="px-3 py-2 font-mono text-xs">{row.phone}</td>
+                          <td className="px-3 py-2 font-mono text-xs">
+                            {formatPhoneToLocal(row.phone)}
+                          </td>
                           <td className="px-3 py-2">
                             {row.role === "admin" ? "מנהל" :
                              row.role === "trainer" ? "מאמן" : "מתאמן"}
@@ -269,7 +272,9 @@ export function UserImportDialog({ trigger }: UserImportDialogProps) {
                       <div key={idx} className="p-2 text-sm">
                         <div className="flex justify-between">
                           <span className="font-medium">שורה {err.row}</span>
-                          <span className="font-mono text-xs">{err.phone}</span>
+                          <span className="font-mono text-xs">
+                            {formatPhoneToLocal(err.phone)}
+                          </span>
                         </div>
                         <div className="text-destructive text-xs">{err.error}</div>
                       </div>

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import {
-  PHONE_REGEX_IL,
   UUID_REGEX,
   formatPhoneToInternational,
+  isValidPhoneIL,
 } from "@/lib/validations/common";
 import { isValidIsraeliId } from "@/lib/validations/israeli-id";
 
@@ -10,7 +10,7 @@ export const phoneField = z
   .string()
   .trim()
   .min(1, "נדרש מספר טלפון")
-  .regex(PHONE_REGEX_IL, "מספר טלפון לא תקין (פורמט: 0501234567)")
+  .refine(isValidPhoneIL, "מספר טלפון לא תקין (פורמט: 0501234567)")
   .transform(formatPhoneToInternational);
 
 export const optionalText = (max: number) =>

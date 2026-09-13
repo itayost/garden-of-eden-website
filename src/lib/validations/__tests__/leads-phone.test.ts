@@ -16,6 +16,7 @@ describe("normalizeLeadPhone", () => {
 
   it("returns null for unrecognizable input", () => {
     expect(normalizeLeadPhone("123")).toBeNull();
+    expect(normalizeLeadPhone("0312345678")).toBeNull();
   });
 });
 

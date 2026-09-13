@@ -65,6 +65,10 @@ export async function updateUserAction(
       return { error: "משתמש לא נמצא" };
     }
 
+    if (targetProfile.phone && !phone) {
+      return { error: "לא ניתן להסיר מספר טלפון המשמש להתחברות" };
+    }
+
     let trainerScope: BranchScope | null = null;
     // 5. Trainers can only edit trainees, and cannot change role/is_active
     if (callerProfile?.role === "trainer") {
@@ -153,6 +157,16 @@ export async function updateUserAction(
 
     if (profileError) {
       console.error("Profile update error:", profileError);
+      if (phoneChanged && targetProfile.phone) {
+        const { error: rollbackError } =
+          await adminClient.auth.admin.updateUserById(userId, {
+            phone: formatPhoneToInternational(targetProfile.phone),
+            phone_confirm: true,
+          });
+        if (rollbackError) {
+          console.error("Auth phone rollback error:", rollbackError);
+        }
+      }
       return { error: "שגיאה בעדכון הפרופיל" };
     }
 

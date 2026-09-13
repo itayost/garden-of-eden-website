@@ -9,6 +9,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import type { Profile } from "@/types/database";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 type AppSidebarProps = {
   headerLabel: string;
@@ -25,7 +26,8 @@ export function AppSidebar({
   profile,
   children,
 }: AppSidebarProps) {
-  const displayName = profile?.full_name ?? user.phone ?? "משתמש";
+  const displayName =
+    profile?.full_name || formatPhoneToLocal(user.phone) || "משתמש";
   const initial = (displayName.trim()[0] ?? "?").toUpperCase();
 
   return (

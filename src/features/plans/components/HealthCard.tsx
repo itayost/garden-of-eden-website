@@ -59,7 +59,7 @@ export function HealthCard({ traineeId, health }: { traineeId: string; health: T
             </div>
             <div className="space-y-1">
               <Label htmlFor="h-phone">טלפון לחירום</Label>
-              <Input id="h-phone" dir="ltr" className="text-right" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={pending} />
+              <Input id="h-phone" type="tel" inputMode="tel" dir="ltr" className="text-right" placeholder="0501234567" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={pending} />
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={save} disabled={pending}>

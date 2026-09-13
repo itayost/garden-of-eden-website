@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  formatPhoneToInternational,
+  isValidMobilePhoneIL,
+} from "@/lib/validations/common";
 
 /**
  * Payment validation schemas using Zod 4.x
@@ -33,7 +37,11 @@ export const createPaymentSchema = z.object({
 
   payerPhone: z
     .string()
-    .regex(/^05\d{8}$/, { error: "מספר טלפון לא תקין (דוגמה: 0501234567)" }),
+    .trim()
+    .refine(isValidMobilePhoneIL, {
+      error: "מספר טלפון לא תקין (דוגמה: 0501234567)",
+    })
+    .transform(formatPhoneToInternational),
 
   payerEmail: z
     .string()

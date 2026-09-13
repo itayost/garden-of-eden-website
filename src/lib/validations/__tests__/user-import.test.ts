@@ -58,6 +58,14 @@ describe("csvRowSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts Auth and punctuated phone formats and returns canonical E.164", () => {
+    for (const phone of ["972501234567", "050-123-4567"]) {
+      const result = csvRowSchema.safeParse({ name: "יוסי כהן", phone });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.phone).toBe("+972501234567");
+    }
+  });
+
   it("defaults role to trainee when omitted", () => {
     const result = csvRowSchema.safeParse({
       name: "יוסי כהן",

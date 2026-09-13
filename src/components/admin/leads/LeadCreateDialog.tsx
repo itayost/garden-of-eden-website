@@ -164,8 +164,10 @@ export function LeadCreateDialog({
             <div className="relative">
               <Input
                 id="phone"
+                type="tel"
+                inputMode="tel"
                 dir="ltr"
-                placeholder="050-1234567"
+                placeholder="0501234567"
                 {...register("phone")}
               />
             </div>

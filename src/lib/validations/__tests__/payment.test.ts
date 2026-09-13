@@ -15,6 +15,7 @@ describe('createPaymentSchema', () => {
   it('should accept valid payment data', () => {
     const result = createPaymentSchema.safeParse(validPaymentData);
     expect(result.success).toBe(true);
+    if (result.success) expect(result.data.payerPhone).toBe('+972501234567');
   });
 
   describe('amount validation', () => {
@@ -165,16 +166,18 @@ describe('createPaymentSchema', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should reject phone with dashes', () => {
+    it('should normalize phone with dashes', () => {
       const data = { ...validPaymentData, payerPhone: '050-123-4567' };
       const result = createPaymentSchema.safeParse(data);
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.payerPhone).toBe('+972501234567');
     });
 
-    it('should reject international format', () => {
+    it('should normalize international format', () => {
       const data = { ...validPaymentData, payerPhone: '+972501234567' };
       const result = createPaymentSchema.safeParse(data);
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.payerPhone).toBe('+972501234567');
     });
   });
 

@@ -1,7 +1,14 @@
 import { z } from "zod";
+import {
+  formatPhoneToInternational,
+  isValidPhoneIL,
+} from "@/lib/validations/common";
 
-// Phone validation (Israeli format: 0XX or +972XX)
-const phoneRegex = /^0\d{9}$|^\+972\d{9}$/;
+const phoneSchema = z
+  .string()
+  .trim()
+  .refine(isValidPhoneIL, "מספר טלפון לא תקין (פורמט: 0501234567)")
+  .transform(formatPhoneToInternational);
 
 // Role options (same as user-create.ts)
 const userRoles = ["trainee", "trainer", "admin"] as const;
@@ -20,9 +27,7 @@ export const csvRowSchema = z.object({
     .min(2, "שם חייב להכיל לפחות 2 תווים")
     .max(100, "שם ארוך מדי"),
 
-  phone: z
-    .string()
-    .regex(phoneRegex, "מספר טלפון לא תקין (פורמט: 0501234567 או +972501234567)"),
+  phone: phoneSchema,
 
   role: z
     .enum(userRoles, { message: "תפקיד לא תקין" })

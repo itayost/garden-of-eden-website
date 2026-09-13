@@ -2,9 +2,21 @@ import { z } from "zod";
 import { branchIdListSchema } from "@/lib/validations/branch";
 import type { Profile } from "@/types/database";
 import type { FieldChange } from "@/types/activity-log";
+import {
+  formatPhoneToInternational,
+  formatPhoneToLocal,
+  isValidPhoneIL,
+} from "@/lib/validations/common";
 
-// Phone validation (Israeli format: 0XX or +972XX)
-const phoneRegex = /^0\d{9}$|^\+972\d{9}$/;
+const editablePhoneSchema = z
+  .string()
+  .trim()
+  .refine((phone) => phone === "" || isValidPhoneIL(phone), {
+    message: "מספר טלפון לא תקין (פורמט: 0501234567)",
+  })
+  .transform((phone) =>
+    phone === "" ? "" : formatPhoneToInternational(phone),
+  );
 
 export const userEditSchema = z.object({
   full_name: z
@@ -12,11 +24,7 @@ export const userEditSchema = z.object({
     .min(2, "שם חייב להכיל לפחות 2 תווים")
     .max(100, "שם ארוך מדי"),
 
-  phone: z
-    .string()
-    .regex(phoneRegex, "מספר טלפון לא תקין (פורמט: 0501234567 או +972501234567)")
-    .or(z.literal(""))
-    .optional(),
+  phone: editablePhoneSchema,
 
   birthdate: z
     .string()
@@ -52,7 +60,7 @@ export function getUserEditDefaults(
 ): UserEditFormData {
   return {
     full_name: profile.full_name || "",
-    phone: profile.phone || "",
+    phone: formatPhoneToLocal(profile.phone),
     birthdate: profile.birthdate || "",
     club: profile.club || "",
     role: profile.role ?? "trainee", // the column default; the column has no NOT NULL yet
@@ -77,13 +85,17 @@ export function getFieldChanges(
   }
 
   // Normalize empty string to null for comparison
-  const originalPhone = original.phone || null;
-  const updatedPhone = updated.phone || null;
+  const originalPhone = original.phone
+    ? formatPhoneToInternational(original.phone)
+    : null;
+  const updatedPhone = updated.phone
+    ? formatPhoneToInternational(updated.phone)
+    : null;
   if (originalPhone !== updatedPhone) {
     changes.push({
       field: "phone",
       old_value: original.phone,
-      new_value: updated.phone || null,
+      new_value: updatedPhone,
     });
   }
 

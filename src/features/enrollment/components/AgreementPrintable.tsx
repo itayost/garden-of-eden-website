@@ -1,4 +1,5 @@
 import type { EnrollmentAgreement } from "@/types/plans";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
@@ -37,7 +38,7 @@ export function AgreementPrintable({ agreement }: { agreement: EnrollmentAgreeme
       <Block title="פרטי ההורה / האפוטרופוס">
         <Field label="שם מלא" value={agreement.parent_name} />
         <Field label="מספר ת.ז" value={maskIdNumber(agreement.parent_id_number)} />
-        <Field label="טלפון נייד" value={agreement.parent_phone} />
+        <Field label="טלפון נייד" value={formatPhoneToLocal(agreement.parent_phone)} />
         <Field label='דוא"ל' value={agreement.parent_email} />
       </Block>
 
@@ -61,7 +62,10 @@ export function AgreementPrintable({ agreement }: { agreement: EnrollmentAgreeme
 
       <Block title="איש קשר נוסף למקרה חירום">
         <Field label="שם מלא" value={agreement.emergency_contact_name} />
-        <Field label="טלפון" value={agreement.emergency_contact_phone} />
+        <Field
+          label="טלפון"
+          value={formatPhoneToLocal(agreement.emergency_contact_phone)}
+        />
       </Block>
 
       <section className="space-y-2 rounded-2xl border p-4 text-sm">
