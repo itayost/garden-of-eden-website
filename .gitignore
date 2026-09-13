@@ -63,3 +63,6 @@ scripts/backups/
 # graphify: local tool output, regenerable. Only the report is committed.
 graphify-out/*
 !graphify-out/GRAPH_REPORT.md
+
+# Local UX review snapshots (impeccable), regenerable
+.impeccable/

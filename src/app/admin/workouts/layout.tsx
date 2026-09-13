@@ -42,19 +42,16 @@ export default function WorkoutsLayout({
 
   return (
     <div className="space-y-6">
-      <nav
-        className="flex items-center gap-6 border-b"
-        role="tablist"
-        aria-label="ניהול אימונים"
-      >
+      {/* Links that look like tabs are still links: a tablist would promise
+          arrow-key navigation and a tabpanel that do not exist here. */}
+      <nav className="flex items-center gap-6 border-b" aria-label="ניהול אימונים">
         {TABS.map((tab) => {
           const active = tab.isActive(pathname);
           return (
             <Link
               key={tab.href}
               href={tab.href}
-              role="tab"
-              aria-selected={active}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "-mb-px border-b-2 pb-3 text-sm font-medium transition-colors",
                 active

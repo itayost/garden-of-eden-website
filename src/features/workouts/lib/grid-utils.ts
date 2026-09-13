@@ -22,6 +22,47 @@ export function copyCellAcrossWeeks(cells: ProgramCell[], sourceWeekIndex: numbe
   return cells.map((c) => ({ week: c.week, sets: src.sets, repsHe: src.repsHe, loadHe: src.loadHe, notesHe: src.notesHe }));
 }
 
+/**
+ * Trim and collapse inner whitespace. The category column is free text, so
+ * without this "כוח  מתפרץ" and "כוח מתפרץ" become two categories that read
+ * as one.
+ */
+export function normalizeCategoryName(value: string | null | undefined): string {
+  return (value ?? "").trim().replace(/\s+/g, " ");
+}
+
+/** The categories actually in use, which is what the pickers offer. */
+export function deriveMainCategories(
+  exercises: Pick<WorkoutExercise, "mainCategory">[]
+): string[] {
+  const set = new Set<string>();
+  for (const e of exercises) {
+    const name = normalizeCategoryName(e.mainCategory);
+    if (name) set.add(name);
+  }
+  return [...set].sort();
+}
+
+/** Same name to a human, different string to Postgres: spacing, dash shape, case. */
+function comparableCategory(value: string): string {
+  return normalizeCategoryName(value)
+    .toLowerCase()
+    .replace(/[־‐-―-]/g, "-");
+}
+
+/**
+ * An existing category that a typed name would duplicate without replacing.
+ * Null when the name is new, or already exactly one of the existing ones.
+ */
+export function findSimilarCategory(
+  value: string,
+  existing: readonly string[]
+): string | null {
+  const target = comparableCategory(value);
+  if (!target) return null;
+  return existing.find((name) => name !== value && comparableCategory(name) === target) ?? null;
+}
+
 export function deriveSubCategories(
   exercises: Pick<WorkoutExercise, "mainCategory" | "subCategory">[],
   mainCategory?: string

@@ -60,12 +60,14 @@ export function TableToolbar({
       <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-center">
         {/* Search Input */}
         <div className="relative w-full md:w-64">
-          <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          {/* Logical, not physical: the icon belongs on the reading-start side,
+              which is where right-3 happened to put it in this RTL admin. */}
+          <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
             value={localSearch}
             onChange={handleSearchChange}
-            className="pr-9"
+            className="ps-9"
           />
         </div>
 

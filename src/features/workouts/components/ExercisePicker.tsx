@@ -16,7 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { listExercises, listSubCategories } from "@/features/workouts/lib/actions";
+import {
+  listExercises,
+  listMainCategories,
+  listSubCategories,
+} from "@/features/workouts/lib/actions";
 import { MAIN_CATEGORIES } from "@/features/workouts/lib/types";
 import type { WorkoutExercise } from "@/features/workouts/lib/types";
 
@@ -69,6 +73,9 @@ export function ExercisePicker({
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [subCategories, setSubCategories] = useState<string[]>([]);
+  // The categories in use. MAIN_CATEGORIES is only the seed for an empty library.
+  const [mainCategories, setMainCategories] =
+    useState<readonly string[]>(MAIN_CATEGORIES);
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [selected, setSelected] = useState<WorkoutExercise[]>([]);
   const [total, setTotal] = useState(0);
@@ -93,6 +100,19 @@ export function ExercisePicker({
       setSubCategories(cats);
     });
   }, [mainCategory, open]);
+
+  // Main categories come from the library itself, so a category added in the
+  // exercise form is filterable here without a deploy.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    listMainCategories().then((list) => {
+      if (!cancelled && list.length > 0) setMainCategories(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   // Load exercises whenever filters, page, or open change
   useEffect(() => {
@@ -213,7 +233,7 @@ export function ExercisePicker({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">כל הקטגוריות</SelectItem>
-                {MAIN_CATEGORIES.map((cat) => (
+                {mainCategories.map((cat) => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
               </SelectContent>

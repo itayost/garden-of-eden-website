@@ -21,7 +21,11 @@ import {
 } from "@/types/equipment";
 
 export type { ExerciseInput } from "@/lib/validations/workout-exercise";
-import { deriveSubCategories } from "@/features/workouts/lib/grid-utils";
+import {
+  deriveMainCategories,
+  deriveSubCategories,
+  normalizeCategoryName,
+} from "@/features/workouts/lib/grid-utils";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -257,7 +261,7 @@ export async function createExercise(input: ExerciseInput): Promise<ActionResult
       "workout_exercises"
     )
       .insert({
-        main_category: validated.data.main_category,
+        main_category: normalizeCategoryName(validated.data.main_category),
         sub_category: emptyToNull(validated.data.sub_category),
         name_he: emptyToNull(validated.data.name_he),
         name_en: emptyToNull(validated.data.name_en),
@@ -310,7 +314,7 @@ export async function updateExercise(
   try {
     const { error: updateError } = await typedFrom(adminClient, "workout_exercises")
       .update({
-        main_category: validated.data.main_category,
+        main_category: normalizeCategoryName(validated.data.main_category),
         sub_category: emptyToNull(validated.data.sub_category),
         name_he: emptyToNull(validated.data.name_he),
         name_en: emptyToNull(validated.data.name_en),
@@ -372,8 +376,131 @@ export async function listSubCategories(mainCategory?: string): Promise<string[]
 }
 
 // ---------------------------------------------------------------------------
+// listMainCategories
+// ---------------------------------------------------------------------------
+
+/**
+ * The categories actually in use. The column is free text, so the list belongs
+ * to the data rather than to a const that only a deploy can change.
+ */
+export async function listMainCategories(): Promise<string[]> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return [];
+
+  const adminClient = createAdminClient();
+
+  const { data, error } = (await typedFrom(adminClient, "workout_exercises").select(
+    "main_category",
+  )) as { data: Pick<RawWorkoutExercise, "main_category">[] | null; error: unknown };
+
+  if (error) {
+    console.error("listMainCategories query error:", error);
+    return [];
+  }
+
+  return deriveMainCategories((data ?? []).map((r) => ({ mainCategory: r.main_category })));
+}
+
+// ---------------------------------------------------------------------------
+// countUnlinkedExercises
+// ---------------------------------------------------------------------------
+
+/** How many exercises no QR scan can reach. Drives the library's banner. */
+export async function countUnlinkedExercises(): Promise<number> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return 0;
+
+  const adminClient = createAdminClient();
+
+  const { count, error } = (await typedFrom(adminClient, "workout_exercises")
+    .select("id", { count: "exact", head: true })
+    .is("equipment_id", null)) as { count: number | null; error: unknown };
+
+  if (error) {
+    console.error("countUnlinkedExercises error:", error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// bulkLinkEquipment
+// ---------------------------------------------------------------------------
+
+/** Above this, a single update is doing something nobody meant to do. */
+const BULK_LINK_LIMIT = 200;
+
+/**
+ * One machine hosts many exercises, and linking them one dialog at a time is
+ * how every exercise stayed unlinked. A null equipmentId unlinks instead.
+ */
+export async function bulkLinkEquipment(
+  exerciseIds: string[],
+  equipmentId: string | null,
+): Promise<ActionResult & { updated?: number }> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+
+  const ids = [...new Set(exerciseIds)].filter(isValidUUID);
+  if (ids.length === 0) return { error: "לא נבחרו תרגילים" };
+  if (ids.length > BULK_LINK_LIMIT) {
+    return { error: `אפשר לקשר עד ${BULK_LINK_LIMIT} תרגילים בבת אחת` };
+  }
+  if (equipmentId !== null && !isValidUUID(equipmentId)) {
+    return { error: "מזהה ציוד לא תקין" };
+  }
+
+  const adminClient = createAdminClient();
+
+  try {
+    const { error: updateError } = await typedFrom(adminClient, "workout_exercises")
+      .update({ equipment_id: equipmentId })
+      .in("id", ids);
+
+    if (updateError) {
+      console.error("bulkLinkEquipment error:", updateError);
+      return { error: "שגיאה בקישור התרגילים" };
+    }
+
+    revalidatePath(REVALIDATE_PATH);
+    return { success: true, updated: ids.length };
+  } catch (err) {
+    console.error("bulkLinkEquipment error:", err);
+    return { error: "שגיאה בקישור התרגילים" };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // deleteExercise
 // ---------------------------------------------------------------------------
+
+/** Templates and logged sessions that would lose their exercise. */
+async function countExerciseReferences(
+  adminClient: ReturnType<typeof createAdminClient>,
+  id: string,
+): Promise<{ templates: number; sessions: number } | null> {
+  const { count: templates, error: templatesError } = (await typedFrom(
+    adminClient,
+    "session_template_exercises",
+  )
+    .select("id", { count: "exact", head: true })
+    .eq("exercise_id", id)) as { count: number | null; error: unknown };
+
+  const { count: sessions, error: sessionsError } = (await typedFrom(
+    adminClient,
+    "training_session_exercises",
+  )
+    .select("id", { count: "exact", head: true })
+    .eq("exercise_id", id)) as { count: number | null; error: unknown };
+
+  if (templatesError || sessionsError) {
+    console.error("countExerciseReferences error:", templatesError ?? sessionsError);
+    return null;
+  }
+
+  return { templates: templates ?? 0, sessions: sessions ?? 0 };
+}
 
 export async function deleteExercise(id: string): Promise<ActionResult> {
   const { error: authError } = await verifyAdminOrTrainer();
@@ -384,6 +511,21 @@ export async function deleteExercise(id: string): Promise<ActionResult> {
   const adminClient = createAdminClient();
 
   try {
+    // Deleting a referenced exercise empties rows in templates and in sessions
+    // trainees already logged, so refuse and say where it is used.
+    const references = await countExerciseReferences(adminClient, id);
+    if (!references) return { error: "שגיאה בבדיקת השימוש בתרגיל" };
+
+    if (references.templates > 0 || references.sessions > 0) {
+      const used = [
+        references.templates > 0 ? `${references.templates} תבניות` : null,
+        references.sessions > 0 ? `${references.sessions} אימונים` : null,
+      ]
+        .filter(Boolean)
+        .join(" וב-");
+      return { error: `לא ניתן למחוק: התרגיל בשימוש ב-${used}. אפשר לערוך אותו במקום.` };
+    }
+
     const { error: deleteError } = await typedFrom(adminClient, "workout_exercises")
       .delete()
       .eq("id", id);

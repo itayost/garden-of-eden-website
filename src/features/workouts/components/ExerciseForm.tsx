@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -16,17 +16,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createExercise, updateExercise } from "@/features/workouts/lib/actions";
+import {
+  createExercise,
+  listMainCategories,
+  updateExercise,
+} from "@/features/workouts/lib/actions";
 import { exerciseSchema } from "@/lib/validations/workout-exercise";
 import type { ExerciseInput } from "@/lib/validations/workout-exercise";
 import { MAIN_CATEGORIES } from "@/features/workouts/lib/types";
 import type { WorkoutExercise } from "@/features/workouts/lib/types";
+import {
+  findSimilarCategory,
+  normalizeCategoryName,
+} from "@/features/workouts/lib/grid-utils";
 import { MeasureBadges } from "@/components/admin/equipment/MeasureBadges";
 import { numText, resolveDefaults } from "@/lib/utils/performance-profile";
 import { NumberField } from "@/components/ui/number-field";
 import type { Equipment } from "@/types/equipment";
 
 const NO_EQUIPMENT_VALUE = "__none__";
+/** Turns the category select into a text field instead of picking a value. */
+const NEW_CATEGORY_VALUE = "__new__";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -52,6 +62,11 @@ export function ExerciseForm({
 }: ExerciseFormProps) {
   const isEdit = Boolean(exercise);
   const [pending, startTransition] = useTransition();
+
+  // The categories in use, which is what the select offers. MAIN_CATEGORIES is
+  // only the seed for a library that has none yet.
+  const [categories, setCategories] = useState<readonly string[]>(MAIN_CATEGORIES);
+  const [typingCategory, setTypingCategory] = useState(false);
 
   const {
     register,
@@ -81,11 +96,50 @@ export function ExerciseForm({
   const mainCategoryValue = watch("main_category");
   const equipmentIdValue = watch("equipment_id");
 
+  useEffect(() => {
+    let cancelled = false;
+    listMainCategories().then((list) => {
+      if (!cancelled && list.length > 0) setCategories(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The edited exercise's own category belongs in the list even if it is the
+  // only row using it.
+  const categoryOptions = useMemo(() => {
+    const all = new Set<string>(categories);
+    const own = normalizeCategoryName(exercise?.mainCategory);
+    if (own) all.add(own);
+    return [...all].sort();
+  }, [categories, exercise?.mainCategory]);
+
+  // A new name that only differs by spacing, dash shape or case would split one
+  // category in two, and both halves would look identical in every filter.
+  const similarCategory = typingCategory
+    ? findSimilarCategory(mainCategoryValue ?? "", categoryOptions)
+    : null;
+
   const selectedEquipment =
     equipmentOptions.find((item) => item.id === equipmentIdValue) ?? null;
 
   // Shown as placeholders, so an empty override reads as "inherits this".
   const inherited = resolveDefaults(null, selectedEquipment);
+
+  const chooseCategory = (value: string) => {
+    setValue("main_category", value, { shouldValidate: true });
+    setTypingCategory(false);
+  };
+
+  const handleCategorySelect = (value: string) => {
+    if (value === NEW_CATEGORY_VALUE) {
+      setTypingCategory(true);
+      setValue("main_category", "", { shouldValidate: false });
+      return;
+    }
+    chooseCategory(value);
+  };
 
   const onSubmit = (data: ExerciseInput) => {
     startTransition(async () => {
@@ -108,22 +162,59 @@ export function ExerciseForm({
       {/* main_category */}
       <div className="space-y-1">
         <Label htmlFor="main-category">קטגוריה ראשית *</Label>
-        <Select
-          value={mainCategoryValue}
-          onValueChange={(val) => setValue("main_category", val, { shouldValidate: true })}
-          disabled={pending}
-        >
-          <SelectTrigger id="main-category">
-            <SelectValue placeholder="בחר קטגוריה" />
-          </SelectTrigger>
-          <SelectContent>
-            {MAIN_CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {typingCategory ? (
+          <>
+            <Input
+              id="main-category"
+              autoFocus
+              aria-required="true"
+              placeholder="שם הקטגוריה החדשה"
+              disabled={pending}
+              value={mainCategoryValue ?? ""}
+              onChange={(e) =>
+                setValue("main_category", e.target.value, { shouldValidate: true })
+              }
+            />
+            <button
+              type="button"
+              className="text-muted-foreground text-xs underline"
+              onClick={() => chooseCategory(exercise?.mainCategory ?? "")}
+            >
+              בחירה מהרשימה
+            </button>
+            {similarCategory && (
+              <p className="text-xs text-muted-foreground">
+                קיימת כבר{" "}
+                <button
+                  type="button"
+                  className="font-medium underline"
+                  onClick={() => chooseCategory(similarCategory)}
+                >
+                  {similarCategory}
+                </button>
+                . עדיף להשתמש בה, אחרת אותה קטגוריה תופיע פעמיים.
+              </p>
+            )}
+          </>
+        ) : (
+          <Select
+            value={mainCategoryValue}
+            onValueChange={handleCategorySelect}
+            disabled={pending}
+          >
+            <SelectTrigger id="main-category" aria-required="true">
+              <SelectValue placeholder="בחר קטגוריה" />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryOptions.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+              <SelectItem value={NEW_CATEGORY_VALUE}>+ קטגוריה חדשה</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
         {errors.main_category && (
           <p className="text-destructive text-xs">{errors.main_category.message}</p>
         )}
