@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Play, Clock, CheckCircle2 } from "lucide-react";
+import { Play, Clock, CheckCircle2, ExternalLink } from "lucide-react";
 import type { WorkoutVideo } from "@/types/database";
 
 interface VideoCardProps {
@@ -97,6 +97,20 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
                   </div>
                 )}
               </div>
+              {youtubeId && (
+                <div className="px-4 pb-4 text-center">
+                  {/* Content blockers and filtered networks often block only the embed; YouTube itself still plays */}
+                  <a
+                    href={`https://www.youtube.com/watch?v=${encodeURIComponent(youtubeId)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-primary underline underline-offset-4"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    הסרטון לא נטען? צפייה ביוטיוב
+                  </a>
+                </div>
+              )}
             </DialogContent>
           </Dialog>
 
