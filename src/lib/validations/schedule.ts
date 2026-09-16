@@ -86,6 +86,11 @@ export const slotUpdateSchema = slotSchema.extend({
 
 export const slotIdSchema = z.object({ slotId: uuidSchema });
 
+/** One name added to an existing slot from the calendar's roster sheet. */
+export const rosterAddSchema = rosterEntrySchema.extend({ slotId: uuidSchema });
+
+export const rosterRemoveSchema = z.object({ rosterEntryId: uuidSchema });
+
 export const duplicateDaySchema = z
   .object({
     branchId: uuidSchema,
@@ -100,6 +105,8 @@ export const duplicateDaySchema = z
 export type SlotInput = z.input<typeof slotSchema>;
 export type SlotUpdateInput = z.input<typeof slotUpdateSchema>;
 export type DuplicateDayInput = z.input<typeof duplicateDaySchema>;
+export type RosterAddInput = z.input<typeof rosterAddSchema>;
+export type RosterRemoveInput = z.input<typeof rosterRemoveSchema>;
 
 export const slotUpdateSchemaWithRosterRule = slotUpdateSchema.refine(
   (v) => v.trainees.length > 0 || v.maxTrainees !== null,
