@@ -137,13 +137,16 @@ export async function removeSlotTraineeAction(input: RosterRemoveInput): Promise
   const { data: deleted, error } = await typedFrom(supabase, "daily_schedule_slot_trainees")
     .delete()
     .eq("id", rosterEntryId)
+    // The trainee may cancel between the read above and this delete; a
+    // cancellation is usage history, so it must not be erased by the race.
+    .is("cancelled_at", null)
     .select("id");
 
   if (error) {
     console.error("Remove slot trainee error:", error);
     return { error: "שגיאה בהסרת המתאמן" };
   }
-  if ((deleted?.length ?? 0) === 0) return { error: "הרישום לא נמצא" };
+  if ((deleted?.length ?? 0) === 0) return { error: "הרישום לא נמצא או שכבר בוטל" };
 
   revalidateScheduleSurfaces();
   return { success: true };
