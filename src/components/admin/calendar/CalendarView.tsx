@@ -148,11 +148,18 @@ export function CalendarView({
           <ArrowButton label="שבוע הבא" icon="next" href={hrefFor(addDays(weekStart, 7))} />
         </div>
 
-        {selectedDate !== today && (
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/admin/calendar?branch=${branchId}`}>היום</Link>
-          </Button>
-        )}
+        {/* Inside the loaded week "today" is client state: a Link to the same
+            server date would leave the selection where it was. */}
+        {selectedDate !== today &&
+          (inLoadedWeek(today) ? (
+            <Button variant="ghost" size="sm" onClick={() => selectDay(today)}>
+              היום
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/admin/calendar?branch=${branchId}`}>היום</Link>
+            </Button>
+          ))}
         <BranchSwitcher />
         <Button variant="ghost" size="icon" asChild aria-label="נוהל בטיחות וחירום">
           <Link href="/admin/safety">
