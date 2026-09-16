@@ -174,8 +174,11 @@ export function SlotFormDialog({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // A bookable slot may be saved empty; it fills itself.
-    if (!isEdit && roster.length === 0 && maxTrainees === "") {
+    // A bookable slot may be saved empty; it fills itself. An existing slot
+    // that never had seats (seeded from the weekly schedule) may be edited
+    // before names are added in the calendar; only dropping seats needs a name.
+    const mustName = slot === null || slot.max_trainees !== null;
+    if (mustName && activeCount === 0 && maxTrainees === "") {
       toast.error("יש להוסיף לפחות מתאמן אחד");
       return;
     }

@@ -100,6 +100,26 @@ async function replaceRoster(
   return { error: null };
 }
 
+/** The slot's current non-cancelled roster, in the shape the roster checks take. */
+async function loadActiveRoster(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  slotId: string,
+): Promise<{ traineeId: string | null; name: string }[] | { error: string }> {
+  const { data, error } = (await typedFrom(supabase, "daily_schedule_slot_trainees")
+    .select("trainee_id, trainee_name")
+    .eq("slot_id", slotId)
+    .is("cancelled_at", null)) as {
+    data: { trainee_id: string | null; trainee_name: string }[] | null;
+    error: { message: string } | null;
+  };
+
+  if (error) {
+    console.error("Load slot roster error:", error);
+    return { error: "שגיאה בטעינת רשימת המתאמנים" };
+  }
+  return (data ?? []).map((row) => ({ traineeId: row.trainee_id, name: row.trainee_name }));
+}
+
 /** Roster rows for insert, preserving the order the admin arranged. */
 function rosterRows(
   slotId: string,
@@ -180,9 +200,9 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
 }
 
 /**
- * Updates a slot. The roster is replaced wholesale (delete + insert) — the
- * form always submits the complete list, and roster rows carry no state of
- * their own worth preserving.
+ * Updates a slot. The roster is replaced wholesale only when `trainees` is
+ * sent; the calendar omits it and edits rosters one entry at a time, so a
+ * booking made while the form was open is never deleted.
  *
  * Any staff member may edit any slot: the board is one shared document, and a
  * trainer who spots a wrong hour fixes it rather than chasing an admin.
@@ -204,9 +224,11 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const supabase = await createClient();
 
   const { data: existing } = (await typedFrom(supabase, "daily_schedule_slots")
-    .select("id, branch_id")
+    .select("id, branch_id, max_trainees")
     .eq("id", slotId)
-    .maybeSingle()) as { data: { id: string; branch_id: string | null } | null };
+    .maybeSingle()) as {
+    data: { id: string; branch_id: string | null; max_trainees: number | null } | null;
+  };
 
   if (!existing) return { error: "הסלוט לא נמצא" };
 
@@ -220,8 +242,19 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const trainerResult = await resolveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
-  if (trainees !== undefined) {
-    const rosterCheck = await verifyRosterTrainees(trainees, branchId);
+  // With no roster sent, the kept roster is still what the checks apply to: a
+  // slot moved to another branch must not carry trainees from the old one, and
+  // a slot losing its seats must still name someone. A slot seeded rosterless
+  // from the weekly schedule never had seats, so editing its hour or trainer
+  // stays possible before anyone is added.
+  const rosterToCheck = trainees ?? (await loadActiveRoster(supabase, slotId));
+  if ("error" in rosterToCheck) return { error: rosterToCheck.error };
+  const losesSeats = existing.max_trainees !== null && maxTrainees === null;
+  if (rosterToCheck.length === 0 && maxTrainees === null && (trainees !== undefined || losesSeats)) {
+    return { error: "יש להוסיף לפחות מתאמן אחד" };
+  }
+  if (trainees !== undefined || existing.branch_id !== branchId) {
+    const rosterCheck = await verifyRosterTrainees(rosterToCheck, branchId);
     if (rosterCheck.error) return { error: rosterCheck.error };
   }
 
