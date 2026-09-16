@@ -270,7 +270,7 @@ export function SessionBuilder({
           <Button variant="outline" asChild>
             <Link href={backHref}>
               <ArrowRight className="me-2 h-4 w-4" />
-              חזרה ללוח
+              חזרה לרשימה
             </Link>
           </Button>
         </CardContent>
@@ -295,7 +295,7 @@ export function SessionBuilder({
         <Button variant="ghost" asChild>
           <Link href={backHref}>
             <ArrowRight className="me-2 h-4 w-4" />
-            חזרה ללוח
+            חזרה לרשימה
           </Link>
         </Button>
       </div>

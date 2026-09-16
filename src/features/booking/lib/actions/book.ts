@@ -56,6 +56,7 @@ function revalidate(): void {
   revalidatePath("/dashboard/schedule");
   revalidatePath("/dashboard");
   revalidatePath("/admin/schedule");
+  revalidatePath("/admin/calendar");
 }
 
 /**

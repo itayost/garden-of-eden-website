@@ -119,11 +119,10 @@ export function WeeklyScheduleView({
 
   return (
     <div className="space-y-6">
-      {/* The page header and the link to the daily board belong to the shell
-          that owns both tabs. */}
+      {/* The page header and the link to the calendar belong to the page shell. */}
       <p className="text-sm text-muted-foreground">
         מי עובד באיזו רצועה בכל יום בשבוע. הלוח הזה לא שייך לתאריך מסוים — הוא
-        קובע מה ברירת המחדל, והלוח היומי עדיין נבנה יום-יום.
+        קובע מה ברירת המחדל, והיומן עדיין נבנה יום-יום.
       </p>
 
       {/* One column per day on a desktop, stacked days on a phone — six

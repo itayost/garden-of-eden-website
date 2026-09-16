@@ -50,6 +50,7 @@ function revalidateStaffSurfaces(profileId: string): void {
   revalidatePath("/admin/plans");
   revalidatePath("/admin/orders");
   revalidatePath("/admin/schedule");
+  revalidatePath("/admin/calendar");
 }
 
 /** Active products the caller may sell: their writable branches, optionally narrowed to the trainee's. */
