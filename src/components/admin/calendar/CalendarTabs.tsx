@@ -26,7 +26,7 @@ export function CalendarTabs() {
   const { branchId } = useCurrentBranch();
 
   return (
-    <nav aria-label="תצוגות היומן" className="flex w-full gap-1 rounded-xl bg-muted p-1 sm:w-auto">
+    <nav aria-label="תצוגות היומן" className="flex w-full gap-1 rounded-xl bg-muted p-1 sm:w-fit">
       {TABS.map(({ href, label, Icon }) => {
         const active = pathname === href;
         return (
