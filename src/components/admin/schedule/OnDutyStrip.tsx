@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CalendarOff, LifeBuoy, MapPin, Users } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { cn } from "@/lib/utils";
 import { trainerColor } from "@/lib/utils/trainer-color";
 import { onDutyTimeLabel } from "@/lib/utils/weekly-schedule";
@@ -32,6 +33,7 @@ function groupByStretch(bands: OnDutyBand[]): [string, OnDutyBand[]][] {
  * say what actually runs.
  */
 export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
+  const { branchId } = useCurrentBranch();
   const hasAnything =
     onDuty.bands.length > 0 ||
     onDuty.standby.length > 0 ||
@@ -48,10 +50,10 @@ export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
             על המשמרת היום
           </span>
           <Link
-            href="/admin/weekly-schedule"
+            href={`/admin/calendar/template?branch=${branchId}`}
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
-            לוח שבועי
+            תבנית שבועית
           </Link>
         </div>
 

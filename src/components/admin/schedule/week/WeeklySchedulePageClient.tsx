@@ -1,10 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { CalendarDays, CalendarRange } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { useCurrentBranch } from "@/features/branches/components/BranchContext";
+import { CalendarTabs } from "@/components/admin/calendar/CalendarTabs";
 import { BranchSwitcher } from "@/features/branches/components/BranchSwitcher";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import type { WeeklyBand, WeeklyException } from "@/types/weekly-schedule";
@@ -22,8 +18,8 @@ interface WeeklySchedulePageClientProps {
 }
 
 /**
- * The standing week and its exceptions. The dated week that used to be a tab
- * here is the calendar's week grid now (/admin/calendar).
+ * The standing week and its exceptions, shown as the calendar's second tab.
+ * It names no dates: the calendar's days are seeded from it.
  */
 export function WeeklySchedulePageClient({
   bands,
@@ -34,21 +30,11 @@ export function WeeklySchedulePageClient({
   trainers,
   templateError,
 }: WeeklySchedulePageClientProps) {
-  const { branchId } = useCurrentBranch();
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 px-1">
-          <CalendarRange className="h-4 w-4 text-muted-foreground" />
-          <span className="font-display text-xl">לוח שבועי</span>
-          <BranchSwitcher />
-        </div>
-        <Button variant="outline" asChild>
-          <Link href={`/admin/calendar?branch=${branchId}`}>
-            <CalendarDays className="h-4 w-4" />
-            ליומן
-          </Link>
-        </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <CalendarTabs />
+        <BranchSwitcher />
       </div>
 
       <WeeklyScheduleView

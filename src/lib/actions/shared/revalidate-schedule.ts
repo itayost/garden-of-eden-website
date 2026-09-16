@@ -3,8 +3,8 @@ import { revalidatePath } from "next/cache";
 /**
  * Invalidates every surface that renders slots.
  *
- * Three pages: the booking calendar, the session-building list, and the weekly
- * page, whose bands and exceptions share these writes.
+ * Three pages: the booking calendar, its weekly template tab (whose bands and
+ * exceptions share these writes), and the session-building list.
  * They used to be listed separately in three files, which is how the build
  * action came to revalidate one of them and not the other.
  *
@@ -20,5 +20,5 @@ import { revalidatePath } from "next/cache";
 export function revalidateScheduleSurfaces(): void {
   revalidatePath("/admin/calendar");
   revalidatePath("/admin/schedule");
-  revalidatePath("/admin/weekly-schedule");
+  revalidatePath("/admin/calendar/template");
 }

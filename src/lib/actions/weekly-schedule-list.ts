@@ -47,7 +47,7 @@ export async function getBandsAction(branchId: string): Promise<BandsResult> {
 
   if (error) {
     console.error("Get weekly bands error:", error);
-    return { error: "שגיאה בטעינת הלוח השבועי" };
+    return { error: "שגיאה בטעינת התבנית השבועית" };
   }
 
   return { success: true, data: (data ?? []) as WeeklyBand[] };
@@ -97,7 +97,7 @@ export async function getWeeklyScheduleAction(
       "Get weekly schedule error:",
       bandsResult.error ?? exceptionsResult.error,
     );
-    return { error: "שגיאה בטעינת הלוח השבועי" };
+    return { error: "שגיאה בטעינת התבנית השבועית" };
   }
 
   return {

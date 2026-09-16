@@ -1,0 +1,52 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { CalendarDays, CalendarRange } from "lucide-react";
+
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
+import { cn } from "@/lib/utils";
+
+export const CALENDAR_PATH = "/admin/calendar";
+export const CALENDAR_TEMPLATE_PATH = "/admin/calendar/template";
+
+const TABS = [
+  { href: CALENDAR_PATH, label: "יומן", Icon: CalendarDays },
+  { href: CALENDAR_TEMPLATE_PATH, label: "תבנית שבועית", Icon: CalendarRange },
+] as const;
+
+/**
+ * The two faces of one calendar: the dated days staff work in, and the standing
+ * week those days are seeded from. Separate routes rather than in-page tabs, so
+ * each loads only its own data and either can be linked to; the branch carries
+ * across.
+ */
+export function CalendarTabs() {
+  const pathname = usePathname();
+  const { branchId } = useCurrentBranch();
+
+  return (
+    <nav aria-label="תצוגות היומן" className="flex w-full gap-1 rounded-xl bg-muted p-1 sm:w-auto">
+      {TABS.map(({ href, label, Icon }) => {
+        const active = pathname === href;
+        return (
+          <Link
+            key={href}
+            href={`${href}?branch=${branchId}`}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors sm:flex-none",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40",
+              active
+                ? "bg-background font-medium text-forest shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
