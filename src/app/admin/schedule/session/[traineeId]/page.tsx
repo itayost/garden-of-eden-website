@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 interface PageProps {
   params: Promise<{ traineeId: string }>;
-  searchParams: Promise<{ date?: string; slot?: string }>;
+  searchParams: Promise<{ date?: string; slot?: string; branch?: string }>;
 }
 
 export default async function SessionBuilderPage({
@@ -33,6 +33,7 @@ export default async function SessionBuilderPage({
   const date =
     query.date && isValidDateString(query.date) ? query.date : israelToday();
   const slotId = query.slot && isValidUUID(query.slot) ? query.slot : null;
+  const branchId = query.branch && isValidUUID(query.branch) ? query.branch : null;
 
   // Admin client for the trainee lookup: no profiles RLS policy lets a
   // trainer read a trainee row, and trainers are this page's primary users.
@@ -73,6 +74,7 @@ export default async function SessionBuilderPage({
       traineeName={trainee.full_name ?? "מתאמן"}
       date={date}
       slotId={slotId}
+      branchId={branchId}
       session={session}
       loadError={loadError}
       programs={programs}
