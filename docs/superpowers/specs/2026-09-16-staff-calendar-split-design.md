@@ -48,9 +48,11 @@ both layouts and switching device width keeps the same day in view.
 Invalid or out-of-range dates fall back to today, with the same
 `MAX_WEEK_OFFSET_DAYS` bound the weekly page uses.
 
-`revalidateScheduleSurfaces()` revalidates `/admin/calendar` and
-`/admin/schedule`. `/admin/weekly-schedule` is dropped from it, because
-after Section 4 that page no longer renders slots.
+`revalidateScheduleSurfaces()` adds `/admin/calendar` and keeps
+`/admin/schedule` and `/admin/weekly-schedule` (band and exception
+writes still need the weekly page refreshed). Actions that revalidate
+`/admin/schedule` alone for roster-visible data (booking, staff payment,
+trainee health) also revalidate `/admin/calendar`.
 
 ## Section 2: Booking calendar (`/admin/calendar`)
 
@@ -84,8 +86,12 @@ The `OnDutyStrip` shows for the selected day.
 
 ### Desktop layout (`md` and up)
 
-A 7-column week grid, reusing `WeekDayColumn` with a calendar variant of
-`WeekSlotCard`. A day header click selects that day (updates `?date=`).
+A 6-column week grid (Saturday below when it has something, as
+today), reusing `WeekDayColumn` and `WeekSlotCard`. A day header click
+selects that day. Both layouts render in one tree and switch with CSS,
+never a `useIsMobile` branch, so hydration cannot remount open dialogs.
+Selecting a day inside the loaded week is client state mirrored to the
+URL with `history.replaceState`.
 
 ### Calendar slot card
 
@@ -98,7 +104,8 @@ and no link to the session builder.
 
 ### Roster panel
 
-Tapping a slot opens a sheet (side on desktop, bottom on phones):
+Tapping a slot opens `SheetDialogContent` (bottom sheet on phones,
+centered dialog from `sm`), the same surface `SlotFormDialog` uses:
 
 - Header: time, trainer, location, occupancy, edit and delete buttons.
   Edit opens `SlotFormDialog` for slot details; delete uses the existing
@@ -189,8 +196,12 @@ New:
 - `src/components/admin/calendar/DateStrip.tsx`
 - `src/components/admin/calendar/CalendarDayList.tsx`
 - `src/components/admin/calendar/CalendarWeekGrid.tsx`
-- `src/components/admin/calendar/CalendarSlotCard.tsx`
 - `src/components/admin/calendar/RosterSheet.tsx`
+- `src/components/admin/schedule/TraineeSearch.tsx` (extracted from
+  `SlotFormDialog`, shared with `RosterSheet`)
+- `src/lib/actions/shared/verify-roster-trainees.ts` (moved out of the
+  mutate file so the roster actions share it)
+- `src/lib/schedule/calendar.ts`, `src/lib/schedule/roster-entry.ts` + tests
 - `src/lib/actions/daily-schedule-roster.ts`
 - `src/lib/schedule/session-worklist.ts` + test
 - `src/components/admin/schedule/SessionWorklist.tsx`
@@ -203,7 +214,9 @@ Changed:
 - `src/lib/actions/daily-schedule-mutate.ts`, `src/lib/validations/schedule.ts`
   (optional roster on update)
 - `SlotFormDialog.tsx` (no roster on edit)
-- `WeekDayColumn.tsx` links to `/admin/calendar?date=`
+- `WeekDayColumn.tsx`: header selects the day; `WeekSlotCard.tsx`: "אין
+  רשומים" for an empty roster, occupancy in destructive colour when over
+- `SessionBuilder.tsx` and the session page: back link carries `branch`
 
 Removed once unused: `ScheduleDayView.tsx`, `SlotCard.tsx`,
 `DatedWeekView.tsx`. Existing files over 400 lines are not grown.
