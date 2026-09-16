@@ -47,3 +47,14 @@ Deriving is what makes the week cheap. Seven days of staffing come from one Band
 The one-way rule is what made the dated week necessary. A slot created on the daily board could not appear on a page that only knew weekdays, and the surprise that caused is what prompted this. The answer is a surface with dates on it, not a write-back: a slot on 18.8 still says nothing about every Tuesday.
 
 Two smaller decisions follow from the same reasoning. Saturday appears only when it holds a slot or a one-off extra — the academy does not staff it, but a slot written there is real and must not be invisible. And a day that already has a board shows only that date's deviations, since the routine staffing is already in the slots and repeating it would be the stale-copy problem in visual form.
+
+## Amendment 2026-09-16: the dated week moved to the calendar
+
+Staff now have two screens instead of one board: `/admin/calendar` (who is in
+which slot, a phone day view and a desktop week grid) and `/admin/schedule`
+(which rostered trainees still need a Training session). The "השבוע הזה" tab
+left this page for the calendar's week grid; `/admin/weekly-schedule` shows the
+standing template and exceptions only. Nothing about deriving staffing or
+materialising slots changed. Rosters edited from the calendar are written one
+entry at a time, so a staff edit cannot delete a booking a trainee made while
+the form was open. Spec: `docs/superpowers/specs/2026-09-16-staff-calendar-split-design.md`.

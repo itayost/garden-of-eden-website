@@ -3,7 +3,10 @@ import { describe, expect, test } from "vitest";
 import {
   slotSchemaWithRosterRule,
   duplicateDaySchema,
+  rosterAddSchema,
+  rosterRemoveSchema,
   slotSchema,
+  slotUpdateSchemaWithRosterRule,
 } from "@/lib/validations/schedule";
 
 const TRAINER = "11111111-1111-4111-8111-111111111111";
@@ -111,5 +114,62 @@ describe("duplicateDaySchema", () => {
       duplicateDaySchema.safeParse({ branchId: BRANCH, fromDate: "2026-08-06", toDate: "2026-08-06" })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("rosterAddSchema", () => {
+  const SLOT = "44444444-4444-4444-8444-444444444444";
+
+  test("accepts a linked trainee", () => {
+    const result = rosterAddSchema.safeParse({ slotId: SLOT, traineeId: TRAINEE, name: " נועם " });
+    expect(result.success && result.data).toEqual({ slotId: SLOT, traineeId: TRAINEE, name: "נועם" });
+  });
+
+  test("accepts free text with no trainee id", () => {
+    const result = rosterAddSchema.safeParse({ slotId: SLOT, name: "אורח" });
+    expect(result.success && result.data.traineeId).toBeNull();
+  });
+
+  test("rejects a bad slot id and an empty name", () => {
+    expect(rosterAddSchema.safeParse({ slotId: "x", name: "אורח" }).success).toBe(false);
+    expect(rosterAddSchema.safeParse({ slotId: SLOT, name: "  " }).success).toBe(false);
+  });
+});
+
+describe("rosterRemoveSchema", () => {
+  test("requires a UUID", () => {
+    expect(rosterRemoveSchema.safeParse({ rosterEntryId: TRAINEE }).success).toBe(true);
+    expect(rosterRemoveSchema.safeParse({ rosterEntryId: "1" }).success).toBe(false);
+  });
+});
+
+describe("slotUpdateSchemaWithRosterRule", () => {
+  const SLOT = "44444444-4444-4444-8444-444444444444";
+
+  test("accepts an update with no trainees field and no seats", () => {
+    const details = Object.fromEntries(
+      Object.entries(validSlot()).filter(([key]) => key !== "trainees"),
+    );
+    const result = slotUpdateSchemaWithRosterRule.safeParse({ ...details, slotId: SLOT });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.trainees).toBeUndefined();
+  });
+
+  test("still rejects an explicitly empty roster on a staff-only slot", () => {
+    const result = slotUpdateSchemaWithRosterRule.safeParse({ ...validSlot({ trainees: [] }), slotId: SLOT });
+    expect(result.success).toBe(false);
+  });
+
+  test("still rejects duplicate linked trainees when a roster is sent", () => {
+    const result = slotUpdateSchemaWithRosterRule.safeParse({
+      ...validSlot({
+        trainees: [
+          { traineeId: TRAINEE, name: "א" },
+          { traineeId: TRAINEE, name: "ב" },
+        ],
+      }),
+      slotId: SLOT,
+    });
+    expect(result.success).toBe(false);
   });
 });

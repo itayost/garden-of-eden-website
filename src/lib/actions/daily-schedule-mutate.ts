@@ -3,10 +3,10 @@
 import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { assertBranchReadable, assertBranchWritable } from "@/lib/actions/shared/assert-branch";
-import { listProfileIdsInBranches } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { verifyRosterTrainees } from "@/lib/actions/shared/verify-roster-trainees";
 import {
   duplicateDaySchema,
   slotIdSchema,
@@ -67,62 +67,6 @@ async function resolveTrainerName(
 }
 
 /**
- * Verifies every linked roster entry points at a real, active trainee.
- *
- * The schema only checks UUID shape and the FK accepts any profile id, so
- * without this a crafted call could plant an admin's — or a deactivated
- * trainee's — id in a roster. The row would look linked on the board but
- * behave as free text and dead-end in the session builder, which filters on
- * role. Cheap to get right here, and the actor set is now every trainer.
- *
- * Admin client for the same reason as resolveTrainerName: a trainer cannot
- * read trainee rows through RLS. Callers are gated on verifyAdminOrTrainer.
- */
-async function verifyRosterTrainees(
-  trainees: { traineeId: string | null; name: string }[],
-  branchId: string,
-): Promise<{ error: string | null }> {
-  const ids = trainees
-    .map((entry) => entry.traineeId)
-    .filter((id): id is string => id !== null);
-
-  // An all-free-text roster is legitimate — those names have no account.
-  if (ids.length === 0) return { error: null };
-
-  const db = createAdminClient();
-  const [{ data, error }, members] = await Promise.all([
-    db
-      .from("profiles")
-      .select("id")
-      .in("id", ids)
-      .eq("role", "trainee")
-      .eq("is_active", true)
-      .is("deleted_at", null),
-    listProfileIdsInBranches(db, [branchId]),
-  ]);
-
-  if (error) {
-    console.error("Verify roster trainees error:", error);
-    return { error: "שגיאה באימות רשימת המתאמנים" };
-  }
-
-  // The schema already rejects duplicate ids, so a matching count means every
-  // id resolved to a distinct active trainee.
-  if ((data?.length ?? 0) !== ids.length) {
-    return { error: "אחד המתאמנים ברשימה אינו קיים או אינו פעיל" };
-  }
-
-  // The pick-list only offers this branch's trainees; a direct call must not
-  // roster someone from another branch.
-  const memberSet = new Set(members);
-  if (!ids.every((id) => memberSet.has(id))) {
-    return { error: "אחד המתאמנים ברשימה אינו בסניף הזה" };
-  }
-
-  return { error: null };
-}
-
-/**
  * Atomic roster replace via the replace_slot_roster RPC — delete + insert in
  * one transaction, so a failure can never leave a slot with a lost or partial
  * roster. SECURITY INVOKER: the staff (admin or trainer) RLS write policy on
@@ -154,6 +98,26 @@ async function replaceRoster(
     return { error: "שגיאה בשמירת רשימת המתאמנים" };
   }
   return { error: null };
+}
+
+/** The slot's current non-cancelled roster, in the shape the roster checks take. */
+async function loadActiveRoster(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  slotId: string,
+): Promise<{ traineeId: string | null; name: string }[] | { error: string }> {
+  const { data, error } = (await typedFrom(supabase, "daily_schedule_slot_trainees")
+    .select("trainee_id, trainee_name")
+    .eq("slot_id", slotId)
+    .is("cancelled_at", null)) as {
+    data: { trainee_id: string | null; trainee_name: string }[] | null;
+    error: { message: string } | null;
+  };
+
+  if (error) {
+    console.error("Load slot roster error:", error);
+    return { error: "שגיאה בטעינת רשימת המתאמנים" };
+  }
+  return (data ?? []).map((row) => ({ traineeId: row.trainee_id, name: row.trainee_name }));
 }
 
 /** Roster rows for insert, preserving the order the admin arranged. */
@@ -236,9 +200,9 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
 }
 
 /**
- * Updates a slot. The roster is replaced wholesale (delete + insert) — the
- * form always submits the complete list, and roster rows carry no state of
- * their own worth preserving.
+ * Updates a slot. The roster is replaced wholesale only when `trainees` is
+ * sent; the calendar omits it and edits rosters one entry at a time, so a
+ * booking made while the form was open is never deleted.
  *
  * Any staff member may edit any slot: the board is one shared document, and a
  * trainer who spots a wrong hour fixes it rather than chasing an admin.
@@ -260,9 +224,11 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const supabase = await createClient();
 
   const { data: existing } = (await typedFrom(supabase, "daily_schedule_slots")
-    .select("id, branch_id")
+    .select("id, branch_id, max_trainees")
     .eq("id", slotId)
-    .maybeSingle()) as { data: { id: string; branch_id: string | null } | null };
+    .maybeSingle()) as {
+    data: { id: string; branch_id: string | null; max_trainees: number | null } | null;
+  };
 
   if (!existing) return { error: "הסלוט לא נמצא" };
 
@@ -276,8 +242,21 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const trainerResult = await resolveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
-  const rosterCheck = await verifyRosterTrainees(trainees, branchId);
-  if (rosterCheck.error) return { error: rosterCheck.error };
+  // With no roster sent, the kept roster is still what the checks apply to: a
+  // slot moved to another branch must not carry trainees from the old one, and
+  // a slot losing its seats must still name someone. A slot seeded rosterless
+  // from the weekly schedule never had seats, so editing its hour or trainer
+  // stays possible before anyone is added.
+  const rosterToCheck = trainees ?? (await loadActiveRoster(supabase, slotId));
+  if ("error" in rosterToCheck) return { error: rosterToCheck.error };
+  const losesSeats = existing.max_trainees !== null && maxTrainees === null;
+  if (rosterToCheck.length === 0 && maxTrainees === null && (trainees !== undefined || losesSeats)) {
+    return { error: "יש להוסיף לפחות מתאמן אחד" };
+  }
+  if (trainees !== undefined || existing.branch_id !== branchId) {
+    const rosterCheck = await verifyRosterTrainees(rosterToCheck, branchId);
+    if (rosterCheck.error) return { error: rosterCheck.error };
+  }
 
   const branchCheck = await assertBranchWritable(branchId);
   if (branchCheck.error) return { error: branchCheck.error };
@@ -302,8 +281,10 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     return { error: "שגיאה בעדכון הסלוט" };
   }
 
-  const { error: rosterError } = await replaceRoster(supabase, slotId, trainees);
-  if (rosterError) return { error: rosterError };
+  if (trainees !== undefined) {
+    const { error: rosterError } = await replaceRoster(supabase, slotId, trainees);
+    if (rosterError) return { error: rosterError };
+  }
 
   revalidateScheduleSurfaces();
 

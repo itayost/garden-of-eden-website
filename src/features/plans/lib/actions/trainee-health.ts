@@ -69,5 +69,6 @@ export async function updateTraineeHealthAction(input: HealthInput): Promise<Act
 
   revalidatePath(`/admin/users/${parsed.data.traineeId}`);
   revalidatePath("/admin/schedule");
+  revalidatePath("/admin/calendar");
   return { success: true };
 }

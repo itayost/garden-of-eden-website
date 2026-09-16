@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { CalendarOff, ExternalLink, Plus } from "lucide-react";
+import { CalendarOff, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,7 +20,10 @@ interface WeekDayColumnProps {
   /** The standing template failed to load; do not claim a day has no staffing. */
   templateFailed: boolean;
   onAddSlot: (day: WeekDay) => void;
-  onEditSlot: (day: WeekDay, slot: ScheduleSlot) => void;
+  /** The day the calendar's header actions currently apply to. */
+  isSelected: boolean;
+  onSelectDay: (day: WeekDay) => void;
+  onOpenSlot: (slot: ScheduleSlot) => void;
   onAddException: (day: WeekDay) => void;
 }
 
@@ -34,7 +36,9 @@ export function WeekDayColumn({
   isAdmin,
   templateFailed,
   onAddSlot,
-  onEditSlot,
+  isSelected,
+  onSelectDay,
+  onOpenSlot,
   onAddException,
 }: WeekDayColumnProps) {
   const absentTrainerIds = new Set(
@@ -43,28 +47,24 @@ export function WeekDayColumn({
 
   return (
     <section className="space-y-2">
-      <h2
-        className={cn(
-          "flex items-center justify-between gap-1 rounded-lg px-2 py-1.5 font-display text-sm",
-          day.isToday ? "bg-forest text-cream" : "bg-muted text-forest",
-          day.isPast && !day.isToday && "opacity-70",
-        )}
-      >
-        <span className="truncate">
-          {WEEKDAY_LABELS[day.weekday]}{" "}
-          <span className="tabular-nums opacity-80">{shortDate(day.date)}</span>
-        </span>
-
-        {/* No prefetch: six of these in one viewport would fire six full daily
-            boards, each with its own pick-lists, on nothing but a scroll. */}
-        <Link
-          href={`/admin/schedule?date=${day.date}`}
-          prefetch={false}
-          className="shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
-          aria-label={`פתיחת הלוח היומי של ${WEEKDAY_LABELS[day.weekday]} ${shortDate(day.date)}`}
+      <h2>
+        <button
+          type="button"
+          onClick={() => onSelectDay(day)}
+          aria-pressed={isSelected}
+          className={cn(
+            "flex w-full items-center justify-between gap-1 rounded-lg px-2 py-1.5 font-display text-sm transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40",
+            day.isToday ? "bg-forest text-cream" : "bg-muted text-forest hover:bg-muted/70",
+            isSelected && "ring-2 ring-forest/50 ring-offset-1",
+            day.isPast && !day.isToday && "opacity-70",
+          )}
         >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
+          <span className="truncate">
+            {WEEKDAY_LABELS[day.weekday]}{" "}
+            <span className="tabular-nums opacity-80">{shortDate(day.date)}</span>
+          </span>
+        </button>
       </h2>
 
       {day.isBuilt ? (
@@ -76,7 +76,7 @@ export function WeekDayColumn({
               isTrainerAbsent={
                 slot.trainer_id !== null && absentTrainerIds.has(slot.trainer_id)
               }
-              onEdit={() => onEditSlot(day, slot)}
+              onOpen={() => onOpenSlot(slot)}
             />
           ))}
           <DayDeviations onDuty={day.onDuty} />

@@ -16,3 +16,5 @@ export {
   duplicateDayAction,
   updateSlotAction,
 } from "./daily-schedule-mutate";
+
+export { addSlotTraineeAction, removeSlotTraineeAction } from "./daily-schedule-roster";

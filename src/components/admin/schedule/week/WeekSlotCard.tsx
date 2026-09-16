@@ -13,7 +13,8 @@ interface WeekSlotCardProps {
    * A board that still staffs them is the contradiction worth surfacing.
    */
   isTrainerAbsent: boolean;
-  onEdit: () => void;
+  /** Opens the calendar's roster sheet for this slot. */
+  onOpen: () => void;
 }
 
 /** "6 מתאמנים", or the singular Hebrew reads wrong with a numeral. */
@@ -22,33 +23,30 @@ function rosterLabel(count: number): string {
 }
 
 /**
- * One slot as it appears in a week column.
+ * One slot in the calendar, in the phone day list and the desktop week grid.
  *
- * Deliberately narrower than SlotCard: at six columns there is room for the
- * hour, who takes it, and how many names — the names themselves are one click
- * away on the daily board, which is where a roster is actually worked with. It
- * carries no delete either; deleting from a planning overview is the wrong
- * place for a confirmation dialog.
- *
- * A seeded slot says so instead of showing "0 מתאמנים", because a rosterless
- * slot is half-built rather than empty.
+ * Narrow on purpose: the hour, who takes it, and how full it is. Tapping it
+ * opens the roster sheet, which is where names are added, removed and where
+ * the slot is edited or deleted. It carries no session status; building
+ * sessions is the בניית אימונים screen.
  */
-export function WeekSlotCard({ slot, isTrainerAbsent, onEdit }: WeekSlotCardProps) {
+export function WeekSlotCard({ slot, isTrainerAbsent, onOpen }: WeekSlotCardProps) {
   const palette = trainerColor(slot.trainer_id);
   const rosterCount = slot.trainees.filter((t) => t.cancelled_at === null).length;
-  const seats = slot.max_trainees === null ? null : `${rosterCount}/${slot.max_trainees}`;
+  const overCapacity = slot.max_trainees !== null && rosterCount > slot.max_trainees;
+  const seats = slot.max_trainees === null ? null : `${rosterCount}/${slot.max_trainees} מקומות`;
   const subtitle = slot.focus_he ?? slot.location_he;
 
   return (
     <button
       type="button"
-      onClick={onEdit}
+      onClick={onOpen}
       className={cn(
         "w-full rounded-xl border p-2.5 text-start transition-colors",
         "hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40",
         palette.bg,
       )}
-      aria-label={`עריכת הסלוט של ${slot.trainer_name ?? "ללא מאמן"} בשעה ${slot.start_time.slice(0, 5)}`}
+      aria-label={`רשימת המתאמנים של ${slot.trainer_name ?? "ללא מאמן"} בשעה ${slot.start_time.slice(0, 5)}`}
     >
       <p className="font-display text-sm tabular-nums text-forest">
         {slot.start_time.slice(0, 5)}
@@ -76,16 +74,12 @@ export function WeekSlotCard({ slot, isTrainerAbsent, onEdit }: WeekSlotCardProp
 
       <p
         className={cn(
-          "mt-1.5 flex items-center gap-1 text-[11px]",
-          // A seeded slot is unfinished work, not a styling variant.
-          rosterCount === 0
-            ? "font-medium text-gold"
-            : "text-muted-foreground",
+          "mt-1.5 flex items-center gap-1 text-[11px] tabular-nums",
+          overCapacity ? "font-medium text-destructive" : "text-muted-foreground",
         )}
       >
         <Users className="h-3 w-3 shrink-0" />
-        {rosterCount === 0 ? "הוספת מתאמנים" : rosterLabel(rosterCount)}
-        {seats && <span className="ms-1 text-muted-foreground">· {seats} מקומות · הרשמה עצמית</span>}
+        {rosterCount === 0 ? "אין רשומים" : seats ?? rosterLabel(rosterCount)}
       </p>
     </button>
   );

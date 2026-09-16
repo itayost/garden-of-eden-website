@@ -28,7 +28,7 @@ function toHhMm(time: string): string {
 /**
  * 0 = Sunday .. 6 = Saturday.
  *
- * UTC throughout, matching weekdayName() in ScheduleDayView and addDays()
+ * UTC throughout, matching addDays()
  * beside it: an ISO date is a calendar date, and parsing it in the machine's
  * local zone would shift the weekday for anyone west of Israel.
  */

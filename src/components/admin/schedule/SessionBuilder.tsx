@@ -64,6 +64,8 @@ interface SessionBuilderProps {
   date: string;
   /** Slot the builder was opened from, recorded on the session. */
   slotId: string | null;
+  /** The branch the worklist was showing, so "back" returns to it. */
+  branchId: string | null;
   /** Existing session for this trainee+date, or null when building fresh. */
   session: TrainingSession | null;
   loadError: string | null;
@@ -96,6 +98,7 @@ export function SessionBuilder({
   traineeName,
   date,
   slotId,
+  branchId,
   session,
   loadError,
   programs,
@@ -118,7 +121,7 @@ export function SessionBuilder({
   const [deleting, setDeleting] = useState(false);
   const [loadingPrevious, setLoadingPrevious] = useState(false);
 
-  const backHref = `/admin/schedule?date=${date}`;
+  const backHref = `/admin/schedule?date=${date}${branchId ? `&branch=${branchId}` : ""}`;
 
   // What the trainee actually did — keyed by SESSION-EXERCISE id (the row key
   // of existing rows), so two rows of the same library exercise keep their own
@@ -267,7 +270,7 @@ export function SessionBuilder({
           <Button variant="outline" asChild>
             <Link href={backHref}>
               <ArrowRight className="me-2 h-4 w-4" />
-              חזרה ללוח
+              חזרה לרשימה
             </Link>
           </Button>
         </CardContent>
@@ -292,7 +295,7 @@ export function SessionBuilder({
         <Button variant="ghost" asChild>
           <Link href={backHref}>
             <ArrowRight className="me-2 h-4 w-4" />
-            חזרה ללוח
+            חזרה לרשימה
           </Link>
         </Button>
       </div>
