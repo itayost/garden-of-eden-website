@@ -6,6 +6,7 @@ import {
   rosterAddSchema,
   rosterRemoveSchema,
   slotSchema,
+  slotUpdateSchemaWithRosterRule,
 } from "@/lib/validations/schedule";
 
 const TRAINER = "11111111-1111-4111-8111-111111111111";
@@ -139,5 +140,36 @@ describe("rosterRemoveSchema", () => {
   test("requires a UUID", () => {
     expect(rosterRemoveSchema.safeParse({ rosterEntryId: TRAINEE }).success).toBe(true);
     expect(rosterRemoveSchema.safeParse({ rosterEntryId: "1" }).success).toBe(false);
+  });
+});
+
+describe("slotUpdateSchemaWithRosterRule", () => {
+  const SLOT = "44444444-4444-4444-8444-444444444444";
+
+  test("accepts an update with no trainees field and no seats", () => {
+    const details = Object.fromEntries(
+      Object.entries(validSlot()).filter(([key]) => key !== "trainees"),
+    );
+    const result = slotUpdateSchemaWithRosterRule.safeParse({ ...details, slotId: SLOT });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.trainees).toBeUndefined();
+  });
+
+  test("still rejects an explicitly empty roster on a staff-only slot", () => {
+    const result = slotUpdateSchemaWithRosterRule.safeParse({ ...validSlot({ trainees: [] }), slotId: SLOT });
+    expect(result.success).toBe(false);
+  });
+
+  test("still rejects duplicate linked trainees when a roster is sent", () => {
+    const result = slotUpdateSchemaWithRosterRule.safeParse({
+      ...validSlot({
+        trainees: [
+          { traineeId: TRAINEE, name: "א" },
+          { traineeId: TRAINEE, name: "ב" },
+        ],
+      }),
+      slotId: SLOT,
+    });
+    expect(result.success).toBe(false);
   });
 });

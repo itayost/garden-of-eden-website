@@ -220,8 +220,10 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const trainerResult = await resolveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
-  const rosterCheck = await verifyRosterTrainees(trainees, branchId);
-  if (rosterCheck.error) return { error: rosterCheck.error };
+  if (trainees !== undefined) {
+    const rosterCheck = await verifyRosterTrainees(trainees, branchId);
+    if (rosterCheck.error) return { error: rosterCheck.error };
+  }
 
   const branchCheck = await assertBranchWritable(branchId);
   if (branchCheck.error) return { error: branchCheck.error };
@@ -246,8 +248,10 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     return { error: "שגיאה בעדכון הסלוט" };
   }
 
-  const { error: rosterError } = await replaceRoster(supabase, slotId, trainees);
-  if (rosterError) return { error: rosterError };
+  if (trainees !== undefined) {
+    const { error: rosterError } = await replaceRoster(supabase, slotId, trainees);
+    if (rosterError) return { error: rosterError };
+  }
 
   revalidateScheduleSurfaces();
 

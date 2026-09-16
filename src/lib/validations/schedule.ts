@@ -82,6 +82,12 @@ export const slotSchemaWithRosterRule = slotSchema.refine(
 
 export const slotUpdateSchema = slotSchema.extend({
   slotId: uuidSchema,
+  /**
+   * Absent means "leave the roster as it is". The calendar edits rosters one
+   * entry at a time, and resending a stale list would delete bookings made
+   * while the form was open.
+   */
+  trainees: slotSchema.shape.trainees.optional(),
 });
 
 export const slotIdSchema = z.object({ slotId: uuidSchema });
@@ -109,6 +115,6 @@ export type RosterAddInput = z.input<typeof rosterAddSchema>;
 export type RosterRemoveInput = z.input<typeof rosterRemoveSchema>;
 
 export const slotUpdateSchemaWithRosterRule = slotUpdateSchema.refine(
-  (v) => v.trainees.length > 0 || v.maxTrainees !== null,
+  (v) => v.trainees === undefined || v.trainees.length > 0 || v.maxTrainees !== null,
   { message: "יש להוסיף לפחות מתאמן אחד", path: ["trainees"] },
 );
