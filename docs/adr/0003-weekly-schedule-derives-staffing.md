@@ -58,3 +58,12 @@ standing template and exceptions only. Nothing about deriving staffing or
 materialising slots changed. Rosters edited from the calendar are written one
 entry at a time, so a staff edit cannot delete a booking a trainee made while
 the form was open. Spec: `docs/superpowers/specs/2026-09-16-staff-calendar-split-design.md`.
+
+## Amendment 2026-09-16: the template is a tab of the calendar
+
+The standing week moved from `/admin/weekly-schedule` to
+`/admin/calendar/template`, shown as the "תבנית שבועית" tab next to "יומן". It
+is a setting of the calendar rather than a separate job, and staff open it far
+less often than the dated days, so it no longer has its own menu item. The old
+address redirects, keeping `?branch=`. Nothing about deriving staffing changed.
+

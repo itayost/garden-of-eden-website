@@ -116,7 +116,7 @@ export async function buildDayFromWeeklyScheduleAction(
       "Build day fetch error:",
       bandsResult.error ?? exceptionsResult.error,
     );
-    return { error: "שגיאה בטעינת הלוח השבועי" };
+    return { error: "שגיאה בטעינת התבנית השבועית" };
   }
 
   const onDuty = deriveOnDuty(
@@ -126,7 +126,7 @@ export async function buildDayFromWeeklyScheduleAction(
   );
 
   if (onDuty.bands.length === 0) {
-    return { error: "אין שיבוץ בלוח השבועי ליום זה" };
+    return { error: "אין שיבוץ בתבנית השבועית ליום זה" };
   }
 
   const rows = slotRowsFor(date, onDuty, user!.id, branchId);
@@ -211,7 +211,7 @@ export async function buildWeekFromWeeklyScheduleAction(
       "Build week fetch error:",
       slotsResult.error ?? bandsResult.error ?? exceptionsResult.error,
     );
-    return { error: "שגיאה בטעינת הלוח השבועי" };
+    return { error: "שגיאה בטעינת התבנית השבועית" };
   }
 
   // Saturday is excluded by buildWeek's grid: the academy does not staff it, so

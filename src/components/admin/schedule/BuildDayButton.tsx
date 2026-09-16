@@ -68,19 +68,19 @@ export function BuildDayButton({
           size={compact ? "sm" : "default"}
           className={compact ? "w-full text-xs" : undefined}
           disabled={targetHasSlots || bandCount === 0}
-          aria-label="בנה מהלוח השבועי"
+          aria-label="בנה מהתבנית השבועית"
         >
           <CalendarRange className="h-4 w-4" />
           {/* Icon-only on a phone on the daily board; a column always has room
               for the words, and an unlabelled icon there would be a riddle. */}
           <span className={compact ? undefined : "hidden sm:inline"}>
-            בנה מהלוח השבועי
+            בנה מהתבנית השבועית
           </span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>בניית לוח מהלוח השבועי</AlertDialogTitle>
+          <AlertDialogTitle>בניית היום מהתבנית השבועית</AlertDialogTitle>
           <AlertDialogDescription>
             ייווצרו {bandCount} סלוטים לפי השיבוץ השבועי — שעה, מאמן ומיקום.
             רשימות המתאמנים יישארו ריקות ויש להשלים אותן. רצועות ״חיזוק במידת

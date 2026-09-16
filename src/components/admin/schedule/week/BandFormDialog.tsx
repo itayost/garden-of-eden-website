@@ -226,7 +226,7 @@ export function BandFormDialog({
               onChange={(event) => setLabel(event.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              משמש כפוקוס כשבונים יום מהלוח השבועי.
+              משמש כפוקוס כשבונים יום מהתבנית השבועית.
             </p>
           </div>
 

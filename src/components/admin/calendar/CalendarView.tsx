@@ -24,6 +24,7 @@ import { isBuildableDay, weekRangeLabel, type Week, type WeekDay } from "@/lib/u
 import type { StaffPlanBadge } from "@/types/plans";
 import type { ScheduleSlot } from "@/types/schedule";
 import { CalendarDayList } from "./CalendarDayList";
+import { CalendarTabs } from "./CalendarTabs";
 import { DateStrip } from "./DateStrip";
 import { RosterSheet } from "./RosterSheet";
 
@@ -127,6 +128,8 @@ export function CalendarView({
 
   return (
     <div className="space-y-5">
+      <CalendarTabs />
+
       <div className="flex flex-wrap items-center gap-2">
         {/* Phone: one day at a time. RTL: "previous" points right. */}
         <div className="flex items-center gap-2 md:hidden">

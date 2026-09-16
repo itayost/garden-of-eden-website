@@ -78,7 +78,7 @@ export function BuildWeekButton({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>בניית השבוע מהלוח השבועי</AlertDialogTitle>
+          <AlertDialogTitle>בניית השבוע מהתבנית השבועית</AlertDialogTitle>
           <AlertDialogDescription>
             ייווצרו {slotCount} סלוטים ב-{buildableCount} ימים שעדיין לא נבנו.
             ימים שכבר יש להם לוח, וימים שעברו, לא ישתנו. רשימות המתאמנים יישארו

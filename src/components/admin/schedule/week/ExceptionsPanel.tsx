@@ -74,7 +74,7 @@ export function ExceptionsPanel({
           <div>
             <CardTitle className="text-lg">חריגות</CardTitle>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              היעדרות או תוספת בתאריך מסוים. הלוח השבועי עצמו לא משתנה.
+              היעדרות או תוספת בתאריך מסוים. התבנית השבועית עצמה לא משתנה.
             </p>
           </div>
           {canEdit && (
