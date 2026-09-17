@@ -99,7 +99,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle2", timeout: 15000 });
+    // setContent only accepts load events since puppeteer-core 24.4x; wait for
+    // images and fonts separately (networkidle2 allowed up to 2 open requests).
+    await page.setContent(html, { waitUntil: "load", timeout: 15000 });
+    await page.waitForNetworkIdle({ concurrency: 2, idleTime: 500, timeout: 15000 });
     // Buffer.from() normalises Uint8Array (puppeteer-core v21+) and Buffer equally
     pdf = Buffer.from(await page.pdf({ format: "A4", printBackground: true }));
   } catch (err) {
