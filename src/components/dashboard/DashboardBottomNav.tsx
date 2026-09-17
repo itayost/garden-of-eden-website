@@ -46,7 +46,7 @@ export function DashboardBottomNav({ tier, canBook }: DashboardBottomNavProps) {
               <span className="text-[10px] font-medium leading-none">עוד</span>
             </button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="rounded-t-2xl pb-safe">
+          <SheetContent side="bottom" className="rounded-t-2xl pb-safe" aria-describedby={undefined}>
             <SheetTitle className="sr-only">תפריט נוסף</SheetTitle>
             <nav className="flex flex-col gap-1 pt-2">
               {moreItems.map((item) => {

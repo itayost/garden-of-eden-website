@@ -65,9 +65,9 @@ export function OrderStatusPoller({ orderId }: { orderId: string }) {
 
   return (
     <div className="space-y-2 text-center">
-      <Loader2 className="mx-auto h-12 w-12 animate-spin text-black/40" />
+      <Loader2 className="mx-auto h-12 w-12 animate-spin text-black/40" aria-hidden="true" />
       <h1 className="text-2xl font-bold">ממתינים לאישור התשלום</h1>
-      <p className="text-black/60">זה לוקח כמה שניות.</p>
+      <p role="status" className="text-black/60">זה לוקח כמה שניות.</p>
     </div>
   );
 }

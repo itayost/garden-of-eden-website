@@ -175,9 +175,10 @@ export function LeadDataTable({
           table.getRowModel().rows.map((row) => {
             const lead = row.original;
             return (
-              <div
+              <button
+                type="button"
                 key={row.id}
-                className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
+                className="flex w-full items-center gap-3 p-3 rounded-lg border cursor-pointer text-start hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => handleRowClick(lead)}
               >
                 <div className="flex-1 min-w-0">
@@ -207,7 +208,7 @@ export function LeadDataTable({
                 <span className="text-xs text-muted-foreground">
                   {new Date(lead.created_at).toLocaleDateString("he-IL")}
                 </span>
-              </div>
+              </button>
             );
           })
         ) : (
@@ -246,9 +247,25 @@ export function LeadDataTable({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
+                      {cell.column.id === "name" ? (
+                        <button
+                          type="button"
+                          className="rounded-sm text-start font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(row.original);
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </button>
+                      ) : (
+                        flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )
                       )}
                     </TableCell>
                   ))}

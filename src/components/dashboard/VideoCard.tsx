@@ -76,7 +76,7 @@ export function VideoCard({ video, watched: initialWatched }: VideoCardProps) {
                 </div>
               </button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl p-0">
+            <DialogContent className="max-w-4xl p-0" aria-describedby={undefined}>
               <DialogHeader className="p-4 pb-0">
                 <DialogTitle>{video.title}</DialogTitle>
               </DialogHeader>

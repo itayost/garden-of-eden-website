@@ -141,6 +141,7 @@ export function UserTableToolbar({
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="חיפוש לפי שם או טלפון..."
+            aria-label="חיפוש לפי שם או טלפון"
             value={searchInput}
             onChange={handleSearchChange}
             className="pr-9"
@@ -150,7 +151,7 @@ export function UserTableToolbar({
         {/* Role Filter (admin only - trainers only see trainees) */}
         {isAdmin && (
           <Select value={role || "all"} onValueChange={handleRoleChange}>
-            <SelectTrigger className="w-full md:w-32">
+            <SelectTrigger className="w-full md:w-32" aria-label="סינון לפי תפקיד">
               <SelectValue placeholder="תפקיד" />
             </SelectTrigger>
             <SelectContent>
@@ -164,7 +165,7 @@ export function UserTableToolbar({
 
         {/* Status Filter */}
         <Select value={status || "all"} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-full md:w-32">
+          <SelectTrigger className="w-full md:w-32" aria-label="סינון לפי סטטוס">
             <SelectValue placeholder="סטטוס" />
           </SelectTrigger>
           <SelectContent>
@@ -176,7 +177,7 @@ export function UserTableToolbar({
 
         {/* Position Filter */}
         <Select value={position || POSITION_FILTER_ALL} onValueChange={handlePositionChange}>
-          <SelectTrigger className="w-full md:w-40">
+          <SelectTrigger className="w-full md:w-40" aria-label="סינון לפי עמדה">
             <SelectValue placeholder="עמדה" />
           </SelectTrigger>
           <SelectContent>
@@ -190,7 +191,7 @@ export function UserTableToolbar({
 
         {/* Branch Filter */}
         <Select value={branch || BRANCH_FILTER_ALL} onValueChange={handleBranchChange}>
-          <SelectTrigger className="w-full md:w-40">
+          <SelectTrigger className="w-full md:w-40" aria-label="סינון לפי סניף">
             <SelectValue placeholder="סניף" />
           </SelectTrigger>
           <SelectContent>

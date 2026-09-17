@@ -181,67 +181,85 @@ export function AssessmentsMonthView({ month, year, branches }: AssessmentsMonth
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card
-          className={`cursor-pointer transition-colors ${
-            activeStatus === "full"
-              ? "border-primary ring-1 ring-primary"
-              : "hover:border-primary/50"
-          }`}
+        <button
+          type="button"
+          aria-pressed={activeStatus === "full"}
           onClick={() => handleStatusCardClick("full")}
+          className="w-full rounded-xl text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">
-              מבדק מלא
-            </CardTitle>
-            <ClipboardCheck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.fullCount ?? "—"}</div>
-            <p className="text-xs text-muted-foreground">{monthLabel}</p>
-          </CardContent>
-        </Card>
+          <Card
+            className={`h-full cursor-pointer transition-colors ${
+              activeStatus === "full"
+                ? "border-primary ring-1 ring-primary"
+                : "hover:border-primary/50"
+            }`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-green-700">
+                מבדק מלא
+              </CardTitle>
+              <ClipboardCheck className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data?.fullCount ?? "—"}</div>
+              <p className="text-xs text-muted-foreground">{monthLabel}</p>
+            </CardContent>
+          </Card>
+        </button>
 
-        <Card
-          className={`cursor-pointer transition-colors ${
-            activeStatus === "partial"
-              ? "border-amber-500 ring-1 ring-amber-500"
-              : "hover:border-amber-300"
-          }`}
+        <button
+          type="button"
+          aria-pressed={activeStatus === "partial"}
           onClick={() => handleStatusCardClick("partial")}
+          className="w-full rounded-xl text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-amber-700">
-              מבדק חלקי
-            </CardTitle>
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {data?.partialCount ?? "—"}
-            </div>
-            <p className="text-xs text-muted-foreground">{monthLabel}</p>
-          </CardContent>
-        </Card>
+          <Card
+            className={`h-full cursor-pointer transition-colors ${
+              activeStatus === "partial"
+                ? "border-amber-500 ring-1 ring-amber-500"
+                : "hover:border-amber-300"
+            }`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-amber-700">
+                מבדק חלקי
+              </CardTitle>
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {data?.partialCount ?? "—"}
+              </div>
+              <p className="text-xs text-muted-foreground">{monthLabel}</p>
+            </CardContent>
+          </Card>
+        </button>
 
-        <Card
-          className={`cursor-pointer transition-colors ${
-            activeStatus === "none"
-              ? "border-destructive ring-1 ring-destructive"
-              : "hover:border-destructive/30"
-          }`}
+        <button
+          type="button"
+          aria-pressed={activeStatus === "none"}
           onClick={() => handleStatusCardClick("none")}
+          className="w-full rounded-xl text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              ללא מבדק
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.noneCount ?? "—"}</div>
-            <p className="text-xs text-muted-foreground">{monthLabel}</p>
-          </CardContent>
-        </Card>
+          <Card
+            className={`h-full cursor-pointer transition-colors ${
+              activeStatus === "none"
+                ? "border-destructive ring-1 ring-destructive"
+                : "hover:border-destructive/30"
+            }`}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                ללא מבדק
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data?.noneCount ?? "—"}</div>
+              <p className="text-xs text-muted-foreground">{monthLabel}</p>
+            </CardContent>
+          </Card>
+        </button>
       </div>
 
       {/* Table Card */}

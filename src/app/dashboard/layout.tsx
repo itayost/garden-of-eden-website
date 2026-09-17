@@ -78,7 +78,7 @@ export default async function DashboardLayout({
           titles={DASHBOARD_PAGE_TITLES}
           fallbackTitle="ראשי"
         />
-        <main className="container mx-auto px-4 pt-6 pb-20 md:pb-8">
+        <main id="main-content" tabIndex={-1} className="outline-none container mx-auto px-4 pt-6 pb-20 md:pb-8">
           {children}
         </main>
         <DashboardBottomNav tier={tier} canBook={canBook} />

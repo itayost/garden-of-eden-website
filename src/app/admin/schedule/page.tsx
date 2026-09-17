@@ -63,6 +63,7 @@ export default async function SessionWorklistPage({ searchParams }: PageProps) {
 
   return (
     <BranchProvider value={{ branchId, branches, canSwitch: branches.length > 1 }}>
+      <h1 className="sr-only">בניית אימונים</h1>
       <SessionWorklist
         date={date}
         today={today}

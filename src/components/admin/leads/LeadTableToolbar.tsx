@@ -130,13 +130,14 @@ export function LeadTableToolbar({
           <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="חיפוש לפי שם או טלפון..."
+            aria-label="חיפוש לפי שם או טלפון"
             value={searchInput}
             onChange={handleSearchChange}
             className="pr-9"
           />
         </div>
         <Select value={status || "all"} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-full md:w-40">
+          <SelectTrigger className="w-full md:w-40" aria-label="סינון לפי סטטוס">
             <SelectValue placeholder="סטטוס" />
           </SelectTrigger>
           <SelectContent>
@@ -163,7 +164,7 @@ export function LeadTableToolbar({
           </Label>
         </div>
         <Select value={team || "all"} onValueChange={handleTeamChange}>
-          <SelectTrigger className="w-full md:w-40">
+          <SelectTrigger className="w-full md:w-40" aria-label="סינון לפי קבוצה">
             <SelectValue placeholder="קבוצה" />
           </SelectTrigger>
           <SelectContent>
@@ -176,7 +177,7 @@ export function LeadTableToolbar({
           </SelectContent>
         </Select>
         <Select value={flow || "all"} onValueChange={handleFlowChange}>
-          <SelectTrigger className="w-full md:w-36">
+          <SelectTrigger className="w-full md:w-36" aria-label="סינון לפי סטטוס שיחה">
             <SelectValue placeholder="Flow" />
           </SelectTrigger>
           <SelectContent>
@@ -189,7 +190,7 @@ export function LeadTableToolbar({
           value={assignedTrainer || "all"}
           onValueChange={handleAssignedTrainerChange}
         >
-          <SelectTrigger className="w-full md:w-44">
+          <SelectTrigger className="w-full md:w-44" aria-label="סינון לפי מאמן משוייך">
             <SelectValue placeholder="מאמן משוייך" />
           </SelectTrigger>
           <SelectContent>

@@ -140,7 +140,7 @@ export function PlayerCard({
       {/* Card template background */}
       <Image
         src={config.templateImage}
-        alt="Card background"
+        alt=""
         fill
         className="object-contain"
         priority

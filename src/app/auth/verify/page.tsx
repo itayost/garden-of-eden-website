@@ -10,7 +10,7 @@ import { formatPhoneToLocal } from "@/lib/validations/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const OTP_LENGTH = 6;
@@ -22,6 +22,7 @@ export default function VerifyPage() {
   const [resending, setResending] = useState(false);
   const [phone, setPhone] = useState("");
   const [countdown, setCountdown] = useState(60);
+  const [error, setError] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
 
@@ -82,10 +83,11 @@ export default function VerifyPage() {
 
     const code = otp.join("");
     if (code.length !== OTP_LENGTH) {
-      toast.error(`נא להזין קוד בן ${OTP_LENGTH} ספרות`);
+      setError(`נא להזין קוד בן ${OTP_LENGTH} ספרות`);
       return;
     }
 
+    setError(null);
     setLoading(true);
 
     try {
@@ -110,7 +112,7 @@ export default function VerifyPage() {
       window.location.href = redirect;
     } catch (error: unknown) {
       console.error("Verify error:", error);
-      toast.error(getOtpErrorMessage(error, "קוד האימות שגוי"));
+      setError(getOtpErrorMessage(error, "קוד האימות שגוי"));
       setOtp(Array(OTP_LENGTH).fill(""));
       inputRefs.current[0]?.focus();
     } finally {
@@ -134,6 +136,7 @@ export default function VerifyPage() {
       if (error) throw error;
 
       setCountdown(60);
+      setError(null);
       toast.success("קוד חדש נשלח");
     } catch (error: unknown) {
       console.error("Resend error:", error);
@@ -144,32 +147,44 @@ export default function VerifyPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
+    <main id="main-content" tabIndex={-1} className="outline-none min-h-dvh flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
       <Card className="w-full max-w-md border-[#22C55E]/20">
         <CardHeader className="text-center">
           <Link href="/" className="font-display text-3xl text-[#22C55E] mb-4 block tracking-wider">
             GARDEN OF EDEN
           </Link>
-          <CardTitle className="text-2xl">אימות קוד</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl">
+            <h1 id="otp-title">אימות קוד</h1>
+          </CardTitle>
+          <CardDescription id="otp-description">
             {`הזינו את הקוד שנשלח ב-WhatsApp למספר ${formatPhoneToLocal(phone)}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!isReady ? (
             <div className="flex justify-center py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+              <span className="sr-only">טוען...</span>
             </div>
           ) : (
             <>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="flex justify-center gap-1 sm:gap-2" dir="ltr">
+                <div
+                  role="group"
+                  aria-labelledby="otp-title"
+                  aria-describedby={error ? "otp-description otp-error" : "otp-description"}
+                  className="flex justify-center gap-1 sm:gap-2"
+                  dir="ltr"
+                >
                   {Array.from({ length: OTP_LENGTH }, (_, index) => (
                     <Input
                       key={index}
                       ref={(el) => { inputRefs.current[index] = el; }}
                       type="text"
                       inputMode="numeric"
+                      autoComplete={index === 0 ? "one-time-code" : "off"}
+                      aria-label={`ספרה ${index + 1} מתוך ${OTP_LENGTH}`}
+                      aria-invalid={error !== null}
                       maxLength={OTP_LENGTH}
                       value={otp[index] || ""}
                       onChange={(e) => handleChange(index, e.target.value)}
@@ -180,16 +195,22 @@ export default function VerifyPage() {
                   ))}
                 </div>
 
+                {error && (
+                  <p id="otp-error" role="alert" className="text-center text-sm font-medium text-destructive">
+                    {error}
+                  </p>
+                )}
+
                 <Button type="submit" className="w-full" size="lg" disabled={loading}>
                   {loading ? (
                     <>
-                      <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
                       מאמת...
                     </>
                   ) : (
                     <>
-                      <ArrowRight className="ml-2 h-5 w-5" />
                       אימות והתחברות
+                      <ArrowLeft className="h-5 w-5" aria-hidden="true" />
                     </>
                   )}
                 </Button>
@@ -203,9 +224,9 @@ export default function VerifyPage() {
                   className="text-muted-foreground"
                 >
                   {resending ? (
-                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <RefreshCw className="ml-2 h-4 w-4" />
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
                   )}
                   {countdown > 0 ? `שליחה מחדש בעוד ${countdown} שניות` : "שלח קוד מחדש"}
                 </Button>
@@ -223,6 +244,6 @@ export default function VerifyPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

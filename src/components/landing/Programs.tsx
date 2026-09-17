@@ -4,6 +4,7 @@ import { m, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Dumbbell, Zap, Activity, Target, ArrowLeft, X, Clock, Users, Calendar, MessageCircle } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { FocusScope } from "radix-ui/internal";
 import { Button } from "@/components/ui/button";
 
 const programs = [
@@ -147,7 +148,6 @@ export function Programs() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
                 className="relative rounded-3xl overflow-hidden group cursor-pointer"
-                onClick={() => setSelectedProgram(index)}
                 onMouseEnter={() => setHoveredProgram(index)}
                 onMouseLeave={() => setHoveredProgram(null)}
               >
@@ -156,6 +156,14 @@ export function Programs() {
                   transition={{ duration: 0.2 }}
                   className="h-full p-6 flex flex-col relative min-h-[300px] md:min-h-[450px]"
                 >
+                  {/* Whole-card hit area: one real button, reachable by keyboard */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProgram(index)}
+                    aria-haspopup="dialog"
+                    aria-label={`${program.title}: פרטים נוספים`}
+                    className="absolute inset-0 z-20 rounded-3xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#CDEA68]"
+                  />
                   <Image
                     src={program.image}
                     alt=""
@@ -220,10 +228,10 @@ export function Programs() {
                     </AnimatePresence>
 
                     {hoveredProgram !== index && (
-                      <button className="flex items-center gap-2 text-[#CDEA68] text-sm font-medium group-hover:gap-3 transition-all">
+                      <span aria-hidden="true" className="flex items-center gap-2 text-[#CDEA68] text-sm font-medium group-hover:gap-3 transition-all">
                         למידע נוסף
                         <ArrowLeft className="w-4 h-4" />
-                      </button>
+                      </span>
                     )}
                   </div>
 
@@ -241,108 +249,110 @@ export function Programs() {
       {/* Program Detail Modal */}
       <AnimatePresence>
         {currentProgram && (
-          <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-            onClick={closeModal}
-          >
-            {/* Close button */}
-            <button
-              onClick={closeModal}
-              className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-              aria-label="סגור"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            {/* Modal content */}
+          <FocusScope.Root asChild trapped loop>
             <m.div
               role="dialog"
               aria-modal="true"
-              aria-label={currentProgram?.title}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] rounded-3xl"
+              aria-labelledby="program-dialog-title"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+              onClick={closeModal}
             >
-              {/* Header */}
-              <div className="p-8 border-b border-white/10">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#CDEA68]/20 flex items-center justify-center flex-shrink-0">
-                    <currentProgram.icon className="w-7 h-7 text-[#CDEA68]" />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold text-2xl mb-2">{currentProgram.title}</h3>
-                    <p className="text-white/60">{currentProgram.fullDescription}</p>
-                  </div>
-                </div>
-              </div>
+              {/* Close button */}
+              <button
+                onClick={closeModal}
+                className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+                aria-label="סגור"
+              >
+                <X className="w-6 h-6" />
+              </button>
 
-              {/* Details */}
-              <div className="p-8">
-                {/* Info grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-white/5 rounded-2xl p-4 text-center">
-                    <Clock className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
-                    <span className="text-white/40 text-xs block mb-1">משך אימון</span>
-                    <span className="text-white font-medium text-sm">{currentProgram.duration}</span>
-                  </div>
-                  <div className="bg-white/5 rounded-2xl p-4 text-center">
-                    <Users className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
-                    <span className="text-white/40 text-xs block mb-1">גודל קבוצה</span>
-                    <span className="text-white font-medium text-sm">{currentProgram.groupSize}</span>
-                  </div>
-                  <div className="bg-white/5 rounded-2xl p-4 text-center">
-                    <Calendar className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
-                    <span className="text-white/40 text-xs block mb-1">ימים</span>
-                    <span className="text-white font-medium text-sm">{currentProgram.schedule}</span>
-                  </div>
-                  <div className="bg-white/5 rounded-2xl p-4 text-center">
-                    <Target className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
-                    <span className="text-white/40 text-xs block mb-1">רמה</span>
-                    <span className="text-white font-medium text-sm">{currentProgram.level}</span>
+              {/* Modal content */}
+              <m.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] rounded-3xl"
+              >
+                {/* Header */}
+                <div className="p-8 border-b border-white/10">
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-[#CDEA68]/20 flex items-center justify-center flex-shrink-0">
+                      <currentProgram.icon className="w-7 h-7 text-[#CDEA68]" />
+                    </div>
+                    <div>
+                      <h3 id="program-dialog-title" className="text-white font-bold text-2xl mb-2">{currentProgram.title}</h3>
+                      <p className="text-white/60">{currentProgram.fullDescription}</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Benefits */}
-                <div className="mb-8">
-                  <h4 className="text-white font-bold mb-4">מה תרוויחו מהתוכנית?</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {currentProgram.benefits.map((benefit, index) => (
-                      <m.div
-                        key={benefit}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-center gap-3"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-[#CDEA68]" />
-                        <span className="text-white/70 text-sm">{benefit}</span>
-                      </m.div>
-                    ))}
+                {/* Details */}
+                <div className="p-8">
+                  {/* Info grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white/5 rounded-2xl p-4 text-center">
+                      <Clock className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
+                      <span className="text-white/40 text-xs block mb-1">משך אימון</span>
+                      <span className="text-white font-medium text-sm">{currentProgram.duration}</span>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-4 text-center">
+                      <Users className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
+                      <span className="text-white/40 text-xs block mb-1">גודל קבוצה</span>
+                      <span className="text-white font-medium text-sm">{currentProgram.groupSize}</span>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-4 text-center">
+                      <Calendar className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
+                      <span className="text-white/40 text-xs block mb-1">ימים</span>
+                      <span className="text-white font-medium text-sm">{currentProgram.schedule}</span>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-4 text-center">
+                      <Target className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
+                      <span className="text-white/40 text-xs block mb-1">רמה</span>
+                      <span className="text-white font-medium text-sm">{currentProgram.level}</span>
+                    </div>
                   </div>
-                </div>
 
-                {/* CTA */}
-                <Button
-                  className="w-full py-6 rounded-full bg-[#CDEA68] hover:bg-[#bdd85c] text-black font-medium text-lg"
-                  asChild
-                >
-                  <a
-                    href={getWhatsAppMessage(currentProgram.title)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  {/* Benefits */}
+                  <div className="mb-8">
+                    <h4 className="text-white font-bold mb-4">מה תרוויחו מהתוכנית?</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {currentProgram.benefits.map((benefit, index) => (
+                        <m.div
+                          key={benefit}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="flex items-center gap-3"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-[#CDEA68]" />
+                          <span className="text-white/70 text-sm">{benefit}</span>
+                        </m.div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* CTA */}
+                  <Button
+                    className="w-full py-6 rounded-full bg-[#CDEA68] hover:bg-[#bdd85c] text-black font-medium text-lg"
+                    asChild
                   >
-                    <MessageCircle className="w-5 h-5 ml-2" />
-                    להרשמה לתוכנית
-                  </a>
-                </Button>
-              </div>
+                    <a
+                      href={getWhatsAppMessage(currentProgram.title)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MessageCircle className="w-5 h-5" aria-hidden="true" />
+                      להרשמה לתוכנית
+                    </a>
+                  </Button>
+                </div>
+              </m.div>
             </m.div>
-          </m.div>
+          </FocusScope.Root>
         )}
       </AnimatePresence>
     </>

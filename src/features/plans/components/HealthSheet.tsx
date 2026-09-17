@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { HeartPulse, Phone } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getTraineeHealthAction, type TraineeHealth } from "../lib/actions/trainee-health";
 import { formatPhoneToLocal } from "@/lib/validations/common";
 
@@ -33,9 +33,10 @@ export function HealthSheet({ traineeId, traineeName, open, onOpenChange }: Heal
       <SheetContent side="bottom" dir="rtl">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <HeartPulse className="h-5 w-5 text-amber-600" />
+            <HeartPulse className="h-5 w-5 text-amber-600" aria-hidden="true" />
             {traineeName}
           </SheetTitle>
+          <SheetDescription className="sr-only">מגבלות רפואיות ואנשי קשר לחירום</SheetDescription>
         </SheetHeader>
         <div className="space-y-4 py-4 text-sm">
           {health === undefined && <p className="text-muted-foreground">טוען...</p>}

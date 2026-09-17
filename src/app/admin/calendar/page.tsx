@@ -78,6 +78,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
   return (
     <BranchProvider value={{ branchId, branches, canSwitch: branches.length > 1 }}>
+      <h1 className="sr-only">יומן אימונים</h1>
       <CalendarView
         week={week}
         weekStart={weekStart}

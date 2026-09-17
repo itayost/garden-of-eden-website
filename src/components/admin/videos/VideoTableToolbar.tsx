@@ -54,6 +54,7 @@ export function VideoTableToolbar({
         <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="חיפוש לפי כותרת..."
+          aria-label="חיפוש לפי כותרת"
           value={searchInput}
           onChange={handleSearchChange}
           className="pr-9"
@@ -62,7 +63,7 @@ export function VideoTableToolbar({
 
       {/* Day Filter */}
       <Select defaultValue="all" onValueChange={handleDayChange}>
-        <SelectTrigger className="w-full md:w-32">
+        <SelectTrigger className="w-full md:w-32" aria-label="סינון לפי יום">
           <SelectValue placeholder="כל הימים" />
         </SelectTrigger>
         <SelectContent>

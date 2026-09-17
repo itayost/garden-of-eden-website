@@ -20,7 +20,7 @@ export default function OnboardingLayout({
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main id="main-content" tabIndex={-1} className="outline-none container mx-auto px-4 py-8 max-w-2xl">
         {children}
       </main>
     </div>

@@ -213,8 +213,13 @@ export function TrainerShiftsView({
     <div className="space-y-6">
       {/* Month Navigation */}
       <div className="flex items-center justify-between">
-        <Button variant="outline" size="icon" onClick={() => navigateMonth(-1)}>
-          <ChevronRight className="h-4 w-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => navigateMonth(-1)}
+          aria-label="החודש הקודם"
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold">
@@ -230,8 +235,13 @@ export function TrainerShiftsView({
             </Button>
           )}
         </div>
-        <Button variant="outline" size="icon" onClick={() => navigateMonth(1)}>
-          <ChevronLeft className="h-4 w-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => navigateMonth(1)}
+          aria-label="החודש הבא"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
 
@@ -523,7 +533,21 @@ export function TrainerShiftsView({
                         }
                       >
                         <TableCell className="font-medium">
-                          {summary.trainerName}
+                          <button
+                            type="button"
+                            className="rounded-sm text-start font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            aria-expanded={expandedTrainer === summary.trainerId}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedTrainer(
+                                expandedTrainer === summary.trainerId
+                                  ? null
+                                  : summary.trainerId
+                              );
+                            }}
+                          >
+                            {summary.trainerName}
+                          </button>
                         </TableCell>
                         <TableCell>{summary.shiftCount}</TableCell>
                         <TableCell className="font-mono">
@@ -546,9 +570,9 @@ export function TrainerShiftsView({
                         )}
                         <TableCell>
                           {expandedTrainer === summary.trainerId ? (
-                            <ChevronUp className="h-4 w-4" />
+                            <ChevronUp className="h-4 w-4" aria-hidden="true" />
                           ) : (
-                            <ChevronDown className="h-4 w-4" />
+                            <ChevronDown className="h-4 w-4" aria-hidden="true" />
                           )}
                         </TableCell>
                       </TableRow>
@@ -624,11 +648,12 @@ export function TrainerShiftsView({
                                         handleMarkReviewed(shift.id);
                                       }}
                                       disabled={actionLoading === shift.id}
+                                      aria-label="סמן כנבדק"
                                     >
                                       {actionLoading === shift.id ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                                       ) : (
-                                        <CheckCircle className="h-3 w-3" />
+                                        <CheckCircle className="h-3 w-3" aria-hidden="true" />
                                       )}
                                     </Button>
                                   )}
@@ -639,8 +664,9 @@ export function TrainerShiftsView({
                                       e.stopPropagation();
                                       setEditingShift(shift);
                                     }}
+                                    aria-label="עריכת משמרת"
                                   >
-                                    <Pencil className="h-3 w-3" />
+                                    <Pencil className="h-3 w-3" aria-hidden="true" />
                                   </Button>
                                   <Button
                                     variant="ghost"
@@ -650,8 +676,9 @@ export function TrainerShiftsView({
                                       setOtherPurposeShift(shift);
                                     }}
                                     disabled={!shift.end_time}
+                                    aria-label="זמן אחר"
                                   >
-                                    <Activity className="h-3 w-3" />
+                                    <Activity className="h-3 w-3" aria-hidden="true" />
                                   </Button>
                                   <DeleteConfirmDialog
                                     title="מחיקת משמרת"
@@ -665,8 +692,9 @@ export function TrainerShiftsView({
                                         size="sm"
                                         className="text-destructive hover:text-destructive"
                                         onClick={(e) => e.stopPropagation()}
+                                        aria-label="מחיקת משמרת"
                                       >
-                                        <Trash2 className="h-3 w-3" />
+                                        <Trash2 className="h-3 w-3" aria-hidden="true" />
                                       </Button>
                                     }
                                   />

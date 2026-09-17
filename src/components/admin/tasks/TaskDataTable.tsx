@@ -189,12 +189,14 @@ export function TaskDataTable({
                 value={statusFilter}
                 onValueChange={setStatusFilter}
                 options={statusOptions}
+                ariaLabel="סינון לפי סטטוס"
               />
               {isAdmin && (
                 <ToolbarSelect
                   value={trainerFilter}
                   onValueChange={setTrainerFilter}
                   options={trainerOptions}
+                  ariaLabel="סינון לפי מאמן"
                 />
               )}
             </>

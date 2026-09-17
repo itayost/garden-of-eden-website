@@ -33,6 +33,7 @@ export function BottomNav({ items, trailing, badges, className }: BottomNavProps
 
   return (
     <nav
+      aria-label="ניווט תחתון"
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 md:hidden",
         "bg-background/80 backdrop-blur-lg border-t",
@@ -47,6 +48,7 @@ export function BottomNav({ items, trailing, badges, className }: BottomNavProps
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
                 active

@@ -135,8 +135,9 @@ export function CopyFromProgramDialog({
           )}
 
           {loadingGrid && (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div role="status" className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
+              <span className="sr-only">טוען...</span>
             </div>
           )}
 

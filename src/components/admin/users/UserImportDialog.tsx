@@ -155,8 +155,9 @@ export function UserImportDialog({ trigger }: UserImportDialogProps) {
                 size="sm"
                 onClick={clearFile}
                 disabled={importing}
+                aria-label="הסרת הקובץ"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           )}

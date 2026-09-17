@@ -301,8 +301,8 @@ export function TraineeImageUpload({
       {/* Step 3: Processing */}
       {step === "processing" && (
         <div className="flex flex-col items-center gap-4 py-8 w-full max-w-sm">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">{getStatusText()}</p>
+          <Loader2 className="h-12 w-12 animate-spin text-primary" aria-hidden="true" />
+          <p role="status" className="text-lg text-muted-foreground">{getStatusText()}</p>
           <Progress value={bgProgress} className="w-full" />
           <p className="text-sm text-muted-foreground">{bgProgress}%</p>
         </div>
@@ -311,8 +311,8 @@ export function TraineeImageUpload({
       {/* Step 4: Uploading */}
       {step === "uploading" && (
         <div className="flex flex-col items-center gap-4 py-8">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg text-muted-foreground">מעלה תמונות...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-primary" aria-hidden="true" />
+          <p role="status" className="text-lg text-muted-foreground">מעלה תמונות...</p>
         </div>
       )}
 

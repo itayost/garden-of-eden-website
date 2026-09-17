@@ -99,21 +99,27 @@ export function LeadStatsPanel({
       {STATUS_ORDER.map((status) => {
         const isActive = activeStatus === status;
         return (
-          <Card
+          <button
             key={status}
-            className={`cursor-pointer transition-all ${isActive ? "ring-2 ring-primary" : "hover:shadow-md"}`}
+            type="button"
+            aria-pressed={isActive}
             onClick={() => handleStatusClick(status)}
+            className="w-full rounded-xl text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">
-                {LEAD_STATUS_LABELS[status]}
-              </p>
-              <p className="text-2xl font-bold mt-1">{byStatus[status]}</p>
-              <div
-                className={`h-1 w-8 rounded-full mt-2 ${LEAD_STATUS_COLORS[status].split(" ")[0]}`}
-              />
-            </CardContent>
-          </Card>
+            <Card
+              className={`h-full cursor-pointer transition-all ${isActive ? "ring-2 ring-primary" : "hover:shadow-md"}`}
+            >
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">
+                  {LEAD_STATUS_LABELS[status]}
+                </p>
+                <p className="text-2xl font-bold mt-1">{byStatus[status]}</p>
+                <div
+                  className={`h-1 w-8 rounded-full mt-2 ${LEAD_STATUS_COLORS[status].split(" ")[0]}`}
+                />
+              </CardContent>
+            </Card>
+          </button>
         );
       })}
     </div>

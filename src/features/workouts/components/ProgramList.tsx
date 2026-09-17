@@ -64,7 +64,7 @@ function CreateProgramDialog({ open, onClose }: CreateProgramDialogProps) {
         if (!v) onClose();
       }}
     >
-      <DialogContent dir="rtl">
+      <DialogContent dir="rtl" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>תוכנית חדשה</DialogTitle>
         </DialogHeader>

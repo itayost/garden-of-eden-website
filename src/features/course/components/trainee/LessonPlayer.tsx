@@ -187,11 +187,12 @@ export function LessonPlayer({
         )}
 
         {loading && (
-          <div className="absolute inset-0 grid place-items-center bg-forest">
+          <div role="status" className="absolute inset-0 grid place-items-center bg-forest">
             <Loader2
               className="h-6 w-6 animate-spin text-primary motion-reduce:animate-none"
-              aria-label="טוען"
+              aria-hidden="true"
             />
+            <span className="sr-only">טוען...</span>
           </div>
         )}
 

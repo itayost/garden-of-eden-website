@@ -186,14 +186,14 @@ export function ShiftFormDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           {isEdit ? (
             <div className="space-y-2">
-              <Label>מאמן</Label>
-              <Input value={trainerLabel ?? ""} disabled />
+              <Label htmlFor="shift-trainer">מאמן</Label>
+              <Input id="shift-trainer" value={trainerLabel ?? ""} disabled />
             </div>
           ) : (
             <div className="space-y-2">
-              <Label>מאמן *</Label>
+              <Label htmlFor="shift-trainer">מאמן *</Label>
               <Select value={trainerId} onValueChange={setTrainerId}>
-                <SelectTrigger>
+                <SelectTrigger id="shift-trainer">
                   <SelectValue placeholder="בחר מאמן" />
                 </SelectTrigger>
                 <SelectContent>
@@ -208,12 +208,12 @@ export function ShiftFormDialog({
           )}
 
           <div className="space-y-2">
-            <Label>סניף</Label>
+            <Label htmlFor="shift-branch">סניף</Label>
             <Select
               value={branchId || "none"}
               onValueChange={(v) => setBranchId(v === "none" ? "" : v)}
             >
-              <SelectTrigger>
+              <SelectTrigger id="shift-branch">
                 <SelectValue placeholder="ללא סניף" />
               </SelectTrigger>
               <SelectContent>

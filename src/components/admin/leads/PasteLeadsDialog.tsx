@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -95,19 +96,19 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
           <DialogTitle>הדבקת לידים מגיליון</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <DialogDescription className="text-xs leading-relaxed">
             הדבק ישירות בלי כותרת בסדר: <code>שם</code> · <code>טלפון</code> ·{" "}
             <code>מידע נוסף</code> (עמודה לכל שדה, שורה לכל ליד). אפשר גם להדביק עם
             שורת כותרת — אז העמודות מזוהות לפי השם בכל סדר: <code>שם</code> (חובה),{" "}
             <code>טלפון</code>, <code>מידע נוסף</code>, <code>הערה</code>,{" "}
             <code>מועדון</code>, <code>שנתון</code>, <code>חיפה</code>.
-          </p>
+          </DialogDescription>
 
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
-              <Label className="text-xs">טאב</Label>
+              <Label htmlFor="paste-leads-tab" className="text-xs">טאב</Label>
               <Select value={tabId} onValueChange={setTabId} dir="rtl">
-                <SelectTrigger>
+                <SelectTrigger id="paste-leads-tab">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -120,13 +121,13 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">מקור</Label>
+              <Label htmlFor="paste-leads-source" className="text-xs">מקור</Label>
               <Select
                 value={source}
                 onValueChange={(v) => setSource(v as LeadSource)}
                 dir="rtl"
               >
-                <SelectTrigger>
+                <SelectTrigger id="paste-leads-source">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -139,13 +140,13 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">סטטוס</Label>
+              <Label htmlFor="paste-leads-status" className="text-xs">סטטוס</Label>
               <Select
                 value={status}
                 onValueChange={(v) => setStatus(v as LeadStatus)}
                 dir="rtl"
               >
-                <SelectTrigger>
+                <SelectTrigger id="paste-leads-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -160,6 +161,7 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
           </div>
 
           <Textarea
+            aria-label="נתוני לידים להדבקה"
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={8}

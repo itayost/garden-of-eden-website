@@ -145,8 +145,9 @@ export default function SecuritySettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div role="status" className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+              <span className="sr-only">טוען...</span>
             </div>
           ) : error ? (
             <p className="text-sm text-destructive">{error}</p>

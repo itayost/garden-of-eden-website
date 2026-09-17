@@ -17,6 +17,8 @@ interface TrainerAssignmentSelectProps {
   disabled?: boolean;
   placeholder?: string;
   triggerClassName?: string;
+  /** id for the trigger, so an external <Label htmlFor> can name it */
+  id?: string;
 }
 
 /**
@@ -30,6 +32,7 @@ export function TrainerAssignmentSelect({
   disabled,
   placeholder = "בחר מאמן",
   triggerClassName,
+  id,
 }: TrainerAssignmentSelectProps) {
   const selectValue = value ?? LEAD_UNASSIGNED_VALUE;
 
@@ -40,7 +43,7 @@ export function TrainerAssignmentSelect({
       disabled={disabled}
       dir="rtl"
     >
-      <SelectTrigger className={triggerClassName ?? "w-full"}>
+      <SelectTrigger id={id} className={triggerClassName ?? "w-full"}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -66,12 +67,13 @@ export function PasteChurnedDialog({ onInserted }: PasteChurnedDialogProps) {
           <DialogTitle>הדבקת רשימת לקוחות שעזבו</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <DialogDescription className="text-xs leading-relaxed">
             פורמט: <code>שם</code> טאב <code>תאריך</code>, שורה לכל לקוח.
             תאריך: <strong>יום/חודש/שנה</strong> (לדוגמה <code>01/04/2026</code> = 1 באפריל 2026).
             תומך גם ב-<code>2026-04-01</code> ו-<code>01.04.2026</code>.
-          </p>
+          </DialogDescription>
           <Textarea
+            aria-label="רשימת לקוחות שעזבו להדבקה"
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={8}

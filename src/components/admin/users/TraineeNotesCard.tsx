@@ -254,6 +254,7 @@ export function TraineeNotesCard({
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6"
+                                aria-label="עריכת הערה"
                                 onClick={() =>
                                   handleStartEdit(
                                     report.reportId,
@@ -262,7 +263,7 @@ export function TraineeNotesCard({
                                   )
                                 }
                               >
-                                <Pencil className="h-3.5 w-3.5" />
+                                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                               </Button>
                               <DeleteConfirmDialog
                                 title="מחיקת הערה"
@@ -284,8 +285,9 @@ export function TraineeNotesCard({
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6 text-destructive hover:text-destructive"
+                                    aria-label="מחיקת הערה"
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                                   </Button>
                                 }
                               />

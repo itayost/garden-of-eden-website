@@ -64,7 +64,7 @@ function MuscleDialog({ open, muscle, onClose, onSaved }: MuscleDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent dir="rtl">
+      <DialogContent dir="rtl" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{isEdit ? "עריכת שריר" : "שריר חדש"}</DialogTitle>
         </DialogHeader>
