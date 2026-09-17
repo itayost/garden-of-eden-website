@@ -6,6 +6,7 @@ import { m } from "framer-motion";
 import { MessageCircle, Instagram, ArrowUp, Phone, MapPin } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { useState, useEffect } from "react";
+import { preferredScrollBehavior } from "@/lib/utils/scroll-behavior";
 
 const quickLinks = [
   { href: "#", label: "בית" },
@@ -62,7 +63,7 @@ export function Footer() {
       e.preventDefault();
 
       if (href === "#") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: preferredScrollBehavior() });
         return;
       }
 
@@ -70,13 +71,13 @@ export function Footer() {
       if (element) {
         const offset = 80;
         const top = element.getBoundingClientRect().top + window.scrollY - offset;
-        window.scrollTo({ top, behavior: "smooth" });
+        window.scrollTo({ top, behavior: preferredScrollBehavior() });
       }
     }
   };
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: preferredScrollBehavior() });
   };
 
   return (

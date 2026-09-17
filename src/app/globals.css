@@ -192,9 +192,29 @@ html[dir="rtl"] {
   background: linear-gradient(180deg, #4ADE80 0%, #22C55E 100%);
 }
 
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
+/* Smooth scroll, only for visitors who have not asked for less motion */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Reduced motion: keep the fades that confirm a dialog, sheet, or toast
+   opened or closed, but drop the zoom, slide, and spin-in that tw-animate-css
+   layers on top. Loading spinners stay; they report work in progress. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-enter-rotate: 0 !important;
+    --tw-exit-rotate: 0 !important;
+  }
 }
 
 /* Focus visible improvements */
@@ -223,32 +243,6 @@ html {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L32 15 L30 12 L28 15 Z' fill='%2322C55E' fill-opacity='0.1'/%3E%3Cpath d='M10 25 L12 35 L10 32 L8 35 Z' fill='%2322C55E' fill-opacity='0.08'/%3E%3Cpath d='M50 25 L52 35 L50 32 L48 35 Z' fill='%2322C55E' fill-opacity='0.08'/%3E%3Cpath d='M20 45 L22 55 L20 52 L18 55 Z' fill='%2322C55E' fill-opacity='0.06'/%3E%3Cpath d='M40 45 L42 55 L40 52 L38 55 Z' fill='%2322C55E' fill-opacity='0.06'/%3E%3C/svg%3E");
 }
 
-/* Gold shimmer effect */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.gold-shimmer {
-  background: linear-gradient(
-    90deg,
-    #F59E0B 0%,
-    #FBBF24 25%,
-    #FDE68A 50%,
-    #FBBF24 75%,
-    #F59E0B 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 /* Noise overlay */
 .noise-overlay::before {
   content: '';
@@ -271,21 +265,6 @@ html {
 /* Text shadow for dramatic effect */
 .text-shadow-dramatic {
   text-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-}
-
-/* Gradient text */
-.gradient-text-gold {
-  background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 50%, #F59E0B 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.gradient-text-green {
-  background: linear-gradient(135deg, #22C55E 0%, #4ADE80 50%, #22C55E 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 /* Mobile utilities */
