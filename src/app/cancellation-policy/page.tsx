@@ -18,7 +18,7 @@ export default function CancellationPolicyPage() {
   return (
     <MotionProvider>
       <main id="main-content" tabIndex={-1} className="outline-none bg-paper min-h-screen">
-        <Navbar />
+        <Navbar solid />
 
         <div className="container mx-auto px-6 py-24 max-w-4xl">
           <h1 className="text-4xl font-bold mb-4 text-ink">מדיניות ביטול עסקה</h1>

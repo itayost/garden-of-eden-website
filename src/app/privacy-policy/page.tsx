@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
   return (
     <MotionProvider>
       <main id="main-content" tabIndex={-1} className="outline-none bg-paper min-h-screen">
-        <Navbar />
+        <Navbar solid />
 
         <div className="container mx-auto px-6 py-24 max-w-4xl">
           <h1 className="text-4xl font-bold mb-12 text-ink">מדיניות פרטיות</h1>
@@ -95,7 +95,7 @@ export default function PrivacyPolicyPage() {
               <h2 className="text-2xl font-bold mb-4 text-ink">יצירת קשר</h2>
               <p>
                 לשאלות או בקשות בנוגע לפרטיות, ניתן לפנות אלינו בטלפון{" "}
-                <a href="tel:+972525779446" className="text-brand-lime hover:underline">
+                <a href="tel:+972525779446" className="font-medium text-ink underline decoration-brand-lime decoration-2 underline-offset-4 hover:decoration-ink">
                   052-577-9446
                 </a>{" "}
                 או דרך{" "}
@@ -103,7 +103,7 @@ export default function PrivacyPolicyPage() {
                   href="https://wa.me/972525779446"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-brand-lime hover:underline"
+                  className="font-medium text-ink underline decoration-brand-lime decoration-2 underline-offset-4 hover:decoration-ink"
                 >
                   וואטסאפ
                 </a>

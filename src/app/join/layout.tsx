@@ -29,7 +29,7 @@ export default function JoinLayout({ children }: { children: React.ReactNode }) 
             href="https://wa.me/972525779446"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-ink"
             aria-label="שאלה בוואטסאפ"
           >
             <MessageCircle className="h-5 w-5" />
