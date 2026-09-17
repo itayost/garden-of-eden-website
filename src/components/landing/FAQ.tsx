@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
@@ -98,7 +98,7 @@ export function FAQ({ overrides = {}, omit = [] }: FAQProps = {}) {
     <section id="faq" className="py-20 bg-[#F5F5F0]">
       <div className="container mx-auto px-6">
         {/* Header */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -111,12 +111,12 @@ export function FAQ({ overrides = {}, omit = [] }: FAQProps = {}) {
           <p className="text-black/50 max-w-md mx-auto">
             ריכזנו עבורכם את השאלות הנפוצות ביותר
           </p>
-        </motion.div>
+        </m.div>
 
         {/* FAQ Accordion */}
         <div className="max-w-3xl mx-auto space-y-4">
           {items.map((item, index) => (
-            <motion.div
+            <m.div
               key={item.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -132,18 +132,18 @@ export function FAQ({ overrides = {}, omit = [] }: FAQProps = {}) {
                 className="w-full px-6 py-5 flex items-center justify-between text-right hover:bg-black/[0.02] transition-colors"
               >
                 <span className="font-medium text-black">{item.question}</span>
-                <motion.span
+                <m.span
                   animate={{ rotate: openIndex === index ? 180 : 0 }}
                   transition={{ duration: 0.2 }}
                   className="flex-shrink-0 mr-4"
                 >
                   <ChevronDown className="w-5 h-5 text-black/40" />
-                </motion.span>
+                </m.span>
               </button>
 
               <AnimatePresence>
                 {openIndex === index && (
-                  <motion.div
+                  <m.div
                     id={`${item.id}-content`}
                     role="region"
                     aria-labelledby={`${item.id}-trigger`}
@@ -156,10 +156,10 @@ export function FAQ({ overrides = {}, omit = [] }: FAQProps = {}) {
                     <div className="px-6 pb-5 text-black/60 leading-relaxed border-t border-black/5 pt-4 whitespace-pre-line">
                       {item.answer}
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
-            </motion.div>
+            </m.div>
           ))}
         </div>
 

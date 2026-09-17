@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import Image from "next/image";
 
 const staffMembers = [
@@ -66,7 +66,7 @@ export function Staff() {
     <section id="staff" className="py-20 bg-[#F5F5F0]">
       <div className="container mx-auto px-6">
         {/* Header */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -81,10 +81,10 @@ export function Staff() {
           <p className="text-black/50 max-w-md mx-auto">
             צוות מקצועי ומנוסה שמלווה את השחקנים בכל שלב במסע להצלחה
           </p>
-        </motion.div>
+        </m.div>
 
         {/* Founder card */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -99,6 +99,7 @@ export function Staff() {
                   src={founder.image}
                   alt={founder.name}
                   fill
+                  sizes="(min-width: 768px) 144px, 112px"
                   className="object-cover"
                 />
               </div>
@@ -116,12 +117,12 @@ export function Staff() {
               <p className="text-black/50 md:text-lg">{founder.role}</p>
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* Staff grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {rest.map((member, index) => (
-            <motion.div
+            <m.div
               key={member.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -135,6 +136,7 @@ export function Staff() {
                     src={member.image}
                     alt={member.name}
                     fill
+                    sizes="(min-width: 768px) 96px, 80px"
                     className="object-cover"
                   />
                 </div>
@@ -145,7 +147,7 @@ export function Staff() {
               )}
               <h3 className="font-bold text-black mb-1">{member.name}</h3>
               <p className="text-black/50 text-sm">{member.role}</p>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>

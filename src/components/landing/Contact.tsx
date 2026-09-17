@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { MessageCircle, Phone, MapPin, Clock, Bus } from "lucide-react";
 
 export interface ContactLocation {
@@ -39,7 +39,7 @@ export function Contact({ location = HAIFA }: { location?: ContactLocation } = {
       <div className="container mx-auto px-6">
         <div className={`grid gap-12 items-center ${hasMap ? "lg:grid-cols-2" : "max-w-3xl mx-auto"}`}>
           {hasMap && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -54,11 +54,11 @@ export function Contact({ location = HAIFA }: { location?: ContactLocation } = {
                 title={`Garden of Eden - ${location.address ?? ""}`}
               />
             </div>
-          </motion.div>
+          </m.div>
           )}
 
           {/* Right - Contact form */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -158,7 +158,7 @@ export function Contact({ location = HAIFA }: { location?: ContactLocation } = {
               )}
             </div>
             )}
-          </motion.div>
+          </m.div>
         </div>
       </div>
     </section>
