@@ -55,14 +55,16 @@ export function TraineeMultiSelect({
       {selectedTrainees.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {selectedTrainees.map((t) => (
-            <Badge
-              key={t.id}
-              variant="secondary"
-              className="gap-1 cursor-pointer"
-              onClick={() => remove(t.id)}
-            >
+            <Badge key={t.id} variant="secondary" className="gap-1">
               {t.full_name || "ללא שם"}
-              <X className="h-3 w-3" />
+              <button
+                type="button"
+                onClick={() => remove(t.id)}
+                aria-label={`הסרת ${t.full_name || "ללא שם"}`}
+                className="rounded-full cursor-pointer hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
             </Badge>
           ))}
         </div>

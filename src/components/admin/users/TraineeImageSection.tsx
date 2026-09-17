@@ -117,7 +117,7 @@ export function TraineeImageSection({
 
       {/* Upload Sheet */}
       <Sheet open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-        <SheetContent side="left" className="sm:max-w-md">
+        <SheetContent side="left" className="sm:max-w-md" aria-describedby={undefined}>
           <SheetHeader>
             <SheetTitle>העלאת תמונת פרופיל</SheetTitle>
           </SheetHeader>

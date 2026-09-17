@@ -14,15 +14,14 @@ interface DateStripProps {
 /** The phone's day picker, Arbox style: one row, today and the selection marked. */
 export function DateStrip({ days, selectedDate, onSelect }: DateStripProps) {
   return (
-    <div role="tablist" aria-label="ימי השבוע" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+    <div role="group" aria-label="ימי השבוע" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
       {days.map((day) => {
         const selected = day.date === selectedDate;
         return (
           <button
             key={day.date}
             type="button"
-            role="tab"
-            aria-selected={selected}
+            aria-pressed={selected}
             onClick={() => onSelect(day.date)}
             className={cn(
               "flex min-w-12 flex-1 flex-col items-center gap-0.5 rounded-xl border px-1.5 py-2 transition-colors",
@@ -34,6 +33,7 @@ export function DateStrip({ days, selectedDate, onSelect }: DateStripProps) {
           >
             <span className="text-[11px]">{WEEKDAY_LABELS[day.weekday]}</span>
             <span className="font-display text-sm tabular-nums">{shortDate(day.date)}</span>
+            {day.isToday && <span className="sr-only">(היום)</span>}
             <span
               className={cn(
                 "h-1.5 w-1.5 rounded-full",

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 interface TourTriggerButtonProps {
   className?: string;
-  /** When used as a dropdown menu item, render as div instead of button */
+  /** When used as a dropdown menu item, render without the disabled state */
   asMenuItem?: boolean;
 }
 
@@ -35,19 +35,29 @@ export function TourTriggerButton({ className, asMenuItem }: TourTriggerButtonPr
 
   if (asMenuItem) {
     return (
-      <div onClick={handleClick} className={className}>
+      <button
+        type="button"
+        onClick={handleClick}
+        className={className}
+        aria-busy={loading}
+      >
         {loading ? (
-          <Loader2 className="me-2 h-4 w-4 animate-spin" />
+          <Loader2 className="me-2 h-4 w-4 animate-spin" aria-hidden="true" />
         ) : (
-          <HelpCircle className="me-2 h-4 w-4" />
+          <HelpCircle className="me-2 h-4 w-4" aria-hidden="true" />
         )}
         הפעל סיור מודרך
-      </div>
+      </button>
     );
   }
 
   return (
-    <button onClick={handleClick} className={className} disabled={loading}>
+    <button
+      type="button"
+      onClick={handleClick}
+      className={className}
+      disabled={loading}
+    >
       {loading ? (
         <Loader2 className="me-2 h-4 w-4 animate-spin" />
       ) : (

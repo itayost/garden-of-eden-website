@@ -15,7 +15,7 @@ export const metadata: Metadata = {
  */
 export default function JoinLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-[#F5F5F0]">
+    <main id="main-content" tabIndex={-1} className="outline-none min-h-screen bg-[#F5F5F0]">
       <header className="sticky top-0 z-40 border-b border-black/5 bg-[#F5F5F0]/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <Link href="/kiryat-ata" className="flex items-center gap-2">

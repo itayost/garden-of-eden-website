@@ -61,8 +61,8 @@ export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarPro
   const displayName = profile?.full_name || localPhone || "משתמש";
 
   const triggerButton = (
-    <Button variant="ghost" className="ms-auto gap-2">
-      <UserIcon className="h-5 w-5" />
+    <Button variant="ghost" className="ms-auto gap-2" aria-label={`תפריט משתמש: ${displayName}`}>
+      <UserIcon className="h-5 w-5" aria-hidden="true" />
       <span className="hidden sm:inline">{displayName}</span>
     </Button>
   );

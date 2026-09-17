@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,7 @@ export function TableToolbar({
           <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
             value={localSearch}
             onChange={handleSearchChange}
             className="ps-9"
@@ -90,6 +91,8 @@ interface ToolbarSelectProps {
   onValueChange: (value: string) => void;
   options: { value: string; label: string }[];
   placeholder?: string;
+  /** Accessible name for the trigger; falls back to the placeholder */
+  ariaLabel?: string;
   className?: string;
 }
 
@@ -98,11 +101,12 @@ export function ToolbarSelect({
   onValueChange,
   options,
   placeholder,
+  ariaLabel,
   className = "w-full md:w-40",
 }: ToolbarSelectProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className={className}>
+      <SelectTrigger className={className} aria-label={ariaLabel ?? placeholder}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
@@ -168,11 +172,14 @@ export function ToolbarDateRange({
   startLabel = "מתאריך",
   endLabel = "עד תאריך",
 }: ToolbarDateRangeProps) {
+  const startId = useId();
+  const endId = useId();
   return (
     <>
       <div className="flex items-center gap-2">
-        <Label className="text-sm whitespace-nowrap">{startLabel}</Label>
+        <Label htmlFor={startId} className="text-sm whitespace-nowrap">{startLabel}</Label>
         <Input
+          id={startId}
           type="date"
           value={startDate}
           onChange={(e) => onStartDateChange(e.target.value)}
@@ -180,8 +187,9 @@ export function ToolbarDateRange({
         />
       </div>
       <div className="flex items-center gap-2">
-        <Label className="text-sm whitespace-nowrap">{endLabel}</Label>
+        <Label htmlFor={endId} className="text-sm whitespace-nowrap">{endLabel}</Label>
         <Input
+          id={endId}
           type="date"
           value={endDate}
           onChange={(e) => onEndDateChange(e.target.value)}

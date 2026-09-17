@@ -49,7 +49,7 @@ export function AppSidebar({
         </div>
       </SidebarHeader>
 
-      <SidebarContent>{children}</SidebarContent>
+      <SidebarContent role="navigation" aria-label="ניווט ראשי">{children}</SidebarContent>
 
       <SidebarFooter>
         <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">

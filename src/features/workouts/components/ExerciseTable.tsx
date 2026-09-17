@@ -473,7 +473,7 @@ export function ExerciseTable() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={formOpen} onOpenChange={(v) => !v && setFormOpen(false)}>
-        <DialogContent dir="rtl" className="max-w-lg">
+        <DialogContent dir="rtl" className="max-w-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>
               {editTarget ? "עריכת תרגיל" : "תרגיל חדש"}

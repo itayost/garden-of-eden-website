@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function CancellationPolicyPage() {
   return (
     <MotionProvider>
-      <main className="bg-[#F5F5F0] min-h-screen">
+      <main id="main-content" tabIndex={-1} className="outline-none bg-[#F5F5F0] min-h-screen">
         <Navbar />
 
         <div className="container mx-auto px-6 py-24 max-w-4xl">

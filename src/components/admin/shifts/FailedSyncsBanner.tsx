@@ -64,8 +64,9 @@ export function FailedSyncsBanner({ failedSyncs }: FailedSyncsBannerProps) {
           size="sm"
           className="h-6 w-6 p-0 text-red-400 hover:text-red-600"
           onClick={() => setDismissed(true)}
+          aria-label="סגירת ההתראה"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
 

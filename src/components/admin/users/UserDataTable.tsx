@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useReactTable,
@@ -196,10 +197,10 @@ export function UserDataTable({
           table.getRowModel().rows.map((row) => {
             const user = row.original;
             return (
-              <div
+              <Link
                 key={row.id}
-                className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => handleRowClick(user.id)}
+                href={`/admin/users/${user.id}`}
+                className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Avatar className="h-9 w-9 shrink-0">
                   <AvatarImage src={user.avatar_url || undefined} />
@@ -224,7 +225,7 @@ export function UserDataTable({
                   )}
                 </div>
                 <StatusBadge isActive={user.is_active} />
-              </div>
+              </Link>
             );
           })
         ) : (
@@ -264,9 +265,22 @@ export function UserDataTable({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
+                      {cell.column.id === "full_name" ? (
+                        <Link
+                          href={`/admin/users/${row.original.id}`}
+                          className="rounded-sm text-start font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </Link>
+                      ) : (
+                        flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )
                       )}
                     </TableCell>
                   ))}

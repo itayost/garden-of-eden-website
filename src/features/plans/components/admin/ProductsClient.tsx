@@ -53,7 +53,7 @@ function ProductDialog({ product, onClose }: { product: PlanProduct; onClose: ()
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent dir="rtl">
+      <DialogContent dir="rtl" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>עריכת {product.name_he}</DialogTitle>
         </DialogHeader>

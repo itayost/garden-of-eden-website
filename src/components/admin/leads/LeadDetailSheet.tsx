@@ -302,8 +302,9 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
         </SheetHeader>
 
         {detailLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div role="status" className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+            <span className="sr-only">טוען...</span>
           </div>
         ) : (
           <div className="space-y-6 px-4 pb-8">
@@ -388,17 +389,25 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">שם</Label>
-                  <Input {...register("name")} />
+                  <Label htmlFor="lead-name" className="text-xs">שם</Label>
+                  <Input
+                    id="lead-name"
+                    aria-invalid={errors.name ? true : undefined}
+                    aria-describedby={errors.name ? "lead-name-error" : undefined}
+                    {...register("name")}
+                  />
                   {errors.name && (
-                    <p className="text-xs text-destructive">
+                    <p id="lead-name-error" className="text-xs text-destructive">
                       {errors.name.message}
                     </p>
                   )}
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">טלפון</Label>
+                  <Label htmlFor="lead-phone" className="text-xs">טלפון</Label>
                   <Input
+                    id="lead-phone"
+                    aria-invalid={errors.phone ? true : undefined}
+                    aria-describedby={errors.phone ? "lead-phone-error" : undefined}
                     type="tel"
                     inputMode="tel"
                     dir="ltr"
@@ -406,7 +415,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                     {...register("phone")}
                   />
                   {errors.phone && (
-                    <p className="text-xs text-destructive">
+                    <p id="lead-phone-error" className="text-xs text-destructive">
                       {errors.phone.message}
                     </p>
                   )}
@@ -415,7 +424,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">סטטוס</Label>
+                  <Label htmlFor="lead-status" className="text-xs">סטטוס</Label>
                   <Select
                     value={currentStatus || lead.status}
                     onValueChange={(v) =>
@@ -423,7 +432,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                     }
                     disabled={isClosed}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="lead-status">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -459,7 +468,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">טאב</Label>
+                  <Label htmlFor="lead-tab" className="text-xs">טאב</Label>
                   <Select
                     value={watch("tab_id") ?? lead.tab_id}
                     onValueChange={(v) =>
@@ -467,7 +476,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                     }
                     dir="rtl"
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id="lead-tab" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -480,7 +489,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">מקור</Label>
+                  <Label htmlFor="lead-source" className="text-xs">מקור</Label>
                   <Select
                     value={watch("source") ?? lead.source}
                     onValueChange={(v) =>
@@ -491,7 +500,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                     }
                     dir="rtl"
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id="lead-source" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -507,12 +516,15 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">מועדון</Label>
-                  <Input {...register("club")} placeholder="שם המועדון" />
+                  <Label htmlFor="lead-club" className="text-xs">מועדון</Label>
+                  <Input id="lead-club" {...register("club")} placeholder="שם המועדון" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">שנתון</Label>
+                  <Label htmlFor="lead-birth-year" className="text-xs">שנתון</Label>
                   <Input
+                    id="lead-birth-year"
+                    aria-invalid={errors.birth_year ? true : undefined}
+                    aria-describedby={errors.birth_year ? "lead-birth-year-error" : undefined}
                     type="number"
                     inputMode="numeric"
                     min={1990}
@@ -521,7 +533,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                     {...register("birth_year", { setValueAs: parseBirthYearInput })}
                   />
                   {errors.birth_year && (
-                    <p className="text-xs text-destructive">
+                    <p id="lead-birth-year-error" className="text-xs text-destructive">
                       {errors.birth_year.message}
                     </p>
                   )}
@@ -529,8 +541,9 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">מאמן משוייך</Label>
+                <Label htmlFor="lead-assigned-trainer" className="text-xs">מאמן משוייך</Label>
                 <TrainerAssignmentSelect
+                  id="lead-assigned-trainer"
                   trainers={trainers}
                   value={assignedTrainerId ?? null}
                   onChange={(id) =>
@@ -540,8 +553,9 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">מידע נוסף</Label>
+                <Label htmlFor="lead-additional-info" className="text-xs">מידע נוסף</Label>
                 <Textarea
+                  id="lead-additional-info"
                   rows={2}
                   placeholder="פרטי רקע, היסטוריה, וכו'"
                   {...register("additional_info")}
@@ -549,8 +563,8 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">הערות</Label>
-                <Textarea rows={2} {...register("note")} />
+                <Label htmlFor="lead-note" className="text-xs">הערות</Label>
+                <Textarea id="lead-note" rows={2} {...register("note")} />
               </div>
 
               <Button type="submit" size="sm" disabled={loading} className="w-full">
@@ -586,6 +600,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                   value={textMessage}
                   onChange={(e) => setTextMessage(e.target.value)}
                   placeholder="הודעה חופשית..."
+                  aria-label="הודעת WhatsApp חופשית"
                   className="flex-1"
                 />
                 <Button
@@ -593,11 +608,12 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
                   size="icon"
                   onClick={handleWhatsAppText}
                   disabled={waLoading !== null || !textMessage.trim()}
+                  aria-label="שליחת הודעה"
                 >
                   {waLoading === "text" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <Send className="h-4 w-4" aria-hidden="true" />
                   )}
                 </Button>
               </div>

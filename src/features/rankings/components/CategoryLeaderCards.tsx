@@ -43,52 +43,58 @@ export function CategoryLeaderCards({
         const isSelected = selectedCategory === leader.category;
 
         return (
-          <Card
+          <button
             key={leader.category}
-            className={cn(
-              "cursor-pointer transition-all hover:shadow-md min-w-[130px] sm:min-w-0",
-              isSelected && "ring-2 ring-primary"
-            )}
+            type="button"
+            aria-pressed={isSelected}
             onClick={() => onCategorySelect(leader.category)}
+            className="min-w-[130px] sm:min-w-0 rounded-xl text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <CardHeader className={cn("p-3 sm:p-6 pb-2 bg-gradient-to-br rounded-t-lg", CATEGORY_COLORS[leader.category])}>
-              <div className="flex items-center justify-between">
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                {isSelected && (
-                  <Badge variant="secondary" className="text-xs">
-                    נבחר
-                  </Badge>
-                )}
-              </div>
-              <CardTitle className="text-sm">{config.labelHe}</CardTitle>
-              <p className="text-[10px] leading-tight text-muted-foreground">
-                {ASSESSMENT_LABELS_HE[config.primaryMetric] ?? config.labelHe}
-              </p>
-            </CardHeader>
-            <CardContent className="px-3 pt-2 sm:px-6 sm:pt-3">
-              {leader.leader ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-4 w-4 text-yellow-500" />
-                    <span className="font-medium text-sm truncate">
-                      {leader.leader.userName}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {(leader.leader.metricValue ?? 0).toFixed(2)}{" "}
-                    {ASSESSMENT_UNITS[config.primaryMetric] ?? "ס״מ"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {leader.totalPlayers} משתתפים
-                  </div>
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground py-2">
-                  אין נתונים
-                </div>
+            <Card
+              className={cn(
+                "h-full cursor-pointer transition-all hover:shadow-md",
+                isSelected && "ring-2 ring-primary"
               )}
-            </CardContent>
-          </Card>
+            >
+              <CardHeader className={cn("p-3 sm:p-6 pb-2 bg-gradient-to-br rounded-t-lg", CATEGORY_COLORS[leader.category])}>
+                <div className="flex items-center justify-between">
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  {isSelected && (
+                    <Badge variant="secondary" className="text-xs">
+                      נבחר
+                    </Badge>
+                  )}
+                </div>
+                <CardTitle className="text-sm">{config.labelHe}</CardTitle>
+                <p className="text-[10px] leading-tight text-muted-foreground">
+                  {ASSESSMENT_LABELS_HE[config.primaryMetric] ?? config.labelHe}
+                </p>
+              </CardHeader>
+              <CardContent className="px-3 pt-2 sm:px-6 sm:pt-3">
+                {leader.leader ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-yellow-500" />
+                      <span className="font-medium text-sm truncate">
+                        {leader.leader.userName}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {(leader.leader.metricValue ?? 0).toFixed(2)}{" "}
+                      {ASSESSMENT_UNITS[config.primaryMetric] ?? "ס״מ"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {leader.totalPlayers} משתתפים
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground py-2">
+                    אין נתונים
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </button>
         );
       })}
     </div>

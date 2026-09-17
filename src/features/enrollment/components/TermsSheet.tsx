@@ -36,7 +36,7 @@ export function TermsSheet() {
           תקנון גארדן אוף עדן
         </button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto" dir="rtl">
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto" dir="rtl" aria-describedby={undefined}>
         <SheetHeader>
           <SheetTitle>תקנון סניף קריית אתא</SheetTitle>
         </SheetHeader>

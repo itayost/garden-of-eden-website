@@ -83,7 +83,7 @@ export default function Verify2FAPage() {
 
   if (isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
+      <main id="main-content" tabIndex={-1} className="outline-none min-h-dvh flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
         <Card className="w-full max-w-md border-[#22C55E]/20">
           <CardHeader className="text-center">
             <Link href="/" className="font-display text-3xl text-[#22C55E] mb-4 block tracking-wider">
@@ -97,12 +97,12 @@ export default function Verify2FAPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
+    <main id="main-content" tabIndex={-1} className="outline-none min-h-dvh flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <Link href="/" className="font-display text-3xl text-[#22C55E] block tracking-wider">
@@ -111,6 +111,6 @@ export default function Verify2FAPage() {
         </div>
         <TwoFactorVerify onSuccess={handleSuccess} onCancel={handleCancel} />
       </div>
-    </div>
+    </main>
   );
 }

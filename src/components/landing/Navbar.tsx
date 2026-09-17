@@ -103,7 +103,7 @@ export function Navbar({
           <Link href="/" className="flex items-center gap-2 z-50">
             <Image
               src="/logo-transparent.png"
-              alt="Garden of Eden"
+              alt=""
               width={40}
               height={40}
               className="w-10 h-10 object-contain"
@@ -118,6 +118,7 @@ export function Navbar({
                 key={link.href}
                 href={link.href}
                 onClick={(e) => handleNavClick(e, link.href)}
+                aria-current={activeSection === link.href ? "true" : undefined}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   activeSection === link.href
                     ? "bg-[#CDEA68] text-black"
@@ -163,11 +164,14 @@ export function Navbar({
 
           {/* Mobile menu button */}
           <button
+            type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="md:hidden w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white z-50"
-            aria-label="תפריט"
+            aria-label={isMobileMenuOpen ? "סגירת תפריט" : "פתיחת תפריט"}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="landing-mobile-menu"
           >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {isMobileMenuOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
           </button>
         </div>
       </nav>
@@ -176,6 +180,7 @@ export function Navbar({
       <AnimatePresence>
         {isMobileMenuOpen && (
           <m.div
+            id="landing-mobile-menu"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -188,6 +193,7 @@ export function Navbar({
                   key={link.href}
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
+                  aria-current={activeSection === link.href ? "true" : undefined}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}

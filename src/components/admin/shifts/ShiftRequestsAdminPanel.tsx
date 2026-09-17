@@ -170,7 +170,16 @@ export function ShiftRequestsAdminPanel({
                       onClick={() => openDetail(r)}
                     >
                       <TableCell className="font-medium">
-                        {r.trainer_name}
+                        <button
+                          type="button"
+                          className="rounded-sm text-start font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDetail(r);
+                          }}
+                        >
+                          {r.trainer_name}
+                        </button>
                       </TableCell>
                       <TableCell>
                         {SHIFT_REQUEST_TYPE_LABELS[r.request_type]}
@@ -211,8 +220,9 @@ export function ShiftRequestsAdminPanel({
                                 e.stopPropagation();
                                 openApprove(r);
                               }}
+                              aria-label={`אישור הבקשה של ${r.trainer_name}`}
                             >
-                              <Check className="h-4 w-4" />
+                              <Check className="h-4 w-4" aria-hidden="true" />
                             </Button>
                             <Button
                               size="sm"
@@ -222,8 +232,9 @@ export function ShiftRequestsAdminPanel({
                                 e.stopPropagation();
                                 openReject(r);
                               }}
+                              aria-label={`דחיית הבקשה של ${r.trainer_name}`}
                             >
-                              <X className="h-4 w-4" />
+                              <X className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           </div>
                         )}

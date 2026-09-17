@@ -132,6 +132,12 @@ export default function RootLayout({
         style={{ "--font-heebo": heeboFamily } as React.CSSProperties}
         className={`${bebasNeue.variable} font-sans antialiased overflow-x-hidden`}
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg focus:ring-2 focus:ring-primary"
+        >
+          דלג לתוכן
+        </a>
         <NuqsAdapter>
           {children}
         </NuqsAdapter>

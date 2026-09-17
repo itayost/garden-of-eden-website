@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Phone, ArrowRight, Loader2 } from "lucide-react";
+import { Phone, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 function LoginForm() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = getSafeRedirectUrl(searchParams.get("redirect"));
@@ -27,10 +28,11 @@ function LoginForm() {
     const e164Phone = normalizePhone(phone);
 
     if (!e164Phone) {
-      toast.error("נא להזין מספר נייד ישראלי תקין (למשל 0501234567)");
+      setError("נא להזין מספר נייד ישראלי תקין (למשל 0501234567)");
       return;
     }
 
+    setError(null);
     setLoading(true);
 
     try {
@@ -52,7 +54,7 @@ function LoginForm() {
       router.push("/auth/verify");
     } catch (error: unknown) {
       console.error("Login error:", error);
-      toast.error(getOtpErrorMessage(error));
+      setError(getOtpErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -72,24 +74,32 @@ function LoginForm() {
             onChange={(e) => setPhone(e.target.value)}
             className="pe-10 text-lg text-start"
             dir="ltr"
+            autoComplete="tel"
+            aria-invalid={error !== null}
+            aria-describedby={error ? "phone-hint phone-error" : "phone-hint"}
             disabled={loading}
           />
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p id="phone-hint" className="text-sm text-muted-foreground">
           נשלח לכם קוד אימות ב-WhatsApp
         </p>
+        {error && (
+          <p id="phone-error" role="alert" className="text-sm font-medium text-destructive">
+            {error}
+          </p>
+        )}
       </div>
 
       <Button type="submit" className="w-full" size="lg" disabled={loading}>
         {loading ? (
           <>
-            <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
             שולח...
           </>
         ) : (
           <>
-            <ArrowRight className="ml-2 h-5 w-5" />
             שלח קוד אימות
+            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </>
         )}
       </Button>
@@ -99,13 +109,15 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
+    <main id="main-content" tabIndex={-1} className="outline-none min-h-dvh flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
       <Card className="w-full max-w-md border-[#22C55E]/20">
         <CardHeader className="text-center">
           <Link href="/" className="font-display text-3xl text-[#22C55E] mb-4 block tracking-wider">
             GARDEN OF EDEN
           </Link>
-          <CardTitle className="text-2xl">התחברות</CardTitle>
+          <CardTitle className="text-2xl">
+            <h1>התחברות</h1>
+          </CardTitle>
           <CardDescription>
             הזינו את מספר הטלפון שלכם כדי להתחבר
           </CardDescription>
@@ -125,6 +137,6 @@ export default function LoginPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

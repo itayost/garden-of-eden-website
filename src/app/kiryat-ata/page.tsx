@@ -28,7 +28,7 @@ export default async function KiryatAtaPage() {
 
   return (
     <MotionProvider>
-      <main className="bg-[#F5F5F0]">
+      <main id="main-content" tabIndex={-1} className="outline-none bg-[#F5F5F0]">
         <LocalBusinessJsonLd
           seo={BRANCH_SEO.kiryat_ata}
           offers={products.map((p) => ({ name: p.name_he, price: p.price_ils, description: p.blurb_he }))}

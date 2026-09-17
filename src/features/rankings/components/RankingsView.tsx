@@ -114,7 +114,10 @@ export function RankingsView({
         </div>
         <div className="flex items-center gap-4">
           {isPending && (
-            <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+            <span role="status">
+              <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
+              <span className="sr-only">טוען...</span>
+            </span>
           )}
           {(branchOptions.length > 1 || showAllBranchesOption) && (
             <BranchFilter

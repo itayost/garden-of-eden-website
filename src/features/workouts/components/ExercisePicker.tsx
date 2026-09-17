@@ -211,7 +211,7 @@ export function ExercisePicker({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <SheetDialogContent dir="rtl" className="sm:max-w-2xl">
+      <SheetDialogContent dir="rtl" className="sm:max-w-2xl" aria-describedby={undefined}>
         <DialogHeader className="px-4 pt-4 pb-3 text-start sm:px-6 sm:pt-6">
           <DialogTitle>בחר תרגילים</DialogTitle>
         </DialogHeader>
@@ -262,8 +262,9 @@ export function ExercisePicker({
         {/* Results */}
         <div className="min-h-0 flex-1 overflow-y-auto">
           {loadingExercises ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div role="status" className="flex items-center justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
+              <span className="sr-only">טוען...</span>
             </div>
           ) : exercises.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">

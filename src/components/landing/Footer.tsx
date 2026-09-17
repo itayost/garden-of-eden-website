@@ -97,7 +97,7 @@ export function Footer() {
                 >
                   <Image
                     src="/logo-transparent.png"
-                    alt="Garden of Eden"
+                    alt=""
                     width={40}
                     height={40}
                     className="w-10 h-10 object-contain"

@@ -38,8 +38,8 @@ export function DeleteAssessmentDialog({
       onDelete={() => softDeleteAssessmentAction(assessmentId)}
       onSuccess={() => router.refresh()}
       trigger={trigger || (
-        <Button variant="ghost" size="icon">
-          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+        <Button variant="ghost" size="icon" aria-label="מחיקת מבדק">
+          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" aria-hidden="true" />
         </Button>
       )}
     />

@@ -195,8 +195,13 @@ function MealPlanPdfSlot({
                 return { error: result.error || "שגיאה במחיקה" };
               }}
               trigger={
-                <Button variant="ghost" size="icon" disabled={isLoading}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={isLoading}
+                  aria-label={`מחיקת ${label}`}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                 </Button>
               }
             />
@@ -204,8 +209,17 @@ function MealPlanPdfSlot({
         </>
       ) : (
         <div
-          className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+          className="border-2 border-dashed rounded-md p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          role="button"
+          tabIndex={isLoading ? -1 : 0}
+          aria-label={`העלאת קובץ PDF עבור ${label}`}
+          aria-disabled={isLoading}
           onClick={() => !isLoading && fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            e.preventDefault();
+            if (!isLoading) fileInputRef.current?.click();
+          }}
         >
           {isLoading ? (
             <div className="space-y-2">
