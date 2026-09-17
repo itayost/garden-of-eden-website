@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, ArrowRight } from "lucide-react";
+import { Home, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
@@ -20,8 +20,8 @@ export default function NotFound() {
           </Button>
           <Button variant="outline" asChild>
             <Link href="/dashboard">
-              <ArrowRight className="h-4 w-4" />
               לאזור האישי
+              <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
         </div>

@@ -377,7 +377,7 @@ export function RetentionPageClient({
       </div>
 
       <Tabs defaultValue="monthly" dir="rtl">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="flex w-full justify-start md:grid md:grid-cols-4">
           <TabsTrigger value="monthly">
             מנוי חודשי{data ? ` (${data.monthly.filter(inScope).length})` : ""}
           </TabsTrigger>
