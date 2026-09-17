@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { preferredScrollBehavior } from "@/lib/utils/scroll-behavior";
 
 const navLinks = [
   { label: "בית", href: "#" },
@@ -77,7 +78,7 @@ export function Navbar({
     setIsMobileMenuOpen(false);
 
     if (href === "#") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: preferredScrollBehavior() });
       return;
     }
 
@@ -85,7 +86,7 @@ export function Navbar({
     if (element) {
       const offset = 80; // navbar height
       const top = element.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: "smooth" });
+      window.scrollTo({ top, behavior: preferredScrollBehavior() });
     }
   };
 

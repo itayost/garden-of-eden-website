@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, MessageCircle } from "lucide-react";
+import { preferredScrollBehavior } from "@/lib/utils/scroll-behavior";
 
 export interface HeroProps {
   eyebrow?: string;
@@ -33,7 +34,7 @@ export function Hero({
     if (element) {
       const offset = 80;
       const top = element.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: "smooth" });
+      window.scrollTo({ top, behavior: preferredScrollBehavior() });
     }
   };
   const scrollToAbout = () => scrollToId("about");

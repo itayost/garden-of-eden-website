@@ -5,6 +5,7 @@ import { Volume2, VolumeX } from "lucide-react";
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { useInViewAutoplay } from "@/hooks/useInViewAutoplay";
+import { preferredScrollBehavior } from "@/lib/utils/scroll-behavior";
 
 // 4 Core Values - Updated content
 const categories = [
@@ -60,7 +61,7 @@ export function About() {
     if (element) {
       const offset = 80;
       const top = element.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: "smooth" });
+      window.scrollTo({ top, behavior: preferredScrollBehavior() });
     }
   };
 

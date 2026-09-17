@@ -75,7 +75,7 @@ export function BookCover({
           <h1 className="font-display text-4xl leading-tight text-forest sm:text-6xl">
             ספר פיתוח
             <br />
-            <span className="gradient-text-gold">שחקן</span>
+            <span className="text-amber-600">שחקן</span>
           </h1>
           <p className="mt-3 text-sm text-muted-foreground font-light">
             מסלול מאורגן לפיתוח מיומנויות כדורגל

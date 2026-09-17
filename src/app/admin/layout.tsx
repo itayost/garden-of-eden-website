@@ -7,6 +7,7 @@ import { ADMIN_PAGE_TITLES } from "@/lib/navigation/admin-nav";
 import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { MotionProvider } from "@/components/MotionProvider";
 import type { Profile } from "@/types/database";
 
 export default async function AdminLayout({
@@ -49,20 +50,22 @@ export default async function AdminLayout({
   const navBadges = { "/admin/tasks": taskBadge };
 
   return (
-    <SidebarProvider defaultOpen={sidebarOpen}>
-      <AdminSidebar user={user} profile={profile} navBadges={navBadges} />
-      <SidebarInset>
-        <AppTopBar
-          user={user}
-          profile={profile}
-          titles={ADMIN_PAGE_TITLES}
-          fallbackTitle="ניהול"
-        />
-        <main id="main-content" tabIndex={-1} className="outline-none container mx-auto px-4 pt-6 pb-20 md:pb-8">
-          {children}
-        </main>
-        <AdminBottomNav isAdmin={isAdmin} navBadges={navBadges} />
-      </SidebarInset>
-    </SidebarProvider>
+    <MotionProvider>
+      <SidebarProvider defaultOpen={sidebarOpen}>
+        <AdminSidebar user={user} profile={profile} navBadges={navBadges} />
+        <SidebarInset>
+          <AppTopBar
+            user={user}
+            profile={profile}
+            titles={ADMIN_PAGE_TITLES}
+            fallbackTitle="ניהול"
+          />
+          <main id="main-content" tabIndex={-1} className="outline-none container mx-auto px-4 pt-6 pb-20 md:pb-8">
+            {children}
+          </main>
+          <AdminBottomNav isAdmin={isAdmin} navBadges={navBadges} />
+        </SidebarInset>
+      </SidebarProvider>
+    </MotionProvider>
   );
 }
