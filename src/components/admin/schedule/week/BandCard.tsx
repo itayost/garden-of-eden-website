@@ -112,7 +112,7 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
 
           {canEdit && (
             // Always visible on touch, where there is no hover to reveal them.
-            <div className="flex shrink-0 flex-col gap-0.5 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+            <div className="flex shrink-0 flex-col gap-0.5 pointer-coarse:gap-2 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">
               <Button
                 variant="ghost"
                 size="icon"

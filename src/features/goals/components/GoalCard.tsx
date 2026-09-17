@@ -13,7 +13,7 @@ export function GoalCard({ goal, compact = false }: GoalCardProps) {
   const statusConfig = {
     achieved: {
       icon: CheckCircle,
-      color: "text-green-600",
+      color: "text-success",
       bgColor: "bg-green-50",
       borderColor: "border-green-200",
       label: "הושג!",
@@ -134,7 +134,7 @@ export function GoalCard({ goal, compact = false }: GoalCardProps) {
         )}
 
         {goal.achieved_at && (
-          <div className="mt-2 text-xs text-green-600">
+          <div className="mt-2 text-xs text-success">
             הושג ב-
             {new Date(goal.achieved_at).toLocaleDateString("he-IL")}
             {goal.achieved_value && ` (${goal.achieved_value} ${goal.unit})`}

@@ -198,7 +198,7 @@ export function AssessmentsMonthView({ month, year, branches }: AssessmentsMonth
               <CardTitle className="text-sm font-medium text-green-700">
                 מבדק מלא
               </CardTitle>
-              <ClipboardCheck className="h-4 w-4 text-green-600" />
+              <ClipboardCheck className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{data?.fullCount ?? "—"}</div>
@@ -224,7 +224,7 @@ export function AssessmentsMonthView({ month, year, branches }: AssessmentsMonth
               <CardTitle className="text-sm font-medium text-amber-700">
                 מבדק חלקי
               </CardTitle>
-              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertCircle className="h-4 w-4 text-warning-emphasis" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">

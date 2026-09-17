@@ -44,7 +44,7 @@ export function OrderStatusPoller({ orderId }: { orderId: string }) {
   if (view === "confirmed") {
     return (
       <div className="space-y-2 text-center">
-        <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
+        <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
         <h1 className="text-2xl font-bold">התשלום התקבל</h1>
         <p className="text-black/60">
           קוד ההתחברות לאפליקציה יגיע בוואטסאפ למספר של החניך, והחשבונית למייל.
@@ -56,7 +56,7 @@ export function OrderStatusPoller({ orderId }: { orderId: string }) {
   if (view === "timeout") {
     return (
       <div className="space-y-2 text-center">
-        <Clock className="mx-auto h-12 w-12 text-black/40" />
+        <Clock className="mx-auto h-12 w-12 text-black/60" />
         <h1 className="text-2xl font-bold">התשלום בטיפול</h1>
         <p className="text-black/60">אישור התשלום יגיע בוואטסאפ בדקות הקרובות.</p>
       </div>
@@ -65,7 +65,7 @@ export function OrderStatusPoller({ orderId }: { orderId: string }) {
 
   return (
     <div className="space-y-2 text-center">
-      <Loader2 className="mx-auto h-12 w-12 animate-spin text-black/40" aria-hidden="true" />
+      <Loader2 className="mx-auto h-12 w-12 animate-spin text-black/60" aria-hidden="true" />
       <h1 className="text-2xl font-bold">ממתינים לאישור התשלום</h1>
       <p role="status" className="text-black/60">זה לוקח כמה שניות.</p>
     </div>

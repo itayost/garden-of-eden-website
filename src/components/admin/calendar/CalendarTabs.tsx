@@ -36,7 +36,7 @@ export function CalendarTabs() {
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors pointer-coarse:min-h-11 sm:flex-none",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "bg-background font-medium text-forest shadow-sm"
                 : "text-muted-foreground hover:text-foreground",

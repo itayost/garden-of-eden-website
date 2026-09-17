@@ -32,7 +32,7 @@ export function getLeadColumns({ showPaidIndicator }: GetLeadColumnsOptions): Co
       cell: ({ row }) => {
         const paid = (row.original.payment ?? 0) > 0;
         return paid ? (
-          <CheckCircle2 className="h-4 w-4 text-green-600" aria-label="שולם" />
+          <CheckCircle2 className="h-4 w-4 text-success" aria-label="שולם" />
         ) : (
           <Circle className="h-4 w-4 text-muted-foreground" aria-label="לא שולם" />
         );

@@ -66,7 +66,7 @@ export function About() {
 
   return (
     <>
-      <section id="about" className="py-20 bg-[#F5F5F0]">
+      <section id="about" className="py-20 bg-paper">
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left side */}
@@ -75,7 +75,7 @@ export function About() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <span className="text-sm text-black/50 mb-2 block">גלו עוד</span>
+              <span className="text-sm text-black/60 mb-2 block">גלו עוד</span>
               <h2 className="text-4xl md:text-5xl font-bold text-black mb-8">
                 אודותינו
               </h2>
@@ -104,7 +104,7 @@ export function About() {
                   <m.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
-                    className="w-12 h-12 rounded-full bg-[#CDEA68] flex items-center justify-center shadow-lg"
+                    className="w-12 h-12 rounded-full bg-brand-lime flex items-center justify-center shadow-lg"
                   >
                     {isMuted ? (
                       <VolumeX className="w-5 h-5 text-black" />
@@ -133,7 +133,7 @@ export function About() {
                   onClick={() => setActiveCategory(index)}
                   className={`px-6 py-4 rounded-2xl text-right font-medium transition-all duration-300 ${
                     activeCategory === index
-                      ? "bg-[#CDEA68] text-black"
+                      ? "bg-brand-lime text-black"
                       : "bg-transparent border border-black/20 text-black/60 hover:border-black/40"
                   }`}
                 >
@@ -166,7 +166,7 @@ export function About() {
               <h2 className="text-4xl md:text-5xl font-bold text-black">
                 למה לבחור בנו?
               </h2>
-              <p className="text-black/50 max-w-md mt-4 md:mt-0">
+              <p className="text-black/60 max-w-md mt-4 md:mt-0">
                 המתחם שלנו מספק הכל מה שאתם צריכים לחוויית אימון מלאה
               </p>
             </div>
@@ -195,7 +195,7 @@ export function About() {
                   {/* Dark overlay for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
                   {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-[#CDEA68]/0 group-hover:bg-[#CDEA68]/10 transition-colors duration-300" />
+                  <div className="absolute inset-0 bg-brand-lime/0 group-hover:bg-brand-lime/10 transition-colors duration-300" />
 
                   <AnimatePresence mode="wait">
                     {hoveredFeature === index ? (
@@ -206,7 +206,7 @@ export function About() {
                         exit={{ opacity: 0, y: -10 }}
                         className="relative z-10"
                       >
-                        <span className="text-[#CDEA68] text-sm mb-2 block">לחצו לפרטים</span>
+                        <span className="text-brand-lime text-sm mb-2 block">לחצו לפרטים</span>
                         <span className="text-white/70 text-sm">{feature.detail}</span>
                       </m.div>
                     ) : (

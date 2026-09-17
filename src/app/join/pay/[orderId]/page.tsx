@@ -47,25 +47,25 @@ export default async function PayPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-medium text-black/50">שלב 2 מתוך 2</p>
+        <p className="text-sm font-medium text-black/60">שלב 2 מתוך 2</p>
         <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold sm:text-3xl">
-          <ShieldCheck className="h-6 w-6 text-green-600" />
+          <ShieldCheck className="h-6 w-6 text-success" />
           תשלום מאובטח
         </h1>
       </header>
 
       <section className="rounded-2xl border bg-white p-4">
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-          <dt className="text-black/50">מסלול</dt>
+          <dt className="text-black/60">מסלול</dt>
           <dd className="font-medium">{product?.name_he ?? "מסלול"}</dd>
-          <dt className="text-black/50">חניך/ה</dt>
+          <dt className="text-black/60">חניך/ה</dt>
           <dd className="font-medium">{order.child_name}</dd>
-          <dt className="text-black/50">משלם/ת</dt>
+          <dt className="text-black/60">משלם/ת</dt>
           <dd className="font-medium">{order.parent_name}</dd>
-          <dt className="text-black/50">לתשלום</dt>
+          <dt className="text-black/60">לתשלום</dt>
           <dd className="text-xl font-bold">₪{amount.toLocaleString("he-IL")}</dd>
         </dl>
-        <p className="mt-3 text-xs text-black/50">
+        <p className="mt-3 text-xs text-black/60">
           המחיר כולל מע&quot;מ. ההסכם נחתם;{" "}
           <Link href="/join" className="underline">חזרה לבחירת מסלול</Link> מתחילה הרשמה חדשה.
         </p>

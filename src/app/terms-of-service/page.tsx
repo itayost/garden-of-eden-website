@@ -12,11 +12,11 @@ export const metadata: Metadata = {
 export default function TermsOfServicePage() {
   return (
     <MotionProvider>
-      <main id="main-content" tabIndex={-1} className="outline-none bg-[#F5F5F0] min-h-screen">
+      <main id="main-content" tabIndex={-1} className="outline-none bg-paper min-h-screen">
         <Navbar />
 
         <div className="container mx-auto px-6 py-24 max-w-4xl">
-          <h1 className="text-4xl font-bold mb-12 text-[#1a1a1a]">תנאי שימוש</h1>
+          <h1 className="text-4xl font-bold mb-12 text-ink">תנאי שימוש</h1>
 
           <div className="space-y-8 text-gray-700 leading-relaxed">
             <p className="text-lg">
@@ -24,7 +24,7 @@ export default function TermsOfServicePage() {
             </p>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">הסכמה לתנאים</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">הסכמה לתנאים</h2>
               <p>
                 השימוש באתר ובשירותים של Garden of Eden (&quot;האקדמיה&quot;) מהווה הסכמה
                 לתנאי שימוש אלה. אם אינכם מסכימים לתנאים, אנא הימנעו משימוש בשירותים.
@@ -32,7 +32,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">תיאור השירותים</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">תיאור השירותים</h2>
               <p>
                 האקדמיה מספקת שירותי אימון כדורגל, מעקב ביצועים והערכות לשחקנים.
                 השירותים כוללים אימונים פרונטליים, תוכניות אימון מותאמות אישית,
@@ -41,7 +41,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">הרשמה וחשבון משתמש</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">הרשמה וחשבון משתמש</h2>
               <ul className="list-disc list-inside space-y-2 mr-4">
                 <li>עליכם לספק מידע מדויק ועדכני בעת ההרשמה</li>
                 <li>אתם אחראים לשמירה על סודיות פרטי הכניסה שלכם</li>
@@ -51,7 +51,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">תשלום ומחירים</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">תשלום ומחירים</h2>
               <ul className="list-disc list-inside space-y-2 mr-4">
                 <li>המחירים מפורסמים באתר ועשויים להשתנות מעת לעת</li>
                 <li>התשלום נדרש מראש לפי תנאי התוכנית הנבחרת</li>
@@ -60,7 +60,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">מדיניות ביטולים</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">מדיניות ביטולים</h2>
               <p className="mb-4">
                 ביטול עסקה והחזר כספי נעשים לפי חוק הגנת הצרכן: ביטול בתוך 14 ימים
                 מיום הרכישה בניכוי דמי ביטול של 5% או 100 ש&quot;ח (הנמוך מביניהם),
@@ -73,7 +73,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">התנהגות נאותה</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">התנהגות נאותה</h2>
               <p className="mb-4">בעת השימוש בשירותים שלנו, עליכם:</p>
               <ul className="list-disc list-inside space-y-2 mr-4">
                 <li>לנהוג בכבוד כלפי מאמנים, צוות ומשתתפים אחרים</li>
@@ -84,7 +84,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">קניין רוחני</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">קניין רוחני</h2>
               <p>
                 כל התכנים באתר ובפלטפורמה, כולל סרטונים, תוכניות אימון, לוגו ועיצובים,
                 הם קניינה הבלעדי של האקדמיה ומוגנים בזכויות יוצרים. אין להעתיק,
@@ -93,7 +93,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">הגבלת אחריות</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">הגבלת אחריות</h2>
               <p>
                 האקדמיה לא תהיה אחראית לנזקים ישירים או עקיפים הנובעים מהשתתפות
                 באימונים או משימוש בפלטפורמה. ההשתתפות באימונים היא על אחריותכם
@@ -102,7 +102,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">שינויים בתנאים</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">שינויים בתנאים</h2>
               <p>
                 אנו שומרים על הזכות לעדכן תנאים אלה בכל עת. שינויים יפורסמו באתר
                 והמשך השימוש בשירותים לאחר העדכון מהווה הסכמה לתנאים החדשים.
@@ -110,10 +110,10 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">יצירת קשר</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">יצירת קשר</h2>
               <p>
                 לשאלות בנוגע לתנאי השימוש, ניתן לפנות אלינו בטלפון{" "}
-                <a href="tel:+972525779446" className="text-[#CDEA68] hover:underline">
+                <a href="tel:+972525779446" className="text-brand-lime hover:underline">
                   052-577-9446
                 </a>{" "}
                 או דרך{" "}
@@ -121,7 +121,7 @@ export default function TermsOfServicePage() {
                   href="https://wa.me/972525779446"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#CDEA68] hover:underline"
+                  className="text-brand-lime hover:underline"
                 >
                   וואטסאפ
                 </a>
@@ -130,7 +130,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">דין חל וסמכות שיפוט</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">דין חל וסמכות שיפוט</h2>
               <p>
                 תנאי שימוש אלה כפופים לדיני מדינת ישראל. כל סכסוך יתברר בבתי המשפט
                 המוסמכים במחוז חיפה.

@@ -49,7 +49,7 @@ function DeltaIndicator({ isImprovement, formatted }: DeltaIndicatorProps) {
 
   const color = getComparisonColor(isImprovement);
   const colorClass = color === "green"
-    ? "text-green-600 dark:text-green-400"
+    ? "text-success dark:text-green-400"
     : color === "red"
     ? "text-red-600 dark:text-red-400"
     : "text-muted-foreground";

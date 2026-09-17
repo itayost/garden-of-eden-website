@@ -37,22 +37,22 @@ export function PlanCatalog({ products, selectedId, onSelect }: PlanCatalogProps
             className={cn(
               "flex h-full flex-col rounded-2xl border bg-white p-4 text-start transition-all sm:p-6",
               selected
-                ? "border-2 border-[#CDEA68] shadow-lg"
+                ? "border-2 border-brand-lime shadow-lg"
                 : "border-black/10 hover:border-black/20 hover:shadow-md",
             )}
           >
             <h3 className="text-lg font-bold text-black">{product.name_he}</h3>
             {product.blurb_he && (
-              <p className="mt-1 text-sm text-black/50">{product.blurb_he}</p>
+              <p className="mt-1 text-sm text-black/60">{product.blurb_he}</p>
             )}
             <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0">
               <span className="text-2xl font-bold text-black sm:text-3xl">
                 ₪{product.price_ils.toLocaleString("he-IL")}
               </span>
-              <span className="text-sm text-black/40">{periodLabel(product)}</span>
+              <span className="text-sm text-black/60">{periodLabel(product)}</span>
             </div>
             {product.gift_he && (
-              <p className="mt-3 rounded-xl bg-[#CDEA68]/30 px-3 py-2 text-xs text-black/70">
+              <p className="mt-3 rounded-xl bg-brand-lime/30 px-3 py-2 text-xs text-black/70">
                 {product.gift_he}
               </p>
             )}

@@ -17,17 +17,17 @@ export const metadata: Metadata = {
 export default function CancellationPolicyPage() {
   return (
     <MotionProvider>
-      <main id="main-content" tabIndex={-1} className="outline-none bg-[#F5F5F0] min-h-screen">
+      <main id="main-content" tabIndex={-1} className="outline-none bg-paper min-h-screen">
         <Navbar />
 
         <div className="container mx-auto px-6 py-24 max-w-4xl">
-          <h1 className="text-4xl font-bold mb-4 text-[#1a1a1a]">מדיניות ביטול עסקה</h1>
+          <h1 className="text-4xl font-bold mb-4 text-ink">מדיניות ביטול עסקה</h1>
           <p className="text-gray-500 mb-12">גרסה {CANCELLATION_POLICY_VERSION}</p>
 
           <div className="space-y-8 text-gray-700 leading-relaxed">
             {CANCELLATION_SECTIONS.map((section) => (
               <section key={section.title}>
-                <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">{section.title}</h2>
+                <h2 className="text-2xl font-bold mb-4 text-ink">{section.title}</h2>
                 <ul className="list-disc space-y-2 ps-5">
                   {section.items.map((item) => (
                     <li key={item}>{item}</li>
@@ -37,7 +37,7 @@ export default function CancellationPolicyPage() {
             ))}
 
             <section className="rounded-2xl border border-black/10 bg-white p-6">
-              <h2 className="text-xl font-bold mb-3 text-[#1a1a1a]">פרטי העסק</h2>
+              <h2 className="text-xl font-bold mb-3 text-ink">פרטי העסק</h2>
               <dl className="grid gap-2 sm:grid-cols-[auto_1fr] sm:gap-x-6">
                 <dt className="text-gray-500">שם העסק</dt>
                 <dd>{BUSINESS_DETAILS.name_he}</dd>

@@ -43,7 +43,7 @@ export function Hero({
       {/* Hero content */}
       <div className="relative h-screen min-h-[600px] max-h-[900px]">
         {/* Background Image */}
-        <div className="absolute inset-0 bg-[#1a1a1a]">
+        <div className="absolute inset-0 bg-ink">
           <Image
             src="/landing/hero-balance.webp"
             alt=""
@@ -61,7 +61,7 @@ export function Hero({
           {/* CSS entrance (transform only) so the headline paints before hydration */}
           <div className="max-w-2xl motion-safe:animate-in motion-safe:slide-in-from-bottom-8 motion-safe:duration-700">
             {eyebrow && (
-              <span className="mb-4 inline-block rounded-full bg-[#CDEA68] px-3 py-1 text-xs font-medium text-black">
+              <span className="mb-4 inline-block rounded-full bg-brand-lime px-3 py-1 text-xs font-medium text-black">
                 {eyebrow}
               </span>
             )}
@@ -69,7 +69,7 @@ export function Hero({
               {titleStart}
               <br />
               {eyebrow ? null : <span className="text-white">ב</span>}
-              <span className="text-[#CDEA68]">{titleAccent}</span> {titleEnd}
+              <span className="text-brand-lime">{titleAccent}</span> {titleEnd}
             </h1>
 
             <p className="text-white/70 text-lg mb-8 max-w-md">{subtitle}</p>
@@ -77,7 +77,7 @@ export function Hero({
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4">
               <Button
-                className="bg-[#CDEA68] hover:bg-[#bdd85c] text-black font-medium rounded-full px-6 py-5"
+                className="bg-brand-lime hover:bg-brand-lime-hover text-black font-medium rounded-full px-6 py-5"
                 asChild
               >
                 {anchorCta ? (
@@ -123,11 +123,11 @@ export function Hero({
             className="absolute bottom-8 left-6 cursor-pointer group"
             aria-label="גלול למטה"
           >
-            <div className="w-8 h-14 border-2 border-white/30 group-hover:border-[#CDEA68]/50 rounded-full flex justify-center pt-2 transition-colors">
+            <div className="w-8 h-14 border-2 border-white/30 group-hover:border-brand-lime/50 rounded-full flex justify-center pt-2 transition-colors">
               <m.div
                 animate={{ y: [0, 8, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
-                className="w-1.5 h-3 bg-[#CDEA68] rounded-full"
+                className="w-1.5 h-3 bg-brand-lime rounded-full"
               />
             </div>
           </m.button>

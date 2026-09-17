@@ -206,7 +206,7 @@ function PremiumCard({ drill, card, isDone }: PremiumCardProps) {
               </span>
             )}
             {card.levelLabel && (
-              <span className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <span className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-warning-emphasis dark:text-amber-400 border border-amber-500/20">
                 {card.levelLabel}
               </span>
             )}
@@ -300,7 +300,7 @@ function BasicDrillView({ drill, isDone }: BasicDrillViewProps) {
                   </span>
                 )}
             {drill.setsHe && (
-              <span className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-amber-400/10 text-amber-600 dark:text-amber-400">
+              <span className="inline-flex rounded px-2 py-0.5 text-[10px] font-bold bg-amber-400/10 text-warning-emphasis dark:text-amber-400">
                 {drill.setsHe}
               </span>
             )}

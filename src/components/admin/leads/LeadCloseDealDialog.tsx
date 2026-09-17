@@ -76,7 +76,7 @@ export function LeadCloseDealDialog({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-amber-600" />
+            <Target className="h-5 w-5 text-warning-emphasis" />
             סגירת עסקה
           </DialogTitle>
           <DialogDescription>סגירת עסקה עבור {lead.name}</DialogDescription>

@@ -38,7 +38,7 @@ export function RadarStatsChart({ stats, height = 300 }: RadarStatsChartProps) {
           <PolarGrid />
           <PolarAngleAxis
             dataKey="stat"
-            tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }}
+            tick={{ fontSize: 12, fill: "var(--foreground)" }}
           />
           <PolarRadiusAxis
             angle={90}

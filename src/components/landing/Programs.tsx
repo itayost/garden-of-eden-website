@@ -119,7 +119,7 @@ export function Programs() {
 
   return (
     <>
-      <section id="programs" className="py-20 bg-[#F5F5F0]">
+      <section id="programs" className="py-20 bg-paper">
         <div className="container mx-auto px-6">
           {/* Header */}
           <m.div
@@ -133,7 +133,7 @@ export function Programs() {
               <br />
               לכל רמת כושר
             </h2>
-            <p className="text-black/50 max-w-sm mt-4 md:mt-0">
+            <p className="text-black/60 max-w-sm mt-4 md:mt-0">
               לחצו על כרטיס התוכנית לפרטים נוספים
             </p>
           </m.div>
@@ -162,7 +162,7 @@ export function Programs() {
                     onClick={() => setSelectedProgram(index)}
                     aria-haspopup="dialog"
                     aria-label={`${program.title}: פרטים נוספים`}
-                    className="absolute inset-0 z-20 rounded-3xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#CDEA68]"
+                    className="absolute inset-0 z-20 rounded-3xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-brand-lime"
                   />
                   <Image
                     src={program.image}
@@ -174,7 +174,7 @@ export function Programs() {
                   {/* Dark overlay for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40" />
                   {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-[#CDEA68]/0 group-hover:bg-[#CDEA68]/10 transition-colors duration-300" />
+                  <div className="absolute inset-0 bg-brand-lime/0 group-hover:bg-brand-lime/10 transition-colors duration-300" />
 
                   {/* Icon badge */}
                   <m.div
@@ -184,7 +184,7 @@ export function Programs() {
                     }}
                     className="w-10 h-10 rounded-xl flex items-center justify-center mb-auto relative z-10"
                   >
-                    <program.icon className="w-5 h-5 text-[#CDEA68]" />
+                    <program.icon className="w-5 h-5 text-brand-lime" />
                   </m.div>
 
                   {/* Content */}
@@ -209,7 +209,7 @@ export function Programs() {
                               {program.groupSize}
                             </span>
                           </div>
-                          <span className="flex items-center gap-2 text-[#CDEA68] text-sm font-medium">
+                          <span className="flex items-center gap-2 text-brand-lime text-sm font-medium">
                             לחצו לפרטים
                             <ArrowLeft className="w-4 h-4" />
                           </span>
@@ -228,7 +228,7 @@ export function Programs() {
                     </AnimatePresence>
 
                     {hoveredProgram !== index && (
-                      <span aria-hidden="true" className="flex items-center gap-2 text-[#CDEA68] text-sm font-medium group-hover:gap-3 transition-all">
+                      <span aria-hidden="true" className="flex items-center gap-2 text-brand-lime text-sm font-medium group-hover:gap-3 transition-all">
                         למידע נוסף
                         <ArrowLeft className="w-4 h-4" />
                       </span>
@@ -275,13 +275,13 @@ export function Programs() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#1a1a1a] to-[#2a2a2a] rounded-3xl"
+                className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-ink to-[#2a2a2a] rounded-3xl"
               >
                 {/* Header */}
                 <div className="p-8 border-b border-white/10">
                   <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-[#CDEA68]/20 flex items-center justify-center flex-shrink-0">
-                      <currentProgram.icon className="w-7 h-7 text-[#CDEA68]" />
+                    <div className="w-14 h-14 rounded-2xl bg-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                      <currentProgram.icon className="w-7 h-7 text-brand-lime" />
                     </div>
                     <div>
                       <h3 id="program-dialog-title" className="text-white font-bold text-2xl mb-2">{currentProgram.title}</h3>
@@ -295,23 +295,23 @@ export function Programs() {
                   {/* Info grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div className="bg-white/5 rounded-2xl p-4 text-center">
-                      <Clock className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
-                      <span className="text-white/40 text-xs block mb-1">משך אימון</span>
+                      <Clock className="w-5 h-5 text-brand-lime mx-auto mb-2" />
+                      <span className="text-white/60 text-xs block mb-1">משך אימון</span>
                       <span className="text-white font-medium text-sm">{currentProgram.duration}</span>
                     </div>
                     <div className="bg-white/5 rounded-2xl p-4 text-center">
-                      <Users className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
-                      <span className="text-white/40 text-xs block mb-1">גודל קבוצה</span>
+                      <Users className="w-5 h-5 text-brand-lime mx-auto mb-2" />
+                      <span className="text-white/60 text-xs block mb-1">גודל קבוצה</span>
                       <span className="text-white font-medium text-sm">{currentProgram.groupSize}</span>
                     </div>
                     <div className="bg-white/5 rounded-2xl p-4 text-center">
-                      <Calendar className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
-                      <span className="text-white/40 text-xs block mb-1">ימים</span>
+                      <Calendar className="w-5 h-5 text-brand-lime mx-auto mb-2" />
+                      <span className="text-white/60 text-xs block mb-1">ימים</span>
                       <span className="text-white font-medium text-sm">{currentProgram.schedule}</span>
                     </div>
                     <div className="bg-white/5 rounded-2xl p-4 text-center">
-                      <Target className="w-5 h-5 text-[#CDEA68] mx-auto mb-2" />
-                      <span className="text-white/40 text-xs block mb-1">רמה</span>
+                      <Target className="w-5 h-5 text-brand-lime mx-auto mb-2" />
+                      <span className="text-white/60 text-xs block mb-1">רמה</span>
                       <span className="text-white font-medium text-sm">{currentProgram.level}</span>
                     </div>
                   </div>
@@ -328,7 +328,7 @@ export function Programs() {
                           transition={{ delay: index * 0.1 }}
                           className="flex items-center gap-3"
                         >
-                          <div className="w-2 h-2 rounded-full bg-[#CDEA68]" />
+                          <div className="w-2 h-2 rounded-full bg-brand-lime" />
                           <span className="text-white/70 text-sm">{benefit}</span>
                         </m.div>
                       ))}
@@ -337,7 +337,7 @@ export function Programs() {
 
                   {/* CTA */}
                   <Button
-                    className="w-full py-6 rounded-full bg-[#CDEA68] hover:bg-[#bdd85c] text-black font-medium text-lg"
+                    className="w-full py-6 rounded-full bg-brand-lime hover:bg-brand-lime-hover text-black font-medium text-lg"
                     asChild
                   >
                     <a

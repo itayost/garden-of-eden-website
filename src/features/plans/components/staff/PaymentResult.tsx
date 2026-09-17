@@ -12,7 +12,7 @@ import { resendAgreementLinkAction } from "../../lib/actions/staff-payment";
 
 function Line({ ok, children }: { ok: boolean | null; children: React.ReactNode }) {
   const Icon = ok === null ? FileText : ok ? CheckCircle2 : XCircle;
-  const color = ok === null ? "text-muted-foreground" : ok ? "text-green-600" : "text-destructive";
+  const color = ok === null ? "text-muted-foreground" : ok ? "text-success" : "text-destructive";
   return (
     <li className="flex items-start gap-3 rounded-xl border p-3">
       <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${color}`} />

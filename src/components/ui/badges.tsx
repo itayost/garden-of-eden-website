@@ -30,7 +30,7 @@ export function RoleBadge({ role }: { role: string | null }) {
 export function StatusBadge({ isActive }: { isActive: boolean }) {
   if (isActive) {
     return (
-      <Badge variant="outline" className="border-green-500 text-green-600">
+      <Badge variant="outline" className="border-green-500 text-success">
         פעיל
       </Badge>
     );
@@ -48,7 +48,7 @@ export function StatusBadge({ isActive }: { isActive: boolean }) {
 export function YesNoBadge({ value }: { value: boolean }) {
   if (value) {
     return (
-      <Badge variant="outline" className="border-green-500 text-green-600">
+      <Badge variant="outline" className="border-green-500 text-success">
         כן
       </Badge>
     );

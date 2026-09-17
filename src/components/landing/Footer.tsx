@@ -81,7 +81,7 @@ export function Footer() {
 
   return (
     <>
-      <footer className="bg-[#1a1a1a] text-white relative">
+      <footer className="bg-ink text-white relative">
         <div className="container mx-auto px-6 py-16">
           <div className="grid md:grid-cols-12 gap-12 mb-12">
             {/* Brand */}
@@ -103,7 +103,7 @@ export function Footer() {
                     className="w-10 h-10 object-contain"
                   />
                 </m.div>
-                <span className="font-bold group-hover:text-[#CDEA68] transition-colors">
+                <span className="font-bold group-hover:text-brand-lime transition-colors">
                   GARDEN OF EDEN
                 </span>
               </a>
@@ -115,7 +115,7 @@ export function Footer() {
               <div className="space-y-2">
                 <a
                   href="tel:+972525779446"
-                  className="flex items-center gap-2 text-white/50 hover:text-[#CDEA68] transition-colors text-sm group"
+                  className="flex items-center gap-2 text-white/50 hover:text-brand-lime transition-colors text-sm group"
                 >
                   <Phone className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   052-577-9446
@@ -136,10 +136,10 @@ export function Footer() {
                     <a
                       href={link.href}
                       onClick={(e) => handleNavClick(e, link.href)}
-                      className="text-white/50 hover:text-[#CDEA68] transition-colors text-sm inline-block relative group"
+                      className="text-white/50 hover:text-brand-lime transition-colors text-sm inline-block relative group"
                     >
                       {link.label}
-                      <span className="absolute bottom-0 left-0 w-0 h-px bg-[#CDEA68] group-hover:w-full transition-all duration-300" />
+                      <span className="absolute bottom-0 left-0 w-0 h-px bg-brand-lime group-hover:w-full transition-all duration-300" />
                     </a>
                   </li>
                 ))}
@@ -154,10 +154,10 @@ export function Footer() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-white/50 hover:text-[#CDEA68] transition-colors text-sm inline-block relative group"
+                      className="text-white/50 hover:text-brand-lime transition-colors text-sm inline-block relative group"
                     >
                       {link.label}
-                      <span className="absolute bottom-0 left-0 w-0 h-px bg-[#CDEA68] group-hover:w-full transition-all duration-300" />
+                      <span className="absolute bottom-0 left-0 w-0 h-px bg-brand-lime group-hover:w-full transition-all duration-300" />
                     </Link>
                   </li>
                 ))}
@@ -178,7 +178,7 @@ export function Footer() {
                     rel="noopener noreferrer"
                     whileHover={{ scale: 1.1, y: -2 }}
                     whileTap={{ scale: 0.95 }}
-                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-[#CDEA68] flex items-center justify-center text-white hover:text-black transition-colors"
+                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-brand-lime flex items-center justify-center text-white hover:text-black transition-colors"
                     aria-label={social.label}
                   >
                     <social.icon className="w-5 h-5" />
@@ -194,7 +194,7 @@ export function Footer() {
                       href={social.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-white/50 hover:text-[#CDEA68] transition-colors text-sm group"
+                      className="flex items-center gap-2 text-white/50 hover:text-brand-lime transition-colors text-sm group"
                     >
                       <social.icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                       {social.label}
@@ -257,7 +257,7 @@ export function Footer() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={scrollToTop}
-        className="fixed bottom-8 left-8 w-12 h-12 rounded-full bg-[#CDEA68] text-black shadow-lg flex items-center justify-center z-40"
+        className="fixed bottom-8 left-8 w-12 h-12 rounded-full bg-brand-lime text-black shadow-lg flex items-center justify-center z-40"
         aria-label="חזרה למעלה"
       >
         <ArrowUp className="w-5 h-5" />

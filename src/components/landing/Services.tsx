@@ -126,7 +126,7 @@ export function Services() {
   };
 
   return (
-    <section id="services" className="py-20 bg-[#F5F5F0]">
+    <section id="services" className="py-20 bg-paper">
       <div className="container mx-auto px-6">
         {/* Header */}
         <m.div
@@ -138,7 +138,7 @@ export function Services() {
           <h2 className="text-4xl md:text-5xl font-bold text-black mb-4">
             תוכניות מנוי גמישות
           </h2>
-          <p className="text-black/50 max-w-md mx-auto">
+          <p className="text-black/60 max-w-md mx-auto">
             בחרו את התוכנית שמתאימה לכם והתחילו את המסע לגרסה הטובה ביותר של עצמכם
           </p>
         </m.div>
@@ -157,7 +157,7 @@ export function Services() {
               {/* Recommended badge */}
               {plan.highlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#CDEA68] text-black text-xs font-medium">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-lime text-black text-xs font-medium">
                     <span className="w-1.5 h-1.5 rounded-full bg-black" />
                     מומלץ ע״י המאמנים
                   </span>
@@ -169,28 +169,28 @@ export function Services() {
                 whileHover={{ y: -8, transition: { duration: 0.2 } }}
                 className={`rounded-3xl p-8 h-full flex flex-col transition-all duration-300 ${
                   plan.highlighted
-                    ? "bg-white border-2 border-[#CDEA68] shadow-lg"
+                    ? "bg-white border-2 border-brand-lime shadow-lg"
                     : "bg-white border border-black/10 hover:border-black/20 hover:shadow-md"
                 }`}
               >
 
                 {/* Plan name */}
                 <h3 className="text-xl font-bold text-black mb-2">{plan.name}</h3>
-                <p className="text-black/50 text-sm mb-6">{plan.description}</p>
+                <p className="text-black/60 text-sm mb-6">{plan.description}</p>
 
                 {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-bold text-black">₪{plan.price}</span>
                   </div>
-                  <span className="text-black/40 text-sm">{plan.period}</span>
+                  <span className="text-black/60 text-sm">{plan.period}</span>
                 </div>
 
                 {/* Features */}
                 <ul className="space-y-3 mb-4">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#CDEA68] mt-2 flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-brand-lime mt-2 flex-shrink-0" />
                       <span className="text-black/70 text-sm">{feature}</span>
                     </li>
                   ))}
@@ -200,7 +200,7 @@ export function Services() {
                 {plan.extraFeatures.length > 0 && (
                   <button
                     onClick={() => toggleExpand(index)}
-                    className="flex items-center gap-2 text-black/50 hover:text-black/70 text-sm mb-6 transition-colors"
+                    className="flex items-center gap-2 text-black/60 hover:text-black/70 text-sm mb-6 transition-colors"
                   >
                     <m.span
                       animate={{ rotate: expandedPlan === index ? 180 : 0 }}
@@ -228,7 +228,7 @@ export function Services() {
                           animate={{ opacity: 1, x: 0 }}
                           className="flex items-start gap-3"
                         >
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#CDEA68]/60 mt-2 flex-shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-brand-lime/60 mt-2 flex-shrink-0" />
                           <span className="text-black/60 text-sm">{feature}</span>
                         </m.li>
                       ))}
@@ -240,8 +240,8 @@ export function Services() {
                 <div className="mt-auto pt-4">
                   {"availableSpots" in plan && plan.availableSpots != null && (
                     <div className="flex justify-center mb-3">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#CDEA68]/30 text-black text-xs font-medium">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#CDEA68] border border-black/20" />
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-lime/30 text-black text-xs font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-lime border border-black/20" />
                         נותרו {plan.availableSpots} מקומות
                       </span>
                     </div>
@@ -253,7 +253,7 @@ export function Services() {
                       rel="noopener noreferrer"
                       className={`w-full py-3 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                         plan.highlighted
-                          ? "bg-[#CDEA68] hover:bg-[#bdd85c] text-black"
+                          ? "bg-brand-lime hover:bg-brand-lime-hover text-black"
                           : "bg-black hover:bg-black/80 text-white"
                       }`}
                     >
@@ -286,7 +286,7 @@ export function Services() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center text-black/50 text-sm mt-8 space-y-1"
+          className="text-center text-black/60 text-sm mt-8 space-y-1"
         >
           <p>* כל האימונים משולבים עם כדור</p>
           <p>* מתקדמים ו-PRO בהתחייבות ל-4 חודשים, ניתן לבטל בהתראה של 7 ימי עסקים לפני מועד התשלום</p>

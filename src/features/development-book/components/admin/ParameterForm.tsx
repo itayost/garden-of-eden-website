@@ -567,7 +567,7 @@ export function ParameterForm({ parameter, allMuscles }: ParameterFormProps) {
       {/* ------------------------------------------------------------------ */}
       <div className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background/95 px-4 py-3 backdrop-blur-sm">
         {isDirty ? (
-          <span className="text-sm text-amber-600">שינויים לא נשמרו</span>
+          <span className="text-sm text-warning-emphasis">שינויים לא נשמרו</span>
         ) : (
           <span />
         )}
