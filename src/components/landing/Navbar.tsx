@@ -25,12 +25,15 @@ interface NavbarProps {
   /** WhatsApp by default; "#services" scrolls to the plans on the same page. */
   ctaHref?: string;
   ctaLabel?: string;
+  /** Pages without a dark hero (policies) need the solid bar from the first pixel. */
+  solid?: boolean;
 }
 
 export function Navbar({
   otherBranch,
   ctaHref = "https://wa.me/972525779446",
   ctaLabel = "התחילו עכשיו",
+  solid = false,
 }: NavbarProps = {}) {
   const ctaIsAnchor = ctaHref.startsWith("#");
   const [isScrolled, setIsScrolled] = useState(false);
@@ -94,7 +97,7 @@ export function Navbar({
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 px-6 py-4 transition-all duration-300 ${
-          isScrolled
+          isScrolled || solid
             ? "bg-black/80 backdrop-blur-lg"
             : "bg-transparent"
         }`}

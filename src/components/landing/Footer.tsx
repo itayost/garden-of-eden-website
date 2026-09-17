@@ -182,7 +182,7 @@ export function Footer() {
                     className="w-10 h-10 rounded-xl bg-white/10 hover:bg-brand-lime flex items-center justify-center text-white hover:text-black transition-colors"
                     aria-label={social.label}
                   >
-                    <social.icon className="w-5 h-5" />
+                    <social.icon className="w-5 h-5" aria-hidden="true" />
                   </m.a>
                 ))}
               </div>
@@ -197,7 +197,7 @@ export function Footer() {
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-white/50 hover:text-brand-lime transition-colors text-sm group"
                     >
-                      <social.icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      <social.icon className="w-4 h-4 group-hover:scale-110 transition-transform" aria-hidden="true" />
                       {social.label}
                     </a>
                   </li>

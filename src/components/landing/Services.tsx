@@ -267,8 +267,8 @@ export function Services() {
                       rel="noopener noreferrer"
                       className={`w-full py-3 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
                         plan.highlighted
-                          ? "bg-[#25D366] hover:bg-[#1fb855] text-white"
-                          : "bg-[#25D366] hover:bg-[#1fb855] text-white"
+                          ? "bg-[#25D366] hover:bg-[#1fb855] text-ink"
+                          : "bg-[#25D366] hover:bg-[#1fb855] text-ink"
                       }`}
                     >
                       <MessageCircle className="w-4 h-4" />

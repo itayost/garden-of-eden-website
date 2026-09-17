@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PlanProduct } from "@/types/plans";
 
@@ -57,15 +57,18 @@ export function PlanCatalog({ products, selectedId, onSelect }: PlanCatalogProps
               </p>
             )}
             <div className="mt-auto pt-4">
-              <Button
-                type="button"
-                variant={selected ? "default" : "outline"}
-                className="h-11 w-full rounded-full"
-                tabIndex={-1}
+              {/* Looks like a button, but the whole card is the control: a nested
+                  <button> would be a second, hidden tab stop. */}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  buttonVariants({ variant: selected ? "default" : "outline" }),
+                  "h-11 w-full rounded-full",
+                )}
               >
-                {selected ? <Check className="h-4 w-4 me-2" /> : null}
+                {selected ? <Check className="h-4 w-4" /> : null}
                 {selected ? "נבחר" : "בחירה"}
-              </Button>
+              </span>
             </div>
           </button>
         );
