@@ -125,12 +125,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="he" dir="rtl" className="overflow-x-hidden">
+    <html lang="he" dir="rtl" className="overflow-x-clip">
       {/* --font-heebo is set inline because it composes two generated
           families (Hebrew + Latin); Tailwind reads it via --font-sans. */}
       <body
         style={{ "--font-heebo": heeboFamily } as React.CSSProperties}
-        className={`${bebasNeue.variable} font-sans antialiased overflow-x-hidden`}
+        className={`${bebasNeue.variable} font-sans antialiased overflow-x-clip`}
       >
         <a
           href="#main-content"

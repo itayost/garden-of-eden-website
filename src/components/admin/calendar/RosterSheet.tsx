@@ -135,7 +135,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
       <Dialog open onOpenChange={(open) => !open && onClose()}>
         <SheetDialogContent>
           <DialogHeader className={cn("px-4 pt-4 pb-3 text-start sm:px-6 sm:pt-6", palette.bg)}>
-            <div className="flex items-start justify-between gap-2 pe-8">
+            <div className="flex items-start justify-between gap-2 pe-10">
               <div className="min-w-0">
                 <DialogTitle className="flex flex-wrap items-center gap-2">
                   <span className="font-display tabular-nums">{time}</span>
@@ -195,18 +195,20 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
                         <button
                           type="button"
                           onClick={() => setPlanFor({ id: entry.trainee_id!, name: entry.trainee_name })}
-                          className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold", chip.className)}
+                          className="-my-1 inline-flex min-h-10 shrink-0 items-center px-1"
                           title={badge?.sessionsLeft != null ? `${badge.sessionsLeft} אימונים נותרו` : undefined}
                           aria-label={`המסלול של ${entry.trainee_name}: ${chip.label}`}
                         >
-                          {chip.label}
+                          <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", chip.className)}>
+                            {chip.label}
+                          </span>
                         </button>
                       )}
                       {badge?.hasMedicalNotes && entry.trainee_id && (
                         <button
                           type="button"
                           onClick={() => setHealthFor({ id: entry.trainee_id!, name: entry.trainee_name })}
-                          className="rounded-full p-0.5 text-amber-600 hover:bg-amber-100"
+                          className="-my-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full text-amber-700 hover:bg-amber-100"
                           aria-label={`מידע רפואי של ${entry.trainee_name}`}
                         >
                           <HeartPulse className="h-4 w-4" />
@@ -215,7 +217,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 shrink-0"
+                        className="size-10 shrink-0"
                         disabled={busyId !== null}
                         onClick={() => remove(entry)}
                         aria-label={`הסרת ${entry.trainee_name} מהסלוט`}

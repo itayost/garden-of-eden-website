@@ -35,7 +35,7 @@ export function AgreementBadge({
         <PenLine className="h-3 w-3 me-1" />
         הסכם לא נחתם
       </Badge>
-      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={resend} disabled={pending}>
+      <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={resend} disabled={pending}>
         {pending ? <Loader2 className="h-3 w-3 me-1 animate-spin" /> : <Send className="h-3 w-3 me-1" />}
         שלח שוב
       </Button>
