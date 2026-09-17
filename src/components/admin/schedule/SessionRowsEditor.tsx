@@ -136,7 +136,7 @@ export function SessionRowsEditor({
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-bold">{row.exerciseName}</p>
-                  <div className="flex shrink-0 gap-0.5 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                  <div className="flex shrink-0 gap-0.5 pointer-coarse:gap-2 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:group-focus-within:opacity-100">
                     <Button
                       variant="ghost"
                       size="icon"

@@ -33,7 +33,7 @@ export function HealthSheet({ traineeId, traineeName, open, onOpenChange }: Heal
       <SheetContent side="bottom" dir="rtl">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <HeartPulse className="h-5 w-5 text-amber-600" aria-hidden="true" />
+            <HeartPulse className="h-5 w-5 text-warning-emphasis" aria-hidden="true" />
             {traineeName}
           </SheetTitle>
           <SheetDescription className="sr-only">מגבלות רפואיות ואנשי קשר לחירום</SheetDescription>

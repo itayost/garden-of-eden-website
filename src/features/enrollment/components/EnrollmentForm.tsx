@@ -32,7 +32,7 @@ interface EnrollmentFormProps {
 function SectionTitle({ step, children }: { step: number; children: string }) {
   return (
     <h2 className="flex items-center gap-3 text-lg font-bold">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#CDEA68] text-sm font-bold text-black">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-lime text-sm font-bold text-black">
         {step}
       </span>
       {children}
@@ -282,7 +282,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
 
         <Section>
           <SectionTitle step={6}>חתימה</SectionTitle>
-          <div className="rounded-xl border-2 border-[#CDEA68] bg-[#CDEA68]/10 p-4 text-sm font-medium">
+          <div className="rounded-xl border-2 border-brand-lime bg-brand-lime/10 p-4 text-sm font-medium">
             בחתימתי מטה אני מאשר/ת כי כל הפרטים שמסרתי נכונים, וכי אני מקבל/ת על עצמי את תנאי הסכם זה ואת תקנון גארדן אוף עדן במלואם.
           </div>
           <FormField
@@ -305,7 +305,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
           <div className="mx-auto flex max-w-2xl items-center gap-3">
             <div className="shrink-0 sm:hidden">
-              <span className="block text-[11px] text-black/50">{product.name_he}</span>
+              <span className="block text-[11px] text-black/60">{product.name_he}</span>
               <span className="text-lg font-bold">{priceLabel}</span>
             </div>
         <Button type="submit" size="lg" className="h-12 min-w-0 flex-1 rounded-full text-base" disabled={loading}>

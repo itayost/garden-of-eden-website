@@ -25,7 +25,7 @@ export function DateStrip({ days, selectedDate, onSelect }: DateStripProps) {
             onClick={() => onSelect(day.date)}
             className={cn(
               "flex min-w-12 flex-1 flex-col items-center gap-0.5 rounded-xl border px-1.5 py-2 transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               selected ? "border-forest bg-forest text-cream" : "bg-background hover:bg-muted",
               !selected && day.isToday && "border-forest text-forest",
               !selected && day.isPast && "opacity-60",

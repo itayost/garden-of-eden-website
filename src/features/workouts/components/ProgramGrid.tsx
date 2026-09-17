@@ -87,7 +87,7 @@ export function ProgramGrid({ rows, weeks, onRowsChange }: ProgramGridProps) {
                 />
               </div>
 
-              <div className="flex items-center gap-0.5 shrink-0">
+              <div className="flex items-center gap-0.5 pointer-coarse:gap-2 shrink-0">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -204,7 +204,7 @@ export function ProgramGrid({ rows, weeks, onRowsChange }: ProgramGridProps) {
                   />
 
                   {/* Reorder + remove controls */}
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-0.5 pointer-coarse:gap-2">
                     <Button
                       variant="ghost"
                       size="icon"

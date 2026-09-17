@@ -27,7 +27,7 @@ const stepStyles = {
   },
   label: {
     current: "text-primary",
-    completed: "text-green-600",
+    completed: "text-success",
     default: "text-muted-foreground",
   },
   dot: {

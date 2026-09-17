@@ -9,7 +9,7 @@ const videos = [
 
 export function Testimonials() {
   return (
-    <section id="testimonials" className="py-20 bg-[#F5F5F0]">
+    <section id="testimonials" className="py-20 bg-paper">
       <div className="container mx-auto px-6">
         {/* Header */}
         <m.div
@@ -18,11 +18,11 @@ export function Testimonials() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="text-sm text-black/50 mb-2 block">המלצות</span>
+          <span className="text-sm text-black/60 mb-2 block">המלצות</span>
           <h2 className="text-4xl md:text-5xl font-bold text-black mb-4">
             מה ההורים אומרים
           </h2>
-          <p className="text-black/50 max-w-md mx-auto">
+          <p className="text-black/60 max-w-md mx-auto">
             הורים משתפים את החוויה שלהם עם Garden of Eden
           </p>
         </m.div>

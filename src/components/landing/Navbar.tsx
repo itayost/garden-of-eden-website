@@ -121,7 +121,7 @@ export function Navbar({
                 aria-current={activeSection === link.href ? "true" : undefined}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   activeSection === link.href
-                    ? "bg-[#CDEA68] text-black"
+                    ? "bg-brand-lime text-black"
                     : "text-white/80 hover:text-white"
                 }`}
               >
@@ -199,7 +199,7 @@ export function Navbar({
                   transition={{ delay: index * 0.1 }}
                   className={`text-2xl font-medium transition-colors ${
                     activeSection === link.href
-                      ? "text-[#CDEA68]"
+                      ? "text-brand-lime"
                       : "text-white/80"
                   }`}
                 >
@@ -230,7 +230,7 @@ export function Navbar({
                   </Button>
                 )}
                 <Button
-                  className="bg-[#CDEA68] hover:bg-[#bdd85c] text-black rounded-full px-8 py-6 text-lg font-medium"
+                  className="bg-brand-lime hover:bg-brand-lime-hover text-black rounded-full px-8 py-6 text-lg font-medium"
                   asChild
                 >
                   {ctaIsAnchor ? (

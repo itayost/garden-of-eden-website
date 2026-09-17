@@ -44,7 +44,7 @@ const YEARS = Array.from({ length: 12 }, (_, i) => THIS_YEAR + i);
 
 const field = "h-12 rounded-xl text-base";
 const select =
-  "h-12 w-full rounded-xl border border-input bg-transparent px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  "h-12 w-full rounded-xl border border-input bg-transparent px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring";
 
 /**
  * The card form. Values stay in component state and the action's arguments:
@@ -126,12 +126,12 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
               <FormLabel required className="flex items-center justify-between">
                 <span>מספר כרטיס</span>
                 {BRAND_LABEL[brand] && (
-                  <span className="text-xs font-normal text-black/50">{BRAND_LABEL[brand]}</span>
+                  <span className="text-xs font-normal text-black/60">{BRAND_LABEL[brand]}</span>
                 )}
               </FormLabel>
               <FormControl>
                 <div className="relative">
-                  <CreditCard className="pointer-events-none absolute end-3 top-1/2 h-5 w-5 -translate-y-1/2 text-black/30" />
+                  <CreditCard className="pointer-events-none absolute end-3 top-1/2 h-5 w-5 -translate-y-1/2 text-black/50" />
                   <Input
                     {...f}
                     value={formatCardNumber(f.value ?? "")}
@@ -231,7 +231,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
           />
         )}
 
-        <p className="flex items-start gap-2 text-xs text-black/50">
+        <p className="flex items-start gap-2 text-xs text-black/60">
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           הפרטים מועברים מוצפנים ישירות לחברת הסליקה ואינם נשמרים באתר. החיוב מופיע כ&quot;גארדן אוף עדן&quot;.
         </p>

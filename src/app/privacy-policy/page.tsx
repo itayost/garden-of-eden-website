@@ -11,11 +11,11 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <MotionProvider>
-      <main id="main-content" tabIndex={-1} className="outline-none bg-[#F5F5F0] min-h-screen">
+      <main id="main-content" tabIndex={-1} className="outline-none bg-paper min-h-screen">
         <Navbar />
 
         <div className="container mx-auto px-6 py-24 max-w-4xl">
-          <h1 className="text-4xl font-bold mb-12 text-[#1a1a1a]">מדיניות פרטיות</h1>
+          <h1 className="text-4xl font-bold mb-12 text-ink">מדיניות פרטיות</h1>
 
           <div className="space-y-8 text-gray-700 leading-relaxed">
             <p className="text-lg">
@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
             </p>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">כללי</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">כללי</h2>
               <p>
                 Garden of Eden (&quot;האקדמיה&quot;, &quot;אנחנו&quot;) מכבדת את פרטיות המשתמשים
                 באתר ובשירותים שלנו. מדיניות פרטיות זו מסבירה כיצד אנו אוספים, משתמשים
@@ -32,7 +32,7 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">איסוף מידע</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">איסוף מידע</h2>
               <p className="mb-4">אנו אוספים את סוגי המידע הבאים:</p>
               <ul className="list-disc list-inside space-y-2 mr-4">
                 <li>מידע אישי: שם, כתובת דוא&quot;ל, מספר טלפון</li>
@@ -43,7 +43,7 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">שימוש במידע</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">שימוש במידע</h2>
               <p className="mb-4">אנו משתמשים במידע שנאסף למטרות הבאות:</p>
               <ul className="list-disc list-inside space-y-2 mr-4">
                 <li>מתן שירותי אימון ומעקב התקדמות</li>
@@ -54,7 +54,7 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">אבטחת מידע</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">אבטחת מידע</h2>
               <p>
                 אנו נוקטים באמצעי אבטחה מתקדמים להגנה על המידע שלכם, כולל הצפנה,
                 גישה מוגבלת ואחסון מאובטח. עם זאת, אין אפשרות להבטיח אבטחה מוחלטת
@@ -63,7 +63,7 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">שיתוף מידע עם צדדים שלישיים</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">שיתוף מידע עם צדדים שלישיים</h2>
               <p>
                 איננו מוכרים או משתפים את המידע האישי שלכם עם צדדים שלישיים למטרות
                 שיווקיות. ייתכן שנשתף מידע עם ספקי שירות הפועלים מטעמנו, תוך הקפדה
@@ -72,7 +72,7 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">זכויותיכם</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">זכויותיכם</h2>
               <p className="mb-4">יש לכם את הזכויות הבאות בנוגע למידע האישי שלכם:</p>
               <ul className="list-disc list-inside space-y-2 mr-4">
                 <li>גישה למידע שנאסף עליכם</li>
@@ -83,7 +83,7 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">עוגיות (Cookies)</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">עוגיות (Cookies)</h2>
               <p>
                 האתר שלנו משתמש בעוגיות לשיפור חווית המשתמש ולצורכי ניתוח. ניתן
                 לשנות את הגדרות הדפדפן כדי לחסום עוגיות, אך הדבר עלול להשפיע על
@@ -92,10 +92,10 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">יצירת קשר</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">יצירת קשר</h2>
               <p>
                 לשאלות או בקשות בנוגע לפרטיות, ניתן לפנות אלינו בטלפון{" "}
-                <a href="tel:+972525779446" className="text-[#CDEA68] hover:underline">
+                <a href="tel:+972525779446" className="text-brand-lime hover:underline">
                   052-577-9446
                 </a>{" "}
                 או דרך{" "}
@@ -103,7 +103,7 @@ export default function PrivacyPolicyPage() {
                   href="https://wa.me/972525779446"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#CDEA68] hover:underline"
+                  className="text-brand-lime hover:underline"
                 >
                   וואטסאפ
                 </a>
@@ -112,7 +112,7 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold mb-4 text-[#1a1a1a]">שינויים במדיניות</h2>
+              <h2 className="text-2xl font-bold mb-4 text-ink">שינויים במדיניות</h2>
               <p>
                 אנו עשויים לעדכן מדיניות זו מעת לעת. שינויים מהותיים יפורסמו באתר
                 ויכנסו לתוקף מיד עם פרסומם.

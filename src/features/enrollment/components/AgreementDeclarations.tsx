@@ -30,7 +30,7 @@ function DeclarationField<T extends DeclarationValues>({
       control={control}
       name={name as Path<T>}
       render={({ field }) => (
-        <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-xl border border-black/10 p-3 has-[button[data-state=checked]]:border-[#CDEA68] has-[button[data-state=checked]]:bg-[#CDEA68]/10">
+        <FormItem className="flex flex-row items-start gap-3 space-y-0 rounded-xl border border-black/10 p-3 has-[button[data-state=checked]]:border-brand-lime has-[button[data-state=checked]]:bg-brand-lime/10">
           <FormControl>
             <Checkbox
               className="mt-0.5 size-5"

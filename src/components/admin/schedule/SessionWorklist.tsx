@@ -15,17 +15,13 @@ import { cn } from "@/lib/utils";
 import { hebrewWeekday } from "@/lib/utils/date";
 import { addDays, shortDate } from "@/lib/utils/iso-date";
 import { trainerColor } from "@/lib/utils/trainer-color";
+import { STAFF_PLAN_CHIP } from "@/lib/plans/status-styles";
 import type { StaffPlanBadge } from "@/types/plans";
-
-const PLAN_CHIP: Partial<Record<StaffPlanBadge["status"], { label: string; className: string }>> = {
-  expired: { label: "פג", className: "bg-destructive text-white" },
-  ending_soon: { label: "מסתיים", className: "bg-amber-500 text-black" },
-};
 
 const STATUS: Record<WorklistRow["status"], { label: (row: WorklistRow) => string; className: string; Icon: typeof Plus }> = {
   not_built: { label: () => "לא נבנה", className: "bg-secondary text-secondary-foreground", Icon: Plus },
   built: { label: (row) => `נבנה · ${row.exerciseCount} תרגילים`, className: "bg-primary text-primary-foreground", Icon: Dumbbell },
-  completed: { label: () => "הושלם", className: "bg-green-600 text-white", Icon: Check },
+  completed: { label: () => "הושלם", className: "bg-success text-success-foreground", Icon: Check },
 };
 
 interface SessionWorklistProps {
@@ -145,7 +141,7 @@ export function SessionWorklist({
                       {group.rows.map((row) => {
                         const status = STATUS[row.status];
                         const badge = planBadges[row.traineeId];
-                        const chip = badge?.endsOn ? PLAN_CHIP[badge.status] : undefined;
+                        const chip = badge?.endsOn ? STAFF_PLAN_CHIP[badge.status] : undefined;
                         return (
                           <li key={row.rosterEntryId} className="flex items-center gap-2 pe-3">
                             <Link
@@ -172,7 +168,7 @@ export function SessionWorklist({
                               <button
                                 type="button"
                                 onClick={() => setHealthFor({ id: row.traineeId, name: row.traineeName })}
-                                className="rounded-full p-0.5 text-amber-600 hover:bg-amber-100"
+                                className="rounded-full p-0.5 text-warning-emphasis hover:bg-amber-100"
                                 aria-label={`מידע רפואי של ${row.traineeName}`}
                               >
                                 <HeartPulse className="h-4 w-4" />
@@ -222,7 +218,7 @@ function FilterLink({ href, active, label }: { href: string; active: boolean; la
       href={href}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "rounded-full border px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40",
+        "rounded-full border px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         active ? "border-forest bg-forest text-cream" : "bg-background hover:bg-muted",
       )}
     >

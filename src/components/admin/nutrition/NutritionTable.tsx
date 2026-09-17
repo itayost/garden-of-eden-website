@@ -169,7 +169,7 @@ export function NutritionTable({
                     </span>
                     <div className="flex items-center gap-1.5 mt-1">
                       {hasMealPlan ? (
-                        <Badge variant="default" className="bg-green-600 text-xs">
+                        <Badge variant="default" className="bg-success text-success-foreground text-xs">
                           תזונה
                         </Badge>
                       ) : (
@@ -222,7 +222,7 @@ export function NutritionTable({
                       </TableCell>
                       <TableCell>
                         {hasMealPlan ? (
-                          <Badge variant="default" className="bg-green-600">
+                          <Badge variant="default" className="bg-success text-success-foreground">
                             קיימת
                           </Badge>
                         ) : (

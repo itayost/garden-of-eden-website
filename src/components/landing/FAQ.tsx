@@ -95,7 +95,7 @@ export function FAQ({ overrides = {}, omit = [] }: FAQProps = {}) {
   };
 
   return (
-    <section id="faq" className="py-20 bg-[#F5F5F0]">
+    <section id="faq" className="py-20 bg-paper">
       <div className="container mx-auto px-6">
         {/* Header */}
         <m.div
@@ -104,11 +104,11 @@ export function FAQ({ overrides = {}, omit = [] }: FAQProps = {}) {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="text-sm text-black/50 mb-2 block">שאלות נפוצות</span>
+          <span className="text-sm text-black/60 mb-2 block">שאלות נפוצות</span>
           <h2 className="text-4xl md:text-5xl font-bold text-black mb-4">
             יש לכם שאלה?
           </h2>
-          <p className="text-black/50 max-w-md mx-auto">
+          <p className="text-black/60 max-w-md mx-auto">
             ריכזנו עבורכם את השאלות הנפוצות ביותר
           </p>
         </m.div>
@@ -137,7 +137,7 @@ export function FAQ({ overrides = {}, omit = [] }: FAQProps = {}) {
                   transition={{ duration: 0.2 }}
                   className="flex-shrink-0 mr-4"
                 >
-                  <ChevronDown className="w-5 h-5 text-black/40" />
+                  <ChevronDown className="w-5 h-5 text-black/60" />
                 </m.span>
               </button>
 

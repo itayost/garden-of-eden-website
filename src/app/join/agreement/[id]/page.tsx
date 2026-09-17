@@ -49,7 +49,7 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3 rounded-2xl border border-green-600/40 bg-green-50 p-4 text-sm">
-        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
         <div>
           <p className="font-medium">ההסכם חתום ושמור</p>
           <p className="text-black/60">זה העותק שלכם. אפשר להדפיס או לשמור את הדף.</p>

@@ -1,8 +1,9 @@
 /** Sleep range colors for chart */
+/** Status tokens from globals.css; SVG fills resolve CSS variables. */
 export const SLEEP_COLORS = {
-  poor: "#ef4444",
-  moderate: "#f59e0b",
-  good: "#10b981",
+  poor: "var(--destructive)",
+  moderate: "var(--warning)",
+  good: "var(--success)",
 } as const;
 
 /** Sleep range labels for chart legend */

@@ -19,7 +19,7 @@ export function DuplicatePrompt({
   return (
     <div className="space-y-4 rounded-xl border border-amber-500/60 bg-amber-50 p-4">
       <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning-emphasis" />
         <p className="text-sm">
           נרשם תשלום זהה למתאמן הזה {when}. להמשיך ולרשום תשלום נוסף?
         </p>

@@ -54,7 +54,7 @@ export function WeekDayColumn({
           aria-pressed={isSelected}
           className={cn(
             "flex w-full items-center justify-between gap-1 rounded-lg px-2 py-1.5 font-display text-sm transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             day.isToday ? "bg-forest text-cream" : "bg-muted text-forest hover:bg-muted/70",
             isSelected && "ring-2 ring-forest/50 ring-offset-1",
             day.isPast && !day.isToday && "opacity-70",

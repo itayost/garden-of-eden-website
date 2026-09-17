@@ -30,15 +30,11 @@ import {
 } from "@/lib/actions/daily-schedule";
 import { cn } from "@/lib/utils";
 import { trainerColor } from "@/lib/utils/trainer-color";
+import { STAFF_PLAN_CHIP } from "@/lib/plans/status-styles";
 import type { StaffPlanBadge } from "@/types/plans";
 import type { ScheduleSlot, SlotTrainee } from "@/types/schedule";
 
 /** Only the states that need a trainer's attention get a chip. */
-const PLAN_CHIP: Partial<Record<StaffPlanBadge["status"], { label: string; className: string }>> = {
-  expired: { label: "פג", className: "bg-destructive text-white" },
-  ending_soon: { label: "מסתיים", className: "bg-amber-500 text-black" },
-};
-
 interface RosterSheetProps {
   /** The slot on screen, looked up from fresh page data; null closes the sheet. */
   slot: ScheduleSlot | null;
@@ -181,7 +177,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
               <ul className="divide-y rounded-xl border">
                 {active.map((entry) => {
                   const badge = entry.trainee_id ? planBadges[entry.trainee_id] : undefined;
-                  const chip = badge?.endsOn ? PLAN_CHIP[badge.status] : undefined;
+                  const chip = badge?.endsOn ? STAFF_PLAN_CHIP[badge.status] : undefined;
                   return (
                     <li key={entry.id} className="flex items-center gap-2 px-3 py-2">
                       <span className={cn("min-w-0 flex-1 truncate text-sm", !entry.trainee_id && "text-muted-foreground")}>

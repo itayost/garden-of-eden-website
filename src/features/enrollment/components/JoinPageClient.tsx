@@ -66,7 +66,7 @@ export function JoinPageClient({
         selected && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white px-5 py-4">
             <div>
-              <span className="block text-xs text-black/50">המסלול שנבחר</span>
+              <span className="block text-xs text-black/60">המסלול שנבחר</span>
               <span className="text-lg font-bold">
                 {selected.name_he} · ₪{selected.price_ils.toLocaleString("he-IL")}
               </span>

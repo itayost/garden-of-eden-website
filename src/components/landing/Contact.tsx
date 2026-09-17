@@ -35,7 +35,7 @@ const HAIFA: ContactLocation = {
 export function Contact({ location = HAIFA }: { location?: ContactLocation } = {}) {
   const hasMap = Boolean(location.mapEmbedUrl);
   return (
-    <section id="contact" className="py-20 bg-[#F5F5F0]">
+    <section id="contact" className="py-20 bg-paper">
       <div className="container mx-auto px-6">
         <div className={`grid gap-12 items-center ${hasMap ? "lg:grid-cols-2" : "max-w-3xl mx-auto"}`}>
           {hasMap && (
@@ -44,7 +44,7 @@ export function Contact({ location = HAIFA }: { location?: ContactLocation } = {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <div className="aspect-[4/3] rounded-3xl overflow-hidden relative bg-[#1a1a1a]">
+            <div className="aspect-[4/3] rounded-3xl overflow-hidden relative bg-ink">
               <iframe
                 src={location.mapEmbedUrl ?? undefined}
                 className="absolute inset-0 w-full h-full border-0"
@@ -63,7 +63,7 @@ export function Contact({ location = HAIFA }: { location?: ContactLocation } = {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <span className="text-sm text-black/50 mb-2 block">צור קשר</span>
+            <span className="text-sm text-black/60 mb-2 block">צור קשר</span>
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
               יש לכם שאלה?
             </h2>
@@ -77,37 +77,37 @@ export function Contact({ location = HAIFA }: { location?: ContactLocation } = {
                 href={`https://wa.me/${location.whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10 hover:border-[#CDEA68]/50 transition-colors group"
+                className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10 hover:border-brand-lime/50 transition-colors group"
               >
-                <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center">
-                  <MessageCircle className="w-5 h-5 text-[#CDEA68]" />
+                <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-brand-lime" />
                 </div>
                 <div>
-                  <span className="text-black/50 text-xs block">וואטסאפ</span>
+                  <span className="text-black/60 text-xs block">וואטסאפ</span>
                   <span className="text-black font-medium text-sm">שלחו הודעה</span>
                 </div>
               </a>
 
               <a
                 href={`tel:+${location.whatsapp}`}
-                className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10 hover:border-[#CDEA68]/50 transition-colors group"
+                className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10 hover:border-brand-lime/50 transition-colors group"
               >
-                <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-[#CDEA68]" />
+                <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center">
+                  <Phone className="w-5 h-5 text-brand-lime" />
                 </div>
                 <div>
-                  <span className="text-black/50 text-xs block">טלפון</span>
+                  <span className="text-black/60 text-xs block">טלפון</span>
                   <span className="text-black font-medium text-sm">{location.phoneDisplay}</span>
                 </div>
               </a>
 
               {location.hours && (
               <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10">
-                <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-[#CDEA68]" />
+                <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-brand-lime" />
                 </div>
                 <div>
-                  <span className="text-black/50 text-xs block">שעות פעילות</span>
+                  <span className="text-black/60 text-xs block">שעות פעילות</span>
                   <span className="text-black font-medium text-sm">{location.hours}</span>
                 </div>
               </div>
@@ -115,11 +115,11 @@ export function Contact({ location = HAIFA }: { location?: ContactLocation } = {
 
               {location.address && (
               <div className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-black/10">
-                <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-[#CDEA68]" />
+                <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-brand-lime" />
                 </div>
                 <div>
-                  <span className="text-black/50 text-xs block">מיקום</span>
+                  <span className="text-black/60 text-xs block">מיקום</span>
                   <span className="text-black font-medium text-sm">{location.address}</span>
                 </div>
               </div>
@@ -132,12 +132,12 @@ export function Contact({ location = HAIFA }: { location?: ContactLocation } = {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {location.transport.map((item) => (
                   <div key={item.origin} className="flex items-start gap-3 p-4 bg-white rounded-2xl border border-black/10">
-                    <div className="w-10 h-10 rounded-xl bg-[#CDEA68]/10 flex items-center justify-center flex-shrink-0">
-                      <Bus className="w-5 h-5 text-[#CDEA68]" />
+                    <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center flex-shrink-0">
+                      <Bus className="w-5 h-5 text-brand-lime" />
                     </div>
                     <div>
                       <span className="text-black font-medium text-sm block">{item.origin}</span>
-                      <span className="text-black/50 text-xs">{item.route}</span>
+                      <span className="text-black/60 text-xs">{item.route}</span>
                     </div>
                   </div>
                 ))}

@@ -43,7 +43,7 @@ export function WeekSlotCard({ slot, isTrainerAbsent, onOpen }: WeekSlotCardProp
       onClick={onOpen}
       className={cn(
         "w-full rounded-xl border p-2.5 text-start transition-colors",
-        "hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40",
+        "hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         palette.bg,
       )}
       aria-label={`רשימת המתאמנים של ${slot.trainer_name ?? "ללא מאמן"} בשעה ${slot.start_time.slice(0, 5)}`}

@@ -46,7 +46,7 @@ function InitialsAvatar({ name, size }: { name: string; size: "sm" | "lg" }) {
 
   return (
     <div
-      className={`relative ${dimensions} rounded-full bg-[#CDEA68] flex items-center justify-center flex-shrink-0 overflow-hidden shadow-[inset_0_-10px_18px_rgba(0,0,0,0.06)]`}
+      className={`relative ${dimensions} rounded-full bg-brand-lime flex items-center justify-center flex-shrink-0 overflow-hidden shadow-[inset_0_-10px_18px_rgba(0,0,0,0.06)]`}
     >
       <LeafMark className="absolute -top-1 -end-1 w-10 h-10 text-black/10 rotate-12" />
       <span
@@ -63,7 +63,7 @@ export function Staff() {
   const rest = staffMembers.slice(1);
 
   return (
-    <section id="staff" className="py-20 bg-[#F5F5F0]">
+    <section id="staff" className="py-20 bg-paper">
       <div className="container mx-auto px-6">
         {/* Header */}
         <m.div
@@ -72,13 +72,13 @@ export function Staff() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="inline-block px-4 py-1.5 rounded-full bg-[#CDEA68]/20 text-black/70 text-sm font-medium mb-4">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-brand-lime/20 text-black/70 text-sm font-medium mb-4">
             הצוות שלנו
           </span>
           <h2 className="text-4xl md:text-5xl font-bold text-black mb-4">
             הכירו את המומחים
           </h2>
-          <p className="text-black/50 max-w-md mx-auto">
+          <p className="text-black/60 max-w-md mx-auto">
             צוות מקצועי ומנוסה שמלווה את השחקנים בכל שלב במסע להצלחה
           </p>
         </m.div>
@@ -90,11 +90,11 @@ export function Staff() {
           viewport={{ once: true }}
           className="mb-4 md:mb-6 max-w-2xl mx-auto"
         >
-          <div className="relative overflow-hidden rounded-3xl p-6 md:p-8 bg-white border-2 border-[#CDEA68] shadow-lg flex flex-col md:flex-row items-center justify-center gap-6">
-            <LeafMark className="hidden md:block absolute -end-6 -bottom-6 w-32 h-32 text-[#CDEA68]/25 -rotate-12 pointer-events-none" />
+          <div className="relative overflow-hidden rounded-3xl p-6 md:p-8 bg-white border-2 border-brand-lime shadow-lg flex flex-col md:flex-row items-center justify-center gap-6">
+            <LeafMark className="hidden md:block absolute -end-6 -bottom-6 w-32 h-32 text-brand-lime/25 -rotate-12 pointer-events-none" />
 
             {founder.image ? (
-              <div className="relative w-28 h-28 md:w-36 md:h-36 rounded-full overflow-hidden flex-shrink-0 ring-4 ring-[#CDEA68]/30">
+              <div className="relative w-28 h-28 md:w-36 md:h-36 rounded-full overflow-hidden flex-shrink-0 ring-4 ring-brand-lime/30">
                 <Image
                   src={founder.image}
                   alt={founder.name}
@@ -108,13 +108,13 @@ export function Staff() {
             )}
 
             <div className="relative text-center md:text-start">
-              <span className="inline-block px-3 py-1 rounded-full bg-[#CDEA68] text-black/80 text-xs font-bold tracking-widest mb-3">
+              <span className="inline-block px-3 py-1 rounded-full bg-brand-lime text-black/80 text-xs font-bold tracking-widest mb-3">
                 מייסד
               </span>
               <h3 className="text-2xl md:text-3xl font-bold text-black mb-1">
                 {founder.name}
               </h3>
-              <p className="text-black/50 md:text-lg">{founder.role}</p>
+              <p className="text-black/60 md:text-lg">{founder.role}</p>
             </div>
           </div>
         </m.div>
@@ -146,7 +146,7 @@ export function Staff() {
                 </div>
               )}
               <h3 className="font-bold text-black mb-1">{member.name}</h3>
-              <p className="text-black/50 text-sm">{member.role}</p>
+              <p className="text-black/60 text-sm">{member.role}</p>
             </m.div>
           ))}
         </div>

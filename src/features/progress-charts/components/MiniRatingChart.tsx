@@ -88,7 +88,7 @@ export function MiniRatingChart({ data, height = 80 }: MiniRatingChartProps) {
               <Line
                 type="monotone"
                 dataKey="overall_rating"
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}

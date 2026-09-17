@@ -275,7 +275,7 @@ export function ShiftStatusCard({ initialShift, branchOptions }: ShiftStatusCard
                 <h3 className="font-semibold text-lg">סטטוס משמרת</h3>
                 {activeShift ? (
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="default" className={isPending ? "bg-amber-500" : "bg-green-600"}>
+                    <Badge variant="default" className={isPending ? "bg-warning text-warning-foreground" : "bg-success text-success-foreground"}>
                       {pendingClockOut
                         ? "ממתין לסנכרון סיום"
                         : isPendingClockIn

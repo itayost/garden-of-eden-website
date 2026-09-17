@@ -24,6 +24,13 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-emphasis: var(--warning-emphasis);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -52,6 +59,12 @@
   --color-gold-light: #FBBF24;
   --color-cream: #FFFDF5;
   --color-earth: #1C1917;
+
+  /* Landing and enrollment surfaces: lime accent on ink and paper */
+  --color-brand-lime: #CDEA68;
+  --color-brand-lime-hover: #BDD85C;
+  --color-ink: #1A1A1A;
+  --color-paper: #F5F5F0;
 }
 
 :root {
@@ -74,9 +87,18 @@
   --accent: oklch(0.65 0.2 145);
   --accent-foreground: oklch(0.1 0.05 145);
   --destructive: oklch(0.55 0.25 25);
+  /* Status: solid fills pass 4.5:1 with their foreground; warning-emphasis
+     is the amber that passes as text on white. */
+  --success: oklch(0.527 0.154 150.069);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.769 0.188 70.08);
+  --warning-foreground: oklch(0.21 0.034 264.665);
+  --warning-emphasis: oklch(0.555 0.163 48.998);
+  --info: oklch(0.5 0.134 242.749);
+  --info-foreground: oklch(0.99 0 0);
   --border: oklch(0.88 0.02 145);
   --input: oklch(0.92 0.01 145);
-  --ring: oklch(0.65 0.2 145);
+  --ring: oklch(0.5 0.16 145);
   /* Chart colors - nature inspired */
   --chart-1: oklch(0.45 0.15 145);
   --chart-2: oklch(0.65 0.2 145);
@@ -111,6 +133,13 @@
   --accent: oklch(0.7 0.18 85);
   --accent-foreground: oklch(0.1 0.03 145);
   --destructive: oklch(0.65 0.2 25);
+  --success: oklch(0.723 0.219 149.579);
+  --success-foreground: oklch(0.1 0.03 145);
+  --warning: oklch(0.828 0.189 84.429);
+  --warning-foreground: oklch(0.1 0.03 145);
+  --warning-emphasis: oklch(0.828 0.189 84.429);
+  --info: oklch(0.746 0.16 232.661);
+  --info-foreground: oklch(0.1 0.03 145);
   --border: oklch(0.22 0.03 145);
   --input: oklch(0.22 0.03 145);
   --ring: oklch(0.65 0.2 145);
@@ -131,7 +160,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;

@@ -11,7 +11,7 @@ import { MotionProvider } from "@/components/MotionProvider";
 export default function HomePage() {
   return (
     <MotionProvider>
-      <main id="main-content" tabIndex={-1} className="outline-none bg-[#F5F5F0]">
+      <main id="main-content" tabIndex={-1} className="outline-none bg-paper">
         <LocalBusinessJsonLd seo={BRANCH_SEO.haifa} />
         <Navbar otherBranch={{ label: "סניף קריית אתא", href: "/kiryat-ata" }} />
         <Hero />

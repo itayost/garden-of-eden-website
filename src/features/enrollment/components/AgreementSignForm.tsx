@@ -86,7 +86,7 @@ export function AgreementSignForm({ agreement, token }: { agreement: EnrollmentA
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-medium text-black/50">סניף קריית אתא</p>
+        <p className="text-sm font-medium text-black/60">סניף קריית אתא</p>
         <h1 className="mt-1 text-2xl font-bold sm:text-3xl">חתימה על הסכם ההרשמה</h1>
         <p className="mt-2 text-sm text-black/60">
           התשלום התקבל. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה.
@@ -95,15 +95,15 @@ export function AgreementSignForm({ agreement, token }: { agreement: EnrollmentA
 
       <section className="rounded-2xl border bg-white p-4">
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-          <dt className="text-black/50">חניך/ה</dt>
+          <dt className="text-black/60">חניך/ה</dt>
           <dd className="font-medium">{agreement.child_name}</dd>
-          <dt className="text-black/50">מסלול</dt>
+          <dt className="text-black/60">מסלול</dt>
           <dd className="font-medium">{agreement.plan_name}</dd>
-          <dt className="text-black/50">מחיר</dt>
+          <dt className="text-black/60">מחיר</dt>
           <dd className="font-medium">₪{Number(agreement.plan_price_ils).toLocaleString("he-IL")}</dd>
-          <dt className="text-black/50">תחילה</dt>
+          <dt className="text-black/60">תחילה</dt>
           <dd className="font-medium">{ddmmyyyy(agreement.plan_start_on)}</dd>
-          <dt className="text-black/50">שולם ב</dt>
+          <dt className="text-black/60">שולם ב</dt>
           <dd className="font-medium">{agreement.payment_method}</dd>
         </dl>
       </section>
@@ -152,7 +152,7 @@ export function AgreementSignForm({ agreement, token }: { agreement: EnrollmentA
           </Section>
 
           <Section title="חתימה">
-            <div className="rounded-xl border-2 border-[#CDEA68] bg-[#CDEA68]/10 p-4 text-sm font-medium">
+            <div className="rounded-xl border-2 border-brand-lime bg-brand-lime/10 p-4 text-sm font-medium">
               בחתימתי מטה אני מאשר/ת כי כל הפרטים שמסרתי נכונים, וכי אני מקבל/ת על עצמי את תנאי הסכם זה ואת תקנון גארדן אוף עדן במלואם.
             </div>
             <FormField control={form.control} name="signatureName" render={({ field: f }) => (

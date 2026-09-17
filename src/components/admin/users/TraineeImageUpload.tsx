@@ -342,7 +342,7 @@ export function TraineeImageUpload({
             </div>
           </div>
 
-          <p className="text-sm text-green-600 text-center">
+          <p className="text-sm text-success text-center">
             התמונות הועלו בהצלחה!
           </p>
 

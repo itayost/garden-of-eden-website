@@ -13,7 +13,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="border-s-4 border-[#CDEA68] ps-3 text-lg font-bold">{title}</h2>
+      <h2 className="border-s-4 border-brand-lime ps-3 text-lg font-bold">{title}</h2>
       <div className="grid gap-4 rounded-2xl border p-4 sm:grid-cols-2">{children}</div>
     </section>
   );

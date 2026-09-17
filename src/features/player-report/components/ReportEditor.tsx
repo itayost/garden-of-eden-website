@@ -118,14 +118,14 @@ export function ReportEditor({
         title="נקודות חוזקה / פרמטרים ששופרו"
         items={strengths}
         onChange={setStrengths}
-        headerClassName="text-green-600"
+        headerClassName="text-success"
         testIdPrefix="strengths"
       />
       <ReportBulletList
         title="מיקוד לשיפור בהמשך התהליך"
         items={weaknesses}
         onChange={setWeaknesses}
-        headerClassName="text-amber-600"
+        headerClassName="text-warning-emphasis"
         testIdPrefix="weaknesses"
       />
       <ReportBulletList

@@ -29,7 +29,7 @@ function getRankIcon(rank: number) {
     case 2:
       return <Medal className="h-5 w-5 text-gray-400" />;
     case 3:
-      return <Award className="h-5 w-5 text-amber-600" />;
+      return <Award className="h-5 w-5 text-warning-emphasis" />;
     default:
       return null;
   }

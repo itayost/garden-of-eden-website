@@ -86,7 +86,7 @@ export function TasksReviewSection({ tasks, today }: TasksReviewSectionProps) {
       <Card className="border-amber-300 dark:border-amber-800">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <AlertTriangle className="h-5 w-5 text-warning-emphasis" />
             דורש תשומת לב
           </CardTitle>
         </CardHeader>
