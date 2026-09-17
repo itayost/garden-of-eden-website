@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, MessageCircle } from "lucide-react";
@@ -43,9 +44,13 @@ export function Hero({
       <div className="relative h-screen min-h-[600px] max-h-[900px]">
         {/* Background Image */}
         <div className="absolute inset-0 bg-[#1a1a1a]">
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: "url('/landing/hero-balance.webp')" }}
+          <Image
+            src="/landing/hero-balance.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
           />
           {/* Overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/50" />
@@ -53,12 +58,8 @@ export function Hero({
 
         {/* Content */}
         <div className="relative z-10 container mx-auto px-6 h-full flex flex-col justify-end pb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="max-w-2xl"
-          >
+          {/* CSS entrance (transform only) so the headline paints before hydration */}
+          <div className="max-w-2xl motion-safe:animate-in motion-safe:slide-in-from-bottom-8 motion-safe:duration-700">
             {eyebrow && (
               <span className="mb-4 inline-block rounded-full bg-[#CDEA68] px-3 py-1 text-xs font-medium text-black">
                 {eyebrow}
@@ -111,10 +112,10 @@ export function Hero({
                 למידע נוסף
               </Button>
             </div>
-          </motion.div>
+          </div>
 
           {/* Scroll indicator - clickable */}
-          <motion.button
+          <m.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
@@ -123,13 +124,13 @@ export function Hero({
             aria-label="גלול למטה"
           >
             <div className="w-8 h-14 border-2 border-white/30 group-hover:border-[#CDEA68]/50 rounded-full flex justify-center pt-2 transition-colors">
-              <motion.div
+              <m.div
                 animate={{ y: [0, 8, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
                 className="w-1.5 h-3 bg-[#CDEA68] rounded-full"
               />
             </div>
-          </motion.button>
+          </m.button>
         </div>
       </div>
     </section>

@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { Dumbbell, Zap, Activity, Target, ArrowLeft, X, Clock, Users, Calendar, MessageCircle } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,7 @@ export function Programs() {
       <section id="programs" className="py-20 bg-[#F5F5F0]">
         <div className="container mx-auto px-6">
           {/* Header */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -134,12 +135,12 @@ export function Programs() {
             <p className="text-black/50 max-w-sm mt-4 md:mt-0">
               לחצו על כרטיס התוכנית לפרטים נוספים
             </p>
-          </motion.div>
+          </m.div>
 
           {/* Programs grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {programs.map((program, index) => (
-              <motion.div
+              <m.div
                 key={program.title}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -150,23 +151,25 @@ export function Programs() {
                 onMouseEnter={() => setHoveredProgram(index)}
                 onMouseLeave={() => setHoveredProgram(null)}
               >
-                <motion.div
+                <m.div
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
                   className="h-full p-6 flex flex-col relative min-h-[300px] md:min-h-[450px]"
-                  style={{
-                    backgroundImage: `url(${program.image})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }}
                 >
+                  <Image
+                    src={program.image}
+                    alt=""
+                    fill
+                    sizes="(min-width: 768px) 25vw, 50vw"
+                    className="object-cover"
+                  />
                   {/* Dark overlay for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40" />
                   {/* Hover overlay */}
                   <div className="absolute inset-0 bg-[#CDEA68]/0 group-hover:bg-[#CDEA68]/10 transition-colors duration-300" />
 
                   {/* Icon badge */}
-                  <motion.div
+                  <m.div
                     animate={{
                       scale: hoveredProgram === index ? 1.1 : 1,
                       backgroundColor: hoveredProgram === index ? "rgba(205, 234, 104, 0.2)" : "rgba(255, 255, 255, 0.1)",
@@ -174,7 +177,7 @@ export function Programs() {
                     className="w-10 h-10 rounded-xl flex items-center justify-center mb-auto relative z-10"
                   >
                     <program.icon className="w-5 h-5 text-[#CDEA68]" />
-                  </motion.div>
+                  </m.div>
 
                   {/* Content */}
                   <div className="mt-auto relative z-10">
@@ -182,7 +185,7 @@ export function Programs() {
 
                     <AnimatePresence mode="wait">
                       {hoveredProgram === index ? (
-                        <motion.div
+                        <m.div
                           key="hover"
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -202,9 +205,9 @@ export function Programs() {
                             לחצו לפרטים
                             <ArrowLeft className="w-4 h-4" />
                           </span>
-                        </motion.div>
+                        </m.div>
                       ) : (
-                        <motion.p
+                        <m.p
                           key="default"
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -212,7 +215,7 @@ export function Programs() {
                           className="text-white/50 text-sm mb-4"
                         >
                           {program.description}
-                        </motion.p>
+                        </m.p>
                       )}
                     </AnimatePresence>
 
@@ -228,8 +231,8 @@ export function Programs() {
                   <div className="absolute top-4 left-4 px-2 py-1 rounded-full bg-white/10 text-white/60 text-xs">
                     {program.level}
                   </div>
-                </motion.div>
-              </motion.div>
+                </m.div>
+              </m.div>
             ))}
           </div>
         </div>
@@ -238,7 +241,7 @@ export function Programs() {
       {/* Program Detail Modal */}
       <AnimatePresence>
         {currentProgram && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -255,7 +258,7 @@ export function Programs() {
             </button>
 
             {/* Modal content */}
-            <motion.div
+            <m.div
               role="dialog"
               aria-modal="true"
               aria-label={currentProgram?.title}
@@ -309,7 +312,7 @@ export function Programs() {
                   <h4 className="text-white font-bold mb-4">מה תרוויחו מהתוכנית?</h4>
                   <div className="grid grid-cols-2 gap-3">
                     {currentProgram.benefits.map((benefit, index) => (
-                      <motion.div
+                      <m.div
                         key={benefit}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -318,7 +321,7 @@ export function Programs() {
                       >
                         <div className="w-2 h-2 rounded-full bg-[#CDEA68]" />
                         <span className="text-white/70 text-sm">{benefit}</span>
-                      </motion.div>
+                      </m.div>
                     ))}
                   </div>
                 </div>
@@ -338,8 +341,8 @@ export function Programs() {
                   </a>
                 </Button>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
     </>

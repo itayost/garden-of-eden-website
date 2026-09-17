@@ -1,8 +1,10 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Volume2, VolumeX } from "lucide-react";
 import { useState, useRef } from "react";
+import Image from "next/image";
+import { useInViewAutoplay } from "@/hooks/useInViewAutoplay";
 
 // 4 Core Values - Updated content
 const categories = [
@@ -51,6 +53,7 @@ export function About() {
   const [isMuted, setIsMuted] = useState(true);
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  useInViewAutoplay(videoRef);
 
   const scrollToServices = () => {
     const element = document.getElementById("services");
@@ -67,7 +70,7 @@ export function About() {
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left side */}
-            <motion.div
+            <m.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -86,10 +89,10 @@ export function About() {
                   muted={isMuted}
                   loop
                   playsInline
-                  autoPlay
+                  preload="none"
                   poster="/landing/athletic.webp"
                 >
-                  <source src="/landing/promo-video.mp4" type="video/mp4" />
+                  <source src="/landing/promo-video-720.mp4" type="video/mp4" />
                 </video>
 
                 {/* Mute/Unmute button */}
@@ -98,7 +101,7 @@ export function About() {
                   className="absolute bottom-4 right-4 z-10"
                   aria-label={isMuted ? "הפעל צליל" : "השתק"}
                 >
-                  <motion.div
+                  <m.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                     className="w-12 h-12 rounded-full bg-[#CDEA68] flex items-center justify-center shadow-lg"
@@ -108,17 +111,17 @@ export function About() {
                     ) : (
                       <Volume2 className="w-5 h-5 text-black" />
                     )}
-                  </motion.div>
+                  </m.div>
                 </button>
               </div>
 
               <p className="text-black/60 mt-6 leading-relaxed">
                 צפו איך אנחנו משנים את עולם הכושר עם מאמנים מוסמכים, כלים מתקדמים ותוכניות מותאמות אישית עבורכם.
               </p>
-            </motion.div>
+            </m.div>
 
             {/* Right side - Categories with content */}
-            <motion.div
+            <m.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -137,23 +140,23 @@ export function About() {
                   <span className="block font-bold">{cat.label}</span>
                   <AnimatePresence mode="wait">
                     {activeCategory === index && (
-                      <motion.span
+                      <m.span
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         className="block text-sm font-normal mt-2 text-black/70"
                       >
                         {cat.description}
-                      </motion.span>
+                      </m.span>
                     )}
                   </AnimatePresence>
                 </button>
               ))}
-            </motion.div>
+            </m.div>
           </div>
 
           {/* Why Choose Us */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -171,7 +174,7 @@ export function About() {
             {/* Feature cards - clickable */}
             <div className="grid md:grid-cols-3 gap-4">
               {features.map((feature, index) => (
-                <motion.button
+                <m.button
                   key={feature.title}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -181,12 +184,14 @@ export function About() {
                   onMouseEnter={() => setHoveredFeature(index)}
                   onMouseLeave={() => setHoveredFeature(null)}
                   className="aspect-[4/3] rounded-3xl p-6 flex flex-col justify-end relative overflow-hidden group text-right"
-                  style={{
-                    backgroundImage: `url(${feature.image})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }}
                 >
+                  <Image
+                    src={feature.image}
+                    alt=""
+                    fill
+                    sizes="(min-width: 768px) 33vw, 100vw"
+                    className="object-cover"
+                  />
                   {/* Dark overlay for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
                   {/* Hover overlay */}
@@ -194,7 +199,7 @@ export function About() {
 
                   <AnimatePresence mode="wait">
                     {hoveredFeature === index ? (
-                      <motion.div
+                      <m.div
                         key="detail"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -203,9 +208,9 @@ export function About() {
                       >
                         <span className="text-[#CDEA68] text-sm mb-2 block">לחצו לפרטים</span>
                         <span className="text-white/70 text-sm">{feature.detail}</span>
-                      </motion.div>
+                      </m.div>
                     ) : (
-                      <motion.div
+                      <m.div
                         key="summary"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -214,13 +219,13 @@ export function About() {
                       >
                         <span className="text-white/50 text-sm mb-1 block">{feature.desc}</span>
                         <h3 className="text-white font-bold text-xl">{feature.title}</h3>
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
-                </motion.button>
+                </m.button>
               ))}
             </div>
-          </motion.div>
+          </m.div>
         </div>
       </section>
     </>

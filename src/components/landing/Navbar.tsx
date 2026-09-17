@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
@@ -36,9 +36,12 @@ export function Navbar({
   const [activeSection, setActiveSection] = useState("#");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Handle scroll - background blur & active section
+  // Handle scroll - background blur & active section, measured at most once per frame
   useEffect(() => {
-    const handleScroll = () => {
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
       setIsScrolled(window.scrollY > 50);
 
       // Find active section
@@ -57,8 +60,15 @@ export function Navbar({
       setActiveSection("#");
     };
 
+    const handleScroll = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(update);
+    };
+
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   // Smooth scroll handler
@@ -165,7 +175,7 @@ export function Navbar({
       {/* Mobile menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -174,7 +184,7 @@ export function Navbar({
           >
             <div className="flex flex-col items-center justify-center h-full gap-6">
               {navLinks.map((link, index) => (
-                <motion.a
+                <m.a
                   key={link.href}
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
@@ -188,10 +198,10 @@ export function Navbar({
                   }`}
                 >
                   {link.label}
-                </motion.a>
+                </m.a>
               ))}
 
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: navLinks.length * 0.1 }}
@@ -227,9 +237,9 @@ export function Navbar({
                     </a>
                   )}
                 </Button>
-              </motion.div>
+              </m.div>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </>

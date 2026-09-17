@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 const videos = [
   { id: "6GdTCLUmS6Q", title: "המלצת הורים" },
@@ -12,7 +12,7 @@ export function Testimonials() {
     <section id="testimonials" className="py-20 bg-[#F5F5F0]">
       <div className="container mx-auto px-6">
         {/* Header */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -25,12 +25,12 @@ export function Testimonials() {
           <p className="text-black/50 max-w-md mx-auto">
             הורים משתפים את החוויה שלהם עם Garden of Eden
           </p>
-        </motion.div>
+        </m.div>
 
         {/* Videos grid */}
         <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {videos.map((video, index) => (
-            <motion.div
+            <m.div
               key={video.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -49,7 +49,7 @@ export function Testimonials() {
                   className="border-0"
                 />
               </div>
-            </motion.div>
+            </m.div>
           ))}
         </div>
       </div>

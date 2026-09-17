@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { MessageCircle, Instagram, ArrowUp, Phone, MapPin } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { useState, useEffect } from "react";
@@ -91,7 +91,7 @@ export function Footer() {
                 onClick={(e) => handleNavClick(e, "#")}
                 className="inline-flex items-center gap-2 mb-6 group"
               >
-                <motion.div
+                <m.div
                   whileHover={{ rotate: 360 }}
                   transition={{ duration: 0.5 }}
                 >
@@ -102,7 +102,7 @@ export function Footer() {
                     height={40}
                     className="w-10 h-10 object-contain"
                   />
-                </motion.div>
+                </m.div>
                 <span className="font-bold group-hover:text-[#CDEA68] transition-colors">
                   GARDEN OF EDEN
                 </span>
@@ -171,7 +171,7 @@ export function Footer() {
               {/* Social icons */}
               <div className="flex gap-3 mb-6">
                 {socialLinks.map((social) => (
-                  <motion.a
+                  <m.a
                     key={social.label}
                     href={social.href}
                     target="_blank"
@@ -182,7 +182,7 @@ export function Footer() {
                     aria-label={social.label}
                   >
                     <social.icon className="w-5 h-5" />
-                  </motion.a>
+                  </m.a>
                 ))}
               </div>
 
@@ -247,7 +247,7 @@ export function Footer() {
       </footer>
 
       {/* Back to Top Button */}
-      <motion.button
+      <m.button
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{
           opacity: showBackToTop ? 1 : 0,
@@ -261,7 +261,7 @@ export function Footer() {
         aria-label="חזרה למעלה"
       >
         <ArrowUp className="w-5 h-5" />
-      </motion.button>
+      </m.button>
     </>
   );
 }

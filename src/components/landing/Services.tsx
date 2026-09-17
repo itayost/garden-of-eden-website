@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { ChevronDown, ExternalLink, MessageCircle } from "lucide-react";
 
@@ -129,7 +129,7 @@ export function Services() {
     <section id="services" className="py-20 bg-[#F5F5F0]">
       <div className="container mx-auto px-6">
         {/* Header */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -141,12 +141,12 @@ export function Services() {
           <p className="text-black/50 max-w-md mx-auto">
             בחרו את התוכנית שמתאימה לכם והתחילו את המסע לגרסה הטובה ביותר של עצמכם
           </p>
-        </motion.div>
+        </m.div>
 
         {/* Pricing cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {plans.map((plan, index) => (
-            <motion.div
+            <m.div
               key={plan.name}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -165,7 +165,7 @@ export function Services() {
               )}
 
               {/* Card */}
-              <motion.div
+              <m.div
                 whileHover={{ y: -8, transition: { duration: 0.2 } }}
                 className={`rounded-3xl p-8 h-full flex flex-col transition-all duration-300 ${
                   plan.highlighted
@@ -202,12 +202,12 @@ export function Services() {
                     onClick={() => toggleExpand(index)}
                     className="flex items-center gap-2 text-black/50 hover:text-black/70 text-sm mb-6 transition-colors"
                   >
-                    <motion.span
+                    <m.span
                       animate={{ rotate: expandedPlan === index ? 180 : 0 }}
                       transition={{ duration: 0.2 }}
                     >
                       <ChevronDown className="w-4 h-4" />
-                    </motion.span>
+                    </m.span>
                     {expandedPlan === index ? "הסתר פרטים" : "הצג עוד פרטים"}
                   </button>
                 )}
@@ -215,14 +215,14 @@ export function Services() {
                 {/* Extra features - expandable */}
                 <AnimatePresence>
                   {expandedPlan === index && (
-                    <motion.ul
+                    <m.ul
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       className="space-y-3 mb-6 overflow-hidden"
                     >
                       {plan.extraFeatures.map((feature) => (
-                        <motion.li
+                        <m.li
                           key={feature}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -230,9 +230,9 @@ export function Services() {
                         >
                           <div className="w-1.5 h-1.5 rounded-full bg-[#CDEA68]/60 mt-2 flex-shrink-0" />
                           <span className="text-black/60 text-sm">{feature}</span>
-                        </motion.li>
+                        </m.li>
                       ))}
-                    </motion.ul>
+                    </m.ul>
                   )}
                 </AnimatePresence>
 
@@ -276,13 +276,13 @@ export function Services() {
                     </a>
                   )}
                 </div>
-              </motion.div>
-            </motion.div>
+              </m.div>
+            </m.div>
           ))}
         </div>
 
         {/* Bottom note */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -290,7 +290,7 @@ export function Services() {
         >
           <p>* כל האימונים משולבים עם כדור</p>
           <p>* מתקדמים ו-PRO בהתחייבות ל-4 חודשים, ניתן לבטל בהתראה של 7 ימי עסקים לפני מועד התשלום</p>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

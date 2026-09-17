@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import type { PlanProduct } from "@/types/plans";
 import { featuresFor, KIRYAT_ATA_LANDING, periodFor } from "../../../content/landing-kiryat-ata";
@@ -17,7 +17,7 @@ export function KiryatAtaServices({ products }: { products: PlanProduct[] }) {
   return (
     <section id="services" className="py-20 bg-[#F5F5F0]">
       <div className="container mx-auto px-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -26,7 +26,7 @@ export function KiryatAtaServices({ products }: { products: PlanProduct[] }) {
           <span className="text-sm text-black/50 mb-2 block">{KIRYAT_ATA_LANDING.hero.eyebrow}</span>
           <h2 className="text-4xl md:text-5xl font-bold text-black mb-4">{title}</h2>
           <p className="text-black/50 max-w-md mx-auto">{subtitle}</p>
-        </motion.div>
+        </m.div>
 
         {products.length === 0 ? (
           <p className="text-center text-black/50">
@@ -37,7 +37,7 @@ export function KiryatAtaServices({ products }: { products: PlanProduct[] }) {
             {products.map((product, index) => {
               const highlighted = product.slug === highlightedSlug;
               return (
-                <motion.div
+                <m.div
                   key={product.id}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -61,7 +61,7 @@ export function KiryatAtaServices({ products }: { products: PlanProduct[] }) {
                     </div>
                   )}
 
-                  <motion.div
+                  <m.div
                     whileHover={{ y: -8, transition: { duration: 0.2 } }}
                     className={`rounded-3xl p-8 h-full flex flex-col transition-all duration-300 ${
                       highlighted
@@ -103,14 +103,14 @@ export function KiryatAtaServices({ products }: { products: PlanProduct[] }) {
                         <ArrowLeft className="w-4 h-4" />
                       </Link>
                     </div>
-                  </motion.div>
-                </motion.div>
+                  </m.div>
+                </m.div>
               );
             })}
           </div>
         )}
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -124,7 +124,7 @@ export function KiryatAtaServices({ products }: { products: PlanProduct[] }) {
             </Link>
             .
           </p>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );
