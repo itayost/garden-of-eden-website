@@ -19,6 +19,14 @@ import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 export const metadata: Metadata = branchMetadata(BRANCH_SEO.kiryat_ata);
 
 /**
+ * The prices come from the database, so the page cannot be frozen at build
+ * time. Editing a product through /admin revalidates this path for an
+ * immediate update; the hourly window is the fallback for a price changed
+ * straight in the database, which no server action hears about.
+ */
+export const revalidate = 3600;
+
+/**
  * The קריית אתא landing page: the Haifa page's sections with branch copy,
  * prices from plan_products, and every "הצטרפו" leading to /join.
  */
