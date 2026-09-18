@@ -3,6 +3,7 @@
 import { CalendarOff, MapPin, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { rosterLabel } from "@/lib/utils/roster-label";
 import { trainerColor } from "@/lib/utils/trainer-color";
 import type { ScheduleSlot } from "@/types/schedule";
 
@@ -15,11 +16,6 @@ interface WeekSlotCardProps {
   isTrainerAbsent: boolean;
   /** Opens the calendar's roster sheet for this slot. */
   onOpen: () => void;
-}
-
-/** "6 מתאמנים", or the singular Hebrew reads wrong with a numeral. */
-function rosterLabel(count: number): string {
-  return count === 1 ? "מתאמן אחד" : `${count} מתאמנים`;
 }
 
 /**

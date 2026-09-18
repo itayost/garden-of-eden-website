@@ -5,19 +5,32 @@ import { CalendarDays, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { WeekSlotCard } from "@/components/admin/schedule/week/WeekSlotCard";
+import type { DaySessionStatus } from "@/lib/schedule/day-session-status";
 import type { WeekDay } from "@/lib/utils/schedule-week";
 import type { ScheduleSlot } from "@/types/schedule";
+import { DaySlotCard } from "./DaySlotCard";
 
 interface CalendarDayListProps {
   /** Null for an empty Saturday. */
   day: WeekDay | null;
   onOpenSlot: (slot: ScheduleSlot) => void;
   onAddSlot: () => void;
+  /** trainee id -> session status on this day; absent = not built. */
+  statuses: Record<string, DaySessionStatus>;
+  /** The statuses query failed; no chip may claim "לא נבנה". */
+  statusesLoaded: boolean;
+  builderHrefFor: (slot: ScheduleSlot, traineeId: string) => string;
 }
 
 /** One day's slots on the timeline rail, grouped by hour. */
-export function CalendarDayList({ day, onOpenSlot, onAddSlot }: CalendarDayListProps) {
+export function CalendarDayList({
+  day,
+  onOpenSlot,
+  onAddSlot,
+  statuses,
+  statusesLoaded,
+  builderHrefFor,
+}: CalendarDayListProps) {
   const byTime = useMemo(() => {
     const groups = new Map<string, ScheduleSlot[]>();
     for (const slot of day?.slots ?? []) {
@@ -57,11 +70,14 @@ export function CalendarDayList({ day, onOpenSlot, onAddSlot }: CalendarDayListP
           <h3 className="font-display text-xl text-forest tabular-nums">{time}</h3>
           <div className="grid gap-2 sm:grid-cols-2">
             {group.map((slot) => (
-              <WeekSlotCard
+              <DaySlotCard
                 key={slot.id}
                 slot={slot}
                 isTrainerAbsent={slot.trainer_id !== null && absentTrainerIds.has(slot.trainer_id)}
                 onOpen={() => onOpenSlot(slot)}
+                statuses={statuses}
+                statusesLoaded={statusesLoaded}
+                builderHrefFor={(traineeId) => builderHrefFor(slot, traineeId)}
               />
             ))}
           </div>

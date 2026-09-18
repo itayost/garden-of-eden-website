@@ -3,6 +3,11 @@
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import {
+  toDaySessionStatuses,
+  type DaySessionStatuses,
+  type SessionStatusRow,
+} from "@/lib/schedule/day-session-status";
+import {
   toRosterExercises,
   type RosterSession,
   type SessionExerciseRow,
@@ -38,6 +43,8 @@ type SummariesResult =
 type RosterSessionsResult =
   | { success: true; data: Record<string, RosterSession> }
   | { error: string };
+
+type StatusesResult = { success: true; data: DaySessionStatuses } | { error: string };
 
 function sortExercises(session: TrainingSession): TrainingSession {
   return {
@@ -181,6 +188,45 @@ export async function getRosterSessionsAction(
       ]),
     ),
   };
+}
+
+/**
+ * Whether each trainee's session is built, across a range of days. The
+ * calendar loads one week and switches day on the client, so a per-date read
+ * would go stale the moment a trainer taps another day in the strip.
+ *
+ * Scoped by branch rather than by a caller-supplied id list: a trainer reads
+ * the trainees of their own branches and no others.
+ */
+export async function getWeekSessionStatusesAction(
+  startDate: string,
+  endDate: string,
+): Promise<StatusesResult> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+
+  if (!isValidDateString(startDate) || !isValidDateString(endDate)) return { error: "תאריך לא תקין" };
+  if (endDate < startDate) return { error: "טווח תאריכים לא תקין" };
+
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return { error: scopeResult.error };
+  const visibleIds = await visibleProfileIds(createAdminClient(), scopeResult.data.scope, undefined);
+  if (visibleIds !== null && visibleIds.length === 0) return { success: true, data: {} };
+
+  const supabase = await createClient();
+  const query = typedFrom(supabase, "training_sessions")
+    .select("trainee_id, session_date, completed_at, exercises:training_session_exercises(id)")
+    .gte("session_date", startDate)
+    .lte("session_date", endDate);
+
+  const { data, error } = await (visibleIds === null ? query : query.in("trainee_id", visibleIds));
+
+  if (error) {
+    console.error("Get week session statuses error:", error);
+    return { error: "שגיאה בטעינת סטטוס האימונים" };
+  }
+
+  return { success: true, data: toDaySessionStatuses((data ?? []) as SessionStatusRow[]) };
 }
 
 /**
