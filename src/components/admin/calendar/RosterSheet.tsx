@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarCheck, HeartPulse, Loader2, MapPin, Pencil, Trash2, Users, X } from "lucide-react";
+import { MapPin, Pencil, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -19,7 +19,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { SheetDialogContent } from "@/components/ui/sheet-dialog";
+import { RosterRow } from "@/components/admin/calendar/RosterRow";
 import { TraineeSearch } from "@/components/admin/schedule/TraineeSearch";
+import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { HealthSheet } from "@/features/plans/components/HealthSheet";
 import { PlanSheet } from "@/features/plans/components/staff/PlanSheet";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
@@ -28,13 +30,13 @@ import {
   deleteSlotAction,
   removeSlotTraineeAction,
 } from "@/lib/actions/daily-schedule";
+import { getRosterSessionsAction } from "@/lib/actions/training-sessions";
+import type { RosterSession } from "@/lib/schedule/roster-exercise";
 import { cn } from "@/lib/utils";
 import { trainerColor } from "@/lib/utils/trainer-color";
-import { STAFF_PLAN_CHIP } from "@/lib/plans/status-styles";
 import type { StaffPlanBadge } from "@/types/plans";
 import type { ScheduleSlot, SlotTrainee } from "@/types/schedule";
 
-/** Only the states that need a trainer's attention get a chip. */
 interface RosterSheetProps {
   /** The slot on screen, looked up from fresh page data; null closes the sheet. */
   slot: ScheduleSlot | null;
@@ -47,17 +49,23 @@ interface RosterSheetProps {
 }
 
 /**
- * Who is in one slot. The only place in the calendar that changes a roster,
- * and it never builds sessions: that is the בניית אימונים screen's job.
+ * Who is in one slot, and what each of them was given: a row opens to the
+ * exercises of that trainee's session for the day. The only place in the
+ * calendar that changes a roster, and it still builds no sessions — it reads
+ * them and links to the בניית אימונים screen, whose job that remains.
  */
 export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEditDetails }: RosterSheetProps) {
   const router = useRouter();
+  const { branchId } = useCurrentBranch();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [planFor, setPlanFor] = useState<{ id: string; name: string } | null>(null);
   const [healthFor, setHealthFor] = useState<{ id: string; name: string } | null>(null);
+  const [sessions, setSessions] = useState<Record<string, RosterSession>>({});
+  const [sessionsState, setSessionsState] = useState<"loading" | "ready" | "error">("loading");
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
 
   const active = useMemo(() => slot?.trainees.filter((t) => t.cancelled_at === null) ?? [], [slot]);
   const lateCancels = slot?.trainees.filter((t) => t.cancelled_at !== null && t.late_cancel) ?? [];
@@ -65,6 +73,41 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
     () => new Set(active.flatMap((t) => (t.trainee_id ? [t.trainee_id] : []))),
     [active],
   );
+
+  // The roster changes under this sheet (adding, removing, a trainee's own
+  // cancellation), so the day's sessions are keyed by who is actually on it.
+  const date = slot?.schedule_date;
+  const linkedIdsKey = useMemo(() => [...activeIds].sort().join(","), [activeIds]);
+
+  useEffect(() => {
+    if (!date) return;
+    const ids = linkedIdsKey ? linkedIdsKey.split(",") : [];
+    if (ids.length === 0) {
+      setSessions({});
+      setSessionsState("ready");
+      return;
+    }
+
+    let cancelled = false;
+    setSessionsState("loading");
+    getRosterSessionsAction(date, ids)
+      .then((result) => {
+        if (cancelled) return;
+        if ("error" in result) {
+          setSessionsState("error");
+          return;
+        }
+        setSessions(result.data);
+        setSessionsState("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setSessionsState("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [date, linkedIdsKey]);
 
   if (!slot) return null;
 
@@ -106,6 +149,14 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
       setBusyId(null);
     }
   };
+
+  const toggleExpanded = (rosterEntryId: string) =>
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(rosterEntryId)) next.delete(rosterEntryId);
+      else next.add(rosterEntryId);
+      return next;
+    });
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -175,54 +226,23 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
               </p>
             ) : (
               <ul className="divide-y rounded-xl border">
-                {active.map((entry) => {
-                  const badge = entry.trainee_id ? planBadges[entry.trainee_id] : undefined;
-                  const chip = badge?.endsOn ? STAFF_PLAN_CHIP[badge.status] : undefined;
-                  return (
-                    <li key={entry.id} className="flex items-center gap-2 px-3 py-2">
-                      <span className={cn("min-w-0 flex-1 truncate text-sm", !entry.trainee_id && "text-muted-foreground")}>
-                        {entry.trainee_name}
-                        {!entry.trainee_id && <span className="ms-1 text-[11px]">(ללא חשבון)</span>}
-                      </span>
-                      {entry.source === "self" && (
-                        <CalendarCheck className="h-4 w-4 shrink-0 text-forest" aria-label="נרשם בעצמו" />
-                      )}
-                      {chip && entry.trainee_id && (
-                        <button
-                          type="button"
-                          onClick={() => setPlanFor({ id: entry.trainee_id!, name: entry.trainee_name })}
-                          className="-my-1 inline-flex min-h-10 shrink-0 items-center px-1"
-                          title={badge?.sessionsLeft != null ? `${badge.sessionsLeft} אימונים נותרו` : undefined}
-                          aria-label={`המסלול של ${entry.trainee_name}: ${chip.label}`}
-                        >
-                          <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", chip.className)}>
-                            {chip.label}
-                          </span>
-                        </button>
-                      )}
-                      {badge?.hasMedicalNotes && entry.trainee_id && (
-                        <button
-                          type="button"
-                          onClick={() => setHealthFor({ id: entry.trainee_id!, name: entry.trainee_name })}
-                          className="-my-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full text-amber-700 hover:bg-amber-100"
-                          aria-label={`מידע רפואי של ${entry.trainee_name}`}
-                        >
-                          <HeartPulse className="h-4 w-4" />
-                        </button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-10 shrink-0"
-                        disabled={busyId !== null}
-                        onClick={() => remove(entry)}
-                        aria-label={`הסרת ${entry.trainee_name} מהסלוט`}
-                      >
-                        {busyId === entry.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                      </Button>
-                    </li>
-                  );
-                })}
+                {active.map((entry) => (
+                  <RosterRow
+                    key={entry.id}
+                    entry={entry}
+                    session={entry.trainee_id ? sessions[entry.trainee_id] : undefined}
+                    sessionsState={sessionsState}
+                    badge={entry.trainee_id ? planBadges[entry.trainee_id] : undefined}
+                    expanded={expandedIds.has(entry.id)}
+                    onToggle={() => toggleExpanded(entry.id)}
+                    removing={busyId === entry.id}
+                    removeDisabled={busyId !== null}
+                    onRemove={() => remove(entry)}
+                    onOpenPlan={() => setPlanFor({ id: entry.trainee_id!, name: entry.trainee_name })}
+                    onOpenHealth={() => setHealthFor({ id: entry.trainee_id!, name: entry.trainee_name })}
+                    builderHref={`/admin/schedule/session/${entry.trainee_id}?date=${slot.schedule_date}&slot=${slot.id}&branch=${branchId}`}
+                  />
+                ))}
               </ul>
             )}
 

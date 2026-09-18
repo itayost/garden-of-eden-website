@@ -249,7 +249,13 @@ export function CalendarView({
         </>
       )}
 
+      {/*
+        Keyed by the open slot so each opening mounts a fresh sheet: the day's
+        sessions are read on mount, and a session another trainer built
+        meanwhile is never served from the last opening's state.
+      */}
       <RosterSheet
+        key={openSlot?.id ?? "closed"}
         slot={openSlot}
         onClose={() => setOpenSlotId(null)}
         trainees={trainees}

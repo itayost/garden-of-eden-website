@@ -1,6 +1,13 @@
 "use server";
 
-import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { visibleProfileIds } from "@/features/branches/lib/memberships";
+import {
+  toRosterExercises,
+  type RosterSession,
+  type SessionExerciseRow,
+} from "@/lib/schedule/roster-exercise";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidDateString, isValidUUID } from "@/lib/validations/common";
@@ -10,12 +17,26 @@ import {
   type TrainingSession,
 } from "@/types/training-session";
 
+/** One slot's roster; a larger list is a caller bug, not a page to serve. */
+const MAX_ROSTER_TRAINEES = 60;
+
+/**
+ * The exercise lines the calendar's roster sheet shows — names and targets,
+ * without the logs and equipment profiles the builder needs.
+ */
+const ROSTER_SESSION_SELECT =
+  "id, trainee_id, completed_at, exercises:training_session_exercises(id, order_index, target_sets, target_reps_he, target_reps, target_load_he, target_weight_kg, target_duration_seconds, target_distance_m, notes_he, exercise:workout_exercises(name_he, name_en))";
+
 type SessionResult =
   | { success: true; data: TrainingSession | null }
   | { error: string };
 
 type SummariesResult =
   | { success: true; data: Record<string, SessionSummary> }
+  | { error: string };
+
+type RosterSessionsResult =
+  | { success: true; data: Record<string, RosterSession> }
   | { error: string };
 
 function sortExercises(session: TrainingSession): TrainingSession {
@@ -98,6 +119,68 @@ export async function getSessionSummariesAction(
   );
 
   return { success: true, data: summaries };
+}
+
+/**
+ * The built sessions of one slot's roster, exercise names included, so the
+ * calendar's roster sheet can show what each trainee was given without
+ * sending a trainer to the builder. Trainees with nothing built are absent
+ * from the map rather than present and empty.
+ */
+export async function getRosterSessionsAction(
+  date: string,
+  traineeIds: string[],
+): Promise<RosterSessionsResult> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+
+  if (!Array.isArray(traineeIds)) return { error: "קלט לא תקין" };
+  if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
+  if (traineeIds.length > MAX_ROSTER_TRAINEES) return { error: "יותר מדי מתאמנים בבקשה אחת" };
+  if (!traineeIds.every(isValidUUID)) return { error: "מזהה מתאמן לא תקין" };
+  if (traineeIds.length === 0) return { success: true, data: {} };
+
+  // A server action is a public endpoint, so the ids the sheet sent are not a
+  // control: a trainer reads only their own branches' trainees. An id outside
+  // the scope is dropped rather than refused, so one stray roster row cannot
+  // blank the whole sheet.
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return { error: scopeResult.error };
+  const visibleIds = await visibleProfileIds(createAdminClient(), scopeResult.data.scope, undefined);
+  const scopedIds = visibleIds === null ? traineeIds : traineeIds.filter((id) => visibleIds.includes(id));
+  if (scopedIds.length === 0) return { success: true, data: {} };
+
+  const supabase = await createClient();
+  const { data, error } = await typedFrom(supabase, "training_sessions")
+    .select(ROSTER_SESSION_SELECT)
+    .eq("session_date", date)
+    .in("trainee_id", scopedIds);
+
+  if (error) {
+    console.error("Get roster sessions error:", error);
+    return { error: "שגיאה בטעינת האימונים" };
+  }
+
+  const rows = (data ?? []) as {
+    id: string;
+    trainee_id: string;
+    completed_at: string | null;
+    exercises: SessionExerciseRow[] | null;
+  }[];
+
+  return {
+    success: true,
+    data: Object.fromEntries(
+      rows.map((row) => [
+        row.trainee_id,
+        {
+          id: row.id,
+          completed_at: row.completed_at,
+          exercises: toRosterExercises(row.exercises ?? []),
+        },
+      ]),
+    ),
+  };
 }
 
 /**

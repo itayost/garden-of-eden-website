@@ -5,6 +5,7 @@
 
 export {
   getPreviousSessionAction,
+  getRosterSessionsAction,
   getSessionAction,
   getSessionSummariesAction,
 } from "./training-sessions-list";
