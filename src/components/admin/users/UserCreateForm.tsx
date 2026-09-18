@@ -143,7 +143,7 @@ export function UserCreateForm({ isAdmin = true, branches }: UserCreateFormProps
                   idPrefix="create-branch"
                 />
               </FormControl>
-              <FormDescription>אפשר לבחור סניף אחד או את שניהם</FormDescription>
+              <FormDescription>סניף אחד לפחות. מתאמן או מאמן בלי סניף אינו נראה לאיש מהצוות.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
