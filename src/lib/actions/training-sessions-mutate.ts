@@ -205,13 +205,19 @@ export async function deleteSessionAction(sessionId: string): Promise<DeleteResu
   const supabase = await createClient();
 
   const { data: existing } = await typedFrom(supabase, "training_sessions")
-    .select("id, completed_at")
+    .select("id, trainee_id, completed_at")
     .eq("id", validated.data.sessionId)
     .maybeSingle();
 
   if (!existing) return { error: "האימון לא נמצא" };
 
-  const session = existing as Pick<TrainingSession, "id" | "completed_at">;
+  const session = existing as Pick<TrainingSession, "id" | "trainee_id" | "completed_at">;
+
+  // A session id is enough to name one, so the branch check belongs here too:
+  // without it a trainer could delete another branch's work by id alone.
+  const scopeError = await assertTraineeInScope(session.trainee_id);
+  if (scopeError) return { error: scopeError };
+
   if (session.completed_at) {
     return { error: "לא ניתן למחוק אימון שהושלם" };
   }

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { SessionBuilder } from "@/components/admin/schedule/SessionBuilder";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { listTemplatesAction } from "@/lib/actions/session-templates";
 import { getSessionAction } from "@/lib/actions/training-sessions";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -28,6 +29,11 @@ export default async function SessionBuilderPage({
 
   const { traineeId } = await params;
   if (!isValidUUID(traineeId)) notFound();
+
+  // The lookup below uses the admin client, so without this a trainer could
+  // read another branch's trainee by typing the id into the URL. Saving
+  // already refuses them, so this only makes the refusal honest and early.
+  if (await assertTraineeInScope(traineeId)) notFound();
 
   const query = await searchParams;
   const date =
