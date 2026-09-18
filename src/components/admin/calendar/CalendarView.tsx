@@ -20,6 +20,7 @@ import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { findDay, visibleDays } from "@/lib/schedule/calendar";
 import { hebrewWeekday } from "@/lib/utils/date";
 import { addDays, shortDate } from "@/lib/utils/iso-date";
+import type { DaySessionStatuses } from "@/lib/schedule/day-session-status";
 import { isBuildableDay, weekRangeLabel, type Week, type WeekDay } from "@/lib/utils/schedule-week";
 import type { StaffPlanBadge } from "@/types/plans";
 import type { ScheduleSlot } from "@/types/schedule";
@@ -38,6 +39,10 @@ interface CalendarViewProps {
   trainers: TrainerOption[];
   trainees: TrainerOption[];
   planBadges: Record<string, StaffPlanBadge>;
+  /** date -> trainee id -> session status, for the name chips in the day list. */
+  sessionStatuses: DaySessionStatuses;
+  /** The statuses query failed; the chips then claim nothing. */
+  statusesLoaded: boolean;
   /** The week's slots could not be read; never render as an empty week. */
   slotsError: string | null;
   /** The standing template could not be read; staffing cannot be claimed. */
@@ -67,6 +72,8 @@ export function CalendarView({
   trainers,
   trainees,
   planBadges,
+  sessionStatuses,
+  statusesLoaded,
   slotsError,
   templateFailed,
 }: CalendarViewProps) {
@@ -100,6 +107,9 @@ export function CalendarView({
   const buildableSlotCount = buildable.reduce((total, d) => total + d.onDuty.bands.length, 0);
 
   const hrefFor = (target: string) => `/admin/calendar?date=${target}&branch=${branchId}`;
+
+  const builderHrefFor = (slot: ScheduleSlot, traineeId: string) =>
+    `/admin/schedule/session/${traineeId}?date=${slot.schedule_date}&slot=${slot.id}&branch=${branchId}`;
 
   const selectDay = (target: string) => {
     setSelectedDate(target);
@@ -212,6 +222,9 @@ export function CalendarView({
               day={selectedDay}
               onOpenSlot={(slot) => setOpenSlotId(slot.id)}
               onAddSlot={() => openSlotForm({ date: selectedDate, slot: null, day: selectedDay })}
+              statuses={sessionStatuses[selectedDate] ?? {}}
+              statusesLoaded={statusesLoaded}
+              builderHrefFor={builderHrefFor}
             />
           </div>
 
@@ -249,7 +262,13 @@ export function CalendarView({
         </>
       )}
 
+      {/*
+        Keyed by the open slot so each opening mounts a fresh sheet: the day's
+        sessions are read on mount, and a session another trainer built
+        meanwhile is never served from the last opening's state.
+      */}
       <RosterSheet
+        key={openSlot?.id ?? "closed"}
         slot={openSlot}
         onClose={() => setOpenSlotId(null)}
         trainees={trainees}

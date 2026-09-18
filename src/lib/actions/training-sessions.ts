@@ -5,8 +5,10 @@
 
 export {
   getPreviousSessionAction,
+  getRosterSessionsAction,
   getSessionAction,
   getSessionSummariesAction,
+  getWeekSessionStatusesAction,
 } from "./training-sessions-list";
 
 export {

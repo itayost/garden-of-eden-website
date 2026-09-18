@@ -8,6 +8,7 @@ import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/l
 import { loadPlanStatusesForStaff } from "@/features/plans/lib/actions/staff-plan-badges";
 import { getSlotsForWeekAction } from "@/lib/actions/daily-schedule";
 import { getSlotFormOptionsAction } from "@/lib/actions/schedule-options";
+import { getWeekSessionStatusesAction } from "@/lib/actions/training-sessions";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { getExceptionsInRangeAction, getWeeklyScheduleAction } from "@/lib/actions/weekly-schedule";
 import { allowedBranches, resolveRequestedBranch } from "@/lib/branches/resolve-branch";
@@ -54,11 +55,12 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
   // Trainers read this page too, so the pick-lists come from the admin-client
   // action (RLS hides trainee rows from a trainer).
-  const [slotsResult, templateResult, exceptionsResult, optionsResult] = await Promise.all([
+  const [slotsResult, templateResult, exceptionsResult, optionsResult, statusesResult] = await Promise.all([
     getSlotsForWeekAction(weekStart, branchId),
     getWeeklyScheduleAction(weekStart, weekEnd, branchId),
     getExceptionsInRangeAction(weekStart, weekEnd, branchId),
     getSlotFormOptionsAction(branchId),
+    getWeekSessionStatusesAction(weekStart, weekEnd),
   ]);
 
   // Each failure degrades on its own and never renders as "nothing here".
@@ -68,6 +70,10 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const bands = "success" in templateResult ? templateResult.data.bands : [];
   const exceptions = "success" in exceptionsResult ? exceptionsResult.data : [];
   const options = "success" in optionsResult ? optionsResult.data : { trainers: [], trainees: [] };
+  // The day list shows a chip per name; if this failed the chips say nothing
+  // rather than telling every trainer their sessions are unbuilt.
+  const statusesLoaded = "success" in statusesResult;
+  const sessionStatuses = "success" in statusesResult ? statusesResult.data : {};
 
   const week = buildWeek({ weekStart, today, slots, bands, exceptions });
 
@@ -88,6 +94,8 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         trainers={options.trainers}
         trainees={options.trainees}
         planBadges={planBadges}
+        sessionStatuses={sessionStatuses}
+        statusesLoaded={statusesLoaded}
         slotsError={slotsError}
         templateFailed={templateFailed}
       />
