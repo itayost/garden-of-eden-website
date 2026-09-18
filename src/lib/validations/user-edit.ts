@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { branchIdListSchema } from "@/lib/validations/branch";
+import { requireBranchForNonAdmin } from "@/lib/validations/user-create";
 import type { Profile } from "@/types/database";
 import type { FieldChange } from "@/types/activity-log";
 import {
@@ -49,7 +50,7 @@ export const userEditSchema = z.object({
   is_active: z.boolean(),
 
   branch_ids: branchIdListSchema,
-});
+}).superRefine(requireBranchForNonAdmin);
 
 export type UserEditFormData = z.infer<typeof userEditSchema>;
 

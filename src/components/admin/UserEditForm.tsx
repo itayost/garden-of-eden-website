@@ -177,7 +177,7 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
                   idPrefix="edit-branch"
                 />
               </FormControl>
-              <FormDescription>אפשר לבחור סניף אחד או את שניהם</FormDescription>
+              <FormDescription>סניף אחד לפחות. מתאמן או מאמן בלי סניף אינו נראה לאיש מהצוות.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
