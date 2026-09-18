@@ -1,6 +1,7 @@
 "use server";
 
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import {
   toDaySessionStatuses,
@@ -46,6 +47,16 @@ type RosterSessionsResult =
 
 type StatusesResult = { success: true; data: DaySessionStatuses } | { error: string };
 
+/**
+ * The trainee ids this caller may read, or null for no restriction at all.
+ * Admins are unrestricted; a trainer sees their own branches' trainees.
+ */
+async function readableTraineeIds(): Promise<{ ids: string[] | null } | { error: string }> {
+  const scopeResult = await getBranchScopeAction();
+  if ("error" in scopeResult) return { error: scopeResult.error };
+  return { ids: await visibleProfileIds(createAdminClient(), scopeResult.data.scope, undefined) };
+}
+
 function sortExercises(session: TrainingSession): TrainingSession {
   return {
     ...session,
@@ -65,6 +76,11 @@ export async function getSessionAction(
 
   if (!isValidUUID(traineeId)) return { error: "מזהה מתאמן לא תקין" };
   if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
+
+  // Saving already refuses an out-of-scope trainee, so reading one was only
+  // ever a way to see another branch's work.
+  const scopeError = await assertTraineeInScope(traineeId);
+  if (scopeError) return { error: scopeError };
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "training_sessions")
@@ -96,10 +112,19 @@ export async function getSessionSummariesAction(
 
   if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
 
+  // Unfiltered this returned every branch's sessions for the date and left the
+  // narrowing to the page, which is not a control.
+  const scoped = await readableTraineeIds();
+  if ("error" in scoped) return { error: scoped.error };
+  if (scoped.ids !== null && scoped.ids.length === 0) return { success: true, data: {} };
+
   const supabase = await createClient();
-  const { data, error } = await typedFrom(supabase, "training_sessions")
+  const summariesQuery = typedFrom(supabase, "training_sessions")
     .select("id, trainee_id, completed_at, exercises:training_session_exercises(id)")
     .eq("session_date", date);
+  const { data, error } = await (scoped.ids === null
+    ? summariesQuery
+    : summariesQuery.in("trainee_id", scoped.ids));
 
   if (error) {
     console.error("Get session summaries error:", error);
@@ -151,10 +176,9 @@ export async function getRosterSessionsAction(
   // control: a trainer reads only their own branches' trainees. An id outside
   // the scope is dropped rather than refused, so one stray roster row cannot
   // blank the whole sheet.
-  const scopeResult = await getBranchScopeAction();
-  if ("error" in scopeResult) return { error: scopeResult.error };
-  const visibleIds = await visibleProfileIds(createAdminClient(), scopeResult.data.scope, undefined);
-  const scopedIds = visibleIds === null ? traineeIds : traineeIds.filter((id) => visibleIds.includes(id));
+  const scoped = await readableTraineeIds();
+  if ("error" in scoped) return { error: scoped.error };
+  const scopedIds = scoped.ids === null ? traineeIds : traineeIds.filter((id) => scoped.ids!.includes(id));
   if (scopedIds.length === 0) return { success: true, data: {} };
 
   const supabase = await createClient();
@@ -208,9 +232,9 @@ export async function getWeekSessionStatusesAction(
   if (!isValidDateString(startDate) || !isValidDateString(endDate)) return { error: "תאריך לא תקין" };
   if (endDate < startDate) return { error: "טווח תאריכים לא תקין" };
 
-  const scopeResult = await getBranchScopeAction();
-  if ("error" in scopeResult) return { error: scopeResult.error };
-  const visibleIds = await visibleProfileIds(createAdminClient(), scopeResult.data.scope, undefined);
+  const scoped = await readableTraineeIds();
+  if ("error" in scoped) return { error: scoped.error };
+  const visibleIds = scoped.ids;
   if (visibleIds !== null && visibleIds.length === 0) return { success: true, data: {} };
 
   const supabase = await createClient();
@@ -242,6 +266,9 @@ export async function getPreviousSessionAction(
 
   if (!isValidUUID(traineeId)) return { error: "מזהה מתאמן לא תקין" };
   if (!isValidDateString(beforeDate)) return { error: "תאריך לא תקין" };
+
+  const scopeError = await assertTraineeInScope(traineeId);
+  if (scopeError) return { error: scopeError };
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "training_sessions")
