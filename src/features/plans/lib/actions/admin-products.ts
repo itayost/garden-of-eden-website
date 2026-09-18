@@ -16,6 +16,10 @@ function revalidate(): void {
   revalidatePath("/admin/plans/products");
   revalidatePath("/admin/plans");
   revalidatePath("/join");
+  // The קריית אתא landing page prints these prices and is statically
+  // generated, so without this a price change is invisible to the public
+  // until the next deployment.
+  revalidatePath("/kiryat-ata");
 }
 
 export async function listProductsAction(): Promise<PlanProduct[]> {
