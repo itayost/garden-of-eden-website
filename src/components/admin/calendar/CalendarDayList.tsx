@@ -16,7 +16,8 @@ interface CalendarDayListProps {
   onOpenSlot: (slot: ScheduleSlot) => void;
   onAddSlot: () => void;
   /** trainee id -> session status on this day; absent = not built. */
-  statuses: Record<string, DaySessionStatus>;
+  /** This day's statuses, keyed by slot id and then by trainee id. */
+  statuses: Record<string, Record<string, DaySessionStatus>>;
   /** The statuses query failed; no chip may claim "לא נבנה". */
   statusesLoaded: boolean;
   builderHrefFor: (slot: ScheduleSlot, traineeId: string) => string;
@@ -75,7 +76,7 @@ export function CalendarDayList({
                 slot={slot}
                 isTrainerAbsent={slot.trainer_id !== null && absentTrainerIds.has(slot.trainer_id)}
                 onOpen={() => onOpenSlot(slot)}
-                statuses={statuses}
+                statuses={statuses[slot.id] ?? {}}
                 statusesLoaded={statusesLoaded}
                 builderHrefFor={(traineeId) => builderHrefFor(slot, traineeId)}
               />

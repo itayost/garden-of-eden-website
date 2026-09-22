@@ -94,8 +94,10 @@ describe("buildSessionWorklist", () => {
         }),
       ],
       {
-        [OMER]: summary(OMER, { exerciseCount: 7 }),
-        [NADAV]: summary(NADAV, { completed_at: "2026-09-16T18:00:00Z" }),
+        "slot-1": {
+          [OMER]: summary(OMER, { exerciseCount: 7 }),
+          [NADAV]: summary(NADAV, { completed_at: "2026-09-16T18:00:00Z" }),
+        },
       },
     );
     expect(groups[0].rows.map((row) => [row.status, row.exerciseCount])).toEqual([
@@ -127,15 +129,15 @@ describe("buildSessionWorklist", () => {
     expect(groups[0].rows.map((row) => row.rosterEntryId)).toEqual(["first", "second"]);
   });
 
-  test("a trainee in two slots appears in both, sharing the day's status", () => {
+  test("a trainee in two slots carries a status in each, not one shared", () => {
     const groups = buildSessionWorklist(
       [
         slot({ id: "one", start_time: "16:00:00", trainees: [entry({ id: "a", trainee_id: NOAM })] }),
         slot({ id: "two", start_time: "18:00:00", trainees: [entry({ id: "b", trainee_id: NOAM })] }),
       ],
-      { [NOAM]: summary(NOAM) },
+      { one: { [NOAM]: summary(NOAM) } },
     );
-    expect(groups.map((group) => group.rows[0].status)).toEqual(["built", "built"]);
+    expect(groups.map((group) => group.rows[0].status)).toEqual(["built", "not_built"]);
   });
 
   test("does not mutate the input slots", () => {
@@ -175,9 +177,26 @@ describe("buildSessionWorklist", () => {
   test("marks a row whose session was edited individually", () => {
     const groups = buildSessionWorklist(
       [slot({ trainees: [entry({ trainee_id: NOAM })] })],
-      { [NOAM]: summary(NOAM, { isCustom: true }) },
+      { "slot-1": { [NOAM]: summary(NOAM, { isCustom: true }) } },
     );
     expect(groups[0].rows[0].isCustom).toBe(true);
+  });
+
+  test("one trainee in two slots reads each slot's own session", () => {
+    const groups = buildSessionWorklist(
+      [
+        slot({ id: "morning", start_time: "09:00:00", trainees: [entry({ trainee_id: NOAM })] }),
+        slot({ id: "evening", start_time: "19:00:00", trainees: [entry({ id: "b", trainee_id: NOAM })] }),
+      ],
+      {
+        morning: { [NOAM]: summary(NOAM, { exerciseCount: 4 }) },
+        evening: { [NOAM]: summary(NOAM, { completed_at: "2026-09-16T20:00:00Z" }) },
+      },
+    );
+
+    expect(groups[0].rows[0].exerciseCount).toBe(4);
+    expect(groups[0].rows[0].status).toBe("built");
+    expect(groups[1].rows[0].status).toBe("completed");
   });
 
   test("a trainee with nothing built is not custom", () => {
@@ -200,7 +219,7 @@ describe("filterWorklist", () => {
         trainees: [entry({ id: "b", trainee_id: OMER })],
       }),
     ],
-    { [NOAM]: summary(NOAM) },
+    { mine: { [NOAM]: summary(NOAM) } },
   );
 
   test("no filters keeps every group with rows", () => {
@@ -236,7 +255,7 @@ describe("worklistProgress", () => {
           ],
         }),
       ],
-      { [NOAM]: summary(NOAM), [NADAV]: summary(NADAV, { completed_at: "2026-09-16T18:00:00Z" }) },
+      { "slot-1": { [NOAM]: summary(NOAM), [NADAV]: summary(NADAV, { completed_at: "2026-09-16T18:00:00Z" }) } },
     );
     expect(worklistProgress(groups)).toEqual({ built: 2, total: 3 });
   });

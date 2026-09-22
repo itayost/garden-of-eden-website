@@ -57,7 +57,7 @@ export default async function SessionBuilderPage({
         .eq("is_active", true)
         .is("deleted_at", null)
         .maybeSingle(),
-      getSessionAction(traineeId, date),
+      getSessionAction(traineeId, date, slotId),
       listPrograms(),
       listTemplatesAction(),
     ]);

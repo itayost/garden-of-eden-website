@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import {
-  getMyTodaySessionAction,
+  getMyTodaySessionsAction,
   resolveEquipmentCodeAction,
 } from "@/lib/actions/trainee-workout";
 import { findScanTarget } from "@/lib/utils/scan-match";
@@ -32,22 +32,26 @@ export default async function ScanPage({ params }: PageProps) {
   // Unknown or inactive code: land on the workout page rather than a dead end.
   if (!equipment) redirect("/dashboard/workout");
 
-  const sessionResult = await getMyTodaySessionAction();
-  const session = "success" in sessionResult ? sessionResult.data : null;
+  const sessionsResult = await getMyTodaySessionsAction();
+  const sessions = "success" in sessionsResult ? sessionsResult.data : [];
 
-  if (session) {
-    const target = findScanTarget(
+  // Across every session today, not just the open one: a trainee standing at a
+  // machine that belongs to their second hour should land on the exercise that
+  // was prescribed to them rather than on a free log. The workout page then
+  // opens whichever hour holds it, because a focus id beats the clock there.
+  const target = findScanTarget(
+    sessions.flatMap((session) =>
       session.exercises.map((exercise) => ({
         sessionExerciseId: exercise.id,
         equipmentId: exercise.exercise?.equipment_id ?? null,
         hasLog: (exercise.logs?.length ?? 0) > 0,
       })),
-      equipment.id,
-    );
+    ),
+    equipment.id,
+  );
 
-    if (target) {
-      redirect(`/dashboard/workout?focus=${target}&equipment=${equipment.id}`);
-    }
+  if (target) {
+    redirect(`/dashboard/workout?focus=${target}&equipment=${equipment.id}`);
   }
 
   redirect(`/dashboard/workout?equipment=${equipment.id}`);
