@@ -1051,6 +1051,48 @@ export type Database = {
           },
         ]
       }
+      daily_schedule_slot_trainers: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number
+          slot_id: string
+          trainer_id: string | null
+          trainer_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          slot_id: string
+          trainer_id?: string | null
+          trainer_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          slot_id?: string
+          trainer_id?: string | null
+          trainer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_schedule_slot_trainers_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "daily_schedule_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_schedule_slot_trainers_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_schedule_slots: {
         Row: {
           band_id: string | null
@@ -4198,6 +4240,48 @@ export type Database = {
             columns: ["video_id"]
             isOneToOne: false
             referencedRelation: "workout_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_schedule_band_trainers: {
+        Row: {
+          band_id: string
+          created_at: string
+          id: string
+          order_index: number
+          trainer_id: string | null
+          trainer_name: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          trainer_id?: string | null
+          trainer_name: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          trainer_id?: string | null
+          trainer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_schedule_band_trainers_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_schedule_bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_schedule_band_trainers_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
