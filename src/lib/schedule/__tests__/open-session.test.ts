@@ -2,9 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import { pickOpenSession, sortTodaySessions } from "../open-session";
 
-const MORNING = { id: "s-morning", startTime: "09:00", exerciseIds: ["e1", "e2"] };
-const EVENING = { id: "s-evening", startTime: "19:00", exerciseIds: ["e3"] };
-const SLOTLESS = { id: "s-none", startTime: null, exerciseIds: ["e4"] };
+const MORNING = { id: "s-morning", slotStartTime: "09:00", exerciseIds: ["e1", "e2"] };
+const EVENING = { id: "s-evening", slotStartTime: "19:00", exerciseIds: ["e3"] };
+const SLOTLESS = { id: "s-none", slotStartTime: null, exerciseIds: ["e4"] };
 
 const at = (hours: number) => hours * 60;
 

@@ -123,3 +123,15 @@ export interface SessionBuilderRow {
   /** True when the targets were seeded from the machine and not yet edited. */
   seededFromEquipment?: boolean;
 }
+
+/**
+ * One of the trainee's sessions for today, with the hour it belongs to.
+ *
+ * The hour comes from the slot and is what orders the list and decides which
+ * one the screen opens, so it travels with the session rather than being
+ * looked up again per render.
+ */
+export interface TodaySession extends TrainingSession {
+  /** HH:MM, or null for a session that belongs to no slot. */
+  slotStartTime: string | null;
+}

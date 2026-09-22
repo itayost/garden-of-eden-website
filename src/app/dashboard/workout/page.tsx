@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import { TodayWorkout } from "@/components/dashboard/workout/TodayWorkout";
 import {
   getEquipmentExercisesAction,
-  getMyTodaySessionAction,
+  getMyTodaySessionsAction,
   getPreviousLogsAction,
 } from "@/lib/actions/trainee-workout";
+import { pickOpenSession } from "@/lib/schedule/open-session";
+import { israelMinutesOfDay } from "@/lib/utils/israel-time";
 import { isValidUUID } from "@/lib/validations/common";
 
 export const metadata: Metadata = {
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ focus?: string; equipment?: string }>;
+  searchParams: Promise<{ focus?: string; equipment?: string; open?: string }>;
 }
 
 export default async function WorkoutPage({ searchParams }: PageProps) {
@@ -28,17 +30,38 @@ export default async function WorkoutPage({ searchParams }: PageProps) {
   // the page a trainee opens standing at the equipment — run them together.
   // The free-log path covers a scan that matched no exercise in today's
   // session: it returns that machine's exercises and its profile.
-  const [sessionResult, equipmentResult] = await Promise.all([
-    getMyTodaySessionAction(),
+  const [sessionsResult, equipmentResult] = await Promise.all([
+    getMyTodaySessionsAction(),
     equipmentId ? getEquipmentExercisesAction(equipmentId) : null,
   ]);
 
-  if ("error" in sessionResult && sessionResult.error === "לא מחובר") {
+  if ("error" in sessionsResult && sessionsResult.error === "לא מחובר") {
     redirect("/auth/login?redirect=/dashboard/workout");
   }
 
-  const session = "success" in sessionResult ? sessionResult.data : null;
-  const loadError = "error" in sessionResult ? sessionResult.error : null;
+  const sessions = "success" in sessionsResult ? sessionsResult.data : [];
+  const loadError = "error" in sessionsResult ? sessionsResult.error : null;
+
+  const requestedId =
+    params.open && isValidUUID(params.open) ? params.open : null;
+  const chosen =
+    requestedId && sessions.some((session) => session.id === requestedId)
+      ? requestedId
+      : null;
+
+  // An explicit choice beats the clock; a stale id from an old link does not.
+  // The clock is read here, on the server, so the picker stays pure.
+  const openId =
+    chosen ??
+    pickOpenSession(
+      sessions.map((session) => ({
+        id: session.id,
+        slotStartTime: session.slotStartTime,
+        exerciseIds: session.exercises.map((exercise) => exercise.id),
+      })),
+      israelMinutesOfDay(new Date()),
+      focusId,
+    );
 
   const equipmentExercises =
     equipmentResult && "success" in equipmentResult ? equipmentResult.data : [];
@@ -49,11 +72,13 @@ export default async function WorkoutPage({ searchParams }: PageProps) {
 
   // "בפעם הקודמת" — the trainee's last log per exercise, excluding today's
   // rows so the hint never echoes the entry being edited. Depends on the
-  // session, so it cannot join the batch above.
-  const previousResult = session
+  // session, so it cannot join the batch above. Only the open one: switching
+  // hours is a navigation, so this runs again with the other session.
+  const openSession = sessions.find((session) => session.id === openId) ?? null;
+  const previousResult = openSession
     ? await getPreviousLogsAction(
-        session.exercises.map((exercise) => exercise.exercise_id),
-        session.exercises.map((exercise) => exercise.id),
+        openSession.exercises.map((exercise) => exercise.exercise_id),
+        openSession.exercises.map((exercise) => exercise.id),
       )
     : null;
   const previousLogs =
@@ -61,7 +86,8 @@ export default async function WorkoutPage({ searchParams }: PageProps) {
 
   return (
     <TodayWorkout
-      session={session}
+      sessions={sessions}
+      openId={openId}
       loadError={loadError}
       focusId={focusId}
       equipmentId={equipmentId}

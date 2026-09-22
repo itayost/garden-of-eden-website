@@ -12,15 +12,15 @@
 export interface OpenSessionCandidate {
   id: string;
   /** HH:MM of the slot this session belongs to; null when it has no slot. */
-  startTime: string | null;
+  slotStartTime: string | null;
   /** Session-exercise ids, for resolving a QR scan. */
   exerciseIds: readonly string[];
 }
 
 /** Minutes since midnight, or null for a session with no slot. */
-function minutesOf(startTime: string | null): number | null {
-  if (!startTime) return null;
-  const [hours, minutes] = startTime.split(":");
+function minutesOf(slotStartTime: string | null): number | null {
+  if (!slotStartTime) return null;
+  const [hours, minutes] = slotStartTime.split(":");
   return Number(hours) * 60 + Number(minutes);
 }
 
@@ -28,12 +28,12 @@ function minutesOf(startTime: string | null): number | null {
  * Chronological, with a session that belongs to no slot last: it has no hour
  * to sort by, and it is the rare shape (one row in the whole table today).
  */
-export function sortTodaySessions<T extends { startTime: string | null }>(
+export function sortTodaySessions<T extends { slotStartTime: string | null }>(
   sessions: readonly T[],
 ): T[] {
   return [...sessions].sort((a, b) => {
-    const left = minutesOf(a.startTime);
-    const right = minutesOf(b.startTime);
+    const left = minutesOf(a.slotStartTime);
+    const right = minutesOf(b.slotStartTime);
     if (left === null) return right === null ? 0 : 1;
     if (right === null) return -1;
     return left - right;
@@ -62,12 +62,12 @@ export function pickOpenSession(
 
   const ordered = sortTodaySessions(sessions);
   const started = ordered.filter((session) => {
-    const minutes = minutesOf(session.startTime);
+    const minutes = minutesOf(session.slotStartTime);
     return minutes !== null && minutes <= nowMinutes;
   });
 
   if (started.length > 0) return started[started.length - 1].id;
 
-  const upcoming = ordered.find((session) => session.startTime !== null);
+  const upcoming = ordered.find((session) => session.slotStartTime !== null);
   return (upcoming ?? ordered[0]).id;
 }

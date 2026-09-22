@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   Check,
   CheckCircle2,
   ChevronDown,
+  Clock,
   Dumbbell,
   Loader2,
 } from "lucide-react";
@@ -27,7 +29,7 @@ import {
 import type {
   SessionEquipmentRef,
   SessionExercise,
-  TrainingSession,
+  TodaySession,
 } from "@/types/training-session";
 import { CompletionCelebration } from "./CompletionCelebration";
 import {
@@ -37,7 +39,10 @@ import {
 } from "./LogExerciseDialog";
 
 interface TodayWorkoutProps {
-  session: TrainingSession | null;
+  /** Today's sessions, earliest hour first. */
+  sessions: TodaySession[];
+  /** Which one renders open; the rest appear as links above it. */
+  openId: string | null;
   loadError: string | null;
   /** Session exercise to auto-open (arrived via QR scan). */
   focusId: string | null;
@@ -161,7 +166,8 @@ function toDialogTarget(
 }
 
 export function TodayWorkout({
-  session,
+  sessions,
+  openId,
   loadError,
   focusId,
   equipmentId,
@@ -170,6 +176,10 @@ export function TodayWorkout({
   freeLogEquipment,
 }: TodayWorkoutProps) {
   const router = useRouter();
+  // The rest of this component works against one session, as it always has.
+  // Which one that is became a decision, and it was made on the server.
+  const session = sessions.find((candidate) => candidate.id === openId) ?? null;
+  const others = sessions.filter((candidate) => candidate.id !== openId);
   const [completing, setCompleting] = useState(false);
   const [openCues, setOpenCues] = useState<Record<string, boolean>>({});
 
@@ -266,6 +276,25 @@ export function TodayWorkout({
             : weekdayLabel(israelToday())}
         </p>
       </div>
+
+      {others.length > 0 && (
+        <ul className="flex flex-wrap gap-2" aria-label="אימונים נוספים היום">
+          {others.map((other) => (
+            <li key={other.id}>
+              <Link
+                href={`/dashboard/workout?open=${other.id}`}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border px-3 text-sm transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                {other.slotStartTime ?? "אימון נוסף"}
+                <span className="text-xs text-muted-foreground">
+                  {other.completed_at ? "הושלם" : `${other.exercises.length} תרגילים`}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {session ? (
         <>

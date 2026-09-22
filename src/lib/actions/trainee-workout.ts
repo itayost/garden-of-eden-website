@@ -16,8 +16,10 @@ import {
   type EquipmentProfile,
   type ExerciseLog,
 } from "@/types/equipment";
+import { sortTodaySessions } from "@/lib/schedule/open-session";
 import {
   SESSION_SELECT_WITH_EXERCISES,
+  type TodaySession,
   type TrainingSession,
 } from "@/types/training-session";
 
@@ -27,16 +29,22 @@ import {
  * calling these acts on their own (empty) data — harmless.
  */
 
-type MySessionResult =
-  | { success: true; data: TrainingSession | null }
+type MySessionsResult =
+  | { success: true; data: TodaySession[] }
   | { error: string };
 
 type LogResult = { success: true; data: ExerciseLog } | { error: string };
 
 type CompleteResult = { success: true } | { error: string };
 
-/** The caller's own session for today (Israel date). Null = nothing built. */
-export async function getMyTodaySessionAction(): Promise<MySessionResult> {
+/**
+ * The caller's sessions for today (Israel date), earliest hour first.
+ *
+ * Plural since a session belongs to a slot: a trainee booked into two hours
+ * has two. The slot's start_time comes along because it orders the list and
+ * decides which one the screen opens.
+ */
+export async function getMyTodaySessionsAction(): Promise<MySessionsResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -44,28 +52,28 @@ export async function getMyTodaySessionAction(): Promise<MySessionResult> {
   if (!user) return { error: "לא מחובר" };
 
   const { data, error } = await typedFrom(supabase, "training_sessions")
-    .select(SESSION_SELECT_WITH_EXERCISES)
+    .select(`${SESSION_SELECT_WITH_EXERCISES}, slot:daily_schedule_slots(start_time)`)
     .eq("trainee_id", user.id)
-    .eq("session_date", israelToday())
-    .maybeSingle();
+    .eq("session_date", israelToday());
 
   if (error) {
-    console.error("Get my session error:", error);
+    console.error("Get my sessions error:", error);
     return { error: "שגיאה בטעינת האימון" };
   }
 
-  if (!data) return { success: true, data: null };
+  const rows = (data ?? []) as (TrainingSession & {
+    slot: { start_time: string } | null;
+  })[];
 
-  const session = data as TrainingSession;
-  return {
-    success: true,
-    data: {
-      ...session,
-      exercises: [...(session.exercises ?? [])].sort(
-        (a, b) => a.order_index - b.order_index,
-      ),
-    },
-  };
+  const sessions = rows.map((row) => ({
+    ...row,
+    slotStartTime: row.slot?.start_time?.slice(0, 5) ?? null,
+    exercises: [...(row.exercises ?? [])].sort(
+      (a, b) => a.order_index - b.order_index,
+    ),
+  }));
+
+  return { success: true, data: sortTodaySessions(sessions) };
 }
 
 /**
