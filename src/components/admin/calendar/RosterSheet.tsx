@@ -76,12 +76,14 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
   );
 
   // The roster changes under this sheet (adding, removing, a trainee's own
-  // cancellation), so the day's sessions are keyed by who is actually on it.
-  const date = slot?.schedule_date;
+  // cancellation), so this slot's sessions are keyed by who is actually on it.
+  // By slot and not by date: a trainee booked into another hour that day holds
+  // a separate session, and this sheet is about this hour.
+  const slotId = slot?.id;
   const linkedIdsKey = useMemo(() => [...activeIds].sort().join(","), [activeIds]);
 
   useEffect(() => {
-    if (!date) return;
+    if (!slotId) return;
     const ids = linkedIdsKey ? linkedIdsKey.split(",") : [];
     if (ids.length === 0) {
       setSessions({});
@@ -91,7 +93,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
 
     let cancelled = false;
     setSessionsState("loading");
-    getRosterSessionsAction(date, ids)
+    getRosterSessionsAction(slotId, ids)
       .then((result) => {
         if (cancelled) return;
         if ("error" in result) {
@@ -108,7 +110,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
     return () => {
       cancelled = true;
     };
-  }, [date, linkedIdsKey]);
+  }, [slotId, linkedIdsKey]);
 
   if (!slot) return null;
 

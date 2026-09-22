@@ -78,12 +78,22 @@ export async function upsertSessionAction(
 
   const builderName = profile!.full_name ?? "מאמן";
 
-  const findExisting = () =>
-    typedFrom(supabase, "training_sessions")
+  // By slot where there is one: that pair is unique. Without a slot, the most
+  // recent of the day, because the slotless case deliberately carries no
+  // unique index and a deleted slot can leave a second one behind.
+  const findExisting = () => {
+    const base = typedFrom(supabase, "training_sessions")
       .select("id")
-      .eq("trainee_id", traineeId)
-      .eq("session_date", sessionDate)
-      .maybeSingle();
+      .eq("trainee_id", traineeId);
+    return slotId
+      ? base.eq("slot_id", slotId).maybeSingle()
+      : base
+          .eq("session_date", sessionDate)
+          .is("slot_id", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+  };
 
   const { data: found, error: existingError } = await findExisting();
   if (existingError) {

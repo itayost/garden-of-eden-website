@@ -59,10 +59,13 @@ function compareSlots(a: ScheduleSlot, b: ScheduleSlot): number {
   );
 }
 
-/** Sessions are per trainee per day, so a trainee in two slots shares one status. */
+/**
+ * A session belongs to a slot, so the summaries arrive keyed by slot first and
+ * a trainee in two slots carries a separate status in each.
+ */
 export function buildSessionWorklist(
   slots: ScheduleSlot[],
-  summaries: Record<string, SessionSummary>,
+  summaries: Record<string, Record<string, SessionSummary>>,
 ): WorklistGroup[] {
   return [...slots].sort(compareSlots).map((slot) => ({
     slotId: slot.id,
@@ -76,7 +79,7 @@ export function buildSessionWorklist(
       .filter(isLinkedActive)
       .sort((a, b) => a.order_index - b.order_index)
       .map((entry) => {
-        const summary = summaries[entry.trainee_id];
+        const summary = summaries[slot.id]?.[entry.trainee_id];
         return {
           rosterEntryId: entry.id,
           traineeId: entry.trainee_id,

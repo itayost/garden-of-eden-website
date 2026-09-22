@@ -37,8 +37,9 @@ type SessionResult =
   | { success: true; data: TrainingSession | null }
   | { error: string };
 
+/** Keyed by slot id ("" for a session with no slot), then by trainee id. */
 type SummariesResult =
-  | { success: true; data: Record<string, SessionSummary> }
+  | { success: true; data: Record<string, Record<string, SessionSummary>> }
   | { error: string };
 
 type RosterSessionsResult =
@@ -70,12 +71,14 @@ function sortExercises(session: TrainingSession): TrainingSession {
 export async function getSessionAction(
   traineeId: string,
   date: string,
+  slotId: string | null,
 ): Promise<SessionResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   if (!isValidUUID(traineeId)) return { error: "מזהה מתאמן לא תקין" };
   if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
+  if (slotId !== null && !isValidUUID(slotId)) return { error: "מזהה סלוט לא תקין" };
 
   // Saving already refuses an out-of-scope trainee, so reading one was only
   // ever a way to see another branch's work.
@@ -83,11 +86,21 @@ export async function getSessionAction(
   if (scopeError) return { error: scopeError };
 
   const supabase = await createClient();
-  const { data, error } = await typedFrom(supabase, "training_sessions")
+  const base = typedFrom(supabase, "training_sessions")
     .select(SESSION_SELECT_WITH_EXERCISES)
-    .eq("trainee_id", traineeId)
-    .eq("session_date", date)
-    .maybeSingle();
+    .eq("trainee_id", traineeId);
+
+  // With a slot the pair is unique. Without one there is deliberately no
+  // unique index (see the migration), so take the most recent rather than
+  // failing on a second row a deleted slot left behind.
+  const { data, error } = slotId
+    ? await base.eq("slot_id", slotId).maybeSingle()
+    : await base
+        .eq("session_date", date)
+        .is("slot_id", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
   if (error) {
     console.error("Get session error:", error);
@@ -121,7 +134,7 @@ export async function getSessionSummariesAction(
   const supabase = await createClient();
   const summariesQuery = typedFrom(supabase, "training_sessions")
     .select(
-      "id, trainee_id, completed_at, slot_workout_synced_at, exercises:training_session_exercises(id)",
+      "id, trainee_id, slot_id, completed_at, slot_workout_synced_at, exercises:training_session_exercises(id)",
     )
     .eq("session_date", date);
   const { data, error } = await (scoped.ids === null
@@ -136,24 +149,35 @@ export async function getSessionSummariesAction(
   const rows = (data ?? []) as {
     id: string;
     trainee_id: string;
+    slot_id: string | null;
     completed_at: string | null;
     slot_workout_synced_at: string | null;
     exercises: { id: string }[];
   }[];
 
-  const summaries = Object.fromEntries(
-    rows.map((row) => [
-      row.trainee_id,
-      {
-        id: row.id,
-        trainee_id: row.trainee_id,
-        exerciseCount: row.exercises?.length ?? 0,
-        completed_at: row.completed_at,
-        // A session the group wrote carries a sync stamp; without one, a
-        // trainer built this trainee's day by hand and group saves skip it.
-        isCustom: row.slot_workout_synced_at === null,
-      },
-    ]),
+  // Keyed by slot then trainee: a session belongs to a slot, so a trainee in
+  // two hours holds two summaries and the trainee id alone no longer names one.
+  // The empty string keys the rare session that belongs to no slot.
+  const summaries = rows.reduce<Record<string, Record<string, SessionSummary>>>(
+    (acc, row) => {
+      const slotKey = row.slot_id ?? "";
+      return {
+        ...acc,
+        [slotKey]: {
+          ...(acc[slotKey] ?? {}),
+          [row.trainee_id]: {
+            id: row.id,
+            trainee_id: row.trainee_id,
+            exerciseCount: row.exercises?.length ?? 0,
+            completed_at: row.completed_at,
+            // A session the group wrote carries a sync stamp; without one, a
+            // trainer built this trainee's day by hand and group saves skip it.
+            isCustom: row.slot_workout_synced_at === null,
+          },
+        },
+      };
+    },
+    {},
   );
 
   return { success: true, data: summaries };
@@ -166,14 +190,14 @@ export async function getSessionSummariesAction(
  * from the map rather than present and empty.
  */
 export async function getRosterSessionsAction(
-  date: string,
+  slotId: string,
   traineeIds: string[],
 ): Promise<RosterSessionsResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   if (!Array.isArray(traineeIds)) return { error: "קלט לא תקין" };
-  if (!isValidDateString(date)) return { error: "תאריך לא תקין" };
+  if (!isValidUUID(slotId)) return { error: "מזהה סלוט לא תקין" };
   if (traineeIds.length > MAX_ROSTER_TRAINEES) return { error: "יותר מדי מתאמנים בבקשה אחת" };
   if (!traineeIds.every(isValidUUID)) return { error: "מזהה מתאמן לא תקין" };
   if (traineeIds.length === 0) return { success: true, data: {} };
@@ -190,7 +214,9 @@ export async function getRosterSessionsAction(
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "training_sessions")
     .select(ROSTER_SESSION_SELECT)
-    .eq("session_date", date)
+    // By slot: the sheet shows what this hour's roster was given, and a
+    // trainee booked into another hour that day holds a separate session.
+    .eq("slot_id", slotId)
     .in("trainee_id", scopedIds);
 
   if (error) {
@@ -245,7 +271,7 @@ export async function getWeekSessionStatusesAction(
 
   const supabase = await createClient();
   const query = typedFrom(supabase, "training_sessions")
-    .select("trainee_id, session_date, completed_at, exercises:training_session_exercises(id)")
+    .select("trainee_id, session_date, slot_id, completed_at, exercises:training_session_exercises(id)")
     .gte("session_date", startDate)
     .lte("session_date", endDate);
 
@@ -282,6 +308,9 @@ export async function getPreviousSessionAction(
     .eq("trainee_id", traineeId)
     .lt("session_date", beforeDate)
     .order("session_date", { ascending: false })
+    // A day can hold two sessions now, so "the previous one" needs a tiebreak
+    // rather than whichever the planner happened to return first.
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
