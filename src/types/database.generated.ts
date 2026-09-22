@@ -1105,8 +1105,6 @@ export type Database = {
           max_trainees: number | null
           schedule_date: string
           start_time: string
-          trainer_id: string | null
-          trainer_name: string | null
           updated_at: string
           workout_built_by: string | null
           workout_built_by_name: string | null
@@ -1124,8 +1122,6 @@ export type Database = {
           max_trainees?: number | null
           schedule_date: string
           start_time: string
-          trainer_id?: string | null
-          trainer_name?: string | null
           updated_at?: string
           workout_built_by?: string | null
           workout_built_by_name?: string | null
@@ -1143,8 +1139,6 @@ export type Database = {
           max_trainees?: number | null
           schedule_date?: string
           start_time?: string
-          trainer_id?: string | null
-          trainer_name?: string | null
           updated_at?: string
           workout_built_by?: string | null
           workout_built_by_name?: string | null
@@ -1169,13 +1163,6 @@ export type Database = {
           {
             foreignKeyName: "daily_schedule_slots_created_by_fkey"
             columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_schedule_slots_trainer_id_fkey"
-            columns: ["trainer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4299,8 +4286,6 @@ export type Database = {
           location_he: string | null
           max_trainees: number
           start_time: string
-          trainer_id: string
-          trainer_name: string
           updated_at: string
           weekday: number
         }
@@ -4316,8 +4301,6 @@ export type Database = {
           location_he?: string | null
           max_trainees?: number
           start_time: string
-          trainer_id: string
-          trainer_name: string
           updated_at?: string
           weekday: number
         }
@@ -4333,8 +4316,6 @@ export type Database = {
           location_he?: string | null
           max_trainees?: number
           start_time?: string
-          trainer_id?: string
-          trainer_name?: string
           updated_at?: string
           weekday?: number
         }
@@ -4349,13 +4330,6 @@ export type Database = {
           {
             foreignKeyName: "weekly_schedule_bands_created_by_fkey"
             columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "weekly_schedule_bands_trainer_id_fkey"
-            columns: ["trainer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
