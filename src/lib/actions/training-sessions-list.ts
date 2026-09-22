@@ -120,7 +120,9 @@ export async function getSessionSummariesAction(
 
   const supabase = await createClient();
   const summariesQuery = typedFrom(supabase, "training_sessions")
-    .select("id, trainee_id, completed_at, exercises:training_session_exercises(id)")
+    .select(
+      "id, trainee_id, completed_at, slot_workout_synced_at, exercises:training_session_exercises(id)",
+    )
     .eq("session_date", date);
   const { data, error } = await (scoped.ids === null
     ? summariesQuery
@@ -135,6 +137,7 @@ export async function getSessionSummariesAction(
     id: string;
     trainee_id: string;
     completed_at: string | null;
+    slot_workout_synced_at: string | null;
     exercises: { id: string }[];
   }[];
 
@@ -146,6 +149,9 @@ export async function getSessionSummariesAction(
         trainee_id: row.trainee_id,
         exerciseCount: row.exercises?.length ?? 0,
         completed_at: row.completed_at,
+        // A session the group wrote carries a sync stamp; without one, a
+        // trainer built this trainee's day by hand and group saves skip it.
+        isCustom: row.slot_workout_synced_at === null,
       },
     ]),
   );

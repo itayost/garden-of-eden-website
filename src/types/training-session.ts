@@ -83,6 +83,8 @@ export interface TrainingSession {
   notes_he: string | null;
   /** Set in Phase 3 when the trainee finishes logging. */
   completed_at: string | null;
+  /** Not null while this session is the slot's group workout, untouched. */
+  slot_workout_synced_at: string | null;
   exercises: SessionExercise[];
   created_at: string;
   updated_at: string;
@@ -94,6 +96,8 @@ export interface SessionSummary {
   trainee_id: string;
   exerciseCount: number;
   completed_at: string | null;
+  /** A trainer edited this session individually, so group saves skip it. */
+  isCustom: boolean;
 }
 
 /** One editable row in the session builder. */

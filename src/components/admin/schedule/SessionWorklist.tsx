@@ -137,6 +137,22 @@ export function SessionWorklist({
                       <span className={cn("font-extrabold", palette.text)}>{group.trainerName ?? "ללא מאמן"}</span>
                       {group.locationHe && <span className="text-xs text-muted-foreground">{group.locationHe}</span>}
                     </header>
+                    {/* Same row as the calendar's roster sheet, so the group's
+                        workout is reachable from wherever a trainer stands. */}
+                    <Link
+                      href={`/admin/schedule/slot/${group.slotId}?branch=${branchId}`}
+                      className="flex min-h-12 items-center justify-between gap-3 border-b px-4 py-2 text-sm transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:outline-none"
+                    >
+                      <span className="flex items-center gap-2 font-medium">
+                        <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        אימון קבוצתי
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {group.hasGroupWorkout
+                          ? `${group.groupExerciseCount} תרגילים`
+                          : "טרם נבנה"}
+                      </span>
+                    </Link>
                     <ul className="divide-y">
                       {group.rows.map((row) => {
                         const status = STATUS[row.status];
@@ -148,7 +164,19 @@ export function SessionWorklist({
                               href={`/admin/schedule/session/${row.traineeId}?date=${date}&slot=${group.slotId}&branch=${branchId}`}
                               className="flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:outline-none"
                             >
-                              <span className="truncate font-medium">{row.traineeName}</span>
+                              <span className="flex min-w-0 items-center gap-1.5">
+                                <span className="truncate font-medium">{row.traineeName}</span>
+                                {/* Says why a group save left this one alone.
+                                    Only where there is a group to differ from. */}
+                                {row.isCustom && group.hasGroupWorkout && (
+                                  <span
+                                    className="shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                                    title="אימון אישי, עדכון קבוצתי לא ידרוס אותו"
+                                  >
+                                    אישי
+                                  </span>
+                                )}
+                              </span>
                               <span className={cn("flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs", status.className)}>
                                 <status.Icon className="h-3 w-3" />
                                 {status.label(row)}

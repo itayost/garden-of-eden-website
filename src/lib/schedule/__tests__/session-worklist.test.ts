@@ -42,6 +42,10 @@ function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
     band_id: null,
     max_trainees: null,
     trainees: [],
+    workout_notes_he: null,
+    workout_built_by: null,
+    workout_built_by_name: null,
+    workout_updated_at: null,
     created_by: LIDOR,
     created_at: "2026-09-10T00:00:00Z",
     updated_at: "2026-09-10T00:00:00Z",
@@ -50,7 +54,14 @@ function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
 }
 
 function summary(traineeId: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
-  return { id: `session-${traineeId}`, trainee_id: traineeId, exerciseCount: 5, completed_at: null, ...overrides };
+  return {
+    id: `session-${traineeId}`,
+    trainee_id: traineeId,
+    exerciseCount: 5,
+    completed_at: null,
+    isCustom: false,
+    ...overrides,
+  };
 }
 
 describe("buildSessionWorklist", () => {
@@ -131,6 +142,50 @@ describe("buildSessionWorklist", () => {
     const input = [slot({ id: "b", start_time: "18:00:00" }), slot({ id: "a", start_time: "16:00:00" })];
     buildSessionWorklist(input, {});
     expect(input.map((s) => s.id)).toEqual(["b", "a"]);
+  });
+  test("marks a group whose slot carries a workout", () => {
+    const groups = buildSessionWorklist(
+      [slot({ workout_updated_at: "2026-09-22T09:00:00.000Z" })],
+      {},
+    );
+    expect(groups[0].hasGroupWorkout).toBe(true);
+  });
+
+  test("a slot with no group workout says so", () => {
+    expect(buildSessionWorklist([slot()], {})[0].hasGroupWorkout).toBe(false);
+  });
+
+  test("carries how many exercises the group workout has", () => {
+    const groups = buildSessionWorklist(
+      [
+        slot({
+          workout_updated_at: "2026-09-22T09:00:00.000Z",
+          workout_exercises: [{ id: "e1" }, { id: "e2" }],
+        }),
+      ],
+      {},
+    );
+    expect(groups[0].groupExerciseCount).toBe(2);
+  });
+
+  test("counts zero when the slot embeds no exercises", () => {
+    expect(buildSessionWorklist([slot()], {})[0].groupExerciseCount).toBe(0);
+  });
+
+  test("marks a row whose session was edited individually", () => {
+    const groups = buildSessionWorklist(
+      [slot({ trainees: [entry({ trainee_id: NOAM })] })],
+      { [NOAM]: summary(NOAM, { isCustom: true }) },
+    );
+    expect(groups[0].rows[0].isCustom).toBe(true);
+  });
+
+  test("a trainee with nothing built is not custom", () => {
+    const groups = buildSessionWorklist(
+      [slot({ trainees: [entry({ trainee_id: NOAM })] })],
+      {},
+    );
+    expect(groups[0].rows[0].isCustom).toBe(false);
   });
 });
 
