@@ -36,6 +36,38 @@ type ServerClient = Awaited<ReturnType<typeof createClient>>;
 /** Postgres unique_violation: a concurrent add of the same trainee won the race. */
 const UNIQUE_VIOLATION = "23505";
 
+/**
+ * A slot's group workout follows its roster.
+ *
+ * Someone joining a slot that already has a group workout is the same event as
+ * booking into it, and someone leaving stops being owed it. Both RPCs decide
+ * for themselves whether there is anything to do: applying to a slot with no
+ * group workout is a no-op, and dropping refuses to touch a session a trainer
+ * edited individually or one the trainee already completed.
+ *
+ * A failure here is logged, never returned: the roster edit the staff member
+ * asked for has already happened, and re-saving the group workout repairs the
+ * copy. Refusing the edit would be the worse of the two outcomes.
+ */
+async function syncSlotWorkout(
+  supabase: ServerClient,
+  fn: "apply_slot_workout_to_trainee" | "drop_slot_workout_session",
+  slotId: string,
+  traineeId: string,
+): Promise<void> {
+  const rpcClient = supabase as unknown as {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ error: { message: string } | null }>;
+  };
+  const { error } = await rpcClient.rpc(fn, {
+    p_slot_id: slotId,
+    p_trainee_id: traineeId,
+  });
+  if (error) console.error(`${fn} failed:`, error);
+}
+
 async function loadWritableSlot(
   supabase: ServerClient,
   slotId: string,
@@ -104,6 +136,11 @@ export async function addSlotTraineeAction(input: RosterAddInput): Promise<AddRe
   }
   if ((written?.length ?? 0) === 0) return { error: "אין הרשאה לעדכן את הסלוט" };
 
+  // A free-text name has no account and can hold no session.
+  if (traineeId) {
+    await syncSlotWorkout(supabase, "apply_slot_workout_to_trainee", slotId, traineeId);
+  }
+
   revalidateScheduleSurfaces();
   return { success: true, data: { overCapacity: plan.overCapacity } };
 }
@@ -147,6 +184,10 @@ export async function removeSlotTraineeAction(input: RosterRemoveInput): Promise
     return { error: "שגיאה בהסרת המתאמן" };
   }
   if ((deleted?.length ?? 0) === 0) return { error: "הרישום לא נמצא או שכבר בוטל" };
+
+  if (row.trainee_id) {
+    await syncSlotWorkout(supabase, "drop_slot_workout_session", row.slot_id, row.trainee_id);
+  }
 
   revalidateScheduleSurfaces();
   return { success: true };

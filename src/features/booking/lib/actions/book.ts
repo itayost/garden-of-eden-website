@@ -172,6 +172,24 @@ export async function cancelBookingAction(slotId: string): Promise<CancelResult>
     .select("id");
   if (error || !data?.length) return { error: "הביטול נכשל. נסו שוב." };
 
+  // The workout leaves with the seat. drop_slot_workout_session refuses to
+  // touch a session a trainer edited individually or one already completed, so
+  // this can only take back what the slot's group workout gave. A late cancel
+  // still counts as a used session; that is the roster row's business, not
+  // this one's. Logged rather than returned: the seat is already given back.
+  const { error: dropError } = await (
+    db as unknown as {
+      rpc: (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ error: { message: string } | null }>;
+    }
+  ).rpc("drop_slot_workout_session", {
+    p_slot_id: slotId,
+    p_trainee_id: user.id,
+  });
+  if (dropError) console.error("drop_slot_workout_session failed:", dropError);
+
   revalidate();
   return { ok: true, late: state === "late" };
 }
