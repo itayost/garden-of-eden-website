@@ -1,7 +1,10 @@
 "use server";
 
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
-import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
+import {
+  assertBranchReadable,
+  assertBranchWritable,
+} from "@/lib/actions/shared/assert-branch";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -54,6 +57,21 @@ function toCounts(data: unknown): FanoutCounts {
     (counts, row) => ({ ...counts, [row.action]: row.trainee_count }),
     {},
   );
+}
+
+/**
+ * A write needs more than the scope a read passes.
+ *
+ * getSlotWorkoutAction applies assertBranchReadable and skips the check
+ * entirely for a slot with no branch, which is right for reading history but
+ * not for a save: the fan-out writes a session for every roster member, so it
+ * is the same class of write as a roster edit. loadWritableSlot() is the rule
+ * every other slot mutation follows — an active branch in the caller's scope,
+ * and a legacy branchless slot is not edited from here at all.
+ */
+async function assertSlotWritable(slot: ScheduleSlot): Promise<{ error: string | null }> {
+  if (!slot.branch_id) return { error: "הסלוט אינו משויך לסניף" };
+  return assertBranchWritable(slot.branch_id);
 }
 
 /**
@@ -137,6 +155,8 @@ export async function saveSlotWorkoutAction(
   // Existence and branch scope, before any write.
   const slotResult = await getSlotWorkoutAction(slotId);
   if ("error" in slotResult) return { error: slotResult.error };
+  const writable = await assertSlotWritable(slotResult.data.slot);
+  if (writable.error) return { error: writable.error };
 
   const supabase = await createClient();
   const rpcClient = supabase as unknown as RpcClient;
@@ -182,6 +202,8 @@ export async function clearSlotWorkoutAction(slotId: string): Promise<ClearResul
 
   const slotResult = await getSlotWorkoutAction(slotId);
   if ("error" in slotResult) return { error: slotResult.error };
+  const writable = await assertSlotWritable(slotResult.data.slot);
+  if (writable.error) return { error: writable.error };
 
   const supabase = await createClient();
   const rpcClient = supabase as unknown as RpcClient;
