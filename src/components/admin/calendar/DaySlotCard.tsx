@@ -5,7 +5,7 @@ import { CalendarCheck, CalendarOff, Check, Dumbbell, MapPin, Plus, Users } from
 
 import { cn } from "@/lib/utils";
 import { rosterLabel } from "@/lib/utils/roster-label";
-import { trainerColor } from "@/lib/utils/trainer-color";
+import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { DaySessionStatus } from "@/lib/schedule/day-session-status";
 import type { ScheduleSlot } from "@/types/schedule";
 
@@ -50,7 +50,7 @@ export function DaySlotCard({
   statusesLoaded,
   builderHrefFor,
 }: DaySlotCardProps) {
-  const palette = trainerColor(slot.trainer_id);
+  const palette = trainerColor(firstTrainerId(slot.trainers));
   const active = slot.trainees.filter((t) => t.cancelled_at === null);
   const overCapacity = slot.max_trainees !== null && active.length > slot.max_trainees;
   const seats = slot.max_trainees === null ? null : `${active.length}/${slot.max_trainees} מקומות`;
@@ -63,14 +63,14 @@ export function DaySlotCard({
         type="button"
         onClick={onOpen}
         className="w-full rounded-lg text-start transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={`רשימת המתאמנים של ${slot.trainer_name ?? "ללא מאמן"} בשעה ${time}`}
+        aria-label={`רשימת המתאמנים של ${trainerNames(slot.trainers) || "ללא מאמן"} בשעה ${time}`}
       >
         <p className="font-display text-sm tabular-nums text-forest">{time}</p>
 
         <div className="mt-1 flex items-center gap-1.5">
           <span className={cn("h-2 w-2 shrink-0 rounded-full", palette.dot)} />
           <span className={cn("truncate text-sm font-bold", palette.text)}>
-            {slot.trainer_name ?? "ללא מאמן"}
+            {trainerNames(slot.trainers) || "ללא מאמן"}
           </span>
           {isTrainerAbsent && (
             <CalendarOff

@@ -39,10 +39,18 @@ describe("slotSchema", () => {
     expect(result.trainees[0]).toEqual({ traineeId: null, name: "אורח חדש" });
   });
 
-  test("accepts a trainer-less slot and normalizes to null", () => {
-    const result = slotSchema.parse(validSlot({ trainerId: undefined }));
+  test("accepts a trainer-less slot and normalizes to an empty list", () => {
+    const result = slotSchema.parse(validSlot({ trainerIds: undefined }));
 
-    expect(result.trainerId).toBe(null);
+    expect(result.trainerIds).toEqual([]);
+  });
+
+  test("accepts two trainers on one slot and keeps their order", () => {
+    const first = "11111111-1111-4111-8111-111111111111";
+    const second = "22222222-2222-4222-8222-222222222222";
+    const result = slotSchema.parse(validSlot({ trainerIds: [second, first] }));
+
+    expect(result.trainerIds).toEqual([second, first]);
   });
 
   test("empty focus and location become null, not empty string", () => {

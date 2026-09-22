@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TrainerCheckboxGroup } from "@/components/admin/schedule/TrainerCheckboxGroup";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { cn } from "@/lib/utils";
 import { createBandAction, updateBandAction } from "@/lib/actions/weekly-schedule";
@@ -64,7 +65,11 @@ export function BandFormDialog({
   );
   // Empty means open-ended ("18:00 והלאה"), which the schema maps to NULL.
   const [endTime, setEndTime] = useState(band?.end_time?.slice(0, 5) ?? "");
-  const [trainerId, setTrainerId] = useState(band?.trainer_id ?? "");
+  const [trainerIds, setTrainerIds] = useState<string[]>(() =>
+    [...(band?.trainers ?? [])]
+      .sort((a, b) => a.order_index - b.order_index)
+      .flatMap((t) => (t.trainer_id ? [t.trainer_id] : [])),
+  );
   const [location, setLocation] = useState(band?.location_he ?? "");
   const [label, setLabel] = useState(band?.label_he ?? "");
   const [isStandby, setIsStandby] = useState(band?.is_standby ?? false);
@@ -73,8 +78,8 @@ export function BandFormDialog({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!trainerId) {
-      toast.error("יש לבחור מאמן");
+    if (trainerIds.length === 0) {
+      toast.error("יש לבחור לפחות מאמן אחד");
       return;
     }
 
@@ -85,7 +90,7 @@ export function BandFormDialog({
         weekday: day,
         startTime,
         endTime,
-        trainerId,
+        trainerIds,
         location,
         label,
         isStandby,
@@ -192,19 +197,13 @@ export function BandFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="band-trainer">מאמן</Label>
-            <Select value={trainerId} onValueChange={setTrainerId}>
-              <SelectTrigger id="band-trainer">
-                <SelectValue placeholder="בחירת מאמן" />
-              </SelectTrigger>
-              <SelectContent>
-                {trainers.map((trainer) => (
-                  <SelectItem key={trainer.id} value={trainer.id}>
-                    {trainer.full_name ?? "ללא שם"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="band-trainer">מאמנים</Label>
+            <TrainerCheckboxGroup
+              idPrefix="band-trainer"
+              trainers={trainers}
+              value={trainerIds}
+              onChange={setTrainerIds}
+            />
           </div>
 
           <div className="space-y-2">

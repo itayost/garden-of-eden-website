@@ -27,6 +27,7 @@ import {
   saveSlotWorkoutAction,
 } from "@/lib/actions/slot-workout";
 import { describeFanout } from "@/lib/schedule/slot-workout-fanout";
+import { trainerNames } from "@/lib/utils/trainer-color";
 import {
   exerciseToBuilderRow,
   rowsToExerciseInput,
@@ -148,7 +149,7 @@ export function SlotWorkoutEditor({ workout, branchId }: SlotWorkoutEditorProps)
           <h1 className="font-display text-2xl text-forest">אימון קבוצתי</h1>
           <p className="text-sm text-muted-foreground">
             {formatDate(slot.schedule_date)} בשעה {time}
-            {slot.trainer_name ? ` · ${slot.trainer_name}` : ""}
+            {trainerNames(slot.trainers) ? ` · ${trainerNames(slot.trainers)}` : ""}
           </p>
         </div>
         <Button variant="ghost" asChild>

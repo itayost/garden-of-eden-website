@@ -45,7 +45,13 @@ export const bandSchema = z
     endTime: optionalTime,
     // Required, unlike a slot's trainer: naming the trainer is the whole
     // content of a band, so an unassigned one would say nothing.
-    trainerId: uuidSchema,
+    // At least one, unlike a slot: trainer_id was NOT NULL on a band, so the
+    // standing week has never had a stretch nobody takes, and the form's
+    // refusal should be a real rule rather than a courtesy.
+    trainerIds: z
+      .array(uuidSchema)
+      .min(1, "יש לבחור לפחות מאמן אחד")
+      .max(10, "יותר מדי מאמנים לשעה אחת"),
     location: optionalText(MAX_TEXT_LENGTH),
     label: optionalText(MAX_TEXT_LENGTH),
     isStandby: z.boolean().default(false),
@@ -68,7 +74,13 @@ export const bandUpdateSchema = z
     weekday: weekdaySchema,
     startTime: timeSchema,
     endTime: optionalTime,
-    trainerId: uuidSchema,
+    // At least one, unlike a slot: trainer_id was NOT NULL on a band, so the
+    // standing week has never had a stretch nobody takes, and the form's
+    // refusal should be a real rule rather than a courtesy.
+    trainerIds: z
+      .array(uuidSchema)
+      .min(1, "יש לבחור לפחות מאמן אחד")
+      .max(10, "יותר מדי מאמנים לשעה אחת"),
     location: optionalText(MAX_TEXT_LENGTH),
     label: optionalText(MAX_TEXT_LENGTH),
     isStandby: z.boolean().default(false),
@@ -93,6 +105,7 @@ export const exceptionSchema = z
   .object({
     branchId: uuidSchema,
     exceptionDate: dateSchema,
+    // A band with nobody on it is expressible now; the cap is a guardrail.
     trainerId: uuidSchema,
     kind: z.enum(EXCEPTION_KINDS),
     startTime: optionalTime,

@@ -74,7 +74,11 @@ export function WeekDayColumn({
               key={slot.id}
               slot={slot}
               isTrainerAbsent={
-                slot.trainer_id !== null && absentTrainerIds.has(slot.trainer_id)
+                // The hour is only "unstaffed by absence" when nobody on it is left.
+                slot.trainers.length > 0 &&
+                slot.trainers.every(
+                  (t) => t.trainer_id !== null && absentTrainerIds.has(t.trainer_id),
+                )
               }
               onOpen={() => onOpenSlot(slot)}
             />

@@ -1,3 +1,4 @@
+import { trainerNames } from "@/lib/utils/trainer-color";
 import type { ScheduleSlot, SlotTrainee } from "@/types/schedule";
 import type { SessionSummary } from "@/types/training-session";
 
@@ -25,8 +26,8 @@ export interface WorklistGroup {
   slotId: string;
   /** HH:MM. */
   startTime: string;
-  trainerId: string | null;
-  trainerName: string | null;
+  /** Everyone coaching this hour, in order. */
+  trainers: { id: string | null; name: string }[];
   locationHe: string | null;
   /** The slot carries a workout for everyone on it. */
   hasGroupWorkout: boolean;
@@ -55,7 +56,7 @@ function statusOf(summary: SessionSummary | undefined): WorklistStatus {
 function compareSlots(a: ScheduleSlot, b: ScheduleSlot): number {
   return (
     a.start_time.localeCompare(b.start_time) ||
-    (a.trainer_name ?? "").localeCompare(b.trainer_name ?? "", "he")
+    trainerNames(a.trainers).localeCompare(trainerNames(b.trainers), "he")
   );
 }
 
@@ -70,8 +71,9 @@ export function buildSessionWorklist(
   return [...slots].sort(compareSlots).map((slot) => ({
     slotId: slot.id,
     startTime: slot.start_time.slice(0, 5),
-    trainerId: slot.trainer_id,
-    trainerName: slot.trainer_name,
+    trainers: [...slot.trainers]
+      .sort((x, y) => x.order_index - y.order_index)
+      .map((trainer) => ({ id: trainer.trainer_id, name: trainer.trainer_name })),
     locationHe: slot.location_he,
     hasGroupWorkout: slot.workout_updated_at !== null,
     groupExerciseCount: slot.workout_exercises?.length ?? 0,
@@ -100,7 +102,12 @@ export function filterWorklist(
   filters: WorklistFilters,
 ): WorklistGroup[] {
   return groups
-    .filter((group) => !filters.mineOnly || group.trainerId === filters.currentUserId)
+    // Mine if I am any of the hour's trainers, not only if I am its first.
+    .filter(
+      (group) =>
+        !filters.mineOnly ||
+        group.trainers.some((trainer) => trainer.id === filters.currentUserId),
+    )
     .map((group) => ({
       ...group,
       rows: filters.pendingOnly

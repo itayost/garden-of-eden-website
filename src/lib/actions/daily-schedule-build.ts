@@ -38,12 +38,15 @@ function slotRowsFor(
   userId: string,
   branchId: string,
 ) {
+  // The id is generated here rather than by the default, so each row's
+  // trainers can be written afterwards without depending on the order an
+  // insert happens to return.
   return onDuty.bands.map((band) => ({
+    id: crypto.randomUUID(),
+    trainers: band.trainers,
     branch_id: branchId,
     schedule_date: date,
     start_time: band.startTime,
-    trainer_id: band.trainerId,
-    trainer_name: band.trainerName,
     // The stretch's label is what this group is ("ילדים א׳"), which is what the
     // focus field carries. A stretch with no label leaves it for the trainer.
     focus_he: band.labelHe,
@@ -52,6 +55,25 @@ function slotRowsFor(
     max_trainees: band.isBookable ? band.maxTrainees : null,
     created_by: userId,
   }));
+}
+
+
+/** The insert payload, and the staffing to attach once the rows land. */
+function splitTrainers(rows: ReturnType<typeof slotRowsFor>) {
+  const slotRows = rows.map((row) => {
+    const { trainers, ...slotRow } = row;
+    void trainers;
+    return slotRow;
+  });
+  const trainerRows = rows.flatMap((row) =>
+    row.trainers.map((trainer, index) => ({
+      slot_id: row.id,
+      trainer_id: trainer.id,
+      trainer_name: trainer.name,
+      order_index: index,
+    })),
+  );
+  return { slotRows, trainerRows };
 }
 
 /**
@@ -134,13 +156,25 @@ export async function buildDayFromWeeklyScheduleAction(
   // One insert, unlike duplicateDayAction's loop: there is no roster to attach
   // per row, so the whole build is a single statement and either all of it
   // lands or none of it does. No compensating wipe is needed.
+  const { slotRows, trainerRows } = splitTrainers(rows);
+
   const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")
-    .insert(rows)
+    .insert(slotRows)
     .select("id");
 
   if (error) {
     console.error("Build day insert error:", error);
     return { error: "שגיאה בבניית הלוח" };
+  }
+
+  if (trainerRows.length > 0) {
+    const { error: trainerError } = await typedFrom(
+      supabase,
+      "daily_schedule_slot_trainers",
+    ).insert(trainerRows);
+    // The slots are on the board either way; a failed staffing write is
+    // repaired by editing a slot, not by unwinding the build.
+    if (trainerError) console.error("Build day insert error (trainers):", trainerError);
   }
 
   // An RLS-rejected insert returns no error and no rows; reporting that as a
@@ -234,13 +268,25 @@ export async function buildWeekFromWeeklyScheduleAction(
     slotRowsFor(day.date, day.onDuty, user!.id, branchId),
   );
 
+  const { slotRows, trainerRows } = splitTrainers(rows);
+
   const { data: created, error } = await typedFrom(supabase, "daily_schedule_slots")
-    .insert(rows)
+    .insert(slotRows)
     .select("id");
 
   if (error) {
     console.error("Build week insert error:", error);
     return { error: "שגיאה בבניית הלוח" };
+  }
+
+  if (trainerRows.length > 0) {
+    const { error: trainerError } = await typedFrom(
+      supabase,
+      "daily_schedule_slot_trainers",
+    ).insert(trainerRows);
+    // The slots are on the board either way; a failed staffing write is
+    // repaired by editing a slot, not by unwinding the build.
+    if (trainerError) console.error("Build week insert error (trainers):", trainerError);
   }
 
   // As in the per-day build: an RLS-rejected insert returns no error and no

@@ -43,7 +43,9 @@ export const slotSchema = z.object({
   branchId: uuidSchema,
   scheduleDate: dateSchema,
   startTime: timeSchema,
-  trainerId: uuidSchema.nullish().transform((v) => v ?? null),
+  // No minimum: a slot with nobody assigned is legitimate today and stays so.
+  // The cap is a guardrail, not a rule anyone will meet.
+  trainerIds: z.array(uuidSchema).max(10, "יותר מדי מאמנים לשעה אחת").default([]),
   focus: optionalText(MAX_TEXT_LENGTH),
   location: optionalText(MAX_TEXT_LENGTH),
   /** Seats for self-booking; null keeps the slot staff-only. */

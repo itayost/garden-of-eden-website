@@ -1,8 +1,9 @@
 /**
  * Daily schedule (לוח יומי) — Phase 1 of the studio training pipeline.
  *
- * A Slot is the schedule atom: (date, hour, trainer, focus, location, roster).
- * Two trainers at the same hour with different groups are two slots.
+ * A Slot is the schedule atom: (date, hour, trainers, focus, location, roster).
+ * Two groups at the same hour are two slots; two trainers taking one group
+ * together are one slot with two names on it.
  *
  * Neither table is in the generated Supabase types, so reads go through
  * `typedFrom()` and these interfaces are the source of truth.
@@ -22,7 +23,21 @@ import {
  * workout has, and asking for that per card would be one query per slot.
  */
 export const SLOT_SELECT_WITH_TRAINEES =
-  "*, trainees:daily_schedule_slot_trainees(id, slot_id, trainee_id, trainee_name, order_index, source, booked_at, cancelled_at, late_cancel, reminded_at), workout_exercises:slot_workout_exercises(id)";
+  "*, trainees:daily_schedule_slot_trainees(id, slot_id, trainee_id, trainee_name, order_index, source, booked_at, cancelled_at, late_cancel, reminded_at), trainers:daily_schedule_slot_trainers(id, trainer_id, trainer_name, order_index), workout_exercises:slot_workout_exercises(id)";
+
+/**
+ * One trainer on one slot or band.
+ *
+ * `trainer_id` is nullable and the name is a snapshot: a deleted trainer
+ * leaves the row and the name behind, which is what keeps a past board
+ * readable. Never treat a null id as "no trainer" — the name is the trainer.
+ */
+export interface SlotTrainer {
+  id: string;
+  trainer_id: string | null;
+  trainer_name: string;
+  order_index: number;
+}
 
 export interface SlotTrainee {
   id: string;
@@ -49,8 +64,8 @@ export interface ScheduleSlot {
   schedule_date: string;
   /** Postgres TIME serialized as HH:MM:SS. */
   start_time: string;
-  trainer_id: string | null;
-  trainer_name: string | null;
+  /** Everyone coaching this hour, in order. First is a position, not a role. */
+  trainers: SlotTrainer[];
   focus_he: string | null;
   location_he: string | null;
   branch_id: string | null;

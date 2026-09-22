@@ -42,8 +42,9 @@ function bandToOnDuty(band: WeeklyBand): OnDutyBand {
     source: "band",
     startTime: toHhMm(band.start_time),
     endTime: band.end_time ? toHhMm(band.end_time) : null,
-    trainerId: band.trainer_id,
-    trainerName: band.trainer_name,
+    trainers: [...band.trainers]
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((trainer) => ({ id: trainer.trainer_id, name: trainer.trainer_name })),
     locationHe: band.location_he,
     labelHe: band.label_he,
     isStandby: band.is_standby,
@@ -60,8 +61,9 @@ function extraToOnDuty(exception: WeeklyException): OnDutyBand {
     // keeps this total for a row that bypassed it through PostgREST.
     startTime: toHhMm(exception.start_time ?? "00:00:00"),
     endTime: exception.end_time ? toHhMm(exception.end_time) : null,
-    trainerId: exception.trainer_id,
-    trainerName: exception.trainer_name,
+    // An exception belongs to one trainer by definition, so it yields a list
+    // of one rather than a second shape for the strip to branch on.
+    trainers: [{ id: exception.trainer_id, name: exception.trainer_name }],
     locationHe: exception.location_he,
     labelHe: exception.label_he,
     // An extra is something the admin arranged for this date, so it is real
@@ -75,7 +77,7 @@ function extraToOnDuty(exception: WeeklyException): OnDutyBand {
 /** Start time first, then trainer name, so the output is deterministic. */
 function byStartThenName(a: OnDutyBand, b: OnDutyBand): number {
   if (a.startTime !== b.startTime) return a.startTime.localeCompare(b.startTime);
-  return a.trainerName.localeCompare(b.trainerName, "he");
+  return (a.trainers[0]?.name ?? "").localeCompare(b.trainers[0]?.name ?? "", "he");
 }
 
 /**
@@ -101,7 +103,13 @@ export function deriveOnDuty(
 
   const standing = bands
     .filter((band) => band.weekday === weekday)
-    .filter((band) => !absentTrainerIds.has(band.trainer_id))
+    // A stretch with two trainers is still happening when one of them is away.
+    // It drops only when there is nobody left to take it. A trainer whose
+    // account was deleted has a null id, which is never marked absent, so the
+    // stretch stays on the board under the snapshot name.
+    .filter((band) =>
+      band.trainers.some((trainer) => !absentTrainerIds.has(trainer.trainer_id ?? "")),
+    )
     .map(bandToOnDuty);
 
   const extras = forDate.filter((e) => e.kind === "extra").map(extraToOnDuty);
@@ -115,7 +123,11 @@ export function deriveOnDuty(
   // Marking a trainer away on a day they never work is harmless data entry,
   // but rendering "גימי בחופשה" on a day גימי has no band explains nothing.
   const expectedTrainerIds = new Set(
-    bands.filter((band) => band.weekday === weekday).map((b) => b.trainer_id),
+    bands
+      .filter((band) => band.weekday === weekday)
+      .flatMap((band) =>
+        band.trainers.flatMap((t) => (t.trainer_id ? [t.trainer_id] : [])),
+      ),
   );
 
   const absences: OnDutyAbsence[] = forDate

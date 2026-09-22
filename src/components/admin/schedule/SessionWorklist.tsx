@@ -128,13 +128,13 @@ export function SessionWorklist({
           ) : (
             <div className="space-y-4">
               {visible.map((group) => {
-                const palette = trainerColor(group.trainerId);
+                const palette = trainerColor(group.trainers[0]?.id ?? null);
                 return (
                   <section key={group.slotId} className="overflow-hidden rounded-2xl border">
                     <header className={cn("flex flex-wrap items-center gap-2 px-4 py-2", palette.bg)}>
                       <span className="font-display text-lg tabular-nums text-forest">{group.startTime}</span>
                       <span className={cn("h-2.5 w-2.5 rounded-full", palette.dot)} aria-hidden="true" />
-                      <span className={cn("font-extrabold", palette.text)}>{group.trainerName ?? "ללא מאמן"}</span>
+                      <span className={cn("font-extrabold", palette.text)}>{group.trainers.map((t) => t.name).join(", ") || "ללא מאמן"}</span>
                       {group.locationHe && <span className="text-xs text-muted-foreground">{group.locationHe}</span>}
                     </header>
                     {/* Same row as the calendar's roster sheet, so the group's

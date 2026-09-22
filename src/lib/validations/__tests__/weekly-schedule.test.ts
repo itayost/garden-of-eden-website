@@ -14,7 +14,7 @@ function validBand(overrides: Record<string, unknown> = {}) {
     weekday: 0,
     startTime: "15:00",
     endTime: "18:00",
-    trainerId: TRAINER,
+    trainerIds: [TRAINER],
     location: "סטודיו",
     label: "",
     isStandby: false,
@@ -61,11 +61,20 @@ describe("bandSchema", () => {
     expect(result.label).toBe(null);
   });
 
-  test("requires a trainer", () => {
+  test("requires at least one trainer", () => {
     // Unlike a slot, which may be written before anyone knows who takes it.
-    expect(bandSchema.safeParse(validBand({ trainerId: undefined })).success).toBe(
+    expect(bandSchema.safeParse(validBand({ trainerIds: [] })).success).toBe(false);
+    expect(bandSchema.safeParse(validBand({ trainerIds: undefined })).success).toBe(
       false,
     );
+  });
+
+  test("accepts two trainers and keeps their order", () => {
+    const first = "11111111-1111-4111-8111-111111111111";
+    const second = "22222222-2222-4222-8222-222222222222";
+    const result = bandSchema.parse(validBand({ trainerIds: [second, first] }));
+
+    expect(result.trainerIds).toEqual([second, first]);
   });
 
   test("rejects an end time at or before the start", () => {

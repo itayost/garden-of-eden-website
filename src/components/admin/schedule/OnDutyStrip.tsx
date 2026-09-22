@@ -65,7 +65,7 @@ export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
               </p>
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                 {group.map((band) => {
-                  const palette = trainerColor(band.trainerId);
+                  const palette = trainerColor(band.trainers[0]?.id ?? null);
                   return (
                     <span
                       key={band.id}
@@ -76,7 +76,7 @@ export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
                         aria-hidden="true"
                       />
                       <span className={cn("font-bold", palette.text)}>
-                        {band.trainerName}
+                        {band.trainers.map((t) => t.name).join(", ")}
                       </span>
                       {band.labelHe && (
                         <span className="text-xs text-muted-foreground">
@@ -103,7 +103,7 @@ export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
               <span className="flex items-center gap-1">
                 <LifeBuoy className="h-3 w-3" />
                 חיזוק במידת הצורך:{" "}
-                {onDuty.standby.map((b) => b.trainerName).join(", ")}
+                {onDuty.standby.map((b) => b.trainers.map((t) => t.name).join(", ")).join(", ")}
               </span>
             )}
             {onDuty.absences.map((absence) => (

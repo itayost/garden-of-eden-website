@@ -43,3 +43,27 @@ export function trainerColor(trainerId: string | null | undefined): TrainerPalet
   }
   return TRAINER_PALETTES[hash % TRAINER_PALETTES.length];
 }
+
+/**
+ * The id that gives a card its colour: the first trainer in order.
+ *
+ * First is a position, not a role. A slot with no trainers, or whose first
+ * trainer was deleted, yields null and falls back to the neutral palette
+ * through trainerColor's own handling.
+ */
+export function firstTrainerId(
+  trainers: readonly { trainer_id: string | null; order_index: number }[],
+): string | null {
+  const ordered = [...trainers].sort((a, b) => a.order_index - b.order_index);
+  return ordered[0]?.trainer_id ?? null;
+}
+
+/** "דין, לידור" — every name on the hour, in order. Empty when there are none. */
+export function trainerNames(
+  trainers: readonly { trainer_name: string; order_index: number }[],
+): string {
+  return [...trainers]
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((trainer) => trainer.trainer_name)
+    .join(", ");
+}
