@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { bandDeletionImpactAction, deleteBandAction } from "@/lib/actions/weekly-schedule";
+import { bandImpactSentence, useBandDeletionImpact } from "@/hooks/useBandDeletionImpact";
+import { deleteBandAction } from "@/lib/actions/weekly-schedule";
 import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { WeeklyBand } from "@/types/weekly-schedule";
 
@@ -38,19 +39,13 @@ export function bandTimeLabel(band: WeeklyBand): string {
 export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [futureSlots, setFutureSlots] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  /** Deleting a stretch takes its future dated hours with it; the dialog says how many. */
+  const { impact, loadImpact } = useBandDeletionImpact();
 
-  /**
-   * Deleting a stretch takes its future dated hours with it, so the dialog has
-   * to be able to say how many. Fetched on open: one query per confirmation
-   * rather than one per card on a week that may show dozens.
-   */
-  const openConfirm = async () => {
-    setFutureSlots(null);
+  const openConfirm = () => {
     setConfirmOpen(true);
-    const result = await bandDeletionImpactAction(band.id);
-    setFutureSlots("success" in result ? result.data.futureSlots : 0);
+    loadImpact(band.id);
   };
   const palette = trainerColor(firstTrainerId(band.trainers));
 
@@ -156,11 +151,7 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
             <AlertDialogDescription>
               הרצועה של {trainerNames(band.trainers) || "ללא מאמן"} ב-{bandTimeLabel(band)} תוסר
               מהשבוע הקבוע ולא תחזור.
-              {futureSlots === null
-                ? " בודק כמה אימונים עתידיים כבר נקבעו..."
-                : futureSlots > 0
-                  ? ` יימחקו גם ${futureSlots} אימונים עתידיים שכבר נקבעו.`
-                  : " אין אימונים עתידיים שכבר נקבעו."}
+              {bandImpactSentence(impact)}
               {" אימונים שכבר התקיימו יישארו."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -171,7 +162,9 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
                 event.preventDefault();
                 handleDelete();
               }}
-              disabled={deleting}
+              // Not before the count is in: confirming while the dialog still
+              // reads "בודק..." is deleting without being told what goes.
+              disabled={deleting || impact === null}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting ? "מוחק..." : "מחיקה"}

@@ -37,10 +37,8 @@ import {
   deleteSlotAction,
   removeSlotTraineeAction,
 } from "@/lib/actions/daily-schedule";
-import {
-  bandDeletionImpactAction,
-  deleteBandAction,
-} from "@/lib/actions/weekly-schedule";
+import { deleteBandAction } from "@/lib/actions/weekly-schedule";
+import { bandImpactSentence, useBandDeletionImpact } from "@/hooks/useBandDeletionImpact";
 import { getRosterSessionsAction } from "@/lib/actions/training-sessions";
 import type { RosterSession } from "@/lib/schedule/roster-exercise";
 import { cn } from "@/lib/utils";
@@ -72,8 +70,12 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
   const [adding, setAdding] = useState(false);
   // Two different removals, so two different confirmations. Null is closed.
   const [confirming, setConfirming] = useState<"occurrence" | "forever" | null>(null);
-  const [futureSlots, setFutureSlots] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  /**
+   * The count is loaded when the confirmation opens rather than with the sheet:
+   * a sheet opened to read a roster should not pay for a dialog nobody opened.
+   */
+  const { impact, loadImpact } = useBandDeletionImpact();
   const [planFor, setPlanFor] = useState<{ id: string; name: string } | null>(null);
   const [healthFor, setHealthFor] = useState<{ id: string; name: string } | null>(null);
   const [sessions, setSessions] = useState<Record<string, RosterSession>>({});
@@ -174,21 +176,19 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
     });
 
   /**
-   * Only a projected hour can be removed two ways, and only an admin may touch
-   * the standing week — band writes have always been admin-only.
+   * A projected hour comes back next week when this date is cancelled, and the
+   * confirmation has to say so — to a trainer as much as to an admin. Kept
+   * apart from who may delete the band itself: that is admin-only, but the
+   * meaning of the single-date cancellation is the same for both.
    */
-  const canDeleteForever = isAdmin && slot.band_id !== null;
+  const isProjected = slot.band_id !== null;
 
-  /**
-   * The count is fetched on open rather than with the sheet: it is one query
-   * per confirmation, and a sheet that is opened to read a roster should not
-   * pay for a dialog nobody opened.
-   */
-  const openDeleteForever = async () => {
-    setFutureSlots(null);
+  /** Only an admin may touch the standing week — band writes have always been admin-only. */
+  const canDeleteForever = isAdmin && isProjected;
+
+  const openDeleteForever = () => {
     setConfirming("forever");
-    const result = await bandDeletionImpactAction(slot.band_id!);
-    setFutureSlots("success" in result ? result.data.futureSlots : 0);
+    loadImpact(slot.band_id!);
   };
 
   const handleDelete = async () => {
@@ -199,7 +199,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
         toast.error(result.error);
         return;
       }
-      toast.success(canDeleteForever ? "האימון בוטל בתאריך הזה" : "הסלוט נמחק");
+      toast.success(isProjected ? "האימון בוטל בתאריך הזה" : "הסלוט נמחק");
       setConfirming(null);
       onClose();
       router.refresh();
@@ -386,10 +386,10 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {canDeleteForever ? "ביטול האימון בתאריך הזה" : "מחיקת האימון"}
+              {isProjected ? "ביטול האימון בתאריך הזה" : "מחיקת האימון"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {canDeleteForever
+              {isProjected
                 ? `האימון של ${time} לא יתקיים בתאריך הזה. השבוע הקבוע לא משתנה, והשעה תחזור בשבוע הבא.`
                 : `האימון של ${trainerNames(slot.trainers) || "ללא מאמן"} ב-${time} יימחק.`}
               {active.length > 0 && ` ${active.length} רשומים יאבדו את מקומם ולא תישלח להם הודעה.`}
@@ -405,7 +405,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "מבטל..." : canDeleteForever ? "ביטול האימון" : "מחיקה"}
+              {deleting ? "מבטל..." : isProjected ? "ביטול האימון" : "מחיקה"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -420,11 +420,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
             <AlertDialogTitle>מחיקה מהיומן לתמיד</AlertDialogTitle>
             <AlertDialogDescription>
               השעה תוסר מהשבוע הקבוע ולא תחזור.
-              {futureSlots === null
-                ? " בודק כמה אימונים עתידיים כבר נקבעו..."
-                : futureSlots > 0
-                  ? ` יימחקו גם ${futureSlots} אימונים עתידיים שכבר נקבעו.`
-                  : " אין אימונים עתידיים שכבר נקבעו."}
+              {bandImpactSentence(impact)}
               {" אימונים שכבר התקיימו יישארו."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -435,7 +431,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
                 event.preventDefault();
                 handleDeleteForever();
               }}
-              disabled={deleting || futureSlots === null}
+              disabled={deleting || impact === null}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting ? "מוחק..." : "מחיקה לתמיד"}

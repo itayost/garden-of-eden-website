@@ -1,11 +1,13 @@
 "use server";
 
 import { verifyAdmin } from "@/lib/actions/shared";
+import { clearSlotWorkout } from "@/lib/actions/shared/clear-slot-workout";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { getIsraelTime } from "@/lib/utils/israel-time";
 import { israelToday } from "@/lib/utils/tasks";
 import {
   bandIdSchema,
@@ -264,12 +266,50 @@ export async function updateBandAction(
 }
 
 /**
+ * The dated hours a band has projected that have not started yet.
+ *
+ * One definition of "still to come", shared by the count the admin is shown and
+ * the delete that acts on it, so the dialog can never promise a different
+ * number than the one that is removed.
+ *
+ * "Not started yet" rather than "from tomorrow": a band deleted at 09:00 must
+ * take today's 18:00 hour with it, or that hour is stranded on the calendar
+ * with its band_id nulled and nothing left to find it by. And not "from today"
+ * either, which would delete an hour that already happened along with its
+ * record of it.
+ */
+async function futureBandSlotIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  bandId: string,
+): Promise<{ ids: string[] } | { error: true }> {
+  const today = israelToday();
+  const { hour, minute } = getIsraelTime();
+  const now = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`;
+
+  const { data, error } = (await typedFrom(supabase, "daily_schedule_slots")
+    .select("id")
+    .eq("band_id", bandId)
+    .or(
+      `schedule_date.gt.${today},and(schedule_date.eq.${today},start_time.gt.${now})`,
+    )) as {
+    data: { id: string }[] | null;
+    error: { message: string } | null;
+  };
+
+  if (error) {
+    console.error("Future band slots query error:", error);
+    return { error: true };
+  }
+
+  return { ids: (data ?? []).map((slot) => slot.id) };
+}
+
+/**
  * How many dated hours a band's deletion would take with it.
  *
  * Only the future ones. daily_schedule_slots.band_id is ON DELETE SET NULL, so
  * without this the deletion silently leaves them on the calendar as orphans and
  * "remove it from the calendar" would be a lie the admin discovers tomorrow.
- * Past hours are history and are never touched.
  */
 export async function bandDeletionImpactAction(
   bandId: string,
@@ -281,17 +321,10 @@ export async function bandDeletionImpactAction(
   if (!validated.success) return { error: "מזהה רצועה לא תקין" };
 
   const supabase = await createClient();
-  const { data, error } = await typedFrom(supabase, "daily_schedule_slots")
-    .select("id")
-    .eq("band_id", validated.data.bandId)
-    .gt("schedule_date", israelToday());
+  const future = await futureBandSlotIds(supabase, validated.data.bandId);
+  if ("error" in future) return { error: "שגיאה בבדיקת הרצועה" };
 
-  if (error) {
-    console.error("Band deletion impact error:", error);
-    return { error: "שגיאה בבדיקת הרצועה" };
-  }
-
-  return { success: true, data: { futureSlots: data?.length ?? 0 } };
+  return { success: true, data: { futureSlots: future.ids.length } };
 }
 
 /**
@@ -314,11 +347,12 @@ export async function deleteBandAction(bandId: string): Promise<DeleteResult> {
   const supabase = await createClient();
 
   // Captured before the band goes: afterwards band_id is NULL on these rows and
-  // there is no way left to tell which hours came from this stretch.
-  const { data: futureSlots } = (await typedFrom(supabase, "daily_schedule_slots")
-    .select("id")
-    .eq("band_id", validated.data.bandId)
-    .gt("schedule_date", israelToday())) as { data: { id: string }[] | null };
+  // there is no way left to tell which hours came from this stretch. A failed
+  // lookup therefore has to stop the whole thing — deleting the band anyway
+  // would strand hours nobody can find again, which is the one outcome this
+  // action exists to prevent.
+  const future = await futureBandSlotIds(supabase, validated.data.bandId);
+  if ("error" in future) return { error: "שגיאה במחיקת הרצועה" };
 
   // The .select() is not decoration: a delete that RLS rejects returns no error
   // and zero rows, which would otherwise be reported as a successful deletion.
@@ -334,29 +368,14 @@ export async function deleteBandAction(bandId: string): Promise<DeleteResult> {
 
   if ((deleted?.length ?? 0) === 0) return { error: "הרצועה לא נמצאה" };
 
-  const futureIds = (futureSlots ?? []).map((slot) => slot.id);
-  if (futureIds.length > 0) {
-    const rpcClient = supabase as unknown as {
-      rpc: (
-        fn: string,
-        args: Record<string, unknown>,
-      ) => Promise<{ error: { message: string } | null }>;
-    };
-
-    // Each hour's group workout first: training_sessions.slot_id is ON DELETE
-    // SET NULL, so a session fanned out from one of these would survive the
-    // slot and leave a trainee with a workout for an hour that no longer
-    // exists. Same reasoning as deleteSlotAction.
-    for (const id of futureIds) {
-      const { error: clearError } = await rpcClient.rpc("clear_slot_workout", {
-        p_slot_id: id,
-      });
-      if (clearError) console.error("clear_slot_workout failed:", clearError);
-    }
+  if (future.ids.length > 0) {
+    // Each hour's group workout first, for the reason spelled out in
+    // clearSlotWorkout. Independent per slot, so they go together.
+    await Promise.all(future.ids.map((id) => clearSlotWorkout(supabase, id)));
 
     const { error: slotsError } = await typedFrom(supabase, "daily_schedule_slots")
       .delete()
-      .in("id", futureIds);
+      .in("id", future.ids);
     // The band is already gone, so the admin's intent stands either way. A
     // failure here leaves orphaned hours, which is what used to happen anyway.
     if (slotsError) console.error("Delete band future slots error:", slotsError);

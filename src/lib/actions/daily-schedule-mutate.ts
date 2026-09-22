@@ -1,6 +1,7 @@
 "use server";
 
 import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { clearSlotWorkout } from "@/lib/actions/shared/clear-slot-workout";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { assertBranchReadable, assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -375,24 +376,9 @@ export async function deleteSlotAction(slotId: string): Promise<DeleteResult> {
   }
 
   // The group workout has to go before the slot does. Its exercises cascade,
-  // but the sessions it fanned out do not: training_sessions.slot_id is ON
-  // DELETE SET NULL, and clear_slot_workout finds them by slot_id, so after
-  // the delete nothing can ever take them back and every roster member keeps a
-  // workout for an hour that no longer exists. Individually edited and
-  // completed sessions are exempt there, as everywhere else.
-  const rpcClient = supabase as unknown as {
-    rpc: (
-      fn: string,
-      args: Record<string, unknown>,
-    ) => Promise<{ error: { message: string } | null }>;
-  };
-  const { error: clearError } = await rpcClient.rpc("clear_slot_workout", {
-    p_slot_id: validated.data.slotId,
-  });
-  if (clearError) {
-    console.error("clear_slot_workout failed:", clearError);
-    return { error: "שגיאה במחיקת הסלוט" };
-  }
+  // but the sessions it fanned out do not — see clearSlotWorkout.
+  const { error: clearError } = await clearSlotWorkout(supabase, validated.data.slotId);
+  if (clearError) return { error: "שגיאה במחיקת הסלוט" };
 
   // Roster rows cascade with the slot. The .select() is not decoration: a
   // delete that RLS rejects returns no error and zero rows, which would
