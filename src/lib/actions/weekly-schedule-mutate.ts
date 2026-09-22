@@ -263,6 +263,47 @@ export async function updateBandAction(
   return { success: true, data: updated as WeeklyBand };
 }
 
+/**
+ * How many dated hours a band's deletion would take with it.
+ *
+ * Only the future ones. daily_schedule_slots.band_id is ON DELETE SET NULL, so
+ * without this the deletion silently leaves them on the calendar as orphans and
+ * "remove it from the calendar" would be a lie the admin discovers tomorrow.
+ * Past hours are history and are never touched.
+ */
+export async function bandDeletionImpactAction(
+  bandId: string,
+): Promise<{ success: true; data: { futureSlots: number } } | { error: string }> {
+  const { error: authError } = await verifyAdmin();
+  if (authError) return { error: authError };
+
+  const validated = bandIdSchema.safeParse({ bandId });
+  if (!validated.success) return { error: "מזהה רצועה לא תקין" };
+
+  const supabase = await createClient();
+  const { data, error } = await typedFrom(supabase, "daily_schedule_slots")
+    .select("id")
+    .eq("band_id", validated.data.bandId)
+    .gt("schedule_date", israelToday());
+
+  if (error) {
+    console.error("Band deletion impact error:", error);
+    return { error: "שגיאה בבדיקת הרצועה" };
+  }
+
+  return { success: true, data: { futureSlots: data?.length ?? 0 } };
+}
+
+/**
+ * Removes a stretch from the standing week, and with it every hour it has
+ * already projected onto a future date.
+ *
+ * The band goes first and the slots after, deliberately. If the band delete
+ * fails nothing has been removed; if the slot delete fails the band is gone and
+ * the slots are orphans, which is exactly the behaviour this replaces rather
+ * than something worse. The other order would delete real hours off the board
+ * and then leave the band standing.
+ */
 export async function deleteBandAction(bandId: string): Promise<DeleteResult> {
   const { error: authError } = await verifyAdmin();
   if (authError) return { error: authError };
@@ -271,6 +312,13 @@ export async function deleteBandAction(bandId: string): Promise<DeleteResult> {
   if (!validated.success) return { error: "מזהה רצועה לא תקין" };
 
   const supabase = await createClient();
+
+  // Captured before the band goes: afterwards band_id is NULL on these rows and
+  // there is no way left to tell which hours came from this stretch.
+  const { data: futureSlots } = (await typedFrom(supabase, "daily_schedule_slots")
+    .select("id")
+    .eq("band_id", validated.data.bandId)
+    .gt("schedule_date", israelToday())) as { data: { id: string }[] | null };
 
   // The .select() is not decoration: a delete that RLS rejects returns no error
   // and zero rows, which would otherwise be reported as a successful deletion.
@@ -285,6 +333,34 @@ export async function deleteBandAction(bandId: string): Promise<DeleteResult> {
   }
 
   if ((deleted?.length ?? 0) === 0) return { error: "הרצועה לא נמצאה" };
+
+  const futureIds = (futureSlots ?? []).map((slot) => slot.id);
+  if (futureIds.length > 0) {
+    const rpcClient = supabase as unknown as {
+      rpc: (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ error: { message: string } | null }>;
+    };
+
+    // Each hour's group workout first: training_sessions.slot_id is ON DELETE
+    // SET NULL, so a session fanned out from one of these would survive the
+    // slot and leave a trainee with a workout for an hour that no longer
+    // exists. Same reasoning as deleteSlotAction.
+    for (const id of futureIds) {
+      const { error: clearError } = await rpcClient.rpc("clear_slot_workout", {
+        p_slot_id: id,
+      });
+      if (clearError) console.error("clear_slot_workout failed:", clearError);
+    }
+
+    const { error: slotsError } = await typedFrom(supabase, "daily_schedule_slots")
+      .delete()
+      .in("id", futureIds);
+    // The band is already gone, so the admin's intent stands either way. A
+    // failure here leaves orphaned hours, which is what used to happen anyway.
+    if (slotsError) console.error("Delete band future slots error:", slotsError);
+  }
 
   revalidateScheduleSurfaces();
 

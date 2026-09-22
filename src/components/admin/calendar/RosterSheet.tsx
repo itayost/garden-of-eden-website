@@ -17,6 +17,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { SheetDialogContent } from "@/components/ui/sheet-dialog";
@@ -31,6 +37,10 @@ import {
   deleteSlotAction,
   removeSlotTraineeAction,
 } from "@/lib/actions/daily-schedule";
+import {
+  bandDeletionImpactAction,
+  deleteBandAction,
+} from "@/lib/actions/weekly-schedule";
 import { getRosterSessionsAction } from "@/lib/actions/training-sessions";
 import type { RosterSession } from "@/lib/schedule/roster-exercise";
 import { cn } from "@/lib/utils";
@@ -60,7 +70,9 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
   const { branchId } = useCurrentBranch();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Two different removals, so two different confirmations. Null is closed.
+  const [confirming, setConfirming] = useState<"occurrence" | "forever" | null>(null);
+  const [futureSlots, setFutureSlots] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [planFor, setPlanFor] = useState<{ id: string; name: string } | null>(null);
   const [healthFor, setHealthFor] = useState<{ id: string; name: string } | null>(null);
@@ -161,6 +173,24 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
       return next;
     });
 
+  /**
+   * Only a projected hour can be removed two ways, and only an admin may touch
+   * the standing week — band writes have always been admin-only.
+   */
+  const canDeleteForever = isAdmin && slot.band_id !== null;
+
+  /**
+   * The count is fetched on open rather than with the sheet: it is one query
+   * per confirmation, and a sheet that is opened to read a roster should not
+   * pay for a dialog nobody opened.
+   */
+  const openDeleteForever = async () => {
+    setFutureSlots(null);
+    setConfirming("forever");
+    const result = await bandDeletionImpactAction(slot.band_id!);
+    setFutureSlots("success" in result ? result.data.futureSlots : 0);
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -169,12 +199,31 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
         toast.error(result.error);
         return;
       }
-      toast.success("הסלוט נמחק");
-      setConfirmDelete(false);
+      toast.success(canDeleteForever ? "האימון בוטל בתאריך הזה" : "הסלוט נמחק");
+      setConfirming(null);
       onClose();
       router.refresh();
     } catch {
-      toast.error("שגיאה במחיקת הסלוט");
+      toast.error("שגיאה בביטול האימון");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteForever = async () => {
+    setDeleting(true);
+    try {
+      const result = await deleteBandAction(slot.band_id!);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("השעה הוסרה מהיומן");
+      setConfirming(null);
+      onClose();
+      router.refresh();
+    } catch {
+      toast.error("שגיאה במחיקת השעה");
     } finally {
       setDeleting(false);
     }
@@ -209,9 +258,41 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
                 <Button variant="ghost" size="icon" onClick={() => onEditDetails(slot)} aria-label="עריכת פרטי הסלוט">
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => setConfirmDelete(true)} aria-label="מחיקת סלוט">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {/*
+                  A projected hour can be removed two ways and they are not the
+                  same decision, so it is a menu rather than one bin. An hour
+                  that came from nowhere has only one meaning, and a menu of one
+                  would be ceremony.
+                */}
+                {canDeleteForever ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" aria-label="הסרת האימון">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setConfirming("occurrence")}>
+                        ביטול האימון בתאריך הזה
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => openDeleteForever()}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        מחיקה מהיומן לתמיד
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setConfirming("occurrence")}
+                    aria-label="מחיקת סלוט"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </DialogHeader>
@@ -298,16 +379,24 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
         </SheetDialogContent>
       </Dialog>
 
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <AlertDialog
+        open={confirming === "occurrence"}
+        onOpenChange={(open) => !open && setConfirming(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת סלוט</AlertDialogTitle>
+            <AlertDialogTitle>
+              {canDeleteForever ? "ביטול האימון בתאריך הזה" : "מחיקת האימון"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              הסלוט של {trainerNames(slot.trainers) || "ללא מאמן"} ב-{time} יימחק לצמיתות, כולל רשימת המתאמנים.
+              {canDeleteForever
+                ? `האימון של ${time} לא יתקיים בתאריך הזה. השבוע הקבוע לא משתנה, והשעה תחזור בשבוע הבא.`
+                : `האימון של ${trainerNames(slot.trainers) || "ללא מאמן"} ב-${time} יימחק.`}
+              {active.length > 0 && ` ${active.length} רשומים יאבדו את מקומם ולא תישלח להם הודעה.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>ביטול</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>חזרה</AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();
@@ -316,7 +405,40 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "מוחק..." : "מחיקה"}
+              {deleting ? "מבטל..." : canDeleteForever ? "ביטול האימון" : "מחיקה"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={confirming === "forever"}
+        onOpenChange={(open) => !open && setConfirming(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקה מהיומן לתמיד</AlertDialogTitle>
+            <AlertDialogDescription>
+              השעה תוסר מהשבוע הקבוע ולא תחזור.
+              {futureSlots === null
+                ? " בודק כמה אימונים עתידיים כבר נקבעו..."
+                : futureSlots > 0
+                  ? ` יימחקו גם ${futureSlots} אימונים עתידיים שכבר נקבעו.`
+                  : " אין אימונים עתידיים שכבר נקבעו."}
+              {" אימונים שכבר התקיימו יישארו."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>חזרה</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                handleDeleteForever();
+              }}
+              disabled={deleting || futureSlots === null}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "מוחק..." : "מחיקה לתמיד"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

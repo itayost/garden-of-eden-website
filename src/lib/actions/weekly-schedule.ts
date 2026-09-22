@@ -13,6 +13,7 @@ export {
 export {
   createBandAction,
   createExceptionAction,
+  bandDeletionImpactAction,
   deleteBandAction,
   deleteExceptionAction,
   updateBandAction,
