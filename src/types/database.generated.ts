@@ -1066,6 +1066,10 @@ export type Database = {
           trainer_id: string | null
           trainer_name: string | null
           updated_at: string
+          workout_built_by: string | null
+          workout_built_by_name: string | null
+          workout_notes_he: string | null
+          workout_updated_at: string | null
         }
         Insert: {
           band_id?: string | null
@@ -1081,6 +1085,10 @@ export type Database = {
           trainer_id?: string | null
           trainer_name?: string | null
           updated_at?: string
+          workout_built_by?: string | null
+          workout_built_by_name?: string | null
+          workout_notes_he?: string | null
+          workout_updated_at?: string | null
         }
         Update: {
           band_id?: string | null
@@ -1096,6 +1104,10 @@ export type Database = {
           trainer_id?: string | null
           trainer_name?: string | null
           updated_at?: string
+          workout_built_by?: string | null
+          workout_built_by_name?: string | null
+          workout_notes_he?: string | null
+          workout_updated_at?: string | null
         }
         Relationships: [
           {
@@ -1122,6 +1134,13 @@ export type Database = {
           {
             foreignKeyName: "daily_schedule_slots_trainer_id_fkey"
             columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_schedule_slots_workout_built_by_fkey"
+            columns: ["workout_built_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3173,6 +3192,66 @@ export type Database = {
           },
         ]
       }
+      slot_workout_exercises: {
+        Row: {
+          exercise_id: string
+          id: string
+          notes_he: string | null
+          order_index: number
+          slot_id: string
+          target_distance_m: number | null
+          target_duration_seconds: number | null
+          target_load_he: string | null
+          target_reps: number | null
+          target_reps_he: string | null
+          target_sets: number | null
+          target_weight_kg: number | null
+        }
+        Insert: {
+          exercise_id: string
+          id?: string
+          notes_he?: string | null
+          order_index?: number
+          slot_id: string
+          target_distance_m?: number | null
+          target_duration_seconds?: number | null
+          target_load_he?: string | null
+          target_reps?: number | null
+          target_reps_he?: string | null
+          target_sets?: number | null
+          target_weight_kg?: number | null
+        }
+        Update: {
+          exercise_id?: string
+          id?: string
+          notes_he?: string | null
+          order_index?: number
+          slot_id?: string
+          target_distance_m?: number | null
+          target_duration_seconds?: number | null
+          target_load_he?: string | null
+          target_reps?: number | null
+          target_reps_he?: string | null
+          target_sets?: number | null
+          target_weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slot_workout_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "workout_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slot_workout_exercises_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "daily_schedule_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainee_clips: {
         Row: {
           id: string
@@ -3960,6 +4039,7 @@ export type Database = {
           notes_he: string | null
           session_date: string
           slot_id: string | null
+          slot_workout_synced_at: string | null
           trainee_id: string
           updated_at: string
         }
@@ -3972,6 +4052,7 @@ export type Database = {
           notes_he?: string | null
           session_date: string
           slot_id?: string | null
+          slot_workout_synced_at?: string | null
           trainee_id: string
           updated_at?: string
         }
@@ -3984,6 +4065,7 @@ export type Database = {
           notes_he?: string | null
           session_date?: string
           slot_id?: string | null
+          slot_workout_synced_at?: string | null
           trainee_id?: string
           updated_at?: string
         }
@@ -4502,6 +4584,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_slot_workout: {
+        Args: { p_slot_id: string }
+        Returns: {
+          action: string
+          trainee_count: number
+        }[]
+      }
+      apply_slot_workout_to_trainee: {
+        Args: { p_slot_id: string; p_trainee_id: string }
+        Returns: string
+      }
       approve_shift_change_request: {
         Args: {
           p_actor_id: string
@@ -4533,10 +4626,15 @@ export type Database = {
           seats_taken: number
         }[]
       }
+      clear_slot_workout: { Args: { p_slot_id: string }; Returns: number }
       compute_age_group: { Args: { p_birthdate: string }; Returns: string }
       count_weekdays_missed: {
         Args: { current_activity: string; last_activity: string }
         Returns: number
+      }
+      drop_slot_workout_session: {
+        Args: { p_slot_id: string; p_trainee_id: string }
+        Returns: boolean
       }
       get_user_role: {
         Args: { user_id: string }
@@ -4577,6 +4675,19 @@ export type Database = {
       replace_template_exercises: {
         Args: { p_exercises: Json; p_template_id: string }
         Returns: undefined
+      }
+      save_slot_workout: {
+        Args: {
+          p_built_by: string
+          p_built_by_name: string
+          p_exercises: Json
+          p_notes: string
+          p_slot_id: string
+        }
+        Returns: {
+          action: string
+          trainee_count: number
+        }[]
       }
       save_workout_program_grid: {
         Args: { p_program_id: string; p_rows: Json }
