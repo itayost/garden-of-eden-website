@@ -17,6 +17,8 @@ export interface WorklistRow {
   traineeName: string;
   status: WorklistStatus;
   exerciseCount: number;
+  /** A trainer built this one individually, so group saves skip it. */
+  isCustom: boolean;
 }
 
 export interface WorklistGroup {
@@ -26,6 +28,10 @@ export interface WorklistGroup {
   trainerId: string | null;
   trainerName: string | null;
   locationHe: string | null;
+  /** The slot carries a workout for everyone on it. */
+  hasGroupWorkout: boolean;
+  /** How many exercises that workout has; zero when there is none. */
+  groupExerciseCount: number;
   rows: WorklistRow[];
 }
 
@@ -64,6 +70,8 @@ export function buildSessionWorklist(
     trainerId: slot.trainer_id,
     trainerName: slot.trainer_name,
     locationHe: slot.location_he,
+    hasGroupWorkout: slot.workout_updated_at !== null,
+    groupExerciseCount: slot.workout_exercises?.length ?? 0,
     rows: slot.trainees
       .filter(isLinkedActive)
       .sort((a, b) => a.order_index - b.order_index)
@@ -75,6 +83,9 @@ export function buildSessionWorklist(
           traineeName: entry.trainee_name,
           status: statusOf(summary),
           exerciseCount: summary?.exerciseCount ?? 0,
+          // Nothing built is not individual work: it is nothing yet, and the
+          // next group save will fill it.
+          isCustom: summary?.isCustom ?? false,
         };
       }),
   }));

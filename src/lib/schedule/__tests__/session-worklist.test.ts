@@ -143,6 +143,50 @@ describe("buildSessionWorklist", () => {
     buildSessionWorklist(input, {});
     expect(input.map((s) => s.id)).toEqual(["b", "a"]);
   });
+  test("marks a group whose slot carries a workout", () => {
+    const groups = buildSessionWorklist(
+      [slot({ workout_updated_at: "2026-09-22T09:00:00.000Z" })],
+      {},
+    );
+    expect(groups[0].hasGroupWorkout).toBe(true);
+  });
+
+  test("a slot with no group workout says so", () => {
+    expect(buildSessionWorklist([slot()], {})[0].hasGroupWorkout).toBe(false);
+  });
+
+  test("carries how many exercises the group workout has", () => {
+    const groups = buildSessionWorklist(
+      [
+        slot({
+          workout_updated_at: "2026-09-22T09:00:00.000Z",
+          workout_exercises: [{ id: "e1" }, { id: "e2" }],
+        }),
+      ],
+      {},
+    );
+    expect(groups[0].groupExerciseCount).toBe(2);
+  });
+
+  test("counts zero when the slot embeds no exercises", () => {
+    expect(buildSessionWorklist([slot()], {})[0].groupExerciseCount).toBe(0);
+  });
+
+  test("marks a row whose session was edited individually", () => {
+    const groups = buildSessionWorklist(
+      [slot({ trainees: [entry({ trainee_id: NOAM })] })],
+      { [NOAM]: summary(NOAM, { isCustom: true }) },
+    );
+    expect(groups[0].rows[0].isCustom).toBe(true);
+  });
+
+  test("a trainee with nothing built is not custom", () => {
+    const groups = buildSessionWorklist(
+      [slot({ trainees: [entry({ trainee_id: NOAM })] })],
+      {},
+    );
+    expect(groups[0].rows[0].isCustom).toBe(false);
+  });
 });
 
 describe("filterWorklist", () => {

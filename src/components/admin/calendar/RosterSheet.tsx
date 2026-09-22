@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MapPin, Pencil, Trash2, Users } from "lucide-react";
+import { Dumbbell, MapPin, Pencil, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -219,6 +220,27 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
                 מעבר לקיבולת ({active.length}/{slot.max_trainees}). הצוות רשאי, המתאמנים לא.
               </p>
             )}
+
+            {/*
+              What this hour does, for everyone on it. The sheet is where a
+              trainer already stands when they wonder, and its absence is the
+              reason the feature was asked for: opening a slot showed names and
+              nothing else.
+            */}
+            <Link
+              href={`/admin/schedule/slot/${slot.id}?branch=${branchId}`}
+              className="flex min-h-12 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="flex items-center gap-2 font-medium">
+                <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground" />
+                אימון קבוצתי
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {slot.workout_updated_at === null
+                  ? "טרם נבנה"
+                  : `${slot.workout_exercises?.length ?? 0} תרגילים · ${slot.workout_built_by_name ?? "הצוות"}`}
+              </span>
+            </Link>
 
             {active.length === 0 ? (
               <p className="rounded-xl border border-dashed py-6 text-center text-sm text-muted-foreground">
