@@ -4,7 +4,7 @@ import { CalendarOff, MapPin, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { rosterLabel } from "@/lib/utils/roster-label";
-import { trainerColor } from "@/lib/utils/trainer-color";
+import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { ScheduleSlot } from "@/types/schedule";
 
 interface WeekSlotCardProps {
@@ -27,7 +27,7 @@ interface WeekSlotCardProps {
  * sessions is the בניית אימונים screen.
  */
 export function WeekSlotCard({ slot, isTrainerAbsent, onOpen }: WeekSlotCardProps) {
-  const palette = trainerColor(slot.trainer_id);
+  const palette = trainerColor(firstTrainerId(slot.trainers));
   const rosterCount = slot.trainees.filter((t) => t.cancelled_at === null).length;
   const overCapacity = slot.max_trainees !== null && rosterCount > slot.max_trainees;
   const seats = slot.max_trainees === null ? null : `${rosterCount}/${slot.max_trainees} מקומות`;
@@ -42,7 +42,7 @@ export function WeekSlotCard({ slot, isTrainerAbsent, onOpen }: WeekSlotCardProp
         "hover:border-forest/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         palette.bg,
       )}
-      aria-label={`רשימת המתאמנים של ${slot.trainer_name ?? "ללא מאמן"} בשעה ${slot.start_time.slice(0, 5)}`}
+      aria-label={`רשימת המתאמנים של ${trainerNames(slot.trainers) || "ללא מאמן"} בשעה ${slot.start_time.slice(0, 5)}`}
     >
       <p className="font-display text-sm tabular-nums text-forest">
         {slot.start_time.slice(0, 5)}
@@ -51,7 +51,7 @@ export function WeekSlotCard({ slot, isTrainerAbsent, onOpen }: WeekSlotCardProp
       <div className="mt-1 flex items-center gap-1.5">
         <span className={cn("h-2 w-2 shrink-0 rounded-full", palette.dot)} />
         <span className={cn("truncate text-sm font-bold", palette.text)}>
-          {slot.trainer_name ?? "ללא מאמן"}
+          {trainerNames(slot.trainers) || "ללא מאמן"}
         </span>
         {isTrainerAbsent && (
           <CalendarOff

@@ -29,41 +29,84 @@ type DuplicateResult =
   | { error: string; fieldErrors?: Record<string, string[]> };
 
 /**
- * Resolves the trainer's display-name snapshot. The snapshot keeps the
- * schedule readable if the trainer is later renamed or deleted.
+ * Resolves the display-name snapshots for a slot's trainers, in the order they
+ * were given.
  *
  * Admin client on purpose: the profiles SELECT policies let a trainer read
  * only their own row and active trainer rows, so a trainer assigning a slot to
  * an admin-who-coaches would be told "המאמן שנבחר אינו קיים" — a lie. Safe
- * because every caller gated on verifyAdminOrTrainer, and this reads one name.
+ * because every caller is gated on verifyAdminOrTrainer, and this reads names.
  *
  * Deliberately does not filter on is_active, unlike the form's pick-list: a
  * deactivated trainer cannot be newly assigned (they are absent from the
  * list), but a slot that already carries one must stay editable, or it is
  * frozen on the board until someone clears the trainer by hand.
  */
-async function resolveTrainerName(
-  trainerId: string | null,
-): Promise<{ name: string | null } | { error: string }> {
-  if (!trainerId) return { name: null };
+async function resolveTrainerNames(
+  trainerIds: readonly string[],
+): Promise<{ names: { trainerId: string; name: string }[] } | { error: string }> {
+  if (trainerIds.length === 0) return { names: [] };
 
   const { data, error } = await createAdminClient()
     .from("profiles")
-    .select("full_name")
-    .eq("id", trainerId)
+    .select("id, full_name")
+    .in("id", [...trainerIds])
     .in("role", ["trainer", "admin"])
-    .is("deleted_at", null)
-    .maybeSingle();
+    .is("deleted_at", null);
 
   // A query failure is not "trainer does not exist" — reporting it as such
   // would send the admin investigating a healthy trainer account.
   if (error) {
-    console.error("Resolve trainer name error:", error);
+    console.error("Resolve trainer names error:", error);
     return { error: "שגיאה באימות המאמן" };
   }
 
-  if (!data) return { error: "המאמן שנבחר אינו קיים או אינו פעיל" };
-  return { name: data.full_name ?? "מאמן" };
+  const byId = new Map((data ?? []).map((row) => [row.id, row.full_name ?? "מאמן"]));
+  const missing = trainerIds.filter((id) => !byId.has(id));
+  if (missing.length > 0) return { error: "אחד המאמנים שנבחרו אינו קיים" };
+
+  // The caller's order is the order on the card, so it is preserved here
+  // rather than taken from whatever the query returned.
+  return { names: trainerIds.map((id) => ({ trainerId: id, name: byId.get(id)! })) };
+}
+
+/**
+ * The slot's trainers, replaced wholesale. Delete then insert rather than a
+ * merge: the list is short, the order is the payload's order, and nothing
+ * hangs off these rows for a merge to protect.
+ */
+async function replaceSlotTrainers(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  slotId: string,
+  names: readonly { trainerId: string; name: string }[],
+): Promise<{ error: string | null }> {
+  const { error: deleteError } = await typedFrom(supabase, "daily_schedule_slot_trainers")
+    .delete()
+    .eq("slot_id", slotId);
+  if (deleteError) {
+    console.error("Clear slot trainers error:", deleteError);
+    return { error: "שגיאה בשמירת המאמנים" };
+  }
+
+  if (names.length === 0) return { error: null };
+
+  const { error: insertError } = await typedFrom(
+    supabase,
+    "daily_schedule_slot_trainers",
+  ).insert(
+    names.map((entry, index) => ({
+      slot_id: slotId,
+      trainer_id: entry.trainerId,
+      trainer_name: entry.name,
+      order_index: index,
+    })),
+  );
+  if (insertError) {
+    console.error("Insert slot trainers error:", insertError);
+    return { error: "שגיאה בשמירת המאמנים" };
+  }
+
+  return { error: null };
 }
 
 /**
@@ -149,11 +192,11 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
     };
   }
 
-  const { branchId, scheduleDate, startTime, trainerId, focus, location, maxTrainees, trainees } =
+  const { branchId, scheduleDate, startTime, trainerIds, focus, location, maxTrainees, trainees } =
     validated.data;
   const supabase = await createClient();
 
-  const trainerResult = await resolveTrainerName(trainerId);
+  const trainerResult = await resolveTrainerNames(trainerIds);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
   const rosterCheck = await verifyRosterTrainees(trainees, branchId);
@@ -167,8 +210,6 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
       branch_id: branchId,
       schedule_date: scheduleDate,
       start_time: startTime,
-      trainer_id: trainerId,
-      trainer_name: trainerResult.name,
       focus_he: focus,
       location_he: location,
       max_trainees: maxTrainees,
@@ -180,6 +221,14 @@ export async function createSlotAction(input: SlotInput): Promise<SlotResult> {
   if (error || !created) {
     console.error("Create slot error:", error);
     return { error: "שגיאה ביצירת הסלוט" };
+  }
+
+  const trainersWritten = await replaceSlotTrainers(supabase, created.id, trainerResult.names);
+  if (trainersWritten.error) {
+    // A slot whose trainers did not land would read as unstaffed, which is a
+    // different slot from the one the admin just described.
+    await typedFrom(supabase, "daily_schedule_slots").delete().eq("id", created.id);
+    return { error: trainersWritten.error };
   }
 
   const { error: rosterError } = await typedFrom(
@@ -219,7 +268,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     };
   }
 
-  const { branchId, slotId, scheduleDate, startTime, trainerId, focus, location, maxTrainees, trainees } =
+  const { branchId, slotId, scheduleDate, startTime, trainerIds, focus, location, maxTrainees, trainees } =
     validated.data;
   const supabase = await createClient();
 
@@ -239,7 +288,7 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     if (currentCheck.error) return { error: currentCheck.error };
   }
 
-  const trainerResult = await resolveTrainerName(trainerId);
+  const trainerResult = await resolveTrainerNames(trainerIds);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
   // With no roster sent, the kept roster is still what the checks apply to: a
@@ -266,8 +315,6 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
       branch_id: branchId,
       schedule_date: scheduleDate,
       start_time: startTime,
-      trainer_id: trainerId,
-      trainer_name: trainerResult.name,
       focus_he: focus,
       location_he: location,
       max_trainees: maxTrainees,
@@ -280,6 +327,9 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
     console.error("Update slot error:", error);
     return { error: "שגיאה בעדכון הסלוט" };
   }
+
+  const trainersWritten = await replaceSlotTrainers(supabase, slotId, trainerResult.names);
+  if (trainersWritten.error) return { error: trainersWritten.error };
 
   if (trainees !== undefined) {
     const { error: rosterError } = await replaceRoster(supabase, slotId, trainees);
@@ -439,8 +489,6 @@ export async function duplicateDayAction(
         branch_id: branchId,
         schedule_date: toDate,
         start_time: slot.start_time,
-        trainer_id: slot.trainer_id,
-        trainer_name: slot.trainer_name,
         focus_he: slot.focus_he,
         location_he: slot.location_he,
         max_trainees: slot.max_trainees,
@@ -448,6 +496,27 @@ export async function duplicateDayAction(
       })
       .select()
       .single();
+
+    if (!error && created && slot.trainers.length > 0) {
+      const { error: trainersError } = await typedFrom(
+        supabase,
+        "daily_schedule_slot_trainers",
+      ).insert(
+        [...slot.trainers]
+          .sort((a, b) => a.order_index - b.order_index)
+          .map((trainer, index) => ({
+            slot_id: created.id,
+            trainer_id: trainer.trainer_id,
+            trainer_name: trainer.trainer_name,
+            order_index: index,
+          })),
+      );
+      if (trainersError) {
+        console.error("Duplicate day trainers error:", trainersError);
+        await wipeTargetDay();
+        return { error: "שגיאה בשכפול היום" };
+      }
+    }
 
     if (error || !created) {
       console.error("Duplicate day insert error:", error);

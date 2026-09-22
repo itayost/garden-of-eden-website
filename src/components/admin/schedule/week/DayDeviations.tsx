@@ -41,7 +41,7 @@ export function DayDeviations({ onDuty }: DayDeviationsProps) {
         <li key={extra.id} className="flex items-start gap-1">
           <UserPlus className="mt-0.5 h-3 w-3 shrink-0" />
           <span className="truncate">
-            {extra.trainerName} · {onDutyTimeLabel(extra)}
+            {extra.trainers.map((t) => t.name).join(", ")} · {onDutyTimeLabel(extra)}
             {extra.labelHe ? ` · ${extra.labelHe}` : ""}
           </span>
         </li>

@@ -17,14 +17,17 @@ const SUNDAY = "2026-08-16";
 const FRIDAY = "2026-08-21";
 const SATURDAY = "2026-08-22";
 
+function trainer(id: string, name: string) {
+  return { id: `link-${id}-${name}`, trainer_id: id, trainer_name: name, order_index: 0 };
+}
+
 function band(overrides: Partial<WeeklyBand> = {}): WeeklyBand {
   return {
     id: crypto.randomUUID(),
     weekday: 0,
     start_time: "15:00:00",
     end_time: "18:00:00",
-    trainer_id: LIDOR,
-    trainer_name: "לידור",
+    trainers: [trainer(LIDOR, "לידור")],
     location_he: "סטודיו",
     branch_id: null,
     label_he: null,
@@ -61,15 +64,15 @@ function exception(overrides: Partial<WeeklyException> = {}): WeeklyException {
 describe("deriveOnDuty", () => {
   test("keeps only the bands for that date's weekday", () => {
     const bands = [
-      band({ weekday: 0, trainer_name: "לידור" }),
-      band({ weekday: 1, trainer_name: "דין" }),
+      band({ weekday: 0, trainers: [trainer(LIDOR, "לידור")] }),
+      band({ weekday: 1, trainers: [trainer(LIDOR, "דין")] }),
     ];
 
     const onDuty = deriveOnDuty(SUNDAY, bands, []);
 
     expect(onDuty.weekday).toBe(0);
     expect(onDuty.bands).toHaveLength(1);
-    expect(onDuty.bands[0].trainerName).toBe("לידור");
+    expect(onDuty.bands[0].trainers[0].name).toBe("לידור");
   });
 
   test("trims the DB's HH:MM:SS down to HH:MM", () => {
@@ -87,26 +90,26 @@ describe("deriveOnDuty", () => {
 
   test("separates standby bands from working ones", () => {
     const bands = [
-      band({ trainer_id: LIDOR, trainer_name: "לידור" }),
-      band({ trainer_id: NADAV, trainer_name: "נדב", is_standby: true }),
+      band({ trainers: [trainer(LIDOR, "לידור")] }),
+      band({ trainers: [trainer(NADAV, "נדב")], is_standby: true }),
     ];
 
     const onDuty = deriveOnDuty(SUNDAY, bands, []);
 
-    expect(onDuty.bands.map((b) => b.trainerName)).toEqual(["לידור"]);
-    expect(onDuty.standby.map((b) => b.trainerName)).toEqual(["נדב"]);
+    expect(onDuty.bands.map((b) => b.trainers[0].name)).toEqual(["לידור"]);
+    expect(onDuty.standby.map((b) => b.trainers[0].name)).toEqual(["נדב"]);
   });
 
   test("orders bands by start time, then trainer name", () => {
     const bands = [
-      band({ start_time: "18:00:00", trainer_id: GIMI, trainer_name: "גימי" }),
-      band({ start_time: "15:00:00", trainer_id: NADAV, trainer_name: "נדב" }),
-      band({ start_time: "15:00:00", trainer_id: LIDOR, trainer_name: "לידור" }),
+      band({ start_time: "18:00:00", trainers: [trainer(GIMI, "גימי")] }),
+      band({ start_time: "15:00:00", trainers: [trainer(NADAV, "נדב")] }),
+      band({ start_time: "15:00:00", trainers: [trainer(LIDOR, "לידור")] }),
     ];
 
     const onDuty = deriveOnDuty(SUNDAY, bands, []);
 
-    expect(onDuty.bands.map((b) => b.trainerName)).toEqual([
+    expect(onDuty.bands.map((b) => b.trainers[0].name)).toEqual([
       "לידור",
       "נדב",
       "גימי",
@@ -117,27 +120,61 @@ describe("deriveOnDuty", () => {
     const bands = [
       band({ start_time: "08:00:00", end_time: "11:00:00" }),
       band({ start_time: "15:00:00" }),
-      band({ trainer_id: NADAV, trainer_name: "נדב" }),
+      band({ trainers: [trainer(NADAV, "נדב")] }),
     ];
 
     const onDuty = deriveOnDuty(SUNDAY, bands, [
       exception({ trainer_id: LIDOR, note_he: "חופשה" }),
     ]);
 
-    expect(onDuty.bands.map((b) => b.trainerName)).toEqual(["נדב"]);
+    expect(onDuty.bands.map((b) => b.trainers[0].name)).toEqual(["נדב"]);
     expect(onDuty.absences).toEqual([
       { trainerId: LIDOR, trainerName: "לידור", noteHe: "חופשה" },
     ]);
   });
 
   test("an absence also removes that trainer's standby band", () => {
-    const bands = [band({ trainer_id: NADAV, trainer_name: "נדב", is_standby: true })];
+    const bands = [band({ trainers: [trainer(NADAV, "נדב")], is_standby: true })];
 
     const onDuty = deriveOnDuty(SUNDAY, bands, [
       exception({ trainer_id: NADAV, trainer_name: "נדב" }),
     ]);
 
     expect(onDuty.standby).toHaveLength(0);
+  });
+
+  test("a band keeps working when only one of its trainers is away", () => {
+    const onDuty = deriveOnDuty(
+      SUNDAY,
+      [band({ trainers: [trainer(LIDOR, "לידור"), trainer(NADAV, "נדב")] })],
+      [exception({ trainer_id: LIDOR, trainer_name: "לידור" })],
+    );
+
+    expect(onDuty.bands).toHaveLength(1);
+    expect(onDuty.bands[0].trainers.map((t) => t.name)).toEqual(["לידור", "נדב"]);
+  });
+
+  test("a band drops only when every one of its trainers is away", () => {
+    const onDuty = deriveOnDuty(
+      SUNDAY,
+      [band({ trainers: [trainer(LIDOR, "לידור"), trainer(NADAV, "נדב")] })],
+      [
+        exception({ trainer_id: LIDOR, trainer_name: "לידור" }),
+        exception({ trainer_id: NADAV, trainer_name: "נדב" }),
+      ],
+    );
+
+    expect(onDuty.bands).toHaveLength(0);
+  });
+
+  test("an absence is reported when the trainer is any of a band's trainers", () => {
+    const onDuty = deriveOnDuty(
+      SUNDAY,
+      [band({ trainers: [trainer(LIDOR, "לידור"), trainer(NADAV, "נדב")] })],
+      [exception({ trainer_id: NADAV, trainer_name: "נדב", note_he: "חופשה" })],
+    );
+
+    expect(onDuty.absences.map((a) => a.trainerName)).toEqual(["נדב"]);
   });
 
   test("an absence for another date leaves the day untouched", () => {
@@ -171,7 +208,7 @@ describe("deriveOnDuty", () => {
 
     const onDuty = deriveOnDuty(SUNDAY, [band()], [extra]);
 
-    const added = onDuty.bands.find((b) => b.trainerName === "אביעד");
+    const added = onDuty.bands.find((b) => b.trainers[0].name === "אביעד");
     expect(added).toMatchObject({
       source: "exception",
       startTime: "16:50",
@@ -197,7 +234,7 @@ describe("deriveOnDuty", () => {
     // לידור is out, נדב covers: one absence plus one extra.
     const onDuty = deriveOnDuty(
       SUNDAY,
-      [band({ trainer_id: LIDOR, trainer_name: "לידור" })],
+      [band({ trainers: [trainer(LIDOR, "לידור")] })],
       [
         exception({ trainer_id: LIDOR, trainer_name: "לידור", note_he: "מילואים" }),
         exception({
@@ -210,7 +247,7 @@ describe("deriveOnDuty", () => {
       ],
     );
 
-    expect(onDuty.bands.map((b) => b.trainerName)).toEqual(["נדב"]);
+    expect(onDuty.bands.map((b) => b.trainers[0].name)).toEqual(["נדב"]);
     expect(onDuty.absences[0].noteHe).toBe("מילואים");
   });
 
@@ -218,7 +255,7 @@ describe("deriveOnDuty", () => {
     // The admin wrote both on purpose: off the standing week, on for one hour.
     const onDuty = deriveOnDuty(
       SUNDAY,
-      [band({ trainer_id: LIDOR })],
+      [band({ trainers: [trainer(LIDOR, "לידור")] })],
       [
         exception({ trainer_id: LIDOR }),
         exception({
@@ -252,14 +289,14 @@ describe("deriveOnDuty", () => {
 
   test("Friday derives its own bands", () => {
     const bands = [
-      band({ weekday: 5, start_time: "09:00:00", end_time: "15:00:00", trainer_name: "דין" }),
-      band({ weekday: 0, trainer_name: "לידור" }),
+      band({ weekday: 5, start_time: "09:00:00", end_time: "15:00:00", trainers: [trainer(LIDOR, "דין")] }),
+      band({ weekday: 0, trainers: [trainer(LIDOR, "לידור")] }),
     ];
 
     const onDuty = deriveOnDuty(FRIDAY, bands, []);
 
     expect(onDuty.weekday).toBe(5);
-    expect(onDuty.bands.map((b) => b.trainerName)).toEqual(["דין"]);
+    expect(onDuty.bands.map((b) => b.trainers[0].name)).toEqual(["דין"]);
   });
 
   test("Saturday yields nothing", () => {
@@ -280,24 +317,22 @@ describe("trainersAtTime", () => {
     const onDuty = deriveOnDuty(
       SUNDAY,
       [
-        band({ start_time: "15:00:00", end_time: "18:00:00", trainer_name: "לידור" }),
+        band({ start_time: "15:00:00", end_time: "18:00:00", trainers: [trainer(LIDOR, "לידור")] }),
         band({
           start_time: "15:00:00",
           end_time: "18:00:00",
-          trainer_id: NADAV,
-          trainer_name: "נדב",
+          trainers: [trainer(NADAV, "נדב")],
         }),
         band({
           start_time: "18:00:00",
           end_time: null,
-          trainer_id: GIMI,
-          trainer_name: "גימי",
+          trainers: [trainer(GIMI, "גימי")],
         }),
       ],
       [],
     );
 
-    expect(trainersAtTime(onDuty, "16:00").map((b) => b.trainerName)).toEqual([
+    expect(trainersAtTime(onDuty, "16:00").map((b) => b.trainers[0].name)).toEqual([
       "לידור",
       "נדב",
     ]);
@@ -307,18 +342,17 @@ describe("trainersAtTime", () => {
     const onDuty = deriveOnDuty(
       SUNDAY,
       [
-        band({ start_time: "15:00:00", end_time: "18:00:00", trainer_name: "לידור" }),
+        band({ start_time: "15:00:00", end_time: "18:00:00", trainers: [trainer(LIDOR, "לידור")] }),
         band({
           start_time: "18:00:00",
           end_time: null,
-          trainer_id: GIMI,
-          trainer_name: "גימי",
+          trainers: [trainer(GIMI, "גימי")],
         }),
       ],
       [],
     );
 
-    expect(trainersAtTime(onDuty, "18:00").map((b) => b.trainerName)).toEqual([
+    expect(trainersAtTime(onDuty, "18:00").map((b) => b.trainers[0].name)).toEqual([
       "גימי",
     ]);
   });
@@ -326,7 +360,7 @@ describe("trainersAtTime", () => {
   test("an open-ended band covers every later hour", () => {
     const onDuty = deriveOnDuty(
       SUNDAY,
-      [band({ start_time: "18:00:00", end_time: null, trainer_name: "גימי" })],
+      [band({ start_time: "18:00:00", end_time: null, trainers: [trainer(LIDOR, "גימי")] })],
       [],
     );
 
@@ -344,13 +378,13 @@ describe("trainersAtTime", () => {
     const onDuty = deriveOnDuty(
       SUNDAY,
       [
-        band({ trainer_id: NADAV, trainer_name: "נדב", is_standby: true }),
-        band({ trainer_name: "לידור" }),
+        band({ trainers: [trainer(NADAV, "נדב")], is_standby: true }),
+        band({ trainers: [trainer(LIDOR, "לידור")] }),
       ],
       [],
     );
 
-    expect(trainersAtTime(onDuty, "16:00").map((b) => b.trainerName)).toEqual([
+    expect(trainersAtTime(onDuty, "16:00").map((b) => b.trainers[0].name)).toEqual([
       "לידור",
     ]);
   });

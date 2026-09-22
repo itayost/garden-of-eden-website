@@ -20,13 +20,16 @@ function roster(names: string[]): SlotTrainee[] {
   }));
 }
 
+function trainer(id: string, name: string) {
+  return { id: `link-${id}-${name}`, trainer_id: id, trainer_name: name, order_index: 0 };
+}
+
 function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
   return {
     id: "00000000-0000-0000-0000-000000000001",
     schedule_date: "2026-08-06",
     start_time: "15:00:00",
-    trainer_id: "00000000-0000-0000-0000-000000000002",
-    trainer_name: "דין",
+    trainers: [trainer("00000000-0000-0000-0000-000000000002", "דין")],
     focus_he: "זריזות מהירות טכניקה עם כדור",
     location_he: null,
     branch_id: null,
@@ -45,6 +48,14 @@ function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
 }
 
 describe("buildScheduleWhatsAppText", () => {
+  test("lists every trainer on the hour", () => {
+    const result = buildScheduleWhatsAppText([
+      slot({ trainers: [trainer("00000000-0000-0000-0000-000000000002", "דין"), trainer("11111111-1111-4111-8111-111111111111", "לידור")] }),
+    ]);
+
+    expect(result).toContain("דין, לידור");
+  });
+
   test("renders a single slot: time header, trainer line, focus line", () => {
     const result = buildScheduleWhatsAppText([slot()]);
 
@@ -63,10 +74,10 @@ describe("buildScheduleWhatsAppText", () => {
 
   test("groups two slots under one time header, blank line between them", () => {
     const result = buildScheduleWhatsAppText([
-      slot({ id: "a", trainer_name: "דין", focus_he: null, trainees: roster(["נדב", "רפאל"]) }),
+      slot({ id: "a", trainers: [trainer("00000000-0000-0000-0000-000000000002", "דין")], focus_he: null, trainees: roster(["נדב", "רפאל"]) }),
       slot({
         id: "b",
-        trainer_name: "לידור",
+        trainers: [trainer("00000000-0000-0000-0000-000000000002", "לידור")],
         focus_he: "כוח כללי אתלטיות",
         trainees: roster(["יאיר", "אלון"]),
       }),
@@ -79,7 +90,7 @@ describe("buildScheduleWhatsAppText", () => {
 
   test("sorts times ascending and separates time groups with a blank line", () => {
     const result = buildScheduleWhatsAppText([
-      slot({ id: "b", start_time: "16:00:00", trainer_name: "סלבה", focus_he: null, trainees: roster(["אייל"]) }),
+      slot({ id: "b", start_time: "16:00:00", trainers: [trainer("00000000-0000-0000-0000-000000000002", "סלבה")], focus_he: null, trainees: roster(["אייל"]) }),
       slot({ id: "a", start_time: "15:00:00", focus_he: null, trainees: roster(["נועם"]) }),
     ]);
 
@@ -88,7 +99,7 @@ describe("buildScheduleWhatsAppText", () => {
 
   test("renders a trainer-less slot as names only", () => {
     const result = buildScheduleWhatsAppText([
-      slot({ trainer_id: null, trainer_name: null, focus_he: null, trainees: roster(["אדם", "מארק"]) }),
+      slot({ trainers: [], focus_he: null, trainees: roster(["אדם", "מארק"]) }),
     ]);
 
     expect(result).toBe("15:00\nאדם, מארק");
@@ -97,8 +108,7 @@ describe("buildScheduleWhatsAppText", () => {
   test("keeps the location on a trainer-less slot", () => {
     const result = buildScheduleWhatsAppText([
       slot({
-        trainer_id: null,
-        trainer_name: null,
+        trainers: [],
         location_he: "מגרש",
         focus_he: null,
         trainees: roster(["אדם", "מארק"]),
@@ -158,7 +168,7 @@ describe("buildScheduleWhatsAppText", () => {
 
   test("renders a rosterless, trainer-less slot as the focus alone", () => {
     const result = buildScheduleWhatsAppText([
-      slot({ trainer_id: null, trainer_name: null, trainees: [] }),
+      slot({ trainers: [], trainees: [] }),
     ]);
 
     expect(result).toBe("15:00\nזריזות מהירות טכניקה עם כדור");
@@ -167,8 +177,7 @@ describe("buildScheduleWhatsAppText", () => {
   test("renders a slot with nothing but an hour as just the hour", () => {
     const result = buildScheduleWhatsAppText([
       slot({
-        trainer_id: null,
-        trainer_name: null,
+        trainers: [],
         focus_he: null,
         trainees: [],
       }),

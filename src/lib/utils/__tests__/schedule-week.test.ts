@@ -20,13 +20,16 @@ const WEDNESDAY = "2026-08-19";
 const FRIDAY = "2026-08-21";
 const SATURDAY = "2026-08-22";
 
+function trainer(id: string, name: string) {
+  return { id: `link-${id}-${name}`, trainer_id: id, trainer_name: name, order_index: 0 };
+}
+
 function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
   return {
     id: "slot-1",
     schedule_date: SUNDAY,
     start_time: "17:00:00",
-    trainer_id: LIDOR,
-    trainer_name: "לידור",
+    trainers: [trainer(LIDOR, "לידור")],
     focus_he: null,
     location_he: "סטודיו",
     branch_id: null,
@@ -50,8 +53,7 @@ function band(overrides: Partial<WeeklyBand> = {}): WeeklyBand {
     weekday: 0,
     start_time: "15:00:00",
     end_time: "18:00:00",
-    trainer_id: LIDOR,
-    trainer_name: "לידור",
+    trainers: [trainer(LIDOR, "לידור")],
     location_he: "סטודיו",
     branch_id: null,
     label_he: null,
@@ -257,7 +259,7 @@ describe("buildWeek", () => {
       ],
     });
     expect(week.days[0].onDuty.bands).toHaveLength(2);
-    expect(week.days[0].extras.map((b) => b.trainerId)).toEqual([NADAV]);
+    expect(week.days[0].extras.map((b) => b.trainers[0]?.id)).toEqual([NADAV]);
   });
 
   test("exposes that date's absences", () => {
@@ -299,7 +301,7 @@ describe("buildWeek", () => {
   });
 
   test("Friday derives its own weekday's bands", () => {
-    const week = build({ bands: [band({ weekday: 5, trainer_id: NADAV })] });
+    const week = build({ bands: [band({ weekday: 5, trainers: [trainer(NADAV, "נדב")] })] });
     expect(week.days[0].onDuty.bands).toHaveLength(0);
     expect(week.days[5].date).toBe(FRIDAY);
     expect(week.days[5].onDuty.bands).toHaveLength(1);

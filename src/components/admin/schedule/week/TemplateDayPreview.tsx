@@ -12,7 +12,7 @@ interface TemplateDayPreviewProps {
 }
 
 function StretchLine({ band, muted }: { band: OnDutyBand; muted?: boolean }) {
-  const palette = trainerColor(band.trainerId);
+  const palette = trainerColor(band.trainers[0]?.id ?? null);
 
   return (
     <li className={cn("flex items-baseline gap-1.5", muted && "opacity-70")}>
@@ -20,7 +20,7 @@ function StretchLine({ band, muted }: { band: OnDutyBand; muted?: boolean }) {
         {onDutyTimeLabel(band)}
       </span>
       <span className={cn("truncate font-medium", palette.text)}>
-        {band.trainerName}
+        {band.trainers.map((t) => t.name).join(", ")}
       </span>
       {band.labelHe && (
         <span className="truncate text-muted-foreground">· {band.labelHe}</span>

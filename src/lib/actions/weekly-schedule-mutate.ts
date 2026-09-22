@@ -66,6 +66,75 @@ async function resolveActiveTrainerName(
   return { name: data.full_name ?? "מאמן" };
 }
 
+/**
+ * The same lookup for a band's whole list, in the order the admin picked.
+ *
+ * Keeps the singular version's is_active filter: unlike a slot, a band is the
+ * standing week, and putting a deactivated trainer on it going forward is a
+ * mistake rather than a state to preserve.
+ */
+async function resolveActiveTrainerNames(
+  trainerIds: readonly string[],
+): Promise<{ names: { trainerId: string; name: string }[] } | { error: string }> {
+  if (trainerIds.length === 0) return { names: [] };
+
+  const { data, error } = await createAdminClient()
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", [...trainerIds])
+    .in("role", ["trainer", "admin"])
+    .eq("is_active", true)
+    .is("deleted_at", null);
+
+  if (error) {
+    console.error("Resolve trainer names error:", error);
+    return { error: "שגיאה באימות המאמן" };
+  }
+
+  const byId = new Map((data ?? []).map((row) => [row.id, row.full_name ?? "מאמן"]));
+  if (trainerIds.some((id) => !byId.has(id))) {
+    return { error: "אחד המאמנים שנבחרו אינו קיים או אינו פעיל" };
+  }
+
+  // The admin's order is the order on the card, so it survives the query.
+  return { names: trainerIds.map((id) => ({ trainerId: id, name: byId.get(id)! })) };
+}
+
+/** The band's trainers, replaced wholesale. Same reasoning as the slot's. */
+async function replaceBandTrainers(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  bandId: string,
+  names: readonly { trainerId: string; name: string }[],
+): Promise<{ error: string | null }> {
+  const { error: deleteError } = await typedFrom(supabase, "weekly_schedule_band_trainers")
+    .delete()
+    .eq("band_id", bandId);
+  if (deleteError) {
+    console.error("Clear band trainers error:", deleteError);
+    return { error: "שגיאה בשמירת המאמנים" };
+  }
+
+  if (names.length === 0) return { error: null };
+
+  const { error: insertError } = await typedFrom(
+    supabase,
+    "weekly_schedule_band_trainers",
+  ).insert(
+    names.map((entry, index) => ({
+      band_id: bandId,
+      trainer_id: entry.trainerId,
+      trainer_name: entry.name,
+      order_index: index,
+    })),
+  );
+  if (insertError) {
+    console.error("Insert band trainers error:", insertError);
+    return { error: "שגיאה בשמירת המאמנים" };
+  }
+
+  return { error: null };
+}
+
 export async function createBandAction(input: BandInput): Promise<BandResult> {
   const { error: authError, user } = await verifyAdmin();
   if (authError) return { error: authError };
@@ -78,10 +147,10 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
     };
   }
 
-  const { branchId, weekday, startTime, endTime, trainerId, location, label, isStandby, maxTrainees, isBookable } =
+  const { branchId, weekday, startTime, endTime, trainerIds, location, label, isStandby, maxTrainees, isBookable } =
     validated.data;
 
-  const trainerResult = await resolveActiveTrainerName(trainerId);
+  const trainerResult = await resolveActiveTrainerNames(trainerIds);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
   const branchCheck = await assertBranchWritable(branchId);
@@ -95,8 +164,6 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
       weekday,
       start_time: startTime,
       end_time: endTime,
-      trainer_id: trainerId,
-      trainer_name: trainerResult.name,
       location_he: location,
       label_he: label,
       is_standby: isStandby,
@@ -110,6 +177,14 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
   if (error || !created) {
     console.error("Create band error:", error);
     return { error: "שגיאה ביצירת הרצועה" };
+  }
+
+  const trainersWritten = await replaceBandTrainers(supabase, created.id, trainerResult.names);
+  if (trainersWritten.error) {
+    // A band whose trainers did not land would read as unstaffed on the
+    // standing week, which is not the band the admin described.
+    await typedFrom(supabase, "weekly_schedule_bands").delete().eq("id", created.id);
+    return { error: trainersWritten.error };
   }
 
   revalidateScheduleSurfaces();
@@ -131,7 +206,7 @@ export async function updateBandAction(
     };
   }
 
-  const { branchId, bandId, weekday, startTime, endTime, trainerId, location, label, isStandby, maxTrainees, isBookable } =
+  const { branchId, bandId, weekday, startTime, endTime, trainerIds, location, label, isStandby, maxTrainees, isBookable } =
     validated.data;
   const supabase = await createClient();
 
@@ -144,7 +219,7 @@ export async function updateBandAction(
 
   if (!existing) return { error: "הרצועה לא נמצאה" };
 
-  const trainerResult = await resolveActiveTrainerName(trainerId);
+  const trainerResult = await resolveActiveTrainerNames(trainerIds);
   if ("error" in trainerResult) return { error: trainerResult.error };
 
   const branchCheck = await assertBranchWritable(branchId);
@@ -156,8 +231,6 @@ export async function updateBandAction(
       weekday,
       start_time: startTime,
       end_time: endTime,
-      trainer_id: trainerId,
-      trainer_name: trainerResult.name,
       location_he: location,
       label_he: label,
       is_standby: isStandby,
@@ -172,6 +245,9 @@ export async function updateBandAction(
     console.error("Update band error:", error);
     return { error: "שגיאה בעדכון הרצועה" };
   }
+
+  const trainersWritten = await replaceBandTrainers(supabase, bandId, trainerResult.names);
+  if (trainersWritten.error) return { error: trainersWritten.error };
 
   // Slots already projected from this band keep their time and trainer (a
   // built day is a record), but they stop taking self-bookings the moment

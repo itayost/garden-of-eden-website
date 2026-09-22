@@ -17,22 +17,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { TraineeSearch } from "./TraineeSearch";
 import { cn } from "@/lib/utils";
 import { createSlotAction, updateSlotAction } from "@/lib/actions/daily-schedule";
+import { TrainerCheckboxGroup } from "@/components/admin/schedule/TrainerCheckboxGroup";
 import { trainersAtTime } from "@/lib/utils/weekly-schedule";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { OnDuty } from "@/types/weekly-schedule";
-
-const NO_TRAINER_VALUE = "__none__";
 
 /** The academy's operating hours, from the real daily schedule. */
 const HOUR_PRESETS = ["15:00", "16:00", "17:00", "18:00", "19:00"];
@@ -43,16 +35,19 @@ const DEFAULT_START_TIME = "15:00";
  * The distinct trainers the weekly schedule puts on this hour.
  *
  * Deduplicated by trainer: someone covering two overlapping stretches is still
- * one choice, and offering their name twice would read as a bug.
+ * one choice, and offering their name twice would read as a bug. A stretch can
+ * carry several trainers now, so this flattens across them.
  */
 function suggestTrainers(onDuty: OnDuty | null, time: string) {
   if (!onDuty) return [];
   const seen = new Set<string>();
-  return trainersAtTime(onDuty, time).filter((band) => {
-    if (seen.has(band.trainerId)) return false;
-    seen.add(band.trainerId);
-    return true;
-  });
+  return trainersAtTime(onDuty, time)
+    .flatMap((band) => band.trainers)
+    .filter((trainer) => {
+      if (!trainer.id || seen.has(trainer.id)) return false;
+      seen.add(trainer.id);
+      return true;
+    });
 }
 
 interface RosterEntry {
@@ -100,12 +95,17 @@ export function SlotFormDialog({
     : DEFAULT_START_TIME;
 
   const [startTime, setStartTime] = useState(initialStartTime);
-  const [trainerId, setTrainerId] = useState<string | null>(() => {
+  const [trainerIds, setTrainerIds] = useState<string[]>(() => {
     // Editing keeps whatever the slot already says, including "no trainer" —
     // the week must never silently rewrite a decision someone made.
-    if (slot) return slot.trainer_id;
-    const suggested = suggestTrainers(onDuty, initialStartTime);
-    return suggested.length === 1 ? suggested[0].trainerId : null;
+    if (slot) {
+      return [...slot.trainers]
+        .sort((a, b) => a.order_index - b.order_index)
+        .flatMap((t) => (t.trainer_id ? [t.trainer_id] : []));
+    }
+    // Everyone the standing week puts on this hour, which is right far more
+    // often than empty is. Still only a default; the picker is right there.
+    return suggestTrainers(onDuty, initialStartTime).flatMap((t) => (t.id ? [t.id] : []));
   });
   // Suggestions stop the moment the user expresses a preference. Edit mode
   // counts as already-decided.
@@ -126,12 +126,12 @@ export function SlotFormDialog({
     setStartTime(next);
     if (trainerTouched) return;
     const suggested = suggestTrainers(onDuty, next);
-    setTrainerId(suggested.length === 1 ? suggested[0].trainerId : null);
+    setTrainerIds(suggested.flatMap((t) => (t.id ? [t.id] : [])));
   };
 
-  const chooseTrainer = (next: string | null) => {
+  const chooseTrainers = (next: string[]) => {
     setTrainerTouched(true);
-    setTrainerId(next);
+    setTrainerIds(next);
   };
   const [focus, setFocus] = useState(slot?.focus_he ?? "");
   const [maxTrainees, setMaxTrainees] = useState(
@@ -189,7 +189,7 @@ export function SlotFormDialog({
         branchId,
         scheduleDate: slot?.schedule_date ?? date,
         startTime,
-        trainerId,
+        trainerIds,
         focus,
         location,
         maxTrainees: maxTrainees === "" ? null : Number(maxTrainees),
@@ -278,46 +278,27 @@ export function SlotFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="slot-trainer">מאמן</Label>
-              {/* Who the weekly schedule puts on this hour — one tap, and the
-                  full list stays below for anything the week did not plan. */}
+              <Label htmlFor="slot-trainer">מאמנים</Label>
+              {/* Who the weekly schedule puts on this hour — one tap adds them
+                  all, and the full list stays below for anything the week did
+                  not plan. */}
               {suggestedTrainers.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {suggestedTrainers.map((band) => (
-                    <button
-                      key={band.trainerId}
-                      type="button"
-                      onClick={() => chooseTrainer(band.trainerId)}
-                      className={cn(
-                        "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
-                        trainerId === band.trainerId
-                          ? "border-forest bg-forest text-cream"
-                          : "border-border text-muted-foreground hover:bg-muted",
-                      )}
-                    >
-                      {band.trainerName}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    chooseTrainers(suggestedTrainers.flatMap((t) => (t.id ? [t.id] : [])))
+                  }
+                  className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  לפי השבוע הקבוע: {suggestedTrainers.map((t) => t.name).join(", ")}
+                </button>
               )}
-              <Select
-                value={trainerId ?? NO_TRAINER_VALUE}
-                onValueChange={(value) =>
-                  chooseTrainer(value === NO_TRAINER_VALUE ? null : value)
-                }
-              >
-                <SelectTrigger id="slot-trainer">
-                  <SelectValue placeholder="ללא מאמן" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_TRAINER_VALUE}>ללא מאמן</SelectItem>
-                  {trainers.map((trainer) => (
-                    <SelectItem key={trainer.id} value={trainer.id}>
-                      {trainer.full_name ?? "ללא שם"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <TrainerCheckboxGroup
+                idPrefix="slot-trainer"
+                trainers={trainers}
+                value={trainerIds}
+                onChange={chooseTrainers}
+              />
             </div>
           </div>
 

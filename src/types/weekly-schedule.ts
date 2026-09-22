@@ -11,6 +11,8 @@
  */
 
 /** 0 = Sunday .. 6 = Saturday, matching getIsraelTime().dayOfWeek. */
+import type { SlotTrainer } from "@/types/schedule";
+
 export const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 export type Weekday = (typeof WEEKDAYS)[number];
 
@@ -42,8 +44,8 @@ export interface WeeklyBand {
   start_time: string;
   /** Null = open-ended ("18:00 והלאה") — runs to the end of the day. */
   end_time: string | null;
-  trainer_id: string;
-  trainer_name: string;
+  /** Everyone on this stretch, in order. */
+  trainers: SlotTrainer[];
   location_he: string | null;
   branch_id: string | null;
   label_he: string | null;
@@ -91,8 +93,8 @@ export interface OnDutyBand {
   startTime: string;
   /** HH:MM, or null for an open-ended stretch. */
   endTime: string | null;
-  trainerId: string;
-  trainerName: string;
+  /** Everyone on this stretch. An exception always yields exactly one. */
+  trainers: { id: string | null; name: string }[];
   locationHe: string | null;
   labelHe: string | null;
   isStandby: boolean;

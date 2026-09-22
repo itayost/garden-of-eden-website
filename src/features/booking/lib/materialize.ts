@@ -61,8 +61,6 @@ export async function materializeBookableSlots(
     band_id: band.id,
     schedule_date: date,
     start_time: band.start_time,
-    trainer_id: band.trainer_id,
-    trainer_name: band.trainer_name,
     focus_he: band.label_he,
     location_he: band.location_he,
     max_trainees: band.max_trainees,
@@ -74,11 +72,39 @@ export async function materializeBookableSlots(
   // unique index on (band_id, schedule_date) makes the loser a no-op.
   const { data, error } = await typedFrom(db, "daily_schedule_slots")
     .upsert(rows, { onConflict: "band_id,schedule_date", ignoreDuplicates: true })
-    .select("id");
+    .select("id, band_id");
   if (error) {
     console.error(`[materialize] insert failed for branch ${branchId}:`, error.message);
     return { inserted: 0, error: error.message };
   }
+
+  // A projected slot inherits the band's whole staffing, in the band's order.
+  // Only the rows this run actually created are in `data` — the losers of the
+  // upsert race are absent, so their trainers are not written twice.
+  const bandsById = new Map(bands.map((band) => [band.id, band]));
+  const trainerRows = ((data ?? []) as { id: string; band_id: string | null }[]).flatMap(
+    (slot) =>
+      [...(bandsById.get(slot.band_id ?? "")?.trainers ?? [])]
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((trainer, index) => ({
+          slot_id: slot.id,
+          trainer_id: trainer.trainer_id,
+          trainer_name: trainer.trainer_name,
+          order_index: index,
+        })),
+  );
+  if (trainerRows.length > 0) {
+    const { error: trainerError } = await typedFrom(
+      db,
+      "daily_schedule_slot_trainers",
+    ).insert(trainerRows);
+    // The slots are already on the board; a failed staffing write is logged and
+    // repaired by editing the slot, not by unwinding the projection.
+    if (trainerError) {
+      console.error(`[materialize] trainers failed for branch ${branchId}:`, trainerError.message);
+    }
+  }
+
   return { inserted: data?.length ?? 0, error: null };
 }
 

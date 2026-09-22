@@ -34,7 +34,7 @@ import {
 import { getRosterSessionsAction } from "@/lib/actions/training-sessions";
 import type { RosterSession } from "@/lib/schedule/roster-exercise";
 import { cn } from "@/lib/utils";
-import { trainerColor } from "@/lib/utils/trainer-color";
+import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { StaffPlanBadge } from "@/types/plans";
 import type { ScheduleSlot, SlotTrainee } from "@/types/schedule";
 
@@ -114,7 +114,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
 
   if (!slot) return null;
 
-  const palette = trainerColor(slot.trainer_id);
+  const palette = trainerColor(firstTrainerId(slot.trainers));
   const time = slot.start_time.slice(0, 5);
   const overCapacity = slot.max_trainees !== null && active.length > slot.max_trainees;
 
@@ -189,7 +189,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
               <div className="min-w-0">
                 <DialogTitle className="flex flex-wrap items-center gap-2">
                   <span className="font-display tabular-nums">{time}</span>
-                  <span className={cn("font-extrabold", palette.text)}>{slot.trainer_name ?? "ללא מאמן"}</span>
+                  <span className={cn("font-extrabold", palette.text)}>{trainerNames(slot.trainers) || "ללא מאמן"}</span>
                 </DialogTitle>
                 <DialogDescription className="mt-1 flex flex-wrap items-center gap-2">
                   {slot.location_he && (
@@ -303,7 +303,7 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
           <AlertDialogHeader>
             <AlertDialogTitle>מחיקת סלוט</AlertDialogTitle>
             <AlertDialogDescription>
-              הסלוט של {slot.trainer_name ?? "ללא מאמן"} ב-{time} יימחק לצמיתות, כולל רשימת המתאמנים.
+              הסלוט של {trainerNames(slot.trainers) || "ללא מאמן"} ב-{time} יימחק לצמיתות, כולל רשימת המתאמנים.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

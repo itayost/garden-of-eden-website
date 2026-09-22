@@ -12,6 +12,7 @@
  * Blank line between slots and between time groups.
  */
 
+import { trainerNames } from "@/lib/utils/trainer-color";
 import type { ScheduleSlot } from "@/types/schedule";
 
 /** Postgres TIME serializes as HH:MM:SS; the message shows HH:MM. */
@@ -30,7 +31,7 @@ function formatSlot(slot: ScheduleSlot): string {
   // The location renders even without a trainer — the admin entered it, and
   // "which field the group is on" matters regardless of who takes them.
   const header = [
-    slot.trainer_name,
+    trainerNames(slot.trainers) || null,
     slot.location_he ? `(${slot.location_he})` : null,
   ]
     .filter(Boolean)

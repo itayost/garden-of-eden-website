@@ -29,13 +29,16 @@ function entry(overrides: Partial<SlotTrainee> = {}): SlotTrainee {
   };
 }
 
+function trainer(id: string, name: string) {
+  return { id: `link-${id}-${name}`, trainer_id: id, trainer_name: name, order_index: 0 };
+}
+
 function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
   return {
     id: "slot-1",
     schedule_date: "2026-09-16",
     start_time: "17:00:00",
-    trainer_id: LIDOR,
-    trainer_name: "לידור",
+    trainers: [trainer(LIDOR, "לידור")],
     focus_he: null,
     location_he: "סטודיו",
     branch_id: null,
@@ -111,11 +114,11 @@ describe("buildSessionWorklist", () => {
     const groups = buildSessionWorklist(
       [
         slot({ id: "late", start_time: "18:00:00" }),
-        slot({ id: "nadav", start_time: "17:00:00", trainer_name: "נדב" }),
+        slot({ id: "nadav", start_time: "17:00:00", trainers: [trainer(NADAV, "נדב")] }),
         slot({
           id: "lidor",
           start_time: "17:00:00",
-          trainer_name: "לידור",
+          trainers: [trainer(LIDOR, "לידור")],
           trainees: [
             entry({ id: "second", trainee_id: OMER, order_index: 1 }),
             entry({ id: "first", trainee_id: NOAM, order_index: 0 }),
@@ -199,6 +202,30 @@ describe("buildSessionWorklist", () => {
     expect(groups[1].rows[0].status).toBe("completed");
   });
 
+  test("sorts two slots at the same hour by their first trainer's name", () => {
+    const groups = buildSessionWorklist(
+      [
+        slot({ id: "n", start_time: "17:00:00", trainers: [trainer(NADAV, "נדב")] }),
+        slot({ id: "l", start_time: "17:00:00", trainers: [trainer(LIDOR, "לידור")] }),
+      ],
+      {},
+    );
+
+    expect(groups.map((group) => group.slotId)).toEqual(["l", "n"]);
+  });
+
+  test("a slot with no trainers sorts as an empty name rather than throwing", () => {
+    const groups = buildSessionWorklist(
+      [
+        slot({ id: "named", start_time: "17:00:00", trainers: [trainer(LIDOR, "לידור")] }),
+        slot({ id: "none", start_time: "17:00:00", trainers: [] }),
+      ],
+      {},
+    );
+
+    expect(groups.map((group) => group.slotId)).toEqual(["none", "named"]);
+  });
+
   test("a trainee with nothing built is not custom", () => {
     const groups = buildSessionWorklist(
       [slot({ trainees: [entry({ trainee_id: NOAM })] })],
@@ -209,13 +236,30 @@ describe("buildSessionWorklist", () => {
 });
 
 describe("filterWorklist", () => {
+  test("'mine' matches a slot where I am the second trainer", () => {
+    const mine = buildSessionWorklist(
+      [
+        slot({
+          id: "shared",
+          trainers: [trainer(NADAV, "נדב"), trainer(LIDOR, "לידור")],
+          trainees: [entry({ trainee_id: NOAM })],
+        }),
+      ],
+      {},
+    );
+
+    expect(
+      filterWorklist(mine, { mineOnly: true, pendingOnly: false, currentUserId: LIDOR }),
+    ).toHaveLength(1);
+  });
+
   const groups = buildSessionWorklist(
     [
-      slot({ id: "mine", trainer_id: LIDOR, trainees: [entry({ id: "a", trainee_id: NOAM })] }),
+      slot({ id: "mine", trainers: [trainer(LIDOR, "לידור")], trainees: [entry({ id: "a", trainee_id: NOAM })] }),
       slot({
         id: "theirs",
         start_time: "18:00:00",
-        trainer_id: NADAV,
+        trainers: [trainer(NADAV, "נדב")],
         trainees: [entry({ id: "b", trainee_id: OMER })],
       }),
     ],

@@ -1,5 +1,6 @@
 "use server";
 
+import { trainerNames } from "@/lib/utils/trainer-color";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { israelMinutesOfDay } from "@/lib/utils/israel-time";
@@ -149,7 +150,7 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
       slotId: r.slot_id,
       date: r.schedule_date,
       time: r.start_time.slice(0, 5),
-      trainerName: r.trainer_name ?? "הצוות",
+      trainerName: trainerNames(r.trainers ?? []) || "הצוות",
       location: r.location_he,
       cancelState: cancelState(r.schedule_date, r.start_time, now),
       byStaff: r.source === "staff",
@@ -161,7 +162,7 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
       id: slot.id,
       date: slot.schedule_date,
       time: slot.start_time.slice(0, 5),
-      trainerName: slot.trainer_name ?? "הצוות",
+      trainerName: trainerNames(slot.trainers ?? []) || "הצוות",
       label: slot.focus_he,
       location: slot.location_he,
       seatsTaken: slot.seatsTaken,

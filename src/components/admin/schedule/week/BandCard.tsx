@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { deleteBandAction } from "@/lib/actions/weekly-schedule";
-import { trainerColor } from "@/lib/utils/trainer-color";
+import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { WeeklyBand } from "@/types/weekly-schedule";
 
 interface BandCardProps {
@@ -39,7 +39,7 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const palette = trainerColor(band.trainer_id);
+  const palette = trainerColor(firstTrainerId(band.trainers));
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -79,7 +79,7 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
             <div className="flex items-center gap-1.5">
               <span className={cn("h-2 w-2 shrink-0 rounded-full", palette.dot)} />
               <span className={cn("truncate text-sm font-bold", palette.text)}>
-                {band.trainer_name}
+                {trainerNames(band.trainers) || "ללא מאמן"}
               </span>
             </div>
 
@@ -118,7 +118,7 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
                 size="icon"
                 className="h-7 w-7"
                 onClick={onEdit}
-                aria-label={`עריכת הרצועה של ${band.trainer_name}`}
+                aria-label={`עריכת הרצועה של ${trainerNames(band.trainers) || "ללא מאמן"}`}
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
@@ -127,7 +127,7 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
                 size="icon"
                 className="h-7 w-7"
                 onClick={() => setConfirmOpen(true)}
-                aria-label={`מחיקת הרצועה של ${band.trainer_name}`}
+                aria-label={`מחיקת הרצועה של ${trainerNames(band.trainers) || "ללא מאמן"}`}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -141,7 +141,7 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>מחיקת רצועה</AlertDialogTitle>
             <AlertDialogDescription>
-              הרצועה של {band.trainer_name} ב-{bandTimeLabel(band)} תימחק
+              הרצועה של {trainerNames(band.trainers) || "ללא מאמן"} ב-{bandTimeLabel(band)} תימחק
               לצמיתות. לוחות יומיים שכבר נבנו לא ישתנו.
             </AlertDialogDescription>
           </AlertDialogHeader>
