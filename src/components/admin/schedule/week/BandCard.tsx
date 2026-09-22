@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { deleteBandAction } from "@/lib/actions/weekly-schedule";
+import { bandDeletionImpactAction, deleteBandAction } from "@/lib/actions/weekly-schedule";
 import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { WeeklyBand } from "@/types/weekly-schedule";
 
@@ -38,7 +38,20 @@ export function bandTimeLabel(band: WeeklyBand): string {
 export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [futureSlots, setFutureSlots] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  /**
+   * Deleting a stretch takes its future dated hours with it, so the dialog has
+   * to be able to say how many. Fetched on open: one query per confirmation
+   * rather than one per card on a week that may show dozens.
+   */
+  const openConfirm = async () => {
+    setFutureSlots(null);
+    setConfirmOpen(true);
+    const result = await bandDeletionImpactAction(band.id);
+    setFutureSlots("success" in result ? result.data.futureSlots : 0);
+  };
   const palette = trainerColor(firstTrainerId(band.trainers));
 
   const handleDelete = async () => {
@@ -126,7 +139,7 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => setConfirmOpen(true)}
+                onClick={() => openConfirm()}
                 aria-label={`מחיקת הרצועה של ${trainerNames(band.trainers) || "ללא מאמן"}`}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -141,8 +154,14 @@ export function BandCard({ band, canEdit, onEdit }: BandCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>מחיקת רצועה</AlertDialogTitle>
             <AlertDialogDescription>
-              הרצועה של {trainerNames(band.trainers) || "ללא מאמן"} ב-{bandTimeLabel(band)} תימחק
-              לצמיתות. לוחות יומיים שכבר נבנו לא ישתנו.
+              הרצועה של {trainerNames(band.trainers) || "ללא מאמן"} ב-{bandTimeLabel(band)} תוסר
+              מהשבוע הקבוע ולא תחזור.
+              {futureSlots === null
+                ? " בודק כמה אימונים עתידיים כבר נקבעו..."
+                : futureSlots > 0
+                  ? ` יימחקו גם ${futureSlots} אימונים עתידיים שכבר נקבעו.`
+                  : " אין אימונים עתידיים שכבר נקבעו."}
+              {" אימונים שכבר התקיימו יישארו."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
