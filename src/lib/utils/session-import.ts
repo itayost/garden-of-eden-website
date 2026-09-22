@@ -2,7 +2,8 @@
  * Turns every source of session rows into `SessionBuilderRow[]`.
  *
  * Sources: the exercise library picker, a workout program week, a saved
- * session template, the previous session, and the session being edited.
+ * session template, a slot's group workout, the previous session, and the
+ * session being edited.
  *
  * Programs are copy SOURCES for daily sessions, never assignments — the
  * trainer pulls one week's prescriptions as a starting point and edits from
@@ -11,6 +12,7 @@
 
 import { numText, resolveDefaults } from "@/lib/utils/performance-profile";
 import type { ProgramGrid, WorkoutExercise } from "@/features/workouts/lib/types";
+import type { SlotWorkout } from "@/types/schedule";
 import type { SessionTemplate } from "@/types/session-template";
 import type {
   SessionBuilderRow,
@@ -181,4 +183,31 @@ export function programWeekToBuilderRows(
       notes: cell?.notesHe ?? "",
     });
   });
+}
+
+/**
+ * A slot's group workout as builder rows. Same full restore as
+ * templateToBuilderRows: every numeric target and the machine profile, so the
+ * editor reopens showing the inputs the trainer filled in rather than the
+ * free-text fallback.
+ */
+export function slotWorkoutToBuilderRows(workout: SlotWorkout): SessionBuilderRow[] {
+  return workout.exercises.map((exercise, index) =>
+    makeBuilderRow({
+      key: `slot-${exercise.exercise_id}-${index}`,
+      exerciseId: exercise.exercise_id,
+      exerciseName:
+        exercise.exercise?.name_he ?? exercise.exercise?.name_en ?? "תרגיל",
+      targetSets: exercise.target_sets,
+      targetReps: exercise.target_reps_he ?? "",
+      targetLoad: exercise.target_load_he ?? "",
+      targetRepsNum: numText(exercise.target_reps),
+      targetWeightKg: numText(exercise.target_weight_kg),
+      targetDurationSeconds: numText(exercise.target_duration_seconds),
+      targetDistanceM: numText(exercise.target_distance_m),
+      notes: exercise.notes_he ?? "",
+      equipment: exercise.exercise?.equipment_ref ?? null,
+      seededFromEquipment: false,
+    }),
+  );
 }

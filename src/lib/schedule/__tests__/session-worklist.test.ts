@@ -42,6 +42,10 @@ function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
     band_id: null,
     max_trainees: null,
     trainees: [],
+    workout_notes_he: null,
+    workout_built_by: null,
+    workout_built_by_name: null,
+    workout_updated_at: null,
     created_by: LIDOR,
     created_at: "2026-09-10T00:00:00Z",
     updated_at: "2026-09-10T00:00:00Z",
@@ -50,7 +54,14 @@ function slot(overrides: Partial<ScheduleSlot> = {}): ScheduleSlot {
 }
 
 function summary(traineeId: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
-  return { id: `session-${traineeId}`, trainee_id: traineeId, exerciseCount: 5, completed_at: null, ...overrides };
+  return {
+    id: `session-${traineeId}`,
+    trainee_id: traineeId,
+    exerciseCount: 5,
+    completed_at: null,
+    isCustom: false,
+    ...overrides,
+  };
 }
 
 describe("buildSessionWorklist", () => {

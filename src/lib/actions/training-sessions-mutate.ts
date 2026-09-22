@@ -180,6 +180,12 @@ export async function upsertSessionAction(
         built_by: user!.id,
         built_by_name: builderName,
         notes_he: notes,
+        // A trainer editing one trainee takes them out of the group. Later
+        // group saves read this NULL and skip them, which is the exception
+        // that makes a slot's workout safe to re-send. A session created here
+        // needs nothing: the column defaults to NULL, which already says
+        // individual.
+        slot_workout_synced_at: null,
       })
       .eq("id", sessionId);
 
