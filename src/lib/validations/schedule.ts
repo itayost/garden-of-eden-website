@@ -5,7 +5,7 @@ import { isValidDateString, UUID_REGEX } from "@/lib/validations/common";
 const MAX_TEXT_LENGTH = 300;
 const MAX_NAME_LENGTH = 100;
 /** Guardrail on roster size; a slot group is a handful of kids. */
-const MAX_TRAINEES_PER_SLOT = 40;
+export const MAX_TRAINEES_PER_SLOT = 40;
 
 const uuidSchema = z.string().regex(UUID_REGEX, "מזהה לא תקין");
 

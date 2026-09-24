@@ -76,6 +76,9 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const sessionStatuses = "success" in statusesResult ? statusesResult.data : {};
 
   const week = buildWeek({ weekStart, today, slots, bands, exceptions });
+  // A branch whose standing week takes bookings (קריית אתא) opens a new
+  // hand-made hour to booking by default too.
+  const branchTakesBookings = bands.some((band) => band.is_bookable);
 
   const rosterIds = Array.from(
     new Set(slots.flatMap((slot) => slot.trainees.flatMap((t) => (t.trainee_id ? [t.trainee_id] : [])))),
@@ -98,6 +101,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         statusesLoaded={statusesLoaded}
         slotsError={slotsError}
         templateFailed={templateFailed}
+        branchTakesBookings={branchTakesBookings}
       />
     </BranchProvider>
   );
