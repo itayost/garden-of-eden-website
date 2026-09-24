@@ -5,7 +5,11 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { BOOKING_WINDOW_DAYS } from "@/lib/schedule/booking-rules";
 import { key, materializationPlan } from "@/lib/schedule/materialization";
 import { addDays } from "@/lib/utils/iso-date";
-import type { WeeklyBand, WeeklyException } from "@/types/weekly-schedule";
+import {
+  BAND_SELECT_WITH_TRAINERS,
+  type WeeklyBand,
+  type WeeklyException,
+} from "@/types/weekly-schedule";
 
 /**
  * Projects the next BOOKING_WINDOW_DAYS of a branch's bookable bands into
@@ -22,9 +26,10 @@ export async function materializeBookableSlots(
   const last = dates[dates.length - 1];
 
   const { data: bands, error: bandsError } = (await typedFrom(db, "weekly_schedule_bands")
-    .select("*")
+    .select(BAND_SELECT_WITH_TRAINERS)
     .eq("branch_id", branchId)
-    .eq("is_bookable", true)) as { data: WeeklyBand[] | null; error: { message: string } | null };
+    .eq("is_bookable", true)
+    .order("order_index", { referencedTable: "trainers", ascending: true })) as { data: WeeklyBand[] | null; error: { message: string } | null };
   if (bandsError) return { inserted: 0, error: bandsError.message };
   if (!bands || bands.length === 0) return { inserted: 0, error: null };
   const bandIds = bands.map((b) => b.id);

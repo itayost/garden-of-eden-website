@@ -16,7 +16,12 @@ import {
   type BuildWeekInput,
 } from "@/lib/validations/weekly-schedule";
 import { SLOT_SELECT_WITH_TRAINEES, type ScheduleSlot } from "@/types/schedule";
-import type { OnDuty, WeeklyBand, WeeklyException } from "@/types/weekly-schedule";
+import {
+  BAND_SELECT_WITH_TRAINERS,
+  type OnDuty,
+  type WeeklyBand,
+  type WeeklyException,
+} from "@/types/weekly-schedule";
 
 type BuildResult =
   | { success: true; count: number }
@@ -126,7 +131,10 @@ export async function buildDayFromWeeklyScheduleAction(
   }
 
   const [bandsResult, exceptionsResult] = await Promise.all([
-    typedFrom(supabase, "weekly_schedule_bands").select("*").eq("branch_id", branchId),
+    typedFrom(supabase, "weekly_schedule_bands")
+      .select(BAND_SELECT_WITH_TRAINERS)
+      .eq("branch_id", branchId)
+      .order("order_index", { referencedTable: "trainers", ascending: true }),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
       .or(`branch_id.eq.${branchId},kind.eq.absent`)
@@ -232,7 +240,10 @@ export async function buildWeekFromWeeklyScheduleAction(
       .eq("branch_id", branchId)
       .gte("schedule_date", weekStart)
       .lte("schedule_date", weekEnd),
-    typedFrom(supabase, "weekly_schedule_bands").select("*").eq("branch_id", branchId),
+    typedFrom(supabase, "weekly_schedule_bands")
+      .select(BAND_SELECT_WITH_TRAINERS)
+      .eq("branch_id", branchId)
+      .order("order_index", { referencedTable: "trainers", ascending: true }),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
       .or(`branch_id.eq.${branchId},kind.eq.absent`)

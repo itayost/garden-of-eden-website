@@ -6,10 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { deriveOnDuty } from "@/lib/utils/weekly-schedule";
 import { isValidDateRange, isValidDateString, isValidUUID } from "@/lib/validations/common";
-import type {
-  OnDuty,
-  WeeklyBand,
-  WeeklyException,
+import {
+  BAND_SELECT_WITH_TRAINERS,
+  type OnDuty,
+  type WeeklyBand,
+  type WeeklyException,
 } from "@/types/weekly-schedule";
 
 type BandsResult = { success: true; data: WeeklyBand[] } | { error: string };
@@ -39,11 +40,11 @@ export async function getBandsAction(branchId: string): Promise<BandsResult> {
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "weekly_schedule_bands")
-    .select("*")
+    .select(BAND_SELECT_WITH_TRAINERS)
     .eq("branch_id", branchId)
     .order("weekday", { ascending: true })
     .order("start_time", { ascending: true })
-    .order("trainer_name", { ascending: true });
+    .order("order_index", { referencedTable: "trainers", ascending: true });
 
   if (error) {
     console.error("Get weekly bands error:", error);
@@ -78,11 +79,11 @@ export async function getWeeklyScheduleAction(
 
   const [bandsResult, exceptionsResult] = await Promise.all([
     typedFrom(supabase, "weekly_schedule_bands")
-      .select("*")
+      .select(BAND_SELECT_WITH_TRAINERS)
       .eq("branch_id", branchId)
       .order("weekday", { ascending: true })
       .order("start_time", { ascending: true })
-      .order("trainer_name", { ascending: true }),
+      .order("order_index", { referencedTable: "trainers", ascending: true }),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
       .or(`branch_id.eq.${branchId},kind.eq.absent`)
@@ -132,8 +133,9 @@ export async function getOnDutyAction(
 
   const [bandsResult, exceptionsResult] = await Promise.all([
     typedFrom(supabase, "weekly_schedule_bands")
-      .select("*")
-      .eq("branch_id", branchId),
+      .select(BAND_SELECT_WITH_TRAINERS)
+      .eq("branch_id", branchId)
+      .order("order_index", { referencedTable: "trainers", ascending: true }),
     typedFrom(supabase, "weekly_schedule_exceptions")
       .select("*")
       .or(`branch_id.eq.${branchId},kind.eq.absent`)
