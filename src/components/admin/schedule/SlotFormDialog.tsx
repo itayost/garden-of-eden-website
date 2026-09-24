@@ -15,6 +15,7 @@ import {
 import { SheetDialogContent } from "@/components/ui/sheet-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { createSlotAction, updateSlotAction } from "@/lib/actions/daily-schedule";
 import { TrainerCheckboxGroup } from "@/components/admin/schedule/TrainerCheckboxGroup";
 import { trainersAtTime } from "@/lib/utils/weekly-schedule";
+import { MAX_TRAINEES_PER_SLOT } from "@/lib/validations/schedule";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { OnDuty } from "@/types/weekly-schedule";
 
@@ -30,6 +32,9 @@ import type { OnDuty } from "@/types/weekly-schedule";
 const HOUR_PRESETS = ["15:00", "16:00", "17:00", "18:00", "19:00"];
 
 const DEFAULT_START_TIME = "15:00";
+
+/** Seats a slot opens with, the same default as a new standing-week hour. */
+const DEFAULT_SEATS = 8;
 
 /**
  * The distinct trainers the weekly schedule puts on this hour.
@@ -66,6 +71,8 @@ interface SlotFormDialogProps {
   trainees: TrainerOption[];
   /** Who the weekly schedule puts on this day; feeds the trainer suggestion. */
   onDuty: OnDuty | null;
+  /** A new slot starts open to self-booking. Editing keeps what the slot says. */
+  defaultBookable?: boolean;
   /**
    * Which day this dialog was opened from, e.g. "יום רביעי · 19.8".
    *
@@ -84,6 +91,7 @@ export function SlotFormDialog({
   trainers,
   trainees,
   onDuty,
+  defaultBookable = false,
   contextLabel,
 }: SlotFormDialogProps) {
   const { branchId } = useCurrentBranch();
@@ -134,9 +142,12 @@ export function SlotFormDialog({
     setTrainerIds(next);
   };
   const [focus, setFocus] = useState(slot?.focus_he ?? "");
-  const [maxTrainees, setMaxTrainees] = useState(
-    slot?.max_trainees === null || slot?.max_trainees === undefined ? "" : String(slot.max_trainees),
+  // Open to self-booking is the slot having seats at all; the count is kept
+  // separately so unticking and ticking again does not lose it.
+  const [isBookable, setIsBookable] = useState(
+    slot ? slot.max_trainees !== null : defaultBookable,
   );
+  const [maxTrainees, setMaxTrainees] = useState(String(slot?.max_trainees ?? DEFAULT_SEATS));
   const [location, setLocation] = useState(slot?.location_he ?? "");
   // Only a new slot takes names here. An existing slot's roster is edited one
   // entry at a time in the calendar, so this form cannot overwrite bookings.
@@ -178,8 +189,13 @@ export function SlotFormDialog({
     // that never had seats (seeded from the weekly schedule) may be edited
     // before names are added in the calendar; only dropping seats needs a name.
     const mustName = slot === null || slot.max_trainees !== null;
-    if (mustName && activeCount === 0 && maxTrainees === "") {
-      toast.error("יש להוסיף לפחות מתאמן אחד");
+    if (mustName && activeCount === 0 && !isBookable) {
+      toast.error("יש להוסיף לפחות מתאמן אחד, או לפתוח את הסלוט להרשמה עצמית");
+      return;
+    }
+    const seats = Number(maxTrainees);
+    if (isBookable && (!Number.isInteger(seats) || seats < 1 || seats > MAX_TRAINEES_PER_SLOT)) {
+      toast.error(`מספר המקומות צריך להיות בין 1 ל-${MAX_TRAINEES_PER_SLOT}`);
       return;
     }
 
@@ -192,7 +208,7 @@ export function SlotFormDialog({
         trainerIds,
         focus,
         location,
-        maxTrainees: maxTrainees === "" ? null : Number(maxTrainees),
+        maxTrainees: isBookable ? seats : null,
       };
 
       const result = slot
@@ -348,29 +364,45 @@ export function SlotFormDialog({
             />
           </div>
 
-          {slot?.max_trainees !== null && slot?.max_trainees !== undefined && (
-            <div className="space-y-2">
-              <Label htmlFor="slot-seats">מקומות להרשמה עצמית</Label>
-              <Input
-                id="slot-seats"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={40}
-                value={maxTrainees}
-                onChange={(event) => setMaxTrainees(event.target.value)}
-                onBlur={() => {
-                  if (maxTrainees === "" || Number(maxTrainees) < 1) setMaxTrainees("1");
-                }}
-                className="w-24"
-              />
-              {maxTrainees !== "" && activeCount > Number(maxTrainees) && (
-                <p className="text-xs text-destructive">
-                  מעבר לקיבולת ({activeCount}/{maxTrainees}). הצוות רשאי, המתאמנים לא.
-                </p>
+          <div className="flex items-start gap-2 rounded-lg border p-3">
+            <Checkbox
+              id="slot-bookable"
+              checked={isBookable}
+              onCheckedChange={(checked) => setIsBookable(checked === true)}
+            />
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="slot-bookable" className="font-normal">
+                פתוח להרשמה עצמית
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {isBookable
+                  ? "מתאמני הסניף רואים את הסלוט באפליקציה ונרשמים בעצמם, לפי המסלול שלהם."
+                  : isEdit && slot.max_trainees !== null
+                    ? "הסלוט ייסגר להרשמה. מי שכבר רשום נשאר ברשימה."
+                    : "רק הצוות מוסיף מתאמנים לסלוט."}
+              </p>
+              {isBookable && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Label htmlFor="slot-seats" className="text-sm">מקומות</Label>
+                  <Input
+                    id="slot-seats"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={MAX_TRAINEES_PER_SLOT}
+                    value={maxTrainees}
+                    onChange={(event) => setMaxTrainees(event.target.value)}
+                    className="h-9 w-20"
+                  />
+                  {activeCount > Number(maxTrainees) && (
+                    <p className="text-xs text-destructive">
+                      מעבר לקיבולת ({activeCount}/{maxTrainees}). הצוות רשאי, המתאמנים לא.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="slot-location">מיקום (אופציונלי)</Label>

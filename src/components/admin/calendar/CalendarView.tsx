@@ -47,6 +47,8 @@ interface CalendarViewProps {
   slotsError: string | null;
   /** The standing template could not be read; staffing cannot be claimed. */
   templateFailed: boolean;
+  /** The branch's standing week takes bookings; a new slot opens to them by default. */
+  branchTakesBookings: boolean;
 }
 
 /** What the slot form was opened for. A date and its staffing are one fact. */
@@ -76,6 +78,7 @@ export function CalendarView({
   statusesLoaded,
   slotsError,
   templateFailed,
+  branchTakesBookings,
 }: CalendarViewProps) {
   const { branchId } = useCurrentBranch();
 
@@ -287,6 +290,7 @@ export function CalendarView({
           trainers={trainers}
           trainees={trainees}
           onDuty={slotForm.day?.onDuty ?? null}
+          defaultBookable={branchTakesBookings}
           contextLabel={`${hebrewWeekday(slotForm.date)} · ${shortDate(slotForm.date)}`}
         />
       )}
