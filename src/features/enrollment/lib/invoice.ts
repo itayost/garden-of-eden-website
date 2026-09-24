@@ -51,6 +51,11 @@ export async function issueOrderInvoice(
     .maybeSingle()) as { data: Order | null };
   if (!order) return { ok: false, error: "ההזמנה לא נמצאה", skipped: false };
   if (order.status !== "paid") return { ok: false, error: "ההזמנה לא שולמה", skipped: false };
+  // Arbox issued its own receipt. paymentFor would fall through to a card
+  // receipt here, so an Arbox order must never reach Morning.
+  if (order.payment_method === "arbox") {
+    return { ok: false, error: "שולם ב-Arbox: הקבלה הופקה שם", skipped: false };
+  }
   if (order.morning_document_id) return { ok: true, url: order.morning_document_url, alreadyIssued: true };
 
   const { data: product } = (await typedFrom(db, "plan_products")

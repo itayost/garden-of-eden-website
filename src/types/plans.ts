@@ -25,14 +25,18 @@ export interface PlanProduct {
 }
 
 /** charging: the card is at the acquirer; a second submit finds nothing to claim. */
-/** How the money arrived. card = the site's own card page; the rest are taken by staff. */
-export type PaymentMethod = "cash" | "transfer" | "bit" | "card";
+/**
+ * How the money arrived. card = the site's own card page; arbox = paid in
+ * Arbox, recorded here only to create the plan; the rest are taken by staff.
+ */
+export type PaymentMethod = "cash" | "transfer" | "bit" | "card" | "arbox";
 
 export const PAYMENT_METHOD_LABELS_HE: Record<PaymentMethod, string> = {
   cash: "מזומן",
   transfer: "העברה בנקאית",
   bit: "ביט",
   card: "כרטיס אשראי",
+  arbox: "Arbox",
 };
 
 export type OrderStatus = "pending" | "charging" | "paid" | "failed" | "expired";

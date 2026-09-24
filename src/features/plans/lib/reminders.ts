@@ -100,6 +100,31 @@ async function expireStaleOrders(db: ReturnType<typeof createAdminClient>): Prom
 }
 
 /**
+ * Trainees with a live plan paid in Arbox, running or queued after another.
+ * They renew in Arbox, so their parent must not get our renewal link. Null
+ * when the read fails: the caller then sends nothing, because a message
+ * cannot be taken back and an unsent reminder goes out on the next run.
+ */
+async function loadArboxRenewers(
+  db: ReturnType<typeof createAdminClient>,
+  plans: readonly Pick<TraineePlan, "profile_id" | "order_id" | "ends_on">[],
+  today: string,
+): Promise<Set<string> | null> {
+  const live = plans.filter((p) => p.order_id !== null && p.ends_on >= today);
+  if (live.length === 0) return new Set();
+  const { data, error } = (await typedFrom(db, "orders")
+    .select("id")
+    .in("id", live.map((p) => p.order_id!))
+    .eq("payment_method", "arbox")) as { data: { id: string }[] | null; error: { message: string } | null };
+  if (error) {
+    console.error("[plan-reminders] load Arbox orders failed:", error.message);
+    return null;
+  }
+  const arboxOrderIds = new Set((data ?? []).map((o) => o.id));
+  return new Set(live.filter((p) => arboxOrderIds.has(p.order_id!)).map((p) => p.profile_id));
+}
+
+/**
  * One reminder per plan per milestone, to the guardian phone. Every active
  * plan is evaluated: the ones with nothing due are skipped by
  * dueReminderMilestone, which also refuses to repeat a sent milestone.
@@ -115,9 +140,9 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   result.failed += signReminders.failed;
 
   const { data: activePlans, error } = (await typedFrom(db, "trainee_plans")
-    .select("profile_id")
+    .select("profile_id, order_id, ends_on")
     .eq("status", "active")) as {
-    data: Pick<TraineePlan, "profile_id">[] | null;
+    data: Pick<TraineePlan, "profile_id" | "order_id" | "ends_on">[] | null;
     error: { message: string } | null;
   };
   if (error) {
@@ -134,8 +159,14 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
     .select("id, full_name, guardian_name, guardian_phone")
     .in("id", profileIds);
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const arboxRenewers = await loadArboxRenewers(db, activePlans ?? [], today);
+  if (!arboxRenewers) {
+    result.failed += 1;
+    return result;
+  }
 
   for (const [profileId, { plan, product, sessionsUsed }] of plans) {
+    if (arboxRenewers.has(profileId)) continue;
     const milestone = dueReminderMilestone(plan, sessionsUsed, today);
     if (!milestone) continue;
 

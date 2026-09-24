@@ -55,10 +55,13 @@ export async function retryFulfillmentAction(orderId: string): Promise<ActionRes
 
   const db = createAdminClient();
   const { data: before } = (await typedFrom(db, "orders")
-    .select("fulfilled_at")
+    .select("fulfilled_at, payment_method")
     .eq("id", orderId)
-    .maybeSingle()) as { data: { fulfilled_at: string | null } | null };
+    .maybeSingle()) as { data: { fulfilled_at: string | null; payment_method: string | null } | null };
   if (before?.fulfilled_at) return { error: "ההזמנה כבר טופלה" };
+  // A retry writes the product's terms and messages the parent; neither is
+  // right for a plan paid in Arbox. Staff record it again from the trainee.
+  if (before?.payment_method === "arbox") return { error: "הזמנה מ-Arbox: רשמו אותה מחדש מדף המתאמן" };
 
   const result = await fulfillOrder(db, orderId);
   if (!result.ok) return { error: result.error };

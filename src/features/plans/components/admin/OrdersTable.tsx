@@ -97,7 +97,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                 <Badge variant={order.status === "paid" ? "default" : "outline"}>
                   {STATUS_LABEL[order.status]}
                 </Badge>
-                {order.status === "paid" && !order.fulfilled_at && (
+                {order.status === "paid" && !order.fulfilled_at && order.payment_method !== "arbox" && (
                   <div className="mt-1 space-y-1">
                     <p className="text-xs text-destructive">
                       {order.fulfillment_error ?? "לא הושלם"}
@@ -116,7 +116,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap items-center gap-2">
-                  {order.status === "paid" && order.fulfilled_at && !order.morning_document_url && (
+                  {order.status === "paid" && order.fulfilled_at && !order.morning_document_url && order.payment_method !== "arbox" && (
                     <Button
                       size="sm"
                       variant="outline"
