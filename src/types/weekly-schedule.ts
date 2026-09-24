@@ -37,6 +37,14 @@ export const EXCEPTION_KIND_LABELS: Record<ExceptionKind, string> = {
   extra: "תוספת חד-פעמית",
 };
 
+/**
+ * PostgREST select string for a band with its trainers joined. `trainers` is
+ * not a column, so a bare "*" leaves it undefined and every reader that walks
+ * it throws. Readers also order the join by `order_index`.
+ */
+export const BAND_SELECT_WITH_TRAINERS =
+  "*, trainers:weekly_schedule_band_trainers(id, trainer_id, trainer_name, order_index)";
+
 export interface WeeklyBand {
   id: string;
   weekday: Weekday;
