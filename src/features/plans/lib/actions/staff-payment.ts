@@ -16,7 +16,6 @@ import { renewalStartDate } from "@/lib/plans/plan-status";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import { toE164 } from "@/lib/plans/local-phone";
-import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import {
   newTraineeSchema,
   resendAgreementSchema,
@@ -27,6 +26,8 @@ import {
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
 import { findRecentDuplicate, recordManualPayment, type ManualPaymentResult } from "../manual-payment";
+import { revalidateStaffSurfaces } from "../revalidate-staff";
+import { checkTraineeSale } from "../trainee-sale";
 import { loadPlansWithUsage } from "../queries";
 
 export type StaffPaymentOutcome =
@@ -43,14 +44,6 @@ export interface StaffPaymentContext {
   startsAfterCurrent: boolean;
   morningConfigured: boolean;
   parentPhone: string | null;
-}
-
-function revalidateStaffSurfaces(profileId: string): void {
-  revalidatePath(`/admin/users/${profileId}`);
-  revalidatePath("/admin/plans");
-  revalidatePath("/admin/orders");
-  revalidatePath("/admin/schedule");
-  revalidatePath("/admin/calendar");
 }
 
 /** Active products the caller may sell: their writable branches, optionally narrowed to the trainee's. */
@@ -124,48 +117,18 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
   if (scopeError) return { error: scopeError };
 
   const db = createAdminClient();
-  const { data: product } = (await typedFrom(db, "plan_products")
-    .select("*")
-    .eq("id", data.productId)
-    .eq("is_active", true)
-    .maybeSingle()) as { data: PlanProduct | null };
-  if (!product) return { error: "המסלול לא נמצא או אינו פעיל" };
-  const branchError = await assertBranchWritable(product.branch_id);
-  if (branchError.error) return { error: branchError.error };
-  // The sheet only offers the trainee's branches; the server holds trainers
-  // to that too. An admin may sell into a new branch, which also enrolls.
-  if (staff?.role !== "admin") {
-    const memberships = (await loadBranchIdsByProfile(db, [data.traineeId])).get(data.traineeId) ?? [];
-    if (!memberships.includes(product.branch_id)) return { error: "המסלול שייך לסניף שהמתאמן אינו רשום בו" };
-  }
-
-  const { data: trainee } = await db
-    .from("profiles")
-    .select("role, phone, full_name, birthdate, guardian_name, guardian_phone, medical_notes, emergency_contact_name, emergency_contact_phone")
-    .eq("id", data.traineeId)
-    .maybeSingle();
-  if (!trainee || trainee.role !== "trainee") return { error: "אפשר לרשום תשלום רק למתאמן" };
-  if (!trainee.phone) return { error: "למתאמן אין טלפון להתחברות. הוסיפו טלפון בפרופיל קודם." };
-
-  if (product.once_per_trainee) {
-    const { count } = await typedFrom(db, "orders")
-      .select("id", { count: "exact", head: true })
-      .eq("profile_id", data.traineeId)
-      .eq("status", "paid")
-      .eq("product_id", product.id);
-    if (!isIntroPackEligible(product, count ?? 0)) {
-      return { error: "חבילת ההיכרות היא לשחקן חדש בלבד ונרכשה כבר. בחרו מסלול אחר." };
-    }
-  }
-
-  if (!data.confirmDuplicate) {
-    const duplicate = await findRecentDuplicate(db, data.traineeId, product.id);
-    if (duplicate) return { duplicate };
-  }
+  const sale = await checkTraineeSale(db, {
+    traineeId: data.traineeId,
+    productId: data.productId,
+    isAdmin: staff?.role === "admin",
+    confirmDuplicate: data.confirmDuplicate,
+  });
+  if (!("ok" in sale)) return sale;
+  const { product, trainee } = sale;
 
   const loginPhone = toE164(trainee.phone);
   const result = await recordManualPayment(db, {
-    product: { ...product, price_ils: Number(product.price_ils) },
+    product,
     trainee: {
       profileId: data.traineeId,
       loginPhone,

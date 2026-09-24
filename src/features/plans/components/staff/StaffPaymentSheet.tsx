@@ -12,17 +12,22 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/utils/iso-date";
 import { toLocalPhone } from "@/lib/plans/local-phone";
-import type { ManualPaymentMethod } from "@/lib/validations/plans-admin";
+import { arboxTermsFromProduct, type ArboxTermsDraft } from "@/lib/plans/arbox-terms";
 import {
   getStaffPaymentContextAction,
   recordTraineePaymentAction,
   type StaffPaymentContext,
 } from "../../lib/actions/staff-payment";
+import { recordArboxPlanAction } from "../../lib/actions/staff-arbox-plan";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
+import { ArboxTermsFields } from "./ArboxTermsFields";
 import { DuplicatePrompt } from "./DuplicatePrompt";
-import { PaymentMethodPicker } from "./PaymentMethodPicker";
+import { PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
+
+/** The existing-trainee sheet also records a plan paid in Arbox. */
+const SHEET_METHODS: readonly PickerMethod[] = ["cash", "transfer", "bit", "arbox"];
 
 interface StaffPaymentSheetProps {
   traineeId: string;
@@ -42,7 +47,9 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   const [context, setContext] = useState<StaffPaymentContext | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(null);
-  const [method, setMethod] = useState<ManualPaymentMethod>("cash");
+  const [method, setMethod] = useState<PickerMethod>("cash");
+  // Only while Arbox is chosen; re-filled from the product whenever it changes.
+  const [arboxTerms, setArboxTerms] = useState<ArboxTermsDraft | null>(null);
   const [reference, setReference] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [duplicate, setDuplicate] = useState<number | null>(null);
@@ -66,8 +73,56 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     };
   }, [open, traineeId]);
 
+  const selectedProduct = context?.products.find((p) => p.id === productId) ?? null;
+
+  const prefillArbox = (nextProductId: string | null) => {
+    const product = context?.products.find((p) => p.id === nextProductId);
+    setArboxTerms(product && context ? arboxTermsFromProduct(product, context.startsOn) : null);
+  };
+
+  const chooseMethod = (next: PickerMethod) => {
+    setMethod(next);
+    if (next === "arbox") prefillArbox(productId);
+    else setArboxTerms(null);
+  };
+
+  const chooseProduct = (next: string) => {
+    setProductId(next);
+    if (method === "arbox") prefillArbox(next);
+  };
+
+  const submitArbox = (confirmDuplicate: boolean) => {
+    if (!productId || !arboxTerms || !selectedProduct) return;
+    startTransition(async () => {
+      const outcome = await recordArboxPlanAction({
+        traineeId,
+        productId,
+        startsOn: arboxTerms.startsOn,
+        endsOn: arboxTerms.endsOn,
+        sessionsTotal: selectedProduct.sessions_total === null ? null : Number(arboxTerms.sessionsTotal),
+        amountIls: Number(arboxTerms.amountIls),
+        reference,
+        confirmDuplicate,
+      });
+      if ("error" in outcome) {
+        toast.error(outcome.error);
+        return;
+      }
+      if ("duplicate" in outcome) {
+        setDuplicate(outcome.duplicate.minutesAgo);
+        return;
+      }
+      toast.success(`המסלול נוצר: ${shortDate(outcome.startsOn)} עד ${shortDate(outcome.endsOn)}`);
+      finish(true);
+    });
+  };
+
   const submit = (confirmDuplicate = false) => {
     if (!productId) return;
+    if (method === "arbox") {
+      submitArbox(confirmDuplicate);
+      return;
+    }
     startTransition(async () => {
       const outcome = await recordTraineePaymentAction({
         traineeId,
@@ -91,16 +146,18 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   };
 
   // State resets on close, not in the effect: the next open reloads fresh.
-  const close = () => {
-    onOpenChange(false, result !== null);
-    if (result) router.refresh();
+  const finish = (paid: boolean) => {
+    onOpenChange(false, paid);
+    if (paid) router.refresh();
     setResult(null);
     setDuplicate(null);
     setMethod("cash");
+    setArboxTerms(null);
     setReference("");
     setContext(null);
     setLoadError(null);
   };
+  const close = () => finish(result !== null);
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(true) : close())}>
@@ -111,7 +168,9 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
             {result
               ? "מה ההורה קיבל"
               : context
-                ? context.startsAfterCurrent
+                ? method === "arbox"
+                  ? "התאריכים, האימונים והסכום כמו שנמכרו ב-Arbox."
+                  : context.startsAfterCurrent
                   ? `המסלול החדש יתחיל ב-${shortDate(context.startsOn)}, אחרי סיום המסלול הנוכחי.`
                   : "המסלול החדש מתחיל היום."
                 : "טוען..."}
@@ -135,28 +194,51 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
             </p>
           ) : (
             <>
-              <ProductPicker products={context.products} selectedId={productId} onSelect={setProductId} disabled={pending} />
-              <PaymentMethodPicker method={method} reference={reference} onMethodChange={setMethod} onReferenceChange={setReference} disabled={pending} />
-              <div className="flex items-center justify-between rounded-xl border p-3">
-                <Label htmlFor="sp-wa" className="leading-snug">
-                  שלח אישור וקישור לחתימה בוואטסאפ
-                  {context.parentPhone && (
-                    <span className="block text-xs font-normal text-muted-foreground" dir="ltr">
-                      {toLocalPhone(context.parentPhone)}
-                    </span>
-                  )}
-                </Label>
-                <Switch id="sp-wa" checked={sendWhatsApp} onCheckedChange={setSendWhatsApp} disabled={pending} />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {context.morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
-              </p>
+              <ProductPicker products={context.products} selectedId={productId} onSelect={chooseProduct} disabled={pending} />
+              <PaymentMethodPicker
+                methods={SHEET_METHODS}
+                method={method}
+                reference={reference}
+                onMethodChange={chooseMethod}
+                onReferenceChange={setReference}
+                disabled={pending}
+              />
+              {method === "arbox" && arboxTerms && selectedProduct ? (
+                <>
+                  <ArboxTermsFields
+                    value={arboxTerms}
+                    onChange={setArboxTerms}
+                    hasSessions={selectedProduct.sessions_total !== null}
+                    disabled={pending}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    לא תופק קבלה ולא יישלח וואטסאפ: הקבלה והחתימה נמצאות ב-Arbox.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between rounded-xl border p-3">
+                    <Label htmlFor="sp-wa" className="leading-snug">
+                      שלח אישור וקישור לחתימה בוואטסאפ
+                      {context.parentPhone && (
+                        <span className="block text-xs font-normal text-muted-foreground" dir="ltr">
+                          {toLocalPhone(context.parentPhone)}
+                        </span>
+                      )}
+                    </Label>
+                    <Switch id="sp-wa" checked={sendWhatsApp} onCheckedChange={setSendWhatsApp} disabled={pending} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {context.morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
+                  </p>
+                </>
+              )}
               {duplicate !== null ? (
                 <DuplicatePrompt minutesAgo={duplicate} onConfirm={() => submit(true)} onCancel={() => setDuplicate(null)} pending={pending} />
               ) : (
                 <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !productId}>
                   {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
-                  רישום התשלום
+                  {method === "arbox" ? "יצירת המסלול" : "רישום התשלום"}
                 </Button>
               )}
             </>

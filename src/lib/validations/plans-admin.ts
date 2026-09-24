@@ -63,6 +63,30 @@ export const staffPaymentSchema = z.object({
 });
 export type StaffPaymentInput = z.input<typeof staffPaymentSchema>;
 
+/**
+ * A plan paid in Arbox. The product pre-fills the terms, but Arbox sold its
+ * own, so staff enter the dates, sessions, and amount to match. No receipt
+ * and no agreement: Arbox already issued one and holds the signature.
+ */
+export const arboxPlanSchema = z
+  .object({
+    traineeId: uuid,
+    productId: uuid,
+    startsOn: isoDate,
+    endsOn: isoDate,
+    /** Null for a product without a session count (a subscription or term). */
+    sessionsTotal: z.number().int("מספר אימונים לא תקין").min(1, "לפחות אימון אחד").max(200, "יותר מדי אימונים").nullable(),
+    amountIls: z.number().positive("הסכום חייב להיות חיובי").max(100000, "סכום גבוה מדי"),
+    /** The Arbox membership or receipt number, when staff have it. */
+    reference: optionalText(60),
+    confirmDuplicate: z.boolean().default(false),
+  })
+  .refine((v) => v.endsOn >= v.startsOn, {
+    message: "תאריך הסיום קודם לתאריך ההתחלה",
+    path: ["endsOn"],
+  });
+export type ArboxPlanInput = z.input<typeof arboxPlanSchema>;
+
 export const issueInvoiceSchema = z.object({ orderId: uuid });
 export const resendAgreementSchema = z.object({ agreementId: uuid });
 

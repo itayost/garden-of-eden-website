@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newTraineeSchema, staffPaymentSchema } from "../plans-admin";
+import { arboxPlanSchema, newTraineeSchema, staffPaymentSchema } from "../plans-admin";
 
 const UUID = "11111111-2222-4333-8444-555555555555";
 
@@ -14,6 +14,17 @@ describe("staffPaymentSchema", () => {
     });
     expect(parsed.reference).toBeNull();
     expect(parsed.confirmDuplicate).toBe(false);
+  });
+
+  it("refuses arbox: an Arbox plan has its own action with its own terms", () => {
+    const result = staffPaymentSchema.safeParse({
+      traineeId: UUID,
+      productId: UUID,
+      paymentMethod: "arbox",
+      reference: "",
+      sendWhatsApp: false,
+    });
+    expect(result.success).toBe(false);
   });
 
   it("refuses card: cards only come from the payment page", () => {
@@ -75,5 +86,47 @@ describe("newTraineeSchema", () => {
       sendWhatsApp: true,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("arboxPlanSchema", () => {
+  const valid = {
+    traineeId: UUID,
+    productId: UUID,
+    startsOn: "2026-09-24",
+    endsOn: "2026-12-23",
+    sessionsTotal: 20,
+    amountIls: 2000,
+    reference: "",
+  };
+
+  it("accepts what Arbox sold and defaults confirmDuplicate to false", () => {
+    const parsed = arboxPlanSchema.parse(valid);
+    expect(parsed.sessionsTotal).toBe(20);
+    expect(parsed.amountIls).toBe(2000);
+    expect(parsed.reference).toBeNull();
+    expect(parsed.confirmDuplicate).toBe(false);
+  });
+
+  it("accepts no sessions for a subscription", () => {
+    expect(arboxPlanSchema.safeParse({ ...valid, sessionsTotal: null }).success).toBe(true);
+  });
+
+  it("accepts a plan that starts and ends on the same day", () => {
+    expect(arboxPlanSchema.safeParse({ ...valid, endsOn: valid.startsOn }).success).toBe(true);
+  });
+
+  it("refuses an end date before the start date", () => {
+    const result = arboxPlanSchema.safeParse({ ...valid, endsOn: "2026-09-23" });
+    expect(result.success).toBe(false);
+  });
+
+  it("refuses zero sessions and a zero amount", () => {
+    expect(arboxPlanSchema.safeParse({ ...valid, sessionsTotal: 0 }).success).toBe(false);
+    expect(arboxPlanSchema.safeParse({ ...valid, amountIls: 0 }).success).toBe(false);
+  });
+
+  it("refuses a malformed date", () => {
+    expect(arboxPlanSchema.safeParse({ ...valid, startsOn: "24/09/2026" }).success).toBe(false);
   });
 });
