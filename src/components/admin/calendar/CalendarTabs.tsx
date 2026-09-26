@@ -6,13 +6,16 @@ import { CalendarDays, CalendarRange } from "lucide-react";
 
 import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { cn } from "@/lib/utils";
-
-export const CALENDAR_PATH = "/admin/calendar";
-export const CALENDAR_TEMPLATE_PATH = "/admin/calendar/template";
+import {
+  CALENDAR_LABEL,
+  CALENDAR_PATH,
+  CALENDAR_TEMPLATE_LABEL,
+  CALENDAR_TEMPLATE_PATH,
+} from "./calendar-views";
 
 const TABS = [
-  { href: CALENDAR_PATH, label: "יומן יומי משתנה", Icon: CalendarDays },
-  { href: CALENDAR_TEMPLATE_PATH, label: "תכנית אימונית קבועה", Icon: CalendarRange },
+  { href: CALENDAR_PATH, label: CALENDAR_LABEL, Icon: CalendarDays },
+  { href: CALENDAR_TEMPLATE_PATH, label: CALENDAR_TEMPLATE_LABEL, Icon: CalendarRange },
 ] as const;
 
 /**
