@@ -218,7 +218,7 @@ export async function updateBandAction(
   // The band's copied fields as they were, so projected hours that still show
   // them can follow the edit below.
   const { data: existing } = await typedFrom(supabase, "weekly_schedule_bands")
-    .select("id, start_time, label_he, location_he")
+    .select("id, weekday, branch_id, start_time, label_he, location_he")
     .eq("id", bandId)
     .maybeSingle();
 
@@ -263,11 +263,15 @@ export async function updateBandAction(
     .gte("schedule_date", israelToday());
   if (seatsError) console.error("Update projected seats error:", seatsError);
 
-  await syncProjectedSlots(supabase, bandId, existing, {
-    start_time: startTime,
-    label_he: label,
-    location_he: location,
-  });
+  // A band moved to another day or branch leaves its projected slots on the
+  // old one; giving those the new details would only disguise the stray hour.
+  if (existing.weekday === weekday && existing.branch_id === branchId) {
+    await syncProjectedSlots(supabase, bandId, existing, {
+      start_time: startTime,
+      label_he: label,
+      location_he: location,
+    });
+  }
 
   revalidateScheduleSurfaces();
 
