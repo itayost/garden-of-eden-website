@@ -57,8 +57,8 @@ function extraToOnDuty(exception: WeeklyException): OnDutyBand {
   return {
     id: exception.id,
     source: "exception",
-    // The schema guarantees an 'extra' has a start time; the fallback only
-    // keeps this total for a row that bypassed it through PostgREST.
+    // The DB CHECK weekly_exceptions_extra_has_start guarantees an 'extra' has
+    // a start time; the fallback only keeps this total.
     startTime: toHhMm(exception.start_time ?? "00:00:00"),
     endTime: exception.end_time ? toHhMm(exception.end_time) : null,
     // An exception belongs to one trainer by definition, so it yields a list

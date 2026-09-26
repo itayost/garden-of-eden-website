@@ -103,8 +103,8 @@ describe("exceptionSchema", () => {
   });
 
   test("rejects an absence carrying times", () => {
-    // An absence covers the whole day; times would read as a partial absence
-    // the derivation does not implement.
+    // An absence covers the whole day; the strict schema refuses any time sent
+    // with it rather than dropping it.
     expect(
       exceptionSchema.safeParse(validException({ startTime: "15:00" })).success,
     ).toBe(false);
@@ -112,9 +112,7 @@ describe("exceptionSchema", () => {
 
   test("rejects an extra hour; a one-off hour is a slot in the calendar", () => {
     expect(
-      exceptionSchema.safeParse(
-        validException({ kind: "extra", startTime: "16:00", endTime: "17:00" }),
-      ).success,
+      exceptionSchema.safeParse(validException({ kind: "extra" })).success,
     ).toBe(false);
   });
 
