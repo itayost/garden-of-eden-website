@@ -10,6 +10,7 @@ import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { BranchSwitcher } from "@/features/branches/components/BranchSwitcher";
 import { HealthSheet } from "@/features/plans/components/HealthSheet";
 import { PlanSheet } from "@/features/plans/components/staff/PlanSheet";
+import { CALENDAR_PATH } from "@/lib/navigation/calendar-views";
 import { filterWorklist, worklistProgress, type WorklistGroup, type WorklistRow } from "@/lib/schedule/session-worklist";
 import { cn } from "@/lib/utils";
 import { hebrewWeekday } from "@/lib/utils/date";
@@ -64,7 +65,7 @@ export function SessionWorklist({
     if (next.pending ?? pendingOnly) params.set("pending", "1");
     return `/admin/schedule?${params.toString()}`;
   };
-  const calendarHref = `/admin/calendar?date=${date}&branch=${branchId}`;
+  const calendarHref = `${CALENDAR_PATH}?date=${date}&branch=${branchId}`;
 
   const progress = worklistProgress(groups);
   const visible = filterWorklist(groups, { mineOnly, pendingOnly, currentUserId });

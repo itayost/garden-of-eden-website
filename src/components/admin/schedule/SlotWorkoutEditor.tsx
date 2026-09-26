@@ -26,6 +26,7 @@ import {
   clearSlotWorkoutAction,
   saveSlotWorkoutAction,
 } from "@/lib/actions/slot-workout";
+import { CALENDAR_PATH } from "@/lib/navigation/calendar-views";
 import { describeFanout } from "@/lib/schedule/slot-workout-fanout";
 import { trainerNames } from "@/lib/utils/trainer-color";
 import {
@@ -68,7 +69,7 @@ export function SlotWorkoutEditor({ workout, branchId }: SlotWorkoutEditorProps)
   const [saving, setSaving] = useState(false);
 
   const time = slot.start_time.slice(0, 5);
-  const backHref = `/admin/calendar?date=${slot.schedule_date}${branchId ? `&branch=${branchId}` : ""}`;
+  const backHref = `${CALENDAR_PATH}?date=${slot.schedule_date}${branchId ? `&branch=${branchId}` : ""}`;
   const hadWorkout = slot.workout_updated_at !== null;
 
   /**

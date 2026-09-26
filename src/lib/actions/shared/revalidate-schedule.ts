@@ -1,5 +1,7 @@
 import { revalidatePath } from "next/cache";
 
+import { CALENDAR_PATH, CALENDAR_TEMPLATE_PATH } from "@/lib/navigation/calendar-views";
+
 /**
  * Invalidates every surface that renders slots.
  *
@@ -18,7 +20,7 @@ import { revalidatePath } from "next/cache";
  * already calls.
  */
 export function revalidateScheduleSurfaces(): void {
-  revalidatePath("/admin/calendar");
+  revalidatePath(CALENDAR_PATH);
   revalidatePath("/admin/schedule");
-  revalidatePath("/admin/calendar/template");
+  revalidatePath(CALENDAR_TEMPLATE_PATH);
 }

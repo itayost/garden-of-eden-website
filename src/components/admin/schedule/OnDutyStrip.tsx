@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { trainerColor } from "@/lib/utils/trainer-color";
 import { onDutyTimeLabel } from "@/lib/utils/weekly-schedule";
 import type { OnDuty, OnDutyBand } from "@/types/weekly-schedule";
-import { CALENDAR_TEMPLATE_LABEL, CALENDAR_TEMPLATE_PATH } from "@/components/admin/calendar/calendar-views";
+import { CALENDAR_TEMPLATE_LABEL, CALENDAR_TEMPLATE_PATH } from "@/lib/navigation/calendar-views";
 
 interface OnDutyStripProps {
   onDuty: OnDuty;

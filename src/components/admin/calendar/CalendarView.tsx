@@ -17,6 +17,7 @@ import { WeekDayColumn } from "@/components/admin/schedule/week/WeekDayColumn";
 import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { BranchSwitcher } from "@/features/branches/components/BranchSwitcher";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
+import { CALENDAR_PATH } from "@/lib/navigation/calendar-views";
 import { findDay, visibleDays } from "@/lib/schedule/calendar";
 import { hebrewWeekday } from "@/lib/utils/date";
 import { addDays, shortDate } from "@/lib/utils/iso-date";
@@ -109,7 +110,7 @@ export function CalendarView({
   const buildable = week.days.filter(isBuildableDay);
   const buildableSlotCount = buildable.reduce((total, d) => total + d.onDuty.bands.length, 0);
 
-  const hrefFor = (target: string) => `/admin/calendar?date=${target}&branch=${branchId}`;
+  const hrefFor = (target: string) => `${CALENDAR_PATH}?date=${target}&branch=${branchId}`;
 
   const builderHrefFor = (slot: ScheduleSlot, traineeId: string) =>
     `/admin/schedule/session/${traineeId}?date=${slot.schedule_date}&slot=${slot.id}&branch=${branchId}`;
@@ -173,7 +174,7 @@ export function CalendarView({
             </Button>
           ) : (
             <Button variant="ghost" size="sm" asChild>
-              <Link href={`/admin/calendar?branch=${branchId}`}>היום</Link>
+              <Link href={`${CALENDAR_PATH}?branch=${branchId}`}>היום</Link>
             </Button>
           ))}
         <BranchSwitcher />

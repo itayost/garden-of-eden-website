@@ -11,7 +11,7 @@ import {
   CALENDAR_PATH,
   CALENDAR_TEMPLATE_LABEL,
   CALENDAR_TEMPLATE_PATH,
-} from "./calendar-views";
+} from "@/lib/navigation/calendar-views";
 
 const TABS = [
   { href: CALENDAR_PATH, label: CALENDAR_LABEL, Icon: CalendarDays },
@@ -45,7 +45,7 @@ export function CalendarTabs() {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4 w-4 shrink-0" />
             {label}
           </Link>
         );

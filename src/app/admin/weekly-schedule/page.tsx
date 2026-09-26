@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { CALENDAR_TEMPLATE_PATH } from "@/lib/navigation/calendar-views";
 import { isValidUUID } from "@/lib/validations/common";
 
 interface PageProps {
@@ -10,5 +11,5 @@ interface PageProps {
 export default async function WeeklyScheduleRedirect({ searchParams }: PageProps) {
   const { branch } = await searchParams;
   const query = branch && isValidUUID(branch) ? `?branch=${branch}` : "";
-  redirect(`/admin/calendar/template${query}`);
+  redirect(`${CALENDAR_TEMPLATE_PATH}${query}`);
 }
