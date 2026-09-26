@@ -7,6 +7,7 @@ import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { bandSlotSyncs, type BandCopy } from "@/lib/schedule/band-slot-sync";
 import { getIsraelTime } from "@/lib/utils/israel-time";
 import { israelToday } from "@/lib/utils/tasks";
 import {
@@ -214,8 +215,10 @@ export async function updateBandAction(
 
   // .update().eq() on a missing row returns no error and updates nothing, so
   // without this the action would report success on a deleted band.
+  // The band's copied fields as they were, so projected hours that still show
+  // them can follow the edit below.
   const { data: existing } = await typedFrom(supabase, "weekly_schedule_bands")
-    .select("id")
+    .select("id, start_time, label_he, location_he")
     .eq("id", bandId)
     .maybeSingle();
 
@@ -251,14 +254,20 @@ export async function updateBandAction(
   const trainersWritten = await replaceBandTrainers(supabase, bandId, trainerResult.names);
   if (trainersWritten.error) return { error: trainersWritten.error };
 
-  // Slots already projected from this band keep their time and trainer (a
-  // built day is a record), but they stop taking self-bookings the moment
-  // the band is no longer bookable. Seats follow the band while it is.
+  // Slots already projected from this band keep their trainer (a built day is
+  // a record), but they stop taking self-bookings the moment the band is no
+  // longer bookable. Seats follow the band while it is.
   const { error: seatsError } = await typedFrom(supabase, "daily_schedule_slots")
     .update({ max_trainees: isBookable ? maxTrainees : null })
     .eq("band_id", bandId)
     .gte("schedule_date", israelToday());
   if (seatsError) console.error("Update projected seats error:", seatsError);
+
+  await syncProjectedSlots(supabase, bandId, existing, {
+    start_time: startTime,
+    label_he: label,
+    location_he: location,
+  });
 
   revalidateScheduleSurfaces();
 
@@ -302,6 +311,38 @@ async function futureBandSlotIds(
   }
 
   return { ids: (data ?? []).map((slot) => slot.id) };
+}
+
+/**
+ * Carries a band edit's time, title and place to the hours it already
+ * projected that have not started. A field changes only on slots that still
+ * show the band's old value, so a single day staff edited by hand keeps its
+ * own. Best-effort like the seats: the band is saved either way, and a slot
+ * left behind is fixed by editing it.
+ */
+async function syncProjectedSlots(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  bandId: string,
+  before: BandCopy,
+  after: BandCopy,
+): Promise<void> {
+  const syncs = bandSlotSyncs(before, after);
+  if (syncs.length === 0) return;
+
+  const future = await futureBandSlotIds(supabase, bandId);
+  if ("error" in future || future.ids.length === 0) return;
+
+  const results = await Promise.all(
+    syncs.map(({ column, from, to }) => {
+      const query = typedFrom(supabase, "daily_schedule_slots")
+        .update({ [column]: to })
+        .in("id", future.ids);
+      return from === null ? query.is(column, null) : query.eq(column, from);
+    }),
+  );
+  results.forEach(({ error }, index) => {
+    if (error) console.error(`Sync projected ${syncs[index].column} error:`, error);
+  });
 }
 
 /**
