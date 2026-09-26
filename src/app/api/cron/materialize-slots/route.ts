@@ -26,6 +26,13 @@ export async function GET(request: NextRequest) {
     for (const branchId of branches) {
       results.push({ branchId, ...(await materializeBookableSlots(db, branchId, today)) });
     }
+    // A per-branch failure is still a failed run. Answering 200 is how every
+    // projection failed with 42P10 while the cron showed green.
+    const failed = results.filter((r) => r.error !== null);
+    if (failed.length > 0) {
+      console.error("[materialize-slots] branches failed:", failed);
+      return NextResponse.json({ success: false, branches: results }, { status: 500 });
+    }
     return NextResponse.json({ success: true, branches: results });
   } catch (error) {
     console.error("[materialize-slots] fatal:", error);
