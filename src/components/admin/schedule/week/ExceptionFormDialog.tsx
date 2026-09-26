@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/select";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { createExceptionAction } from "@/lib/actions/weekly-schedule";
-import { type ExceptionKind } from "@/types/weekly-schedule";
 
 interface ExceptionFormDialogProps {
   open: boolean;
@@ -45,8 +44,9 @@ interface ExceptionFormDialogProps {
 }
 
 /**
- * Records a dated deviation from the standing week: a trainer absent for one
- * date, or a one-off extra. It never edits a Band, so next week is untouched.
+ * Records a trainer absent for one date. It never edits a Band, so next week
+ * is untouched. A one-off extra hour is not an exception: it is a slot made
+ * with "+ סלוט", where it can take trainees and bookings.
  *
  * Create-only, as it always was. There is no edit path for an exception; a
  * wrong one is deleted in the exceptions panel and written again.
@@ -62,16 +62,9 @@ export function ExceptionFormDialog({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const [kind, setKind] = useState<ExceptionKind>("absent");
   const [exceptionDate, setExceptionDate] = useState(defaultDate ?? "");
   const [trainerId, setTrainerId] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [label, setLabel] = useState("");
   const [note, setNote] = useState("");
-
-  const isExtra = kind === "extra";
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -86,13 +79,7 @@ export function ExceptionFormDialog({
         branchId,
         exceptionDate,
         trainerId,
-        kind,
-        // An absence covers the whole day, so it must not carry times even if
-        // the fields were filled in before the kind was switched.
-        startTime: isExtra ? startTime : "",
-        endTime: isExtra ? endTime : "",
-        location: isExtra ? location : "",
-        label: isExtra ? label : "",
+        kind: "absent",
         note,
       });
 
@@ -117,9 +104,9 @@ export function ExceptionFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <SheetDialogContent>
         <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
-          <DialogTitle>חריגה חדשה</DialogTitle>
+          <DialogTitle>היעדרות מאמן</DialogTitle>
           <DialogDescription>
-            החלפה נרשמת כשתי חריגות: היעדרות של האחד ותוספת של השני.
+            המאמן יורד מהשעות שלו ביום הזה. שעה נוספת נוצרת ביומן דרך &quot;+ סלוט&quot;.
           </DialogDescription>
         </DialogHeader>
 
@@ -127,26 +114,6 @@ export function ExceptionFormDialog({
           onSubmit={handleSubmit}
           className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6"
         >
-          <div className="space-y-2">
-            <Label htmlFor="exception-kind">סוג</Label>
-            <Select
-              value={kind}
-              onValueChange={(value) => setKind(value as ExceptionKind)}
-            >
-              <SelectTrigger id="exception-kind">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="absent">
-                  היעדרות — המאמן לא מגיע ביום הזה
-                </SelectItem>
-                <SelectItem value="extra">
-                  תוספת חד-פעמית — רצועה נוספת ביום הזה
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="exception-date">תאריך</Label>
             <Input
@@ -174,58 +141,12 @@ export function ExceptionFormDialog({
             </Select>
           </div>
 
-          {isExtra && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="exception-start">שעת התחלה</Label>
-                  <Input
-                    id="exception-start"
-                    type="time"
-                    value={startTime}
-                    onChange={(event) => setStartTime(event.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="exception-end">שעת סיום</Label>
-                  <Input
-                    id="exception-end"
-                    type="time"
-                    value={endTime}
-                    onChange={(event) => setEndTime(event.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="exception-location">מיקום (אופציונלי)</Label>
-                <Input
-                  id="exception-location"
-                  value={location}
-                  placeholder="לדוגמה: סטודיו"
-                  onChange={(event) => setLocation(event.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="exception-label">קבוצה (אופציונלי)</Label>
-                <Input
-                  id="exception-label"
-                  value={label}
-                  placeholder="לדוגמה: נערים א׳"
-                  onChange={(event) => setLabel(event.target.value)}
-                />
-              </div>
-            </>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="exception-note">הערה (אופציונלי)</Label>
             <Input
               id="exception-note"
               value={note}
-              placeholder={isExtra ? "לדוגמה: מחליף את לידור" : "לדוגמה: חופשה"}
+              placeholder="לדוגמה: חופשה"
               onChange={(event) => setNote(event.target.value)}
             />
           </div>

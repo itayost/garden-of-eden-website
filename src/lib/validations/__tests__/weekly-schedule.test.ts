@@ -28,10 +28,6 @@ function validException(overrides: Record<string, unknown> = {}) {
     exceptionDate: "2026-08-16",
     trainerId: TRAINER,
     kind: "absent",
-    startTime: "",
-    endTime: "",
-    location: "",
-    label: "",
     note: "חופשה",
     ...overrides,
   };
@@ -114,32 +110,10 @@ describe("exceptionSchema", () => {
     ).toBe(false);
   });
 
-  test("accepts an extra with a start time", () => {
-    const result = exceptionSchema.safeParse(
-      validException({ kind: "extra", startTime: "16:00", endTime: "17:00" }),
-    );
-
-    expect(result.success).toBe(true);
-  });
-
-  test("accepts an open-ended extra", () => {
-    const result = exceptionSchema.parse(
-      validException({ kind: "extra", startTime: "18:00", endTime: "" }),
-    );
-
-    expect(result.endTime).toBe(null);
-  });
-
-  test("rejects an extra with no start time", () => {
-    expect(
-      exceptionSchema.safeParse(validException({ kind: "extra" })).success,
-    ).toBe(false);
-  });
-
-  test("rejects an extra whose end is at or before its start", () => {
+  test("rejects an extra hour; a one-off hour is a slot in the calendar", () => {
     expect(
       exceptionSchema.safeParse(
-        validException({ kind: "extra", startTime: "16:00", endTime: "16:00" }),
+        validException({ kind: "extra", startTime: "16:00", endTime: "17:00" }),
       ).success,
     ).toBe(false);
   });

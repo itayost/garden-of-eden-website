@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { isValidDateString, UUID_REGEX } from "@/lib/validations/common";
-import { EXCEPTION_KINDS } from "@/types/weekly-schedule";
 
 const MAX_TEXT_LENGTH = 300;
 
@@ -97,35 +96,21 @@ export const bandUpdateSchema = z
 export const bandIdSchema = z.object({ bandId: uuidSchema });
 
 /**
- * An Exception is one of two shapes sharing a table, so the cross-field rules
- * carry the weight the column types cannot: 'extra' needs a start time,
- * 'absent' must not carry times at all. Both mirror DB CHECKs.
+ * An Exception records one thing only: a trainer absent for a whole date.
+ * A one-off extra hour is a slot made in the calendar, where it can take a
+ * roster and bookings; the 'extra' kind stays readable for the rows that
+ * exist but is no longer written. Strict, so times or a place sent with an
+ * absence are refused rather than silently dropped.
  */
 export const exceptionSchema = z
   .object({
     branchId: uuidSchema,
     exceptionDate: dateSchema,
-    // A band with nobody on it is expressible now; the cap is a guardrail.
     trainerId: uuidSchema,
-    kind: z.enum(EXCEPTION_KINDS),
-    startTime: optionalTime,
-    endTime: optionalTime,
-    location: optionalText(MAX_TEXT_LENGTH),
-    label: optionalText(MAX_TEXT_LENGTH),
+    kind: z.literal("absent", { message: "חריגה היא היעדרות בלבד; שעה נוספת נוצרת כסלוט ביומן" }),
     note: optionalText(MAX_TEXT_LENGTH),
   })
-  .refine((v) => v.kind !== "extra" || v.startTime !== null, {
-    message: "נדרשת שעת התחלה",
-    path: ["startTime"],
-  })
-  .refine(
-    (v) => v.kind !== "absent" || (v.startTime === null && v.endTime === null),
-    { message: "היעדרות חלה על כל היום ואינה נושאת שעות", path: ["startTime"] },
-  )
-  .refine(
-    (v) => v.endTime === null || (v.startTime !== null && v.endTime > v.startTime),
-    { message: "שעת הסיום חייבת להיות אחרי שעת ההתחלה", path: ["endTime"] },
-  );
+  .strict();
 
 export const exceptionIdSchema = z.object({ exceptionId: uuidSchema });
 

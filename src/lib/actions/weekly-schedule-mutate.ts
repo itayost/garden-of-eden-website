@@ -450,8 +450,7 @@ export async function createExceptionAction(
     };
   }
 
-  const { branchId, exceptionDate, trainerId, kind, startTime, endTime, location, label, note } =
-    validated.data;
+  const { branchId, exceptionDate, trainerId, kind, note } = validated.data;
 
   const trainerResult = await resolveActiveTrainerName(trainerId);
   if ("error" in trainerResult) return { error: trainerResult.error };
@@ -471,10 +470,6 @@ export async function createExceptionAction(
       trainer_id: trainerId,
       trainer_name: trainerResult.name,
       kind,
-      start_time: startTime,
-      end_time: endTime,
-      location_he: location,
-      label_he: label,
       note_he: note,
       created_by: user!.id,
     })
