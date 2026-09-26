@@ -39,18 +39,27 @@ export async function materializeBookableSlots(
       .select("*")
       .or(`branch_id.eq.${branchId},kind.eq.absent`)
       .gte("exception_date", today)
-      .lte("exception_date", last) as unknown as Promise<{ data: WeeklyException[] | null }>,
+      .lte("exception_date", last) as unknown as Promise<{ data: WeeklyException[] | null; error: { message: string } | null }>,
     typedFrom(db, "daily_schedule_slots")
       .select("band_id, schedule_date")
       .in("band_id", bandIds)
       .gte("schedule_date", today)
-      .lte("schedule_date", last) as unknown as Promise<{ data: { band_id: string; schedule_date: string }[] | null }>,
+      .lte("schedule_date", last) as unknown as Promise<{ data: { band_id: string; schedule_date: string }[] | null; error: { message: string } | null }>,
     typedFrom(db, "daily_schedule_slot_tombstones")
       .select("band_id, schedule_date")
       .in("band_id", bandIds)
       .gte("schedule_date", today)
-      .lte("schedule_date", last) as unknown as Promise<{ data: { band_id: string; schedule_date: string }[] | null }>,
+      .lte("schedule_date", last) as unknown as Promise<{ data: { band_id: string; schedule_date: string }[] | null; error: { message: string } | null }>,
   ]);
+
+  // A failed read must stop the run rather than read as "nothing there": an
+  // empty tombstone set would resurrect every slot staff deleted, and an empty
+  // exception set would project hours for trainers marked away.
+  const readError = exceptions.error ?? existing.error ?? tombstones.error;
+  if (readError) {
+    console.error(`[materialize] read failed for branch ${branchId}:`, readError.message);
+    return { inserted: 0, error: readError.message };
+  }
 
   const plan = materializationPlan({
     dates,
