@@ -6,13 +6,16 @@ import { CalendarDays, CalendarRange } from "lucide-react";
 
 import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { cn } from "@/lib/utils";
-
-export const CALENDAR_PATH = "/admin/calendar";
-export const CALENDAR_TEMPLATE_PATH = "/admin/calendar/template";
+import {
+  CALENDAR_LABEL,
+  CALENDAR_PATH,
+  CALENDAR_TEMPLATE_LABEL,
+  CALENDAR_TEMPLATE_PATH,
+} from "@/lib/navigation/calendar-views";
 
 const TABS = [
-  { href: CALENDAR_PATH, label: "יומן", Icon: CalendarDays },
-  { href: CALENDAR_TEMPLATE_PATH, label: "תבנית שבועית", Icon: CalendarRange },
+  { href: CALENDAR_PATH, label: CALENDAR_LABEL, Icon: CalendarDays },
+  { href: CALENDAR_TEMPLATE_PATH, label: CALENDAR_TEMPLATE_LABEL, Icon: CalendarRange },
 ] as const;
 
 /**
@@ -35,14 +38,14 @@ export function CalendarTabs() {
             href={`${href}?branch=${branchId}`}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors pointer-coarse:min-h-11 sm:flex-none",
+              "flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-center text-sm leading-tight transition-colors pointer-coarse:min-h-11 sm:flex-none",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "bg-background font-medium text-forest shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4 w-4 shrink-0" />
             {label}
           </Link>
         );

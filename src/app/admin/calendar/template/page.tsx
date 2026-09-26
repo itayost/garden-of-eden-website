@@ -12,9 +12,10 @@ import { getWeeklyScheduleAction } from "@/lib/actions/weekly-schedule";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { addDays } from "@/lib/utils/iso-date";
 import { israelToday } from "@/lib/utils/tasks";
+import { CALENDAR_TEMPLATE_LABEL } from "@/lib/navigation/calendar-views";
 
 export const metadata: Metadata = {
-  title: "תבנית שבועית | Garden of Eden",
+  title: CALENDAR_TEMPLATE_LABEL,
 };
 
 /** How far ahead the exceptions list looks. Beyond this is not yet planned. */

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { trainerColor } from "@/lib/utils/trainer-color";
 import { onDutyTimeLabel } from "@/lib/utils/weekly-schedule";
 import type { OnDuty, OnDutyBand } from "@/types/weekly-schedule";
+import { CALENDAR_TEMPLATE_LABEL, CALENDAR_TEMPLATE_PATH } from "@/lib/navigation/calendar-views";
 
 interface OnDutyStripProps {
   onDuty: OnDuty;
@@ -50,10 +51,10 @@ export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
             על המשמרת היום
           </span>
           <Link
-            href={`/admin/calendar/template?branch=${branchId}`}
+            href={`${CALENDAR_TEMPLATE_PATH}?branch=${branchId}`}
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
-            תבנית שבועית
+            {CALENDAR_TEMPLATE_LABEL}
           </Link>
         </div>
 

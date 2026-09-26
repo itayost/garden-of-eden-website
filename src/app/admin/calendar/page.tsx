@@ -16,9 +16,10 @@ import { resolveCalendarDate } from "@/lib/schedule/calendar";
 import { addDays } from "@/lib/utils/iso-date";
 import { buildWeek, startOfWeek } from "@/lib/utils/schedule-week";
 import { israelToday } from "@/lib/utils/tasks";
+import { CALENDAR_LABEL } from "@/lib/navigation/calendar-views";
 
 export const metadata: Metadata = {
-  title: "יומן | Garden of Eden",
+  title: CALENDAR_LABEL,
 };
 
 interface PageProps {
