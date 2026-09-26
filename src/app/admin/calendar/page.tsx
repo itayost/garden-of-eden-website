@@ -18,7 +18,7 @@ import { buildWeek, startOfWeek } from "@/lib/utils/schedule-week";
 import { israelToday } from "@/lib/utils/tasks";
 
 export const metadata: Metadata = {
-  title: "יומן | Garden of Eden",
+  title: "יומן יומי משתנה | Garden of Eden",
 };
 
 interface PageProps {

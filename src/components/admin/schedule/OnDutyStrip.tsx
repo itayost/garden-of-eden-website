@@ -53,7 +53,7 @@ export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
             href={`/admin/calendar/template?branch=${branchId}`}
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
-            תבנית שבועית
+            תכנית אימונית קבועה
           </Link>
         </div>
 

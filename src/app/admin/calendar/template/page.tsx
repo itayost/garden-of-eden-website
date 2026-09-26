@@ -14,7 +14,7 @@ import { addDays } from "@/lib/utils/iso-date";
 import { israelToday } from "@/lib/utils/tasks";
 
 export const metadata: Metadata = {
-  title: "תבנית שבועית | Garden of Eden",
+  title: "תכנית אימונית קבועה | Garden of Eden",
 };
 
 /** How far ahead the exceptions list looks. Beyond this is not yet planned. */
