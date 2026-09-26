@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAllArboxUsers, fetchArboxBirthdays, type ArboxUser } from "./client";
 import { normalizePhone } from "./normalize-phone";
-import { matchArboxBranch } from "@/lib/branches/arbox-branch-match";
+import { arboxBranchFor } from "@/lib/branches/arbox-branch-match";
 import {
   loadAllBranches,
   loadBranchIdsByProfile,
@@ -23,28 +23,38 @@ export type BirthdaySyncResult = {
 };
 
 /**
- * Fills a profile's branch from Arbox when nobody has set it by hand.
+ * Puts a profile in a branch from Arbox when nobody has set it by hand.
  *
- * Dormant today: every Arbox client carries the same location name and no
- * branch claims it, so matchArboxBranch returns null and nothing is written.
- * The day Eden splits Arbox and sets a branch's Arbox name, new signups land
- * in the right branch on the next nightly run. Hand-edited profiles
+ * A branch whose Arbox location name matches wins, but that hook is dormant:
+ * every Arbox client carries the same location and no branch claims it. So a
+ * trainee with no branch at all gets the branch the staff's naming convention
+ * points to ("קריות" in the Arbox name, otherwise חיפה); before this, every
+ * trainee the sync created was invisible to staff. Hand-edited profiles
  * (branches_set_by_admin_at set) are never touched.
  */
 async function applyArboxBranch(
   supabase: ReturnType<typeof createAdminClient>,
   profileId: string,
-  setByAdminAt: string | null,
-  locationName: string | null,
+  profile: { setByAdminAt: string | null; isTrainee: boolean },
+  arboxUser: Pick<ArboxUser, "location_name" | "full_name">,
   branches: readonly Branch[],
 ): Promise<void> {
-  if (setByAdminAt) return;
-  const branch = matchArboxBranch(locationName, branches);
+  if (profile.setByAdminAt) return;
+  const current = (await loadBranchIdsByProfile(supabase, [profileId])).get(profileId) ?? [];
+  const branch = arboxBranchFor(
+    {
+      locationName: arboxUser.location_name,
+      fullName: arboxUser.full_name,
+      currentBranchIds: current,
+      setByAdminAt: profile.setByAdminAt,
+      isTrainee: profile.isTrainee,
+    },
+    branches,
+  );
   if (!branch) return;
 
   // Idempotent: a profile already in exactly this branch is left alone, so a
   // nightly run costs no writes once memberships have settled.
-  const current = (await loadBranchIdsByProfile(supabase, [profileId])).get(profileId) ?? [];
   if (current.length === 1 && current[0] === branch.id) return;
 
   const { error } = await replaceProfileBranches(supabase, profileId, [branch.id], {
@@ -69,7 +79,7 @@ async function processArboxUser(
 
   const { data: existing, error: lookupError } = await supabase
     .from("profiles")
-    .select("id, full_name, arbox_user_id, branches_set_by_admin_at")
+    .select("id, full_name, arbox_user_id, branches_set_by_admin_at, role")
     .or(orClause)
     .maybeSingle();
 
@@ -90,8 +100,8 @@ async function processArboxUser(
     await applyArboxBranch(
       supabase,
       existing.id,
-      existing.branches_set_by_admin_at ?? null,
-      arboxUser.location_name,
+      { setByAdminAt: existing.branches_set_by_admin_at ?? null, isTrainee: existing.role === "trainee" },
+      arboxUser,
       branches,
     );
 
@@ -149,7 +159,8 @@ async function processArboxUser(
     return "error";
   }
 
-  await applyArboxBranch(supabase, authData.user.id, null, arboxUser.location_name, branches);
+  // New profiles are trainees: the auth trigger creates them with that role.
+  await applyArboxBranch(supabase, authData.user.id, { setByAdminAt: null, isTrainee: true }, arboxUser, branches);
 
   return "created";
 }
