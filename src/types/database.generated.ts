@@ -873,6 +873,7 @@ export type Database = {
       }
       courses: {
         Row: {
+          active_only: boolean
           cover_url: string | null
           created_at: string
           description_he: string | null
@@ -885,6 +886,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          active_only?: boolean
           cover_url?: string | null
           created_at?: string
           description_he?: string | null
@@ -897,6 +899,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          active_only?: boolean
           cover_url?: string | null
           created_at?: string
           description_he?: string | null
