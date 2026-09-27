@@ -386,6 +386,24 @@ describe("unbuiltBands", () => {
     expect(day.unbuiltBands).toEqual([]);
   });
 
+  test("an hour cancelled for this date (tombstone) counts as built", () => {
+    // Staff deleted this date's projected slot on purpose; building must not
+    // bring it back open for booking.
+    const day = dayFrom({
+      bands: [band({ weekday: 0 })],
+      tombstones: [{ band_id: "band-1", schedule_date: SUNDAY }],
+    });
+    expect(day.unbuiltBands).toEqual([]);
+  });
+
+  test("a tombstone on another date does not", () => {
+    const day = dayFrom({
+      bands: [band({ weekday: 0 })],
+      tombstones: [{ band_id: "band-1", schedule_date: WEDNESDAY }],
+    });
+    expect(day.unbuiltBands.map((b) => b.id)).toEqual(["band-1"]);
+  });
+
   test("another band's slot at the same time does not", () => {
     // Two groups can share an hour; one being on the board says nothing of the other.
     const day = dayFrom({ bands: [band({ weekday: 0 })], slots: [slot({ band_id: "band-9", start_time: "15:00:00" })] });

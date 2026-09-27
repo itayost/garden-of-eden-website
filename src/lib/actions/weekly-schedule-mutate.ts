@@ -158,10 +158,12 @@ async function projectBranchNow(branchId: string): Promise<void> {
 
 /**
  * A band moved to another weekday or branch leaves its future days on the old
- * one, still bookable. Days nobody is on are deleted, as a deleted band's are.
- * Days someone is on are kept, detached from the band and closed to new
- * self-bookings, so no booking disappears silently; staff decide what to do
- * with them. Best-effort: the move is saved either way.
+ * one, still bookable. Bookings close first, so none can land mid-way and be
+ * deleted with its day. Then days nobody is on and nothing was prepared for
+ * are deleted, as a deleted band's are; the rest (someone on them, or a group
+ * workout written) are kept, detached from the band. A day whose workout
+ * cannot be cleared is detached rather than deleted, so its sessions are not
+ * orphaned. Best-effort: the move is saved either way.
  */
 async function releaseOldDaySlots(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -170,30 +172,47 @@ async function releaseOldDaySlots(
   const future = await futureBandSlotIds(supabase, bandId);
   if ("error" in future || future.ids.length === 0) return;
 
-  const { data, error } = await typedFrom(supabase, "daily_schedule_slot_trainees")
-    .select("slot_id, cancelled_at, late_cancel")
-    .in("slot_id", future.ids);
-  if (error) {
-    console.error("Moved band roster read error:", error);
+  // book_slot locks the slot row and refuses one with no seats.
+  const { error: closeError } = await typedFrom(supabase, "daily_schedule_slots")
+    .update({ max_trainees: null })
+    .in("id", future.ids);
+  if (closeError) {
+    console.error("Moved band close bookings error:", closeError);
     return;
   }
-  const roster = (data ?? []) as { slot_id: string; cancelled_at: string | null; late_cancel: boolean }[];
+
+  const [slotsRead, rosterRead] = await Promise.all([
+    typedFrom(supabase, "daily_schedule_slots").select("id, workout_updated_at").in("id", future.ids),
+    typedFrom(supabase, "daily_schedule_slot_trainees")
+      .select("slot_id, cancelled_at, late_cancel")
+      .in("slot_id", future.ids),
+  ]);
+  if (slotsRead.error || rosterRead.error) {
+    console.error("Moved band read error:", slotsRead.error ?? rosterRead.error);
+    return;
+  }
   const { deleteIds, detachIds } = partitionMovedBandSlots(
-    future.ids.map((id) => ({
-      id,
-      activeTrainees: roster.filter((r) => r.slot_id === id && (r.cancelled_at === null || r.late_cancel)).length,
+    ((slotsRead.data ?? []) as { id: string; workout_updated_at: string | null }[]).map((slot) => ({
+      id: slot.id,
+      hasWorkout: slot.workout_updated_at !== null,
     })),
+    (rosterRead.data ?? []) as { slot_id: string; cancelled_at: string | null; late_cancel: boolean }[],
   );
 
-  if (deleteIds.length > 0) {
-    await Promise.all(deleteIds.map((id) => clearSlotWorkout(supabase, id)));
-    const { error: deleteError } = await typedFrom(supabase, "daily_schedule_slots").delete().in("id", deleteIds);
+  const cleared = await Promise.all(
+    deleteIds.map(async (id) => ({ id, ok: (await clearSlotWorkout(supabase, id)).error === null })),
+  );
+  const deletable = cleared.filter((c) => c.ok).map((c) => c.id);
+  const keep = [...detachIds, ...cleared.filter((c) => !c.ok).map((c) => c.id)];
+
+  if (deletable.length > 0) {
+    const { error: deleteError } = await typedFrom(supabase, "daily_schedule_slots").delete().in("id", deletable);
     if (deleteError) console.error("Moved band old-day delete error:", deleteError);
   }
-  if (detachIds.length > 0) {
+  if (keep.length > 0) {
     const { error: detachError } = await typedFrom(supabase, "daily_schedule_slots")
-      .update({ band_id: null, max_trainees: null })
-      .in("id", detachIds);
+      .update({ band_id: null })
+      .in("id", keep);
     if (detachError) console.error("Moved band old-day detach error:", detachError);
   }
 }

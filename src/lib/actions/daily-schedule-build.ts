@@ -5,6 +5,7 @@ import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-sche
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { loadTombstones } from "@/lib/actions/shared/load-tombstones";
 import { addDays } from "@/lib/utils/iso-date";
 import { buildWeek, isBuildableDay, unbuiltBands } from "@/lib/utils/schedule-week";
 import { israelToday } from "@/lib/utils/tasks";
@@ -162,9 +163,15 @@ export async function buildDayFromWeeklyScheduleAction(
     return { error: "אין שיבוץ בתבנית השבועית ליום זה" };
   }
 
+  // An hour staff cancelled for this date stays cancelled; a failed read must
+  // not read as "none cancelled" and bring them all back.
+  const tombstones = await loadTombstones(supabase, branchId, date, date);
+  if ("error" in tombstones) return { error: "שגיאה בטעינת הלוח" };
+
   const missing = unbuiltBands(
     onDuty.bands,
     (targetExisting ?? []) as { band_id: string | null; start_time: string }[],
+    new Set(tombstones.data.map((t) => t.band_id)),
   );
   if (missing.length === 0) {
     return { error: "כל השעות של היום כבר בלוח" };
@@ -209,7 +216,7 @@ export async function buildDayFromWeeklyScheduleAction(
 }
 
 /**
- * Seeds every unbuilt day of one week in a single statement.
+ * Adds every day's missing stretches for one week in a single statement.
  *
  * Sunday morning, the admin wants six boards, not six clicks. The rules are the
  * per-day build's rules applied six times: standby is skipped, seeded slots
@@ -272,9 +279,13 @@ export async function buildWeekFromWeeklyScheduleAction(
 
   // Saturday is excluded by buildWeek's grid: the academy does not staff it, so
   // it carries no bands and would contribute nothing to a bulk seed.
+  const tombstones = await loadTombstones(supabase, branchId, weekStart, weekEnd);
+  if ("error" in tombstones) return { error: "שגיאה בטעינת התבנית השבועית" };
+
   const { days } = buildWeek({
     weekStart,
     today: israelToday(),
+    tombstones: tombstones.data,
     slots: (slotsResult.data ?? []) as ScheduleSlot[],
     bands: (bandsResult.data ?? []) as WeeklyBand[],
     exceptions: (exceptionsResult.data ?? []) as WeeklyException[],
