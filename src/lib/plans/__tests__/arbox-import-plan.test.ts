@@ -62,6 +62,7 @@ function plan(overrides: Partial<ImportPlanRow> = {}): ImportPlanRow {
     createdOn: "2026-09-01",
     orderPaymentMethod: "arbox",
     orderProviderTransactionId: "arbox:4000",
+    sessionsUsed: 0,
     ...overrides,
   };
 }
@@ -191,6 +192,22 @@ describe("chain", () => {
       chained: true,
       plan: { startsOn: "2026-11-01", endsOn: "2027-01-30" },
     });
+  });
+
+  test("a card beside a used-up card paid another way starts now, not after it", () => {
+    const usedUp = plan({ orderPaymentMethod: "cash", orderProviderTransactionId: null, endsOn: "2026-12-20", sessionsTotal: 10, sessionsUsed: 10 });
+
+    const { actions } = run({ plans: [usedUp] });
+
+    expect(actions[0]).toMatchObject({ type: "create", chained: false, plan: { startsOn: "2026-09-28" } });
+  });
+
+  test("a card beside a card with sessions left still chains", () => {
+    const running = plan({ orderPaymentMethod: "cash", orderProviderTransactionId: null, endsOn: "2026-12-20", sessionsTotal: 10, sessionsUsed: 9 });
+
+    const { actions } = run({ plans: [running] });
+
+    expect(actions[0]).toMatchObject({ type: "create", chained: true, plan: { startsOn: "2026-12-21" } });
   });
 
   test("a card beside a live membership starts after the membership", () => {

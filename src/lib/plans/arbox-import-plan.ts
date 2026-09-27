@@ -46,6 +46,8 @@ export interface ImportPlanRow {
   readonly createdOn: string;
   readonly orderPaymentMethod: string | null;
   readonly orderProviderTransactionId: string | null;
+  /** Roster sessions counted against the plan so far (countSessionsUsedFromRows). */
+  readonly sessionsUsed: number;
 }
 
 export interface ImportProducts {
@@ -139,6 +141,13 @@ const isLive = (p: ImportPlanRow, today: string): boolean =>
   p.status === "active" && p.endsOn >= today && p.productKind !== "addon";
 
 const isArboxPaid = (p: ImportPlanRow): boolean => p.orderPaymentMethod === "arbox";
+
+/**
+ * A card with no sessions left is not running, even inside its dates, so a new
+ * purchase starts now rather than after it (fulfillment does the same).
+ */
+const isUsedUpCard = (p: ImportPlanRow): boolean =>
+  p.productKind === "session_card" && p.sessionsTotal !== null && p.sessionsUsed >= p.sessionsTotal;
 
 const isHandEnteredArbox = (p: ImportPlanRow): boolean =>
   isArboxPaid(p) && p.orderProviderTransactionId === null;
@@ -244,7 +253,9 @@ function planCreate(
 ): Planned {
   const windowStart = laterOf(today, p.startDate);
   const span = daysBetween(windowStart, p.endDate as string);
-  const latestEnd = live.reduce<string | null>((acc, pl) => (acc === null || pl.endsOn > acc ? pl.endsOn : acc), null);
+  const latestEnd = live
+    .filter((pl) => !isUsedUpCard(pl))
+    .reduce<string | null>((acc, pl) => (acc === null || pl.endsOn > acc ? pl.endsOn : acc), null);
   const startsOn = latestEnd === null ? windowStart : laterOf(addDays(latestEnd, 1), windowStart);
   const endsOn = addDays(startsOn, span);
   const sessionsTotal = p.kind === "card" ? p.sessionsLeft : null;
@@ -269,6 +280,7 @@ function planCreate(
     createdOn: today,
     orderPaymentMethod: "arbox",
     orderProviderTransactionId: order.key,
+    sessionsUsed: 0,
   };
   return { action, plans: [...plans, created] };
 }

@@ -5,29 +5,25 @@
  *
  * No "server-only": scripts/import-arbox-purchases.ts runs this under tsx.
  */
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import { fetchArboxPurchases } from "@/lib/arbox/purchases";
 import type { UnmatchedCard } from "@/lib/arbox/purchase-rows";
 import {
   newPlanId,
   planArboxImports,
-  type CreatePlanAction,
   type ImportAction,
-  type ImportOrderDraft,
   type ImportPlanRow,
   type ImportProducts,
   type ImportSkip,
   type ImportSkipReason,
   type ImportTrainee,
-  type MergePlanAction,
+  purchaseKey,
 } from "@/lib/plans/arbox-import-plan";
+import { countSessionsUsedFromRows } from "@/lib/plans/plan-status";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { applyOne, healLeftoverOrders, type Db, type Outcome } from "./arbox-import-apply";
 import { israelToday } from "@/lib/utils/tasks";
-import type { Database } from "@/types/database";
 import type { PlanKind } from "@/types/plans";
 
-type Db = SupabaseClient<Database>;
 
 /** Same literal as KIRYAT_ATA_BRANCH_NAME in enrollment/lib/catalog.ts, which is server-only. */
 const KIRYAT_ATA = "קריית אתא";
@@ -71,20 +67,64 @@ async function loadTrainees(db: Db, branchId: string): Promise<ImportTrainee[]> 
   }));
 }
 
-async function loadPlans(db: Db, profileIds: readonly string[]): Promise<ImportPlanRow[]> {
+const PAGE = 1000;
+
+interface RosterRow {
+  readonly trainee_id: string;
+  readonly cancelled_at: string | null;
+  readonly late_cancel: boolean;
+  readonly slot: { readonly schedule_date: string; readonly branch_id: string | null } | null;
+}
+
+/**
+ * Roster rows from `since` on, page by page: PostgREST caps a response at
+ * 1000 rows, and a silently truncated roster would undercount usage.
+ */
+async function loadRosterRows(db: Db, profileIds: readonly string[], since: string): Promise<RosterRow[]> {
+  const pages: RosterRow[][] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db
+      .from("daily_schedule_slot_trainees")
+      .select("trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, branch_id)")
+      .in("trainee_id", [...profileIds])
+      .gte("slot.schedule_date", since)
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`[arbox-import] rosters: ${error.message}`);
+    const rows = (data ?? []) as unknown as RosterRow[];
+    pages.push(rows);
+    if (rows.length < PAGE) break;
+  }
+  return pages.flat();
+}
+
+async function loadPlans(db: Db, profileIds: readonly string[], today: string): Promise<ImportPlanRow[]> {
   if (profileIds.length === 0) return [];
   const { data, error } = await db
     .from("trainee_plans")
-    .select("id, profile_id, starts_on, ends_on, sessions_total, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id)")
+    .select("id, profile_id, branch_id, starts_on, ends_on, sessions_total, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id)")
     .in("profile_id", [...profileIds]);
   if (error) throw new Error(`[arbox-import] plans: ${error.message}`);
   type Row = {
-    id: string; profile_id: string; starts_on: string; ends_on: string; sessions_total: number | null;
+    id: string; profile_id: string; branch_id: string; starts_on: string; ends_on: string; sessions_total: number | null;
     status: string; created_at: string;
     product: { kind: string } | null;
     order: { payment_method: string | null; provider_transaction_id: string | null } | null;
   };
-  return ((data ?? []) as unknown as Row[]).map((r) => ({
+  const plans = (data ?? []) as unknown as Row[];
+  // Usage matters only for plans still in their window; older rosters are not read.
+  const live = plans.filter((r) => r.ends_on >= today);
+  const since = live.reduce<string | null>((acc, r) => (acc === null || r.starts_on < acc ? r.starts_on : acc), null);
+  const roster = since === null ? [] : await loadRosterRows(db, profileIds, since);
+  const usedBy = (r: Row): number =>
+    countSessionsUsedFromRows(
+      roster
+        .filter((x) => x.trainee_id === r.profile_id && x.slot)
+        .map((x) => ({ schedule_date: x.slot!.schedule_date, branch_id: x.slot!.branch_id, cancelled_at: x.cancelled_at, late_cancel: x.late_cancel })),
+      r,
+      today,
+    );
+  return plans.map((r) => ({
     id: r.id,
     profileId: r.profile_id,
     productKind: (r.product?.kind ?? "addon") as PlanKind,
@@ -95,17 +135,27 @@ async function loadPlans(db: Db, profileIds: readonly string[]): Promise<ImportP
     createdOn: israelToday(new Date(r.created_at)),
     orderPaymentMethod: r.order?.payment_method ?? null,
     orderProviderTransactionId: r.order?.provider_transaction_id ?? null,
+    sessionsUsed: r.ends_on >= today ? usedBy(r) : 0,
   }));
 }
 
-async function loadImportedKeys(db: Db): Promise<Set<string>> {
-  const { data, error } = await db
-    .from("orders")
-    .select("provider_transaction_id")
-    .eq("payment_provider", "manual")
-    .like("provider_transaction_id", "arbox:%");
-  if (error) throw new Error(`[arbox-import] imported keys: ${error.message}`);
-  return new Set((data ?? []).map((o) => o.provider_transaction_id).filter((k): k is string => k !== null));
+const KEY_CHUNK = 200;
+
+/** Only the keys of today's Arbox purchases: bounded, unlike all imports ever. */
+async function loadImportedKeys(db: Db, keys: readonly string[]): Promise<Set<string>> {
+  const chunks = Array.from({ length: Math.ceil(keys.length / KEY_CHUNK) }, (_, i) => keys.slice(i * KEY_CHUNK, (i + 1) * KEY_CHUNK));
+  const found = await Promise.all(
+    chunks.map(async (chunk) => {
+      const { data, error } = await db
+        .from("orders")
+        .select("provider_transaction_id")
+        .eq("payment_provider", "manual")
+        .in("provider_transaction_id", chunk);
+      if (error) throw new Error(`[arbox-import] imported keys: ${error.message}`);
+      return (data ?? []).map((o) => o.provider_transaction_id).filter((k): k is string => k !== null);
+    }),
+  );
+  return new Set(found.flat());
 }
 
 async function loadProducts(db: Db, branchId: string): Promise<ImportProducts> {
@@ -129,127 +179,15 @@ async function loadProducts(db: Db, branchId: string): Promise<ImportProducts> {
   };
 }
 
-async function loadOurSide(db: Db): Promise<OurSide> {
+async function loadOurSide(db: Db, today: string, keys: readonly string[]): Promise<OurSide> {
   const branchId = await loadBranchId(db);
   const trainees = await loadTrainees(db, branchId);
   const [plans, importedKeys, products] = await Promise.all([
-    loadPlans(db, trainees.map((t) => t.profileId)),
-    loadImportedKeys(db),
+    loadPlans(db, trainees.map((t) => t.profileId), today),
+    loadImportedKeys(db, keys),
     loadProducts(db, branchId),
   ]);
   return { branchId, trainees, plans, importedKeys, products };
-}
-
-type InsertOrderResult = { id: string } | "duplicate" | "failed";
-
-async function insertOrder(db: Db, branchId: string, o: ImportOrderDraft): Promise<InsertOrderResult> {
-  const now = new Date().toISOString();
-  const { data, error } = await db
-    .from("orders")
-    .insert({
-      product_id: o.productId,
-      branch_id: branchId,
-      status: "paid",
-      paid_at: now,
-      fulfilled_at: now,
-      payment_provider: "manual",
-      payment_method: "arbox",
-      provider_transaction_id: o.key,
-      reference: o.reference,
-      received_by: null,
-      amount_ils: o.amountIls,
-      parent_name: o.parentName,
-      payer_phone: o.phone,
-      login_phone: o.phone,
-      child_name: o.childName,
-      child_birthdate: o.childBirthdate,
-      email: null,
-      profile_id: o.profileId,
-      installments: 1,
-    })
-    .select("id")
-    .single();
-  if (error?.code === "23505") return "duplicate";
-  if (error || !data) {
-    console.error(`[arbox-import] order ${o.key} failed:`, error?.message);
-    return "failed";
-  }
-  return { id: data.id };
-}
-
-async function deleteOrder(db: Db, orderId: string): Promise<void> {
-  const { error } = await db.from("orders").delete().eq("id", orderId);
-  if (error) console.error(`[arbox-import] rollback of order ${orderId} failed:`, error.message);
-}
-
-async function logGrant(db: Db, a: ImportAction, orderId: string, planId: string): Promise<void> {
-  const { error } = await db.from("activity_logs").insert({
-    user_id: a.profileId,
-    action: "plan_granted",
-    actor_id: null,
-    actor_name: "Arbox",
-    metadata: { source: "arbox-import", type: a.type, orderId, planId, arboxMembershipUserId: a.purchase.membershipUserId },
-  });
-  if (error) console.error(`[arbox-import] activity log failed:`, error.message);
-}
-
-async function applyCreate(db: Db, branchId: string, a: CreatePlanAction, orderId: string): Promise<string | null> {
-  const { data, error } = await db
-    .from("trainee_plans")
-    .insert({
-      profile_id: a.profileId,
-      product_id: a.plan.productId,
-      branch_id: branchId,
-      order_id: orderId,
-      starts_on: a.plan.startsOn,
-      ends_on: a.plan.endsOn,
-      sessions_total: a.plan.sessionsTotal,
-      status: "active",
-      source: "manual",
-      note: a.plan.note,
-      created_by: null,
-    })
-    .select("id")
-    .single();
-  if (error || !data) {
-    console.error(`[arbox-import] plan for ${a.order.key} failed:`, error?.message);
-    return null;
-  }
-  return data.id;
-}
-
-async function applyMerge(db: Db, a: MergePlanAction, targetId: string, resolve: (id: string) => string | null): Promise<string | null> {
-  const clears = {
-    ...(a.set.clearThreeDays ? { reminded_3_days_at: null } : {}),
-    ...(a.set.clearLastSession ? { reminded_last_session_at: null } : {}),
-    ...(a.set.clearExpired ? { reminded_expired_at: null } : {}),
-  };
-  const base = db
-    .from("trainee_plans")
-    .update({ sessions_total: a.set.sessionsTotal, ends_on: a.set.endsOn, ...clears })
-    .eq("id", targetId)
-    .eq("ends_on", a.target.expectEndsOn);
-  // Guarded by the values the plan was read with: a staff edit in between
-  // makes this match nothing, and the purchase retries next night.
-  const guarded = a.target.expectSessionsTotal === null
-    ? base.is("sessions_total", null)
-    : base.eq("sessions_total", a.target.expectSessionsTotal);
-  const { data, error } = await guarded.select("id");
-  if (error || (data ?? []).length === 0) {
-    console.error(`[arbox-import] merge of ${a.order.key} into ${targetId} failed:`, error?.message ?? "plan changed");
-    return null;
-  }
-  for (const shift of a.shifts) {
-    const planId = resolve(shift.planId);
-    if (!planId) continue;
-    const { error: shiftError } = await db
-      .from("trainee_plans")
-      .update({ starts_on: shift.startsOn, ends_on: shift.endsOn })
-      .eq("id", planId)
-      .eq("starts_on", shift.expectStartsOn);
-    if (shiftError) console.error(`[arbox-import] moving queued plan ${planId} failed:`, shiftError.message);
-  }
-  return targetId;
 }
 
 export interface ImportRunResult {
@@ -260,36 +198,10 @@ export interface ImportRunResult {
   readonly merged: number;
   readonly alreadyImported: number;
   readonly failed: number;
+  /** Leftover import orders repaired or removed before planning. */
+  readonly healed: number;
   readonly skipped: Partial<Record<ImportSkipReason, number>>;
   readonly touchedProfileIds: string[];
-}
-
-type Outcome = "created" | "merged" | "alreadyImported" | "failed";
-
-async function applyOne(
-  db: Db,
-  branchId: string,
-  a: ImportAction,
-  resolve: (id: string) => string | null,
-  remember: (placeholder: string, realId: string) => void,
-): Promise<Outcome> {
-  const targetId = a.type === "merge" ? resolve(a.target.planId) : null;
-  if (a.type === "merge" && !targetId) return "failed";
-
-  const order = await insertOrder(db, branchId, a.order);
-  if (order === "duplicate") return "alreadyImported";
-  if (order === "failed") return "failed";
-
-  const planId = a.type === "create"
-    ? await applyCreate(db, branchId, a, order.id)
-    : await applyMerge(db, a, targetId as string, resolve);
-  if (!planId) {
-    await deleteOrder(db, order.id);
-    return "failed";
-  }
-  if (a.type === "create") remember(a.plan.id, planId);
-  await logGrant(db, a, order.id, planId);
-  return a.type === "create" ? "created" : "merged";
 }
 
 function countSkips(skips: readonly ImportSkip[]): Partial<Record<ImportSkipReason, number>> {
@@ -308,10 +220,12 @@ export async function runArboxPurchaseImport(opts: { dryRun: boolean; now?: Date
 }> {
   const now = opts.now ?? new Date();
   const db = createAdminClient() as Db;
+  const today = israelToday(now);
   const { purchases, unmatchedCards } = await fetchArboxPurchases(now);
-  const ours = await loadOurSide(db);
+  const healed = opts.dryRun ? 0 : await healLeftoverOrders(db);
+  const ours = await loadOurSide(db, today, purchases.map(purchaseKey));
   const { actions, skips } = planArboxImports({
-    today: israelToday(now),
+    today,
     purchases,
     trainees: ours.trainees,
     plans: ours.plans,
@@ -340,6 +254,7 @@ export async function runArboxPurchaseImport(opts: { dryRun: boolean; now?: Date
       merged: count("merged"),
       alreadyImported: count("alreadyImported"),
       failed: count("failed"),
+      healed,
       skipped: countSkips(skips),
       touchedProfileIds: [...new Set(touched)],
     },

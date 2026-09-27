@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   }
 
   if (!DRY_RUN) {
-    console.log(`\napplied: created ${result.created}, merged ${result.merged}, already imported ${result.alreadyImported}, failed ${result.failed}`);
+    console.log(`\napplied: created ${result.created}, merged ${result.merged}, already imported ${result.alreadyImported}, failed ${result.failed}, leftovers repaired ${result.healed}`);
   }
 }
 
