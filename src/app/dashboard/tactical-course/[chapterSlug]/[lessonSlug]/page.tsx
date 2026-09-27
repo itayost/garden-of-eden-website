@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CourseLessonPage } from "@/features/course/components/trainee/CourseLessonPage";
-import { DIGITAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
+import { TACTICAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 
 export const metadata: Metadata = {
   title: "שיעור | Garden of Eden",
@@ -16,8 +16,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const { chapterSlug, lessonSlug } = await params;
   return (
     <CourseLessonPage
-      slug={DIGITAL_COURSE_SLUG}
-      basePath="/dashboard/course"
+      slug={TACTICAL_COURSE_SLUG}
+      basePath="/dashboard/tactical-course"
       chapterSlug={chapterSlug}
       lessonSlug={lessonSlug}
     />
