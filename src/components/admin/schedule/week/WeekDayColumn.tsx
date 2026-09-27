@@ -94,13 +94,12 @@ export function WeekDayColumn({
       )}
 
       <div className="space-y-1">
-        {/* Building is admin-only, needs a template, and refuses a day that
-            already has a board — the same three conditions as the daily view. */}
-        {isAdmin && !day.isBuilt && !templateFailed && day.onDuty.bands.length > 0 && (
+        {/* Building is admin-only, needs a template, and adds only the hours
+            not on the board yet — the same conditions as the daily view. */}
+        {isAdmin && !templateFailed && day.unbuiltBands.length > 0 && (
           <BuildDayButton
             targetDate={day.date}
-            targetHasSlots={false}
-            bandCount={day.onDuty.bands.length}
+            bandCount={day.unbuiltBands.length}
             compact
           />
         )}

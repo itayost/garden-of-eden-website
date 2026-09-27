@@ -108,7 +108,7 @@ export function CalendarView({
   const openSlot = days.flatMap((d) => d.slots).find((s) => s.id === openSlotId) ?? null;
 
   const buildable = week.days.filter(isBuildableDay);
-  const buildableSlotCount = buildable.reduce((total, d) => total + d.onDuty.bands.length, 0);
+  const buildableSlotCount = buildable.reduce((total, d) => total + d.unbuiltBands.length, 0);
 
   const hrefFor = (target: string) => `${CALENDAR_PATH}?date=${target}&branch=${branchId}`;
 
@@ -197,11 +197,10 @@ export function CalendarView({
           </Button>
           <CopyWhatsAppButton slots={selectedSlots} />
           {isAdmin && <DuplicateDayButton targetDate={selectedDate} targetHasSlots={selectedSlots.length > 0} />}
-          {isAdmin && !templateFailed && selectedDay && selectedDay.onDuty.bands.length > 0 && (
+          {isAdmin && !templateFailed && selectedDay && selectedDay.unbuiltBands.length > 0 && (
             <BuildDayButton
               targetDate={selectedDate}
-              targetHasSlots={selectedSlots.length > 0}
-              bandCount={selectedDay.onDuty.bands.length}
+              bandCount={selectedDay.unbuiltBands.length}
             />
           )}
           {isAdmin && !templateFailed && (

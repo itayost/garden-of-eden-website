@@ -41,6 +41,8 @@ export interface WeekDay {
   onDuty: OnDuty;
   /** This date's one-off additions, already inside onDuty.bands. */
   extras: OnDutyBand[];
+  /** The working stretches that have no slot on this date yet: what a build adds. */
+  unbuiltBands: OnDutyBand[];
 }
 
 export interface Week {
@@ -117,6 +119,27 @@ function groupByDate(
   return groups;
 }
 
+/**
+ * Working stretches with no slot yet on this date. A stretch is on the board
+ * when a slot carries its band, or when a hand-made slot (no band) sits at its
+ * start time. Another band's slot at the same hour does not count: two groups
+ * can share an hour. A bookable hour projected ahead of time therefore no
+ * longer blocks building the rest of the day.
+ */
+export function unbuiltBands(
+  bands: readonly OnDutyBand[],
+  slots: readonly Pick<ScheduleSlot, "band_id" | "start_time">[],
+): OnDutyBand[] {
+  return bands.filter(
+    (band) =>
+      !slots.some(
+        (slot) =>
+          (band.source === "band" && slot.band_id === band.id) ||
+          (slot.band_id === null && slot.start_time.slice(0, 5) === band.startTime),
+      ),
+  );
+}
+
 function toWeekDay(
   date: string,
   today: string,
@@ -137,6 +160,7 @@ function toWeekDay(
     slots,
     onDuty,
     extras: onDuty.bands.filter((band) => band.source === "exception"),
+    unbuiltBands: unbuiltBands(onDuty.bands, slots),
   };
 }
 
@@ -189,5 +213,5 @@ export function buildWeek({
  * about which days are offered.
  */
 export function isBuildableDay(day: WeekDay): boolean {
-  return !day.isBuilt && !day.isPast && day.onDuty.bands.length > 0;
+  return !day.isPast && day.unbuiltBands.length > 0;
 }

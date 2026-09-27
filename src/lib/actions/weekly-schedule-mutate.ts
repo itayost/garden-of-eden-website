@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { bandSlotSyncs, type BandCopy } from "@/lib/schedule/band-slot-sync";
+import { partitionMovedBandSlots } from "@/lib/schedule/moved-band-slots";
 import { getIsraelTime } from "@/lib/utils/israel-time";
 import { israelToday } from "@/lib/utils/tasks";
 import {
@@ -155,6 +156,48 @@ async function projectBranchNow(branchId: string): Promise<void> {
   }
 }
 
+/**
+ * A band moved to another weekday or branch leaves its future days on the old
+ * one, still bookable. Days nobody is on are deleted, as a deleted band's are.
+ * Days someone is on are kept, detached from the band and closed to new
+ * self-bookings, so no booking disappears silently; staff decide what to do
+ * with them. Best-effort: the move is saved either way.
+ */
+async function releaseOldDaySlots(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  bandId: string,
+): Promise<void> {
+  const future = await futureBandSlotIds(supabase, bandId);
+  if ("error" in future || future.ids.length === 0) return;
+
+  const { data, error } = await typedFrom(supabase, "daily_schedule_slot_trainees")
+    .select("slot_id, cancelled_at, late_cancel")
+    .in("slot_id", future.ids);
+  if (error) {
+    console.error("Moved band roster read error:", error);
+    return;
+  }
+  const roster = (data ?? []) as { slot_id: string; cancelled_at: string | null; late_cancel: boolean }[];
+  const { deleteIds, detachIds } = partitionMovedBandSlots(
+    future.ids.map((id) => ({
+      id,
+      activeTrainees: roster.filter((r) => r.slot_id === id && (r.cancelled_at === null || r.late_cancel)).length,
+    })),
+  );
+
+  if (deleteIds.length > 0) {
+    await Promise.all(deleteIds.map((id) => clearSlotWorkout(supabase, id)));
+    const { error: deleteError } = await typedFrom(supabase, "daily_schedule_slots").delete().in("id", deleteIds);
+    if (deleteError) console.error("Moved band old-day delete error:", deleteError);
+  }
+  if (detachIds.length > 0) {
+    const { error: detachError } = await typedFrom(supabase, "daily_schedule_slots")
+      .update({ band_id: null, max_trainees: null })
+      .in("id", detachIds);
+    if (detachError) console.error("Moved band old-day detach error:", detachError);
+  }
+}
+
 export async function createBandAction(input: BandInput): Promise<BandResult> {
   const { error: authError, user } = await verifyAdmin();
   if (authError) return { error: authError };
@@ -273,6 +316,9 @@ export async function updateBandAction(
   const trainersWritten = await replaceBandTrainers(supabase, bandId, trainerResult.names);
   if (trainersWritten.error) return { error: trainersWritten.error };
 
+  const moved = existing.weekday !== weekday || existing.branch_id !== branchId;
+  if (moved) await releaseOldDaySlots(supabase, bandId);
+
   // Slots already projected from this band keep their trainer (a built day is
   // a record), but they stop taking self-bookings the moment the band is no
   // longer bookable. Seats follow the band while it is.
@@ -282,9 +328,8 @@ export async function updateBandAction(
     .gte("schedule_date", israelToday());
   if (seatsError) console.error("Update projected seats error:", seatsError);
 
-  // A band moved to another day or branch leaves its projected slots on the
-  // old one; giving those the new details would only disguise the stray hour.
-  if (existing.weekday === weekday && existing.branch_id === branchId) {
+  // A moved band's old-day slots were just released; the rest follow the edit.
+  if (!moved) {
     await syncProjectedSlots(supabase, bandId, existing, {
       start_time: startTime,
       label_he: label,

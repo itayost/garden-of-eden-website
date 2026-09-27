@@ -23,9 +23,7 @@ import { buildDayFromWeeklyScheduleAction } from "@/lib/actions/daily-schedule";
 interface BuildDayButtonProps {
   /** The day currently viewed — the build target. */
   targetDate: string;
-  /** The action refuses to build onto a non-empty day; disable upfront. */
-  targetHasSlots: boolean;
-  /** Working stretches the weekly schedule puts on this day, standby excluded. */
+  /** Working stretches with no slot on this day yet: what the build adds. */
   bandCount: number;
   /** The week view puts this in a column, where the daily board's sizing does not fit. */
   compact?: boolean;
@@ -33,7 +31,6 @@ interface BuildDayButtonProps {
 
 export function BuildDayButton({
   targetDate,
-  targetHasSlots,
   bandCount,
   compact = false,
 }: BuildDayButtonProps) {
@@ -67,7 +64,7 @@ export function BuildDayButton({
           variant="outline"
           size={compact ? "sm" : "default"}
           className={compact ? "w-full text-xs" : undefined}
-          disabled={targetHasSlots || bandCount === 0}
+          disabled={bandCount === 0}
           aria-label="בנה מהתבנית השבועית"
         >
           <CalendarRange className="h-4 w-4" />
