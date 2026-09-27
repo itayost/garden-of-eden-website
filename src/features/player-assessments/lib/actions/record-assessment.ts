@@ -2,6 +2,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { typedFrom } from "@/lib/supabase/helpers";
 import type {
@@ -74,8 +75,13 @@ export async function recordAssessment(
   }
   const assessment = data as PlayerAssessment;
 
-  await writeRatingSnapshot(supabase, assessment);
-  await grantAssessmentBadges(supabase, assessment);
+  // Service role for the post-write steps: player_rating_snapshots has no
+  // write policy at all, and user_achievements lets a user insert only their
+  // own badge, so the staff member's client was refused on both. The access
+  // checks above (verifyAdminOrTrainer, assertTraineeInScope) already ran.
+  const service = createAdminClient();
+  await writeRatingSnapshot(service, assessment);
+  await grantAssessmentBadges(service, assessment);
 
   return { success: true, data: assessment };
 }
@@ -116,6 +122,9 @@ export async function updateAssessment(
   }
   const assessment = data as PlayerAssessment;
 
-  await writeRatingSnapshot(supabase, assessment);
+  // Service role, as in recordAssessment: the staff client cannot write
+  // snapshots, and the nightly backfill only fills missing ones, so an edit
+  // would otherwise never reach the rating card.
+  await writeRatingSnapshot(createAdminClient(), assessment);
   return { success: true, data: assessment };
 }
