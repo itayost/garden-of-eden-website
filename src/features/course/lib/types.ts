@@ -46,6 +46,8 @@ export interface Course {
   isPublished: boolean;
   needsTitle: boolean;
   orderIndex: number;
+  /** Open only to staff and active trainees (הקורס הטקטי). */
+  activeOnly: boolean;
 }
 
 export interface CourseWithChapters extends Course {

@@ -9,6 +9,7 @@ import type {
   LessonProgress,
   LessonProgressMap,
 } from "../types";
+import type { CourseViewer } from "../course-access-rule";
 
 // --- Raw DB row shapes (snake_case) ---
 
@@ -20,6 +21,7 @@ interface RawCourse {
   is_published: boolean;
   needs_title: boolean;
   order_index: number;
+  active_only: boolean;
 }
 
 interface RawChapter {
@@ -162,6 +164,7 @@ function toCourse(row: RawCourse) {
     isPublished: row.is_published,
     needsTitle: row.needs_title,
     orderIndex: row.order_index,
+    activeOnly: row.active_only === true,
   };
 }
 
@@ -196,4 +199,21 @@ export async function getMyLessonProgress(): Promise<LessonProgressMap> {
     };
   }
   return map;
+}
+
+/**
+ * The signed-in viewer's role and account status, for canOpenCourse. A viewer
+ * with no profile row reads as not active.
+ */
+export async function getCourseViewer(): Promise<CourseViewer> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { role: null, isActive: false };
+  const { data } = (await typedFrom(supabase, "profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle()) as { data: { role: string | null; is_active: boolean | null } | null };
+  return { role: data?.role ?? null, isActive: data?.is_active === true };
 }
