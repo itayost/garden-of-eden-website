@@ -15,11 +15,12 @@ import type { AccessTier } from "@/lib/access/course-access";
 interface DashboardBottomNavProps {
   tier: AccessTier;
   canBook: boolean;
+  canTacticalCourse: boolean;
 }
 
-export function DashboardBottomNav({ tier, canBook }: DashboardBottomNavProps) {
+export function DashboardBottomNav({ tier, canBook, canTacticalCourse }: DashboardBottomNavProps) {
   const { main: mainItems, more: moreItems } = splitBottomNav(
-    filterNavForCapabilities(filterNavForTier(DASHBOARD_NAV, tier), { booking: canBook }),
+    filterNavForCapabilities(filterNavForTier(DASHBOARD_NAV, tier), { booking: canBook, tacticalCourse: canTacticalCourse }),
     true,
   );
   const pathname = usePathname();

@@ -23,6 +23,7 @@ type DashboardSidebarProps = {
   /** Decides which nav items this trainee is shown. */
   tier: AccessTier;
   canBook: boolean;
+  canTacticalCourse: boolean;
 };
 
 export function DashboardSidebar({
@@ -30,8 +31,9 @@ export function DashboardSidebar({
   profile,
   tier,
   canBook,
+  canTacticalCourse,
 }: DashboardSidebarProps) {
-  const navItems = filterNavForCapabilities(filterNavForTier(DASHBOARD_NAV, tier), { booking: canBook });
+  const navItems = filterNavForCapabilities(filterNavForTier(DASHBOARD_NAV, tier), { booking: canBook, tacticalCourse: canTacticalCourse });
   const pathname = usePathname();
   return (
     <AppSidebar

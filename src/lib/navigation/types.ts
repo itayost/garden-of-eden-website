@@ -12,7 +12,7 @@ export type NavItem = {
   // sidebar's list order, so both surfaces read one config yet keep their own order).
   mobileOrder?: number;
   /** Shown only when the viewer has this capability (e.g. a bookable branch). */
-  requires?: "booking";
+  requires?: "booking" | "tacticalCourse";
 };
 
 export type NavSection = {
@@ -37,7 +37,7 @@ export function splitBottomNav(
 /** Drop items whose capability the viewer lacks. Cosmetic; the page redirects on its own. */
 export function filterNavForCapabilities(
   items: NavItem[],
-  capabilities: { booking: boolean },
+  capabilities: { booking: boolean; tacticalCourse: boolean },
 ): NavItem[] {
   return items.filter((item) => !item.requires || capabilities[item.requires]);
 }
