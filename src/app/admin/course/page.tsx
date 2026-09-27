@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { listCourseAdminTree, listCourses } from "@/features/course/lib/actions/admin-course";
 import { CourseSwitcher } from "@/features/course/components/admin/CourseSwitcher";
+import { CourseNotice } from "@/features/course/components/CourseNotice";
 import { DIGITAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { CourseAdminClient } from "@/features/course/components/admin/CourseAdminClient";
 
@@ -56,21 +57,11 @@ export default async function AdminCoursePage({ searchParams }: AdminCoursePageP
       <CourseSwitcher courses={courses} current={slug} basePath="/admin/course" />
 
       {!isAdmin ? (
-        <div className="rounded-xl border border-dashed border-border bg-card/50 py-16 text-center">
-          <p className="text-sm text-muted-foreground">
-            עריכת תכני הקורס פתוחה למנהלים בלבד. אפשר לצפות בהתקדמות המתאמנים
-            בכפתור שלמעלה.
-          </p>
-        </div>
+        <CourseNotice message="עריכת תכני הקורס פתוחה למנהלים בלבד. אפשר לצפות בהתקדמות המתאמנים בכפתור שלמעלה." />
       ) : course ? (
         <CourseAdminClient key={course.id} course={course} />
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-card/50 py-16 text-center">
-          <p className="text-sm text-muted-foreground">
-            עדיין לא נוצר קורס. הרץ את סקריפט הזריעה כדי לייבא את הפרקים
-            והשיעורים.
-          </p>
-        </div>
+        <CourseNotice message="עדיין לא נוצר קורס. הרץ את סקריפט הזריעה כדי לייבא את הפרקים והשיעורים." />
       )}
     </div>
   );

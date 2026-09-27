@@ -14,8 +14,8 @@ interface LessonPlaylistProps {
   chapter: CourseChapterWithLessons;
   currentLessonId: string;
   progress: LessonProgressMap;
-  /** Route the lesson links hang off; the digital course is the default. */
-  basePath?: string;
+  /** Route the course's lesson pages hang off. */
+  basePath: string;
 }
 
 /**
@@ -26,7 +26,7 @@ export function LessonPlaylist({
   chapter,
   currentLessonId,
   progress,
-  basePath = "/dashboard/course",
+  basePath,
 }: LessonPlaylistProps) {
   return (
     <section aria-labelledby="playlist-heading" className="space-y-2">

@@ -15,11 +15,11 @@ import type {
 interface ChapterListProps {
   chapters: CourseChapterWithLessons[];
   progress: LessonProgressMap;
-  /** Route the lesson links hang off; the digital course is the default. */
-  basePath?: string;
+  /** Route the course's lesson pages hang off. */
+  basePath: string;
 }
 
-export function ChapterList({ chapters, progress, basePath = "/dashboard/course" }: ChapterListProps) {
+export function ChapterList({ chapters, progress, basePath }: ChapterListProps) {
   return (
     <ul className="space-y-2">
       {chapters.map((chapter, index) => {

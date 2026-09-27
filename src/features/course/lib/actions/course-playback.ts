@@ -72,7 +72,7 @@ export async function getLessonPlaybackUrl(
   // trainees. Row-level security lets any signed-in user read a published
   // lesson row; the video is the protected asset, so the gate is here.
   const activeOnly = lesson.chapter?.course?.active_only === true;
-  if (activeOnly && !canOpenCourse(true, await getCourseViewer())) {
+  if (activeOnly && !canOpenCourse(activeOnly, await getCourseViewer())) {
     return { url: null, quality: null, error: COURSE_ACCESS_DENIED };
   }
 

@@ -1,13 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import {
-  getPublishedCourse,
-  getMyLessonProgress,
-  getCourseViewer,
-} from "@/features/course/lib/actions";
-import { canOpenCourse } from "@/features/course/lib/course-access-rule";
-import { CourseAccessNotice } from "./CourseAccessNotice";
+import { loadCourseForViewer } from "@/features/course/lib/load-course";
+import { CourseNotice } from "../CourseNotice";
 import {
   countChapterProgress,
   isLessonDone,
@@ -30,13 +25,9 @@ export async function CourseLessonPage({
   chapterSlug,
   lessonSlug,
 }: CourseLessonPageProps) {
-  const [course, progress, viewer] = await Promise.all([
-    getPublishedCourse(slug),
-    getMyLessonProgress(),
-    getCourseViewer(),
-  ]);
+  const { course, progress, canOpen } = await loadCourseForViewer(slug);
   if (!course) notFound();
-  if (!canOpenCourse(course.activeOnly, viewer)) return <CourseAccessNotice />;
+  if (!canOpen) return <CourseNotice />;
 
   const chapters = course.chapters.filter((c) => c.lessons.length > 0);
   const chapterIndex = chapters.findIndex((c) => c.slug === chapterSlug);

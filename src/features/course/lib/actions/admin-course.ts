@@ -86,17 +86,16 @@ export async function listCourseAdminTree(slug: string): Promise<AdminCourse | n
 
   const db = createAdminClient();
 
-  const { data: courses, error: courseError } = await typedFrom(db, "courses")
+  const { data: course, error: courseError } = await typedFrom(db, "courses")
     .select("*")
     .eq("slug", slug)
-    .limit(1);
+    .maybeSingle();
 
   if (courseError) {
     console.error("listCourseAdminTree course failed:", courseError);
     return null;
   }
 
-  const course = courses?.[0];
   if (!course) return null;
 
   const { data: chapters, error: chapterError } = await typedFrom(

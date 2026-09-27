@@ -1,10 +1,5 @@
-import {
-  getPublishedCourse,
-  getMyLessonProgress,
-  getCourseViewer,
-} from "@/features/course/lib/actions";
-import { canOpenCourse } from "@/features/course/lib/course-access-rule";
-import { CourseAccessNotice } from "./CourseAccessNotice";
+import { loadCourseForViewer } from "@/features/course/lib/load-course";
+import { CourseNotice } from "../CourseNotice";
 import {
   countCourseProgress,
   findResumePoint,
@@ -23,17 +18,13 @@ interface CourseHomePageProps {
 
 /** A course's home: cover, resume, progress and chapters. */
 export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
-  const [course, progress, viewer] = await Promise.all([
-    getPublishedCourse(slug),
-    getMyLessonProgress(),
-    getCourseViewer(),
-  ]);
+  const { course, progress, canOpen } = await loadCourseForViewer(slug);
 
   if (!course) {
-    return <CourseAccessNotice message="הקורס עדיין לא פורסם. נעדכן אותך ברגע שהוא יעלה." />;
+    return <CourseNotice message="הקורס עדיין לא פורסם. נעדכן אותך ברגע שהוא יעלה." />;
   }
 
-  if (!canOpenCourse(course.activeOnly, viewer)) return <CourseAccessNotice />;
+  if (!canOpen) return <CourseNotice />;
 
   const chapters = course.chapters.filter(
     (chapter) => chapter.lessons.length > 0
@@ -50,7 +41,7 @@ export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
       />
 
       {chapters.length === 0 ? (
-        <CourseAccessNotice message="עוד לא פורסמו שיעורים בקורס." />
+        <CourseNotice message="עוד לא פורסמו שיעורים בקורס." />
       ) : (
         <div className="space-y-5">
           {resume && <ResumeCard point={resume} basePath={basePath} />}

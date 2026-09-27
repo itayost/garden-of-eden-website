@@ -24,30 +24,20 @@ export async function grantCourseBadges(
   completedLessonId: string
 ): Promise<void> {
   try {
-    // Which chapter does the finished lesson belong to, and which course?
-    const { data: lesson } = await typedFrom(supabase, "course_lessons")
-      .select("chapter_id")
+    // The finished lesson's chapter and course in one read. Only the digital
+    // course earns these badges; a lesson of הקורס הטקטי must not award
+    // "watched every lesson of the digital course".
+    const { data: lesson } = (await typedFrom(supabase, "course_lessons")
+      .select("chapter_id, chapter:course_chapters!inner(course_id, course:courses!inner(slug))")
       .eq("id", completedLessonId)
-      .maybeSingle();
+      .maybeSingle()) as {
+      data: { chapter_id: string; chapter: { course_id: string; course: { slug: string } | null } | null } | null;
+    };
 
     const chapterId: string | undefined = lesson?.chapter_id;
-    if (!chapterId) return;
-
-    const { data: chapter } = await typedFrom(supabase, "course_chapters")
-      .select("course_id")
-      .eq("id", chapterId)
-      .maybeSingle();
-
-    const courseId: string | undefined = chapter?.course_id;
-    if (!courseId) return;
-
-    // Only the digital course earns these badges; a lesson of הקורס הטקטי must
-    // not award "watched every lesson of the digital course".
-    const { data: course } = await typedFrom(supabase, "courses")
-      .select("slug")
-      .eq("id", courseId)
-      .maybeSingle();
-    if (!course?.slug || !courseEarnsBadges(course.slug)) return;
+    const courseId: string | undefined = lesson?.chapter?.course_id;
+    const courseSlug: string | undefined = lesson?.chapter?.course?.slug;
+    if (!chapterId || !courseId || !courseSlug || !courseEarnsBadges(courseSlug)) return;
 
     await grantBadge(supabase, userId, "course_first_lesson");
 

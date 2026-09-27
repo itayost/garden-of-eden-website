@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { getCourseProgressReport } from "@/features/course/lib/actions/course-progress-report";
 import { listCourses } from "@/features/course/lib/actions/admin-course";
 import { CourseSwitcher } from "@/features/course/components/admin/CourseSwitcher";
+import { CourseNotice } from "@/features/course/components/CourseNotice";
 import { DIGITAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { CourseProgressExportButton } from "@/components/admin/exports/CourseProgressExportButton";
 import { BrandProgress } from "@/components/ui/brand-progress";
@@ -24,11 +25,7 @@ export default async function CourseProgressPage({ searchParams }: CourseProgres
 
   if (!report) {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-card/50 py-16 text-center">
-        <p className="text-sm text-muted-foreground">
-          אין קורס להצגה, או שאין לך הרשאה.
-        </p>
-      </div>
+      <CourseNotice message="אין קורס להצגה, או שאין לך הרשאה." />
     );
   }
 

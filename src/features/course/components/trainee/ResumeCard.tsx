@@ -6,15 +6,15 @@ import type { ResumePoint } from "@/features/course/lib/types";
 
 interface ResumeCardProps {
   point: ResumePoint;
-  /** Route the lesson links hang off; the digital course is the default. */
-  basePath?: string;
+  /** Route the course's lesson pages hang off. */
+  basePath: string;
 }
 
 /**
  * The most-tapped thing on the course home, so it sits above the chapter list.
  * Reads as "carry on" for a lesson in progress and "start here" otherwise.
  */
-export function ResumeCard({ point, basePath = "/dashboard/course" }: ResumeCardProps) {
+export function ResumeCard({ point, basePath }: ResumeCardProps) {
   const { chapter, lesson, positionSec } = point;
   const started = positionSec > 0;
   const remaining = Math.max(lesson.durationSec - positionSec, 0);

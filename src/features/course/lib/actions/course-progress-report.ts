@@ -36,17 +36,16 @@ export async function getCourseProgressReport(slug: string): Promise<CourseProgr
 
   const db = createAdminClient();
 
-  const { data: courses, error: courseError } = await typedFrom(db, "courses")
+  const { data: course, error: courseError } = await typedFrom(db, "courses")
     .select("id, title_he")
     .eq("slug", slug)
-    .limit(1);
+    .maybeSingle();
 
   if (courseError) {
     console.error("getCourseProgressReport course failed:", courseError);
     return null;
   }
 
-  const course = courses?.[0];
   if (!course) return null;
 
   const { data: chapters, error: chapterError } = await typedFrom(

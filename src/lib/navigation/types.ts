@@ -34,10 +34,13 @@ export function splitBottomNav(
   };
 }
 
+/** What the viewer may see beyond the tier: each key matches a NavItem.requires value. */
+export type NavCapabilities = Record<NonNullable<NavItem["requires"]>, boolean>;
+
 /** Drop items whose capability the viewer lacks. Cosmetic; the page redirects on its own. */
 export function filterNavForCapabilities(
   items: NavItem[],
-  capabilities: { booking: boolean; tacticalCourse: boolean },
+  capabilities: NavCapabilities,
 ): NavItem[] {
   return items.filter((item) => !item.requires || capabilities[item.requires]);
 }
