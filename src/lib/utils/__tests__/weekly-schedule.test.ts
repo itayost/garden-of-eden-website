@@ -124,12 +124,14 @@ describe("deriveOnDuty", () => {
     ];
 
     const onDuty = deriveOnDuty(SUNDAY, bands, [
-      exception({ trainer_id: LIDOR, note_he: "חופשה" }),
+      exception({ id: "exception-1", trainer_id: LIDOR, note_he: "חופשה" }),
     ]);
 
     expect(onDuty.bands.map((b) => b.trainers[0].name)).toEqual(["נדב"]);
+    // The exception id travels with the absence so the calendar can edit or
+    // delete it from where it is shown.
     expect(onDuty.absences).toEqual([
-      { trainerId: LIDOR, trainerName: "לידור", noteHe: "חופשה" },
+      { exceptionId: "exception-1", trainerId: LIDOR, trainerName: "לידור", noteHe: "חופשה" },
     ]);
   });
 

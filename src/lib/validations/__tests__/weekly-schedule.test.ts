@@ -4,6 +4,7 @@ import {
   bandSchema,
   bandUpdateSchema,
   exceptionSchema,
+  exceptionUpdateSchema,
 } from "@/lib/validations/weekly-schedule";
 
 const TRAINER = "11111111-1111-4111-8111-111111111111";
@@ -146,6 +147,24 @@ describe("exceptionSchema", () => {
     expect(
       exceptionSchema.safeParse(validException({ exceptionDate: "2026-02-30" }))
         .success,
+    ).toBe(false);
+  });
+});
+
+describe("exceptionUpdateSchema", () => {
+  const EXCEPTION = "44444444-4444-4444-8444-444444444444";
+
+  test("accepts an absence with its id", () => {
+    expect(exceptionUpdateSchema.safeParse({ ...validException(), exceptionId: EXCEPTION }).success).toBe(true);
+  });
+
+  test("rejects a missing id", () => {
+    expect(exceptionUpdateSchema.safeParse(validException()).success).toBe(false);
+  });
+
+  test("rejects turning it into an extra hour", () => {
+    expect(
+      exceptionUpdateSchema.safeParse({ ...validException({ kind: "extra" }), exceptionId: EXCEPTION }).success,
     ).toBe(false);
   });
 });
