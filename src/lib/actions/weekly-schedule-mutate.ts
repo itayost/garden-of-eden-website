@@ -1,6 +1,7 @@
 "use server";
 
 import { verifyAdmin } from "@/lib/actions/shared";
+import { materializeBookableSlots } from "@/features/booking/lib/materialize";
 import { clearSlotWorkout } from "@/lib/actions/shared/clear-slot-workout";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
@@ -138,6 +139,22 @@ async function replaceBandTrainers(
   return { error: null };
 }
 
+/**
+ * Projects the branch's bookable hours into the calendar now, rather than at
+ * the nightly run, so a new or edited hour shows up as soon as it is saved.
+ * Service role, like the cron: slot tables are staff-only under RLS and the
+ * projection writes on the band author's behalf. Best-effort: the band is
+ * saved either way, and the nightly run fills in whatever this misses.
+ */
+async function projectBranchNow(branchId: string): Promise<void> {
+  try {
+    const { error } = await materializeBookableSlots(createAdminClient(), branchId, israelToday());
+    if (error) console.error("Project after band save error:", error);
+  } catch (error) {
+    console.error("Project after band save error:", error);
+  }
+}
+
 export async function createBandAction(input: BandInput): Promise<BandResult> {
   const { error: authError, user } = await verifyAdmin();
   if (authError) return { error: authError };
@@ -189,6 +206,8 @@ export async function createBandAction(input: BandInput): Promise<BandResult> {
     await typedFrom(supabase, "weekly_schedule_bands").delete().eq("id", created.id);
     return { error: trainersWritten.error };
   }
+
+  if (isBookable) await projectBranchNow(branchId);
 
   revalidateScheduleSurfaces();
 
@@ -272,6 +291,9 @@ export async function updateBandAction(
       location_he: location,
     });
   }
+
+  // After the sync, so days projected now take the band's new details.
+  if (isBookable) await projectBranchNow(branchId);
 
   revalidateScheduleSurfaces();
 
