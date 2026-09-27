@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   bandSchema,
+  bandUpdateSchema,
   exceptionSchema,
 } from "@/lib/validations/weekly-schedule";
 
@@ -88,6 +89,25 @@ describe("bandSchema", () => {
     expect(bandSchema.safeParse(validBand({ startTime: "9:00" })).success).toBe(false);
     expect(bandSchema.safeParse(validBand({ startTime: "24:00" })).success).toBe(false);
     expect(bandSchema.safeParse(validBand({ startTime: "09:30" })).success).toBe(true);
+  });
+
+  test("rejects an hour that is both bookable and standby", () => {
+    // A standby hour never projects into the calendar, so a bookable one
+    // would silently offer nothing to book.
+    const result = bandSchema.safeParse(validBand({ isBookable: true, isStandby: true }));
+
+    expect(result.success).toBe(false);
+  });
+
+  test("accepts a bookable hour and a standby hour on their own", () => {
+    expect(bandSchema.safeParse(validBand({ isBookable: true })).success).toBe(true);
+    expect(bandSchema.safeParse(validBand({ isStandby: true })).success).toBe(true);
+  });
+
+  test("an update is held to the same rule", () => {
+    const update = { ...validBand({ isBookable: true, isStandby: true }), bandId: "22222222-2222-4222-8222-222222222222" };
+
+    expect(bandUpdateSchema.safeParse(update).success).toBe(false);
   });
 
   test("defaults isStandby to false when omitted", () => {

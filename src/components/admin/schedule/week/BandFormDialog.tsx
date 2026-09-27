@@ -72,7 +72,9 @@ export function BandFormDialog({
   );
   const [location, setLocation] = useState(band?.location_he ?? "");
   const [label, setLabel] = useState(band?.label_he ?? "");
-  const [isStandby, setIsStandby] = useState(band?.is_standby ?? false);
+  // A bookable hour is never standby (it would never reach the calendar), so
+  // an existing hour saved in both states opens with standby cleared.
+  const [isStandby, setIsStandby] = useState((band?.is_standby ?? false) && !(band?.is_bookable ?? false));
   const [isBookable, setIsBookable] = useState(band?.is_bookable ?? false);
   const [maxTrainees, setMaxTrainees] = useState(String(band?.max_trainees ?? 8));
 
@@ -233,6 +235,7 @@ export function BandFormDialog({
             <Checkbox
               id="band-standby"
               checked={isStandby}
+              disabled={isBookable}
               onCheckedChange={(checked) => setIsStandby(checked === true)}
             />
             <div className="space-y-1">
@@ -240,7 +243,9 @@ export function BandFormDialog({
                 חיזוק במידת הצורך
               </Label>
               <p className="text-xs text-muted-foreground">
-                מוצג בשיבוץ היומי, אך לא נבנה ממנו סלוט — עוד לא הוחלט שהוא מגיע.
+                {isBookable
+                  ? "לא זמין בשעה שפתוחה להרשמה עצמית: שעת חיזוק לא נכנסת ליומן."
+                  : "מוצג בשיבוץ היומי, אך לא נבנה ממנו סלוט — עוד לא הוחלט שהוא מגיע."}
               </p>
             </div>
           </div>
@@ -249,7 +254,11 @@ export function BandFormDialog({
             <Checkbox
               id="band-bookable"
               checked={isBookable}
-              onCheckedChange={(checked) => setIsBookable(checked === true)}
+              onCheckedChange={(checked) => {
+                const bookable = checked === true;
+                setIsBookable(bookable);
+                if (bookable) setIsStandby(false);
+              }}
             />
             <div className="flex-1 space-y-2">
               <Label htmlFor="band-bookable" className="font-normal">

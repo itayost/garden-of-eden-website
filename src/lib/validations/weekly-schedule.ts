@@ -36,6 +36,16 @@ const optionalTime = timeSchema
   .nullish()
   .transform((v) => (v === "" || v === undefined ? null : v));
 
+/**
+ * A standby hour never projects into the calendar (materializationPlan skips
+ * it), so an hour that is also bookable would offer trainees nothing. Owner
+ * rule, 2026-09-24: a bookable hour is never standby.
+ */
+const notBookableAndStandby = {
+  check: (v: { isBookable: boolean; isStandby: boolean }) => !(v.isBookable && v.isStandby),
+  message: { message: "שעה שפתוחה להרשמה עצמית אינה יכולה להיות חיזוק במידת הצורך", path: ["isStandby"] },
+};
+
 export const bandSchema = z
   .object({
     branchId: uuidSchema,
@@ -64,7 +74,8 @@ export const bandSchema = z
   .refine((v) => v.endTime === null || v.endTime > v.startTime, {
     message: "שעת הסיום חייבת להיות אחרי שעת ההתחלה",
     path: ["endTime"],
-  });
+  })
+  .refine(notBookableAndStandby.check, notBookableAndStandby.message);
 
 export const bandUpdateSchema = z
   .object({
@@ -91,7 +102,8 @@ export const bandUpdateSchema = z
   .refine((v) => v.endTime === null || v.endTime > v.startTime, {
     message: "שעת הסיום חייבת להיות אחרי שעת ההתחלה",
     path: ["endTime"],
-  });
+  })
+  .refine(notBookableAndStandby.check, notBookableAndStandby.message);
 
 export const bandIdSchema = z.object({ bandId: uuidSchema });
 
