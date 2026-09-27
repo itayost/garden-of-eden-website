@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncArboxUsers, syncArboxBirthdays } from "@/lib/arbox/sync";
 import { syncCourseAccess } from "@/lib/arbox/sync-access";
+import { runArboxPurchaseImport, type ImportRunResult } from "@/features/plans/lib/arbox-import";
+import { revalidateStaffSurfaces } from "@/features/plans/lib/revalidate-staff";
 
 // The access step alone makes ~50 serial Arbox calls; the default limit is not
 // enough, and a timeout would discard the two steps that already succeeded.
@@ -13,7 +15,8 @@ export const maxDuration = 300;
  * for unmatched members (with phones), and fills null profile fields for existing ones.
  * Also syncs birthdays from the Arbox birthday report into profiles.birthdate,
  * and each trainee's purchase facts, which decide who sees only the digital
- * course.
+ * course. With ARBOX_IMPORT_PURCHASES=on it then imports new Arbox cards and
+ * memberships of קריית אתא trainees into their plans.
  */
 export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
@@ -47,12 +50,29 @@ export async function GET(request: NextRequest) {
       console.error("[Arbox Sync] Access sync failed:", accessError);
     }
 
+    // Runs last: it needs the links the user step just made. Behind a flag
+    // until the owner approves a dry run; isolated like the access step.
+    let purchasesResult: ImportRunResult | null = null;
+    let purchasesError: string | null = null;
+    if (process.env.ARBOX_IMPORT_PURCHASES === "on") {
+      try {
+        const { result } = await runArboxPurchaseImport({ dryRun: false });
+        purchasesResult = result;
+        result.touchedProfileIds.forEach(revalidateStaffSurfaces);
+      } catch (error) {
+        purchasesError = error instanceof Error ? error.message : String(error);
+        console.error("[Arbox Sync] Purchase import failed:", purchasesError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       users: usersResult,
       birthdays: birthdayResult,
       access: accessResult,
       accessError,
+      purchases: purchasesResult,
+      purchasesError,
     });
   } catch (error) {
     console.error("[Arbox Sync] Fatal error:", error);
