@@ -257,7 +257,6 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
                   <LessonAdminRow
                     key={lesson.id}
                     lesson={lesson}
-                    chapterSlug={selected.slug}
                     index={index}
                     isFirst={index === 0}
                     isLast={index === selected.lessons.length - 1}
