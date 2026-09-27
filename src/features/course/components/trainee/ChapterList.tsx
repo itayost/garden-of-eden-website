@@ -15,9 +15,11 @@ import type {
 interface ChapterListProps {
   chapters: CourseChapterWithLessons[];
   progress: LessonProgressMap;
+  /** Route the course's lesson pages hang off. */
+  basePath: string;
 }
 
-export function ChapterList({ chapters, progress }: ChapterListProps) {
+export function ChapterList({ chapters, progress, basePath }: ChapterListProps) {
   return (
     <ul className="space-y-2">
       {chapters.map((chapter, index) => {
@@ -88,7 +90,7 @@ export function ChapterList({ chapters, progress }: ChapterListProps) {
               <div className={className}>{body}</div>
             ) : (
               <Link
-                href={`/dashboard/course/${chapter.slug}/${entry.lesson.slug}`}
+                href={`${basePath}/${chapter.slug}/${entry.lesson.slug}`}
                 className={className}
               >
                 {body}

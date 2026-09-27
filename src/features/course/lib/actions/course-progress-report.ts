@@ -30,23 +30,22 @@ export interface CourseProgressReport {
  * published lessons, so unpublishing a lesson does not leave people showing as
  * "12 of 11" complete.
  */
-export async function getCourseProgressReport(): Promise<CourseProgressReport | null> {
+export async function getCourseProgressReport(slug: string): Promise<CourseProgressReport | null> {
   const { error } = await verifyAdminOrTrainer();
   if (error) return null;
 
   const db = createAdminClient();
 
-  const { data: courses, error: courseError } = await typedFrom(db, "courses")
+  const { data: course, error: courseError } = await typedFrom(db, "courses")
     .select("id, title_he")
-    .order("order_index", { ascending: true })
-    .limit(1);
+    .eq("slug", slug)
+    .maybeSingle();
 
   if (courseError) {
     console.error("getCourseProgressReport course failed:", courseError);
     return null;
   }
 
-  const course = courses?.[0];
   if (!course) return null;
 
   const { data: chapters, error: chapterError } = await typedFrom(

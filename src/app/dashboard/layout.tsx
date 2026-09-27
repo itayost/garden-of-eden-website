@@ -6,6 +6,8 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DASHBOARD_PAGE_TITLES } from "@/lib/navigation/dashboard-nav";
 import { canBookForUser } from "@/features/booking/lib/can-book";
+import { canOpenCourse } from "@/features/course/lib/course-access-rule";
+import { TACTICAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { MotionProvider } from "@/components/MotionProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -31,7 +33,7 @@ export default async function DashboardLayout({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override",
+      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override, is_active",
     )
     .eq("id", user.id)
     .maybeSingle() as unknown as {
@@ -61,7 +63,21 @@ export default async function DashboardLayout({
     accessOverride: profile?.access_override ?? null,
   });
 
-  const canBook = profile?.role === "trainee" ? await canBookForUser(user.id) : false;
+  // Independent reads; run together so every dashboard render pays for one.
+  // The tactical course is shown only when published and the viewer may open it.
+  const [canBook, { data: tacticalCourse }] = await Promise.all([
+    profile?.role === "trainee" ? canBookForUser(user.id) : Promise.resolve(false),
+    supabase
+      .from("courses")
+      .select("id")
+      .eq("slug", TACTICAL_COURSE_SLUG)
+      .eq("is_published", true)
+      .maybeSingle(),
+  ]);
+  const canTacticalCourse =
+    tacticalCourse !== null &&
+    canOpenCourse(true, { role: profile?.role ?? null, isActive: profile?.is_active === true });
+  const capabilities = { booking: canBook, tacticalCourse: canTacticalCourse };
   const cookieStore = await cookies();
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
@@ -70,7 +86,7 @@ export default async function DashboardLayout({
     // celebration respect prefers-reduced-motion.
     <MotionProvider>
     <SidebarProvider defaultOpen={sidebarOpen}>
-      <DashboardSidebar user={user} profile={profile} tier={tier} canBook={canBook} />
+      <DashboardSidebar user={user} profile={profile} tier={tier} capabilities={capabilities} />
       <SidebarInset>
         <AppTopBar
           user={user}
@@ -81,7 +97,7 @@ export default async function DashboardLayout({
         <main id="main-content" tabIndex={-1} className="outline-none container mx-auto px-4 pt-6 pb-20 md:pb-8">
           {children}
         </main>
-        <DashboardBottomNav tier={tier} canBook={canBook} />
+        <DashboardBottomNav tier={tier} capabilities={capabilities} />
       </SidebarInset>
       <Suspense fallback={null}>
         <OnboardingTourProvider

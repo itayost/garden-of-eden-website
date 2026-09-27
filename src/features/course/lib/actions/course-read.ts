@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import type {
@@ -9,6 +10,7 @@ import type {
   LessonProgress,
   LessonProgressMap,
 } from "../types";
+import type { CourseViewer } from "../course-access-rule";
 
 // --- Raw DB row shapes (snake_case) ---
 
@@ -20,6 +22,7 @@ interface RawCourse {
   is_published: boolean;
   needs_title: boolean;
   order_index: number;
+  active_only: boolean;
 }
 
 interface RawChapter {
@@ -76,25 +79,21 @@ function toLesson(row: RawLesson): CourseLesson {
  * keep the trainee view identical for staff, who can otherwise see drafts.
  */
 export async function getPublishedCourse(
-  slug?: string
+  slug: string
 ): Promise<CourseWithChapters | null> {
   const supabase = await createClient();
 
-  let courseQuery = typedFrom(supabase, "courses")
+  const { data: courseRow, error: courseError } = await typedFrom(supabase, "courses")
     .select("*")
+    .eq("slug", slug)
     .eq("is_published", true)
-    .order("order_index", { ascending: true })
-    .limit(1);
-
-  if (slug) courseQuery = courseQuery.eq("slug", slug);
-
-  const { data: courseRows, error: courseError } = await courseQuery;
+    .maybeSingle();
   if (courseError) {
     console.error("getPublishedCourse failed:", courseError);
     return null;
   }
 
-  const course = (courseRows as RawCourse[] | null)?.[0];
+  const course = courseRow as RawCourse | null;
   if (!course) return null;
 
   const { data: chapterRows, error: chapterError } = await typedFrom(
@@ -162,6 +161,7 @@ function toCourse(row: RawCourse) {
     isPublished: row.is_published,
     needsTitle: row.needs_title,
     orderIndex: row.order_index,
+    activeOnly: row.active_only === true,
   };
 }
 
@@ -197,3 +197,24 @@ export async function getMyLessonProgress(): Promise<LessonProgressMap> {
   }
   return map;
 }
+
+/**
+ * The signed-in viewer's role and account status, for canOpenCourse. A viewer
+ * with no profile row reads as not active. Memoized per request with React
+ * `cache()`, like verifyAdmin: a course page and its playback check would
+ * otherwise each pay an auth.getUser() plus a profiles read.
+ */
+export const getCourseViewer = cache(async (): Promise<CourseViewer> => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { role: null, isActive: false };
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) console.error("getCourseViewer failed:", error);
+  return { role: data?.role ?? null, isActive: data?.is_active === true };
+});

@@ -6,6 +6,8 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import type { VideoQuality } from "../types";
 import { COURSE_VIDEO_BUCKET, PLAYBACK_URL_TTL_SEC } from "../playback-config";
+import { canOpenCourse, COURSE_ACCESS_DENIED } from "../course-access-rule";
+import { getCourseViewer } from "./course-read";
 
 interface PlaybackResult {
   url: string | null;
@@ -16,6 +18,7 @@ interface PlaybackResult {
 interface LessonVideoRow {
   video_path: string | null;
   video_path_sd: string | null;
+  chapter: { course: { active_only: boolean } | null } | null;
 }
 
 /**
@@ -53,7 +56,7 @@ export async function getLessonPlaybackUrl(
     supabase,
     "course_lessons"
   )
-    .select("video_path, video_path_sd")
+    .select("video_path, video_path_sd, chapter:course_chapters!inner(course:courses!inner(active_only))")
     .eq("id", lessonId)
     .maybeSingle()) as { data: LessonVideoRow | null; error: unknown };
 
@@ -63,6 +66,14 @@ export async function getLessonPlaybackUrl(
   }
   if (!lesson) {
     return { url: null, quality: null, error: "שיעור לא נמצא" };
+  }
+
+  // An active-only course (הקורס הטקטי) signs a URL only for staff and active
+  // trainees. Row-level security lets any signed-in user read a published
+  // lesson row; the video is the protected asset, so the gate is here.
+  const activeOnly = lesson.chapter?.course?.active_only === true;
+  if (activeOnly && !canOpenCourse(activeOnly, await getCourseViewer())) {
+    return { url: null, quality: null, error: COURSE_ACCESS_DENIED };
   }
 
   // Fall back to whichever rendition exists rather than failing outright.

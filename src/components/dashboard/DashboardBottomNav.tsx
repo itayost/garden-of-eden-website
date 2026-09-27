@@ -9,17 +9,17 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { cn } from "@/lib/utils";
 import { isActivePath } from "@/lib/utils/active-path";
 import { DASHBOARD_NAV } from "@/lib/navigation/dashboard-nav";
-import { filterNavForCapabilities, filterNavForTier, splitBottomNav } from "@/lib/navigation/types";
+import { type NavCapabilities, filterNavForCapabilities, filterNavForTier, splitBottomNav } from "@/lib/navigation/types";
 import type { AccessTier } from "@/lib/access/course-access";
 
 interface DashboardBottomNavProps {
   tier: AccessTier;
-  canBook: boolean;
+  capabilities: NavCapabilities;
 }
 
-export function DashboardBottomNav({ tier, canBook }: DashboardBottomNavProps) {
+export function DashboardBottomNav({ tier, capabilities }: DashboardBottomNavProps) {
   const { main: mainItems, more: moreItems } = splitBottomNav(
-    filterNavForCapabilities(filterNavForTier(DASHBOARD_NAV, tier), { booking: canBook }),
+    filterNavForCapabilities(filterNavForTier(DASHBOARD_NAV, tier), capabilities),
     true,
   );
   const pathname = usePathname();

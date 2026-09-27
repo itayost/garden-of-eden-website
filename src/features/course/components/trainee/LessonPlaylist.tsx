@@ -14,6 +14,8 @@ interface LessonPlaylistProps {
   chapter: CourseChapterWithLessons;
   currentLessonId: string;
   progress: LessonProgressMap;
+  /** Route the course's lesson pages hang off. */
+  basePath: string;
 }
 
 /**
@@ -24,6 +26,7 @@ export function LessonPlaylist({
   chapter,
   currentLessonId,
   progress,
+  basePath,
 }: LessonPlaylistProps) {
   return (
     <section aria-labelledby="playlist-heading" className="space-y-2">
@@ -42,7 +45,7 @@ export function LessonPlaylist({
           return (
             <li key={lesson.id}>
               <Link
-                href={`/dashboard/course/${chapter.slug}/${lesson.slug}`}
+                href={`${basePath}/${chapter.slug}/${lesson.slug}`}
                 aria-current={current ? "true" : undefined}
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",

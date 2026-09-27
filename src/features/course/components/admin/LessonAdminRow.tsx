@@ -19,7 +19,6 @@ import type { AdminCourseLesson } from "@/features/course/lib/actions/admin-cour
 
 interface LessonAdminRowProps {
   lesson: AdminCourseLesson;
-  chapterSlug: string;
   index: number;
   isFirst: boolean;
   isLast: boolean;
@@ -29,7 +28,6 @@ interface LessonAdminRowProps {
 
 export function LessonAdminRow({
   lesson,
-  chapterSlug,
   index,
   isFirst,
   isLast,
@@ -111,8 +109,6 @@ export function LessonAdminRow({
 
       <LessonVideoUpload
         lessonId={lesson.id}
-        chapterSlug={chapterSlug}
-        lessonSlug={lesson.slug}
         hasVideo={lesson.videoPath !== null}
       />
 

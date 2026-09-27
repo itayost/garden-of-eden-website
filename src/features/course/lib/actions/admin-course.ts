@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { verifyAdmin } from "@/lib/actions/shared";
+import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import { lessonVideoSchema, reorderSchema } from "@/lib/validations/course";
 import { COURSE_VIDEO_BUCKET } from "../playback-config";
@@ -80,23 +80,22 @@ function revalidateCourse(): void {
  * The whole course including drafts, for the CMS. Unlike the trainee read this
  * deliberately ignores publish state -- that is the thing Eden is managing.
  */
-export async function listCourseAdminTree(): Promise<AdminCourse | null> {
+export async function listCourseAdminTree(slug: string): Promise<AdminCourse | null> {
   const { error } = await verifyAdmin();
   if (error) return null;
 
   const db = createAdminClient();
 
-  const { data: courses, error: courseError } = await typedFrom(db, "courses")
+  const { data: course, error: courseError } = await typedFrom(db, "courses")
     .select("*")
-    .order("order_index", { ascending: true })
-    .limit(1);
+    .eq("slug", slug)
+    .maybeSingle();
 
   if (courseError) {
     console.error("listCourseAdminTree course failed:", courseError);
     return null;
   }
 
-  const course = courses?.[0];
   if (!course) return null;
 
   const { data: chapters, error: chapterError } = await typedFrom(
@@ -639,4 +638,19 @@ export async function deleteLesson(
 
   revalidateCourse();
   return { success: true };
+}
+
+/** Every course, for the admin switcher. Staff only. */
+export async function listCourses(): Promise<{ slug: string; titleHe: string }[]> {
+  const { error } = await verifyAdminOrTrainer();
+  if (error) return [];
+  const { data, error: readError } = await createAdminClient()
+    .from("courses")
+    .select("slug, title_he")
+    .order("order_index", { ascending: true });
+  if (readError) {
+    console.error("listCourses failed:", readError);
+    return [];
+  }
+  return (data ?? []).map((c) => ({ slug: c.slug, titleHe: c.title_he }));
 }

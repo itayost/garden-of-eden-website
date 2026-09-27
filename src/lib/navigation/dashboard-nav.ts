@@ -26,6 +26,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { href: "/dashboard/nutrition", label: "תזונה", icon: Utensils, mobileOrder: 2 },
   { href: "/dashboard/videos", label: "סרטונים", icon: Video, mobileOrder: 1 },
   { href: "/dashboard/course", label: "הקורס הדיגיטלי", icon: GraduationCap, mobileOrder: 2 },
+  { href: "/dashboard/tactical-course", label: "הקורס הטקטי", icon: GraduationCap, mobileOrder: 2, requires: "tacticalCourse" },
   { href: "/dashboard/book", label: "ספר פיתוח", icon: BookOpen, mobileOrder: 3 },
   { href: "/dashboard/book/parents", label: "להורים", icon: Users, mobileOrder: 4 },
   { href: "/dashboard/profile", label: "פרופיל", icon: UserCog, mobileOrder: 5 },
