@@ -43,7 +43,7 @@ const optionalTime = timeSchema
  */
 const notBookableAndStandby = {
   check: (v: { isBookable: boolean; isStandby: boolean }) => !(v.isBookable && v.isStandby),
-  message: { message: "שעה שפתוחה להרשמה עצמית אינה יכולה להיות חיזוק במידת הצורך", path: ["isStandby"] },
+  message: { message: "רצועה שפתוחה להרשמה עצמית אינה יכולה להיות חיזוק במידת הצורך", path: ["isStandby"] },
 };
 
 export const bandSchema = z

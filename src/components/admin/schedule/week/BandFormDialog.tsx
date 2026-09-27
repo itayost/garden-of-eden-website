@@ -72,10 +72,12 @@ export function BandFormDialog({
   );
   const [location, setLocation] = useState(band?.location_he ?? "");
   const [label, setLabel] = useState(band?.label_he ?? "");
-  // A bookable hour is never standby (it would never reach the calendar), so
-  // an existing hour saved in both states opens with standby cleared.
-  const [isStandby, setIsStandby] = useState((band?.is_standby ?? false) && !(band?.is_bookable ?? false));
+  const [isStandby, setIsStandby] = useState(band?.is_standby ?? false);
   const [isBookable, setIsBookable] = useState(band?.is_bookable ?? false);
+  // A bookable band is never standby: it would never reach the calendar. The
+  // stored choice is kept, so unticking bookable brings standby back, and a
+  // band saved in both states is saved as not standby.
+  const effectiveStandby = isStandby && !isBookable;
   const [maxTrainees, setMaxTrainees] = useState(String(band?.max_trainees ?? 8));
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -95,7 +97,7 @@ export function BandFormDialog({
         trainerIds,
         location,
         label,
-        isStandby,
+        isStandby: effectiveStandby,
         isBookable,
         maxTrainees: Number(maxTrainees),
       };
@@ -234,7 +236,7 @@ export function BandFormDialog({
           <div className="flex items-start gap-2 rounded-lg border p-3">
             <Checkbox
               id="band-standby"
-              checked={isStandby}
+              checked={effectiveStandby}
               disabled={isBookable}
               onCheckedChange={(checked) => setIsStandby(checked === true)}
             />
@@ -244,7 +246,7 @@ export function BandFormDialog({
               </Label>
               <p className="text-xs text-muted-foreground">
                 {isBookable
-                  ? "לא זמין בשעה שפתוחה להרשמה עצמית: שעת חיזוק לא נכנסת ליומן."
+                  ? "לא זמין ברצועה שפתוחה להרשמה עצמית: רצועת חיזוק לא נכנסת ליומן."
                   : "מוצג בשיבוץ היומי, אך לא נבנה ממנו סלוט — עוד לא הוחלט שהוא מגיע."}
               </p>
             </div>
@@ -254,11 +256,7 @@ export function BandFormDialog({
             <Checkbox
               id="band-bookable"
               checked={isBookable}
-              onCheckedChange={(checked) => {
-                const bookable = checked === true;
-                setIsBookable(bookable);
-                if (bookable) setIsStandby(false);
-              }}
+              onCheckedChange={(checked) => setIsBookable(checked === true)}
             />
             <div className="flex-1 space-y-2">
               <Label htmlFor="band-bookable" className="font-normal">
