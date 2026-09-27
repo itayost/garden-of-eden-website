@@ -2,6 +2,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { typedFrom } from "@/lib/supabase/helpers";
 import type {
@@ -13,6 +14,8 @@ import type {
 import { writeRatingSnapshot } from "../snapshot";
 import { grantAssessmentBadges } from "@/features/achievements/lib/actions/grant-assessment-badges";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
+import { isValidUUID } from "@/lib/validations/common";
+import { assessmentInsertFields, assessmentUpdateFields } from "../assessment-fields";
 
 interface AssessmentInsertInput {
   user_id: string;
@@ -60,13 +63,14 @@ export async function recordAssessment(
 ): Promise<RecordResult> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError || !user) return { success: false, error: authError ?? "unauthorized" };
+  if (!isValidUUID(input.user_id)) return { success: false, error: "מזהה מתאמן לא תקין" };
 
   const scopeError = await assertTraineeInScope(input.user_id);
   if (scopeError) return { success: false, error: scopeError };
 
   const supabase = await createClient();
   const { data, error } = await typedFrom(supabase, "player_assessments")
-    .insert({ ...input, assessed_by: user.id })
+    .insert({ ...assessmentInsertFields(input), user_id: input.user_id, assessed_by: user.id })
     .select("*")
     .single();
   if (error || !data) {
@@ -74,8 +78,13 @@ export async function recordAssessment(
   }
   const assessment = data as PlayerAssessment;
 
-  await writeRatingSnapshot(supabase, assessment);
-  await grantAssessmentBadges(supabase, assessment);
+  // Service role for the post-write steps: player_rating_snapshots has no
+  // write policy at all, and user_achievements lets a user insert only their
+  // own badge, so the staff member's client was refused on both. The access
+  // checks above (verifyAdminOrTrainer, assertTraineeInScope) already ran.
+  const service = createAdminClient();
+  await writeRatingSnapshot(service, assessment);
+  await grantAssessmentBadges(service, assessment);
 
   return { success: true, data: assessment };
 }
@@ -95,6 +104,7 @@ export async function updateAssessment(
 ): Promise<RecordResult> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError || !user) return { success: false, error: authError ?? "unauthorized" };
+  if (!isValidUUID(assessmentId)) return { success: false, error: "מזהה מבדק לא תקין" };
 
   const supabase = await createClient();
   const { data: existing } = (await typedFrom(supabase, "player_assessments")
@@ -107,7 +117,7 @@ export async function updateAssessment(
   if (scopeError) return { success: false, error: scopeError };
 
   const { data, error } = await typedFrom(supabase, "player_assessments")
-    .update({ ...patch, assessed_by: user.id })
+    .update({ ...assessmentUpdateFields(patch), assessed_by: user.id })
     .eq("id", assessmentId)
     .select("*")
     .single();
@@ -116,6 +126,9 @@ export async function updateAssessment(
   }
   const assessment = data as PlayerAssessment;
 
-  await writeRatingSnapshot(supabase, assessment);
+  // Service role, as in recordAssessment: the staff client cannot write
+  // snapshots, and the nightly backfill only fills missing ones, so an edit
+  // would otherwise never reach the rating card.
+  await writeRatingSnapshot(createAdminClient(), assessment);
   return { success: true, data: assessment };
 }
