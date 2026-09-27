@@ -81,6 +81,20 @@ const bookingLimiter = redis
   : null;
 
 /**
+ * Manual Arbox sync: one run per 5 minutes for the whole staff (one key).
+ * A run reads ~500 Arbox clients; staff pressing it repeatedly must not
+ * hammer Arbox. It fails open: the sync is idempotent.
+ */
+const arboxSyncLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.fixedWindow(1, "5 m"),
+      prefix: "goe:arbox-sync",
+      analytics: true,
+    })
+  : null;
+
+/**
  * General rate limiter: 100 requests per minute
  * Used for standard API endpoints
  */
@@ -116,7 +130,7 @@ const generalLimiter = redis
  */
 export async function checkRateLimit(
   identifier: string,
-  type: "payment" | "checkout" | "booking" | "general"
+  type: "payment" | "checkout" | "booking" | "arbox_sync" | "general"
 ): Promise<RateLimitResult> {
   const limiter =
     type === "payment"
@@ -125,7 +139,9 @@ export async function checkRateLimit(
         ? checkoutLimiter
         : type === "booking"
           ? bookingLimiter
-          : generalLimiter;
+          : type === "arbox_sync"
+            ? arboxSyncLimiter
+            : generalLimiter;
   const isSensitiveOperation = type === "payment";
 
   // If Redis is unavailable:

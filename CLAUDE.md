@@ -137,6 +137,7 @@ try {
 `/join` sells `plan_products`, records an `orders` row and a signed `enrollment_agreements` row, and sends the parent to Morning's hosted payment page. Only the signed webhook at `src/app/api/webhooks/morning/route.ts` marks an order paid; `src/features/enrollment/lib/fulfillment.ts` then creates the account, the branch link, and the `trainee_plans` row, and is safe to rerun. Plan state is derived by `resolvePlanStatus()` in `src/lib/plans/`, never stored. Spec: `docs/superpowers/specs/2026-09-10-kiryat-ata-signup-design.md`.
 Reminders: `/api/cron/plan-reminders` runs daily; `dueReminderMilestone()` decides what is due and the `reminded_*_at` columns stop repeats. Renewal links are `/join?renew=<token>` signed with `PLAN_RENEWAL_TOKEN_SECRET`.
 Staff payments: `recordManualPayment()` in `src/features/plans/lib/manual-payment.ts` is the one path for cash, transfer, and Bit (paid order with `payment_provider = manual`, an agreement with `signed_at NULL` that the parent signs from `/join/agreement/[id]?t=`, fulfillment, the Morning receipt through `issueOrderInvoice()`, the WhatsApp). Both the new-trainee sheet and the trainee payment sheet call it; trainers may use them for their branch. Staff surfaces: `loadPlanStatusesForStaff()` feeds the plan column on the users list and the פג/מסתיים chips in the calendar's roster sheet and the session-building list (tap opens the plan sheet); health data (medical notes, emergency contact) goes through `src/features/plans/lib/actions/trainee-health.ts`, which is branch-scoped. `/admin/safety` renders `content/safety-protocol.ts` with the branch manager phones.
+Arbox purchases: `src/features/plans/lib/arbox-import.ts` imports each Arbox card or membership once, keyed `orders.provider_transaction_id = arbox:<membership_user_id>`; it merges into a live Arbox-paid plan of the same kind or starts after what is live. Rules live in the pure `planArboxImports()` (`src/lib/plans/arbox-import-plan.ts`). Spec: `docs/superpowers/specs/2026-09-27-arbox-purchase-import-design.md`.
 
 ### Self-booking (קריית אתא)
 
@@ -182,6 +183,8 @@ CRON_SECRET
 ```
 
 `PLAN_RENEWAL_TOKEN_SECRET` signs renewal and agreement links and must be set in production; the app starts without it but those links throw. The card is charged on `/join/pay/[orderId]` through the adapter in `src/lib/payments/isracard.ts` (`ISRACARD_API_URL`, `ISRACARD_TERMINAL_ID`, `ISRACARD_API_KEY`; refuses politely until set), and Morning only issues the document. Optional until the payment provider is wired: `MORNING_ENV`, `MORNING_CLIENT_ID`, `MORNING_CLIENT_SECRET`, `MORNING_WEBHOOK_SECRET`. Without them `/join` shows a Hebrew notice instead of a payment page.
+
+`ARBOX_IMPORT_PURCHASES=on` turns on the nightly import of Arbox cards and memberships into קריית אתא plans (fourth step of `/api/cron/arbox-sync`); preview with `npx tsx scripts/import-arbox-purchases.ts --dry-run`.
 
 Startup validation in `src/lib/env.ts` (called via `src/instrumentation.ts`) fails fast if any required var is missing.
 
