@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getCourseProgressReport } from "@/features/course/lib/actions/course-progress-report";
+import { listCourses } from "@/features/course/lib/actions/admin-course";
+import { CourseSwitcher } from "@/features/course/components/admin/CourseSwitcher";
+import { DIGITAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { CourseProgressExportButton } from "@/components/admin/exports/CourseProgressExportButton";
 import { BrandProgress } from "@/components/ui/brand-progress";
 
@@ -11,8 +14,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function CourseProgressPage() {
-  const report = await getCourseProgressReport();
+interface CourseProgressPageProps {
+  searchParams: Promise<{ course?: string }>;
+}
+
+export default async function CourseProgressPage({ searchParams }: CourseProgressPageProps) {
+  const slug = (await searchParams).course ?? DIGITAL_COURSE_SLUG;
+  const [report, courses] = await Promise.all([getCourseProgressReport(slug), listCourses()]);
 
   if (!report) {
     return (
@@ -33,7 +41,7 @@ export default async function CourseProgressPage() {
     <div className="space-y-6">
       <div>
         <Link
-          href="/admin/course"
+          href={`/admin/course?course=${slug}`}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -42,6 +50,8 @@ export default async function CourseProgressPage() {
         <h1 className="mt-2 text-3xl font-bold">התקדמות בקורס</h1>
         <p className="text-muted-foreground">{report.courseTitleHe}</p>
       </div>
+
+      <CourseSwitcher courses={courses} current={slug} basePath="/admin/course/progress" />
 
       {/* dt precedes dd so a screen reader pairs each label with its own value;
           flex-col-reverse keeps the number on top visually. */}

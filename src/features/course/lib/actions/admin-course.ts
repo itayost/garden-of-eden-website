@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { verifyAdmin } from "@/lib/actions/shared";
+import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import { lessonVideoSchema, reorderSchema } from "@/lib/validations/course";
 import { COURSE_VIDEO_BUCKET } from "../playback-config";
@@ -80,16 +80,18 @@ function revalidateCourse(): void {
  * The whole course including drafts, for the CMS. Unlike the trainee read this
  * deliberately ignores publish state -- that is the thing Eden is managing.
  */
-export async function listCourseAdminTree(): Promise<AdminCourse | null> {
+export async function listCourseAdminTree(slug?: string): Promise<AdminCourse | null> {
   const { error } = await verifyAdmin();
   if (error) return null;
 
   const db = createAdminClient();
 
-  const { data: courses, error: courseError } = await typedFrom(db, "courses")
+  let courseQuery = typedFrom(db, "courses")
     .select("*")
     .order("order_index", { ascending: true })
     .limit(1);
+  if (slug) courseQuery = courseQuery.eq("slug", slug);
+  const { data: courses, error: courseError } = await courseQuery;
 
   if (courseError) {
     console.error("listCourseAdminTree course failed:", courseError);
@@ -639,4 +641,14 @@ export async function deleteLesson(
 
   revalidateCourse();
   return { success: true };
+}
+
+/** Every course, for the admin switcher. Staff only. */
+export async function listCourses(): Promise<{ slug: string; titleHe: string }[]> {
+  const { error } = await verifyAdminOrTrainer();
+  if (error) return [];
+  const { data } = (await typedFrom(createAdminClient(), "courses")
+    .select("slug, title_he")
+    .order("order_index", { ascending: true })) as { data: { slug: string; title_he: string }[] | null };
+  return (data ?? []).map((c) => ({ slug: c.slug, titleHe: c.title_he }));
 }
