@@ -48,4 +48,11 @@ describe("nextFreeLeadTabSlug", () => {
     expect(slug.length).toBeLessThanOrEqual(50);
     expect(slug).not.toBe(base);
   });
+
+  it("skips a shortened candidate that is already taken", () => {
+    const base = "a".repeat(50);
+    const taken = new Set([base, `${"a".repeat(48)}-2`]);
+
+    expect(nextFreeLeadTabSlug(base, taken)).toBe(`${"a".repeat(48)}-3`);
+  });
 });

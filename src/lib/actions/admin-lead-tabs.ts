@@ -72,13 +72,15 @@ export const listLeadTabsAction = cache(
 async function ensureSlugUnique(
   supabase: SupabaseClient,
   base: string,
-): Promise<string> {
-  // Deleted tabs included: the unique index on slug covers them, so a slug a
-  // deleted tab holds cannot be reused (it made every new Hebrew-named tab
-  // fail once "tab-2" belonged to a deleted tab).
-  const { data } = await typedFrom(supabase, "lead_tabs")
-    .select("slug")
-    .like("slug", `${base}%`);
+): Promise<string | null> {
+  // Every slug, deleted tabs included: the unique index on slug covers them,
+  // and a shortened candidate for a long base need not start with the base,
+  // so no prefix filter is safe. The table holds a few dozen rows.
+  const { data, error } = await typedFrom(supabase, "lead_tabs").select("slug");
+  if (error) {
+    console.error("Read lead tab slugs error:", error);
+    return null;
+  }
   const taken = new Set(((data ?? []) as { slug: string }[]).map((row) => row.slug));
   return nextFreeLeadTabSlug(base, taken);
 }
@@ -96,6 +98,7 @@ export async function createLeadTabAction(
   const { name, color, is_default } = parsed.data;
   const requestedSlug = parsed.data.slug ?? deriveLeadTabSlug(name);
   const slug = await ensureSlugUnique(supabase, requestedSlug);
+  if (!slug) return { error: "שגיאה ביצירת טאב" };
 
   const { data: maxRow } = await typedFrom(supabase, "lead_tabs")
     .select("position")

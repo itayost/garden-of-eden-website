@@ -26,7 +26,7 @@ export function deriveLeadTabSlug(name: string): string {
 
 /**
  * The first free slug from `base`: base, base-2, base-3, ... `taken` must hold
- * every existing slug, deleted tabs included: the DB's unique index on slug
+ * every existing slug (not only those starting with base), deleted tabs included: the DB's unique index on slug
  * covers soft-deleted rows. The suffix is kept inside the 50-character limit
  * by shortening the base, never by cutting the suffix off.
  */
