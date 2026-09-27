@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { grantBadge } from "@/features/achievements/lib/actions/grant-badge";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { courseEarnsBadges } from "./course-slugs";
 
 interface LessonRow {
   id: string;
@@ -23,8 +24,6 @@ export async function grantCourseBadges(
   completedLessonId: string
 ): Promise<void> {
   try {
-    await grantBadge(supabase, userId, "course_first_lesson");
-
     // Which chapter does the finished lesson belong to, and which course?
     const { data: lesson } = await typedFrom(supabase, "course_lessons")
       .select("chapter_id")
@@ -41,6 +40,16 @@ export async function grantCourseBadges(
 
     const courseId: string | undefined = chapter?.course_id;
     if (!courseId) return;
+
+    // Only the digital course earns these badges; a lesson of הקורס הטקטי must
+    // not award "watched every lesson of the digital course".
+    const { data: course } = await typedFrom(supabase, "courses")
+      .select("slug")
+      .eq("id", courseId)
+      .maybeSingle();
+    if (!course?.slug || !courseEarnsBadges(course.slug)) return;
+
+    await grantBadge(supabase, userId, "course_first_lesson");
 
     const { data: chapters } = await typedFrom(supabase, "course_chapters")
       .select("id")

@@ -6,6 +6,7 @@ import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import * as tus from "tus-js-client";
 import { createClient } from "@/lib/supabase/client";
+import { pickResumableUpload } from "@/features/course/lib/resume-upload";
 import { setLessonVideo } from "@/features/course/lib/actions/admin-course";
 import {
   COURSE_VIDEO_BUCKET,
@@ -44,14 +45,20 @@ function readDuration(file: File): Promise<number> {
 function uploadResumable(
   file: File,
   path: string,
-  accessToken: string,
   onProgress: (percent: number) => void,
 ): Promise<void> {
+  const supabase = createClient();
   return new Promise((resolve, reject) => {
     const upload = new tus.Upload(file, {
       endpoint: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/upload/resumable`,
       retryDelays: [0, 3000, 5000, 10000, 20000],
-      headers: { authorization: `Bearer ${accessToken}`, "x-upsert": "true" },
+      headers: { "x-upsert": "true" },
+      // A fresh token on every request: a long recording can outlive the one
+      // that was current when the upload started (tokens last about an hour).
+      onBeforeRequest: async (req) => {
+        const { data } = await supabase.auth.getSession();
+        req.setHeader("authorization", `Bearer ${data.session?.access_token ?? ""}`);
+      },
       uploadDataDuringCreation: true,
       removeFingerprintOnSuccess: true,
       // Supabase's TUS endpoint requires 6 MB chunks.
@@ -69,7 +76,8 @@ function uploadResumable(
     upload
       .findPreviousUploads()
       .then((previous) => {
-        if (previous.length > 0) upload.resumeFromPreviousUpload(previous[0]);
+        const resumable = pickResumableUpload(previous, path);
+        if (resumable) upload.resumeFromPreviousUpload(resumable);
         upload.start();
       })
       .catch(reject);
@@ -128,7 +136,7 @@ export function LessonVideoUpload({ lessonId, hasVideo }: LessonVideoUploadProps
       }
 
       try {
-        await uploadResumable(file, path, session.access_token, setProgress);
+        await uploadResumable(file, path, setProgress);
       } catch (uploadError) {
         console.error("lesson video upload failed:", uploadError);
         toast.error("ההעלאה נכשלה, נסה שוב. ההעלאה תמשיך מהמקום שבו נעצרה.");
