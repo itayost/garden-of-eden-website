@@ -50,8 +50,8 @@ interface ExceptionFormDialogProps {
  * is untouched. A one-off extra hour is not an exception: it is a slot made
  * with "+ סלוט", where it can take trainees and bookings.
  *
- * Create-only, as it always was. There is no edit path for an exception; a
- * wrong one is deleted in the exceptions panel and written again.
+ * Records a new absence, or corrects one when `exception` is passed (from the
+ * calendar's pencil next to the absence).
  */
 export function ExceptionFormDialog({
   open,
@@ -88,7 +88,7 @@ export function ExceptionFormDialog({
         toast.error(result.error);
         return;
       }
-      toast.success("החריגה נשמרה");
+      toast.success(exception ? "ההיעדרות עודכנה" : "ההיעדרות נשמרה");
       onOpenChange(false);
       router.refresh();
     } catch {

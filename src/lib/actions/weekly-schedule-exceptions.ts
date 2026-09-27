@@ -165,9 +165,9 @@ export async function updateExceptionAction(
     if (error.code === "23505") {
       return { error: "כבר קיימת היעדרות למאמן זה בתאריך הזה" };
     }
-    return { error: "שגיאה בעדכון החריגה" };
+    return { error: "שגיאה בעדכון ההיעדרות" };
   }
-  if (!updated) return { error: "החריגה לא נמצאה" };
+  if (!updated) return { error: "ההיעדרות לא נמצאה" };
 
   revalidateScheduleSurfaces();
 

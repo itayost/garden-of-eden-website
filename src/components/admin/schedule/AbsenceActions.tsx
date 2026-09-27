@@ -28,15 +28,15 @@ export function AbsenceActions({ absence, date, trainers }: AbsenceActionsProps)
       <Button
         variant="ghost"
         size="icon"
-        className="h-6 w-6"
+        className="h-8 w-8"
         aria-label={`עריכת ההיעדרות של ${absence.trainerName}`}
         onClick={() => setEditing(true)}
       >
-        <Pencil className="h-3 w-3" />
+        <Pencil className="h-3.5 w-3.5" />
       </Button>
       <DeleteConfirmDialog
         title="מחיקת היעדרות"
-        description={`${absence.trainerName} יחזור לשיבוץ ביום הזה.`}
+        description={`ההיעדרות תימחק והשיבוץ של ${absence.trainerName} ביום הזה יחזור.`}
         successMessage="ההיעדרות נמחקה"
         errorMessage="שגיאה במחיקת ההיעדרות"
         onDelete={() => deleteExceptionAction(absence.exceptionId)}
@@ -45,10 +45,10 @@ export function AbsenceActions({ absence, date, trainers }: AbsenceActionsProps)
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-8 w-8"
             aria-label={`מחיקת ההיעדרות של ${absence.trainerName}`}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         }
       />
