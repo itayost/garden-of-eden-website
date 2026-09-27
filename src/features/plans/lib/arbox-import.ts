@@ -75,7 +75,7 @@ async function loadPlans(db: Db, profileIds: readonly string[]): Promise<ImportP
   if (profileIds.length === 0) return [];
   const { data, error } = await db
     .from("trainee_plans")
-    .select("id, profile_id, starts_on, ends_on, sessions_total, status, created_at, product:plan_products(kind), order:orders(payment_method, provider_transaction_id)")
+    .select("id, profile_id, starts_on, ends_on, sessions_total, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id)")
     .in("profile_id", [...profileIds]);
   if (error) throw new Error(`[arbox-import] plans: ${error.message}`);
   type Row = {
