@@ -6,6 +6,7 @@ import { Users } from "lucide-react";
 import { UserDataTable } from "@/components/admin/users/UserDataTable";
 import { UserImportDialog } from "@/components/admin/users/UserImportDialog";
 import { UserExportButton } from "@/components/admin/users/UserExportButton";
+import { ArboxSyncButton } from "@/components/admin/users/ArboxSyncButton";
 import type { Profile } from "@/types/database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -20,6 +21,9 @@ import { loadPlanStatusesForStaff } from "@/features/plans/lib/actions/staff-pla
 import { listSellableProductsAction } from "@/features/plans/lib/actions/staff-payment";
 import { NewTraineeSheet } from "@/features/plans/components/staff/NewTraineeSheet";
 import { isMorningConfigured } from "@/lib/morning/config";
+
+// The "סנכרון עם Arbox" action runs on this page and reads ~500 Arbox clients.
+export const maxDuration = 300;
 
 export const metadata: Metadata = {
   title: "ניהול משתמשים | Garden of Eden",
@@ -134,6 +138,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
           {sellable.length > 0 && (
             <NewTraineeSheet products={sellable} morningConfigured={isMorningConfigured()} isAdmin={isAdmin} />
           )}
+          <ArboxSyncButton />
           {isAdmin && <UserImportDialog />}
           <UserExportButton users={usersWithBranches.filter((u) => !u.deleted_at)} />
         </div>
