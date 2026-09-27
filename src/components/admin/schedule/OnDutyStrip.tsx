@@ -9,10 +9,16 @@ import { cn } from "@/lib/utils";
 import { trainerColor } from "@/lib/utils/trainer-color";
 import { onDutyTimeLabel } from "@/lib/utils/weekly-schedule";
 import type { OnDuty, OnDutyBand } from "@/types/weekly-schedule";
+import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
+import { AbsenceActions } from "./AbsenceActions";
 import { CALENDAR_TEMPLATE_LABEL, CALENDAR_TEMPLATE_PATH } from "@/lib/navigation/calendar-views";
 
 interface OnDutyStripProps {
   onDuty: OnDuty;
+  /** Admins can edit and delete an absence right here. */
+  canEdit?: boolean;
+  /** For the absence edit dialog's trainer list. */
+  trainers?: TrainerOption[];
 }
 
 /** Stretches sharing an hour range read as one line, the way Eden writes them. */
@@ -33,7 +39,7 @@ function groupByStretch(bands: OnDutyBand[]): [string, OnDutyBand[]][] {
  * This is context, not the board: it says who is around, while the slots below
  * say what actually runs.
  */
-export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
+export function OnDutyStrip({ onDuty, canEdit = false, trainers = [] }: OnDutyStripProps) {
   const { branchId } = useCurrentBranch();
   const hasAnything =
     onDuty.bands.length > 0 ||
@@ -112,6 +118,7 @@ export function OnDutyStrip({ onDuty }: OnDutyStripProps) {
                 <CalendarOff className="h-3 w-3" />
                 {absence.trainerName}
                 {absence.noteHe ? ` — ${absence.noteHe}` : " — לא מגיע"}
+                {canEdit && <AbsenceActions absence={absence} date={onDuty.date} trainers={trainers} />}
               </span>
             ))}
           </div>

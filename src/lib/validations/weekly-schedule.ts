@@ -124,6 +124,9 @@ export const exceptionSchema = z
   })
   .strict();
 
+/** Editing an absence from the calendar: the same rules, plus which row. */
+export const exceptionUpdateSchema = exceptionSchema.extend({ exceptionId: uuidSchema });
+
 export const exceptionIdSchema = z.object({ exceptionId: uuidSchema });
 
 /** The day to build a board for, from the weekly schedule. */
@@ -135,5 +138,6 @@ export const buildWeekSchema = z.object({ branchId: uuidSchema, weekStart: dateS
 export type BandInput = z.input<typeof bandSchema>;
 export type BandUpdateInput = z.input<typeof bandUpdateSchema>;
 export type ExceptionInput = z.input<typeof exceptionSchema>;
+export type ExceptionUpdateInput = z.input<typeof exceptionUpdateSchema>;
 export type BuildDayInput = z.input<typeof buildDaySchema>;
 export type BuildWeekInput = z.input<typeof buildWeekSchema>;

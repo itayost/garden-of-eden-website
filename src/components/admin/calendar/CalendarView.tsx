@@ -211,7 +211,7 @@ export function CalendarView({
         </div>
       )}
 
-      {selectedDay && !templateFailed && <OnDutyStrip onDuty={selectedDay.onDuty} />}
+      {selectedDay && !templateFailed && <OnDutyStrip onDuty={selectedDay.onDuty} canEdit={isAdmin} trainers={trainers} />}
 
       {slotsError ? (
         <Card className="border-destructive">

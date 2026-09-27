@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
-import { createExceptionAction } from "@/lib/actions/weekly-schedule";
+import { createExceptionAction, updateExceptionAction } from "@/lib/actions/weekly-schedule";
 
 interface ExceptionFormDialogProps {
   open: boolean;
@@ -41,6 +41,8 @@ interface ExceptionFormDialogProps {
    * trigger is not a permission.
    */
   canEdit: boolean;
+  /** An absence to correct; without it the dialog records a new one. */
+  exception?: { id: string; exceptionDate: string; trainerId: string; note: string | null };
 }
 
 /**
@@ -57,14 +59,16 @@ export function ExceptionFormDialog({
   trainers,
   defaultDate,
   canEdit,
+  exception,
 }: ExceptionFormDialogProps) {
   const { branchId } = useCurrentBranch();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const [exceptionDate, setExceptionDate] = useState(defaultDate ?? "");
-  const [trainerId, setTrainerId] = useState("");
-  const [note, setNote] = useState("");
+  // Seeded once per mount; callers pass key={exception.id} to edit another.
+  const [exceptionDate, setExceptionDate] = useState(exception?.exceptionDate ?? defaultDate ?? "");
+  const [trainerId, setTrainerId] = useState(exception?.trainerId ?? "");
+  const [note, setNote] = useState(exception?.note ?? "");
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -75,13 +79,10 @@ export function ExceptionFormDialog({
 
     setLoading(true);
     try {
-      const result = await createExceptionAction({
-        branchId,
-        exceptionDate,
-        trainerId,
-        kind: "absent",
-        note,
-      });
+      const fields = { branchId, exceptionDate, trainerId, kind: "absent" as const, note };
+      const result = exception
+        ? await updateExceptionAction({ ...fields, exceptionId: exception.id })
+        : await createExceptionAction(fields);
 
       if ("error" in result) {
         toast.error(result.error);
@@ -104,7 +105,7 @@ export function ExceptionFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <SheetDialogContent>
         <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
-          <DialogTitle>היעדרות מאמן</DialogTitle>
+          <DialogTitle>{exception ? "עריכת היעדרות" : "היעדרות מאמן"}</DialogTitle>
           <DialogDescription>
             המאמן יורד מהשעות שלו ביום הזה. שעה נוספת נוצרת ביומן דרך &quot;+ סלוט&quot;.
           </DialogDescription>

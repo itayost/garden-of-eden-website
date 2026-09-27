@@ -113,6 +113,8 @@ export interface OnDutyBand {
 
 /** A trainer the standing week expected, removed by an absence Exception. */
 export interface OnDutyAbsence {
+  /** The exception row, so the calendar can edit or delete it where it shows. */
+  exceptionId: string;
   trainerId: string;
   trainerName: string;
   noteHe: string | null;

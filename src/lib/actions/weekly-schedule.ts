@@ -13,9 +13,13 @@ export {
 
 export {
   createBandAction,
-  createExceptionAction,
   bandDeletionImpactAction,
   deleteBandAction,
-  deleteExceptionAction,
   updateBandAction,
 } from "./weekly-schedule-mutate";
+
+export {
+  createExceptionAction,
+  deleteExceptionAction,
+  updateExceptionAction,
+} from "./weekly-schedule-exceptions";

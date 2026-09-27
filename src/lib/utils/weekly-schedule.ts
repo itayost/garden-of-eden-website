@@ -133,6 +133,7 @@ export function deriveOnDuty(
   const absences: OnDutyAbsence[] = forDate
     .filter((e) => e.kind === "absent" && expectedTrainerIds.has(e.trainer_id))
     .map((e) => ({
+      exceptionId: e.id,
       trainerId: e.trainer_id,
       trainerName: e.trainer_name,
       noteHe: e.note_he,
