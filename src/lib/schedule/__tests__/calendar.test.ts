@@ -15,6 +15,7 @@ function day(date: string, weekday: WeekDay["weekday"]): WeekDay {
     slots: [],
     onDuty: { bands: [], absences: [] } as unknown as WeekDay["onDuty"],
     extras: [],
+    unbuiltBands: [],
   };
 }
 

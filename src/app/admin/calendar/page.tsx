@@ -10,7 +10,7 @@ import { getSlotsForWeekAction } from "@/lib/actions/daily-schedule";
 import { getSlotFormOptionsAction } from "@/lib/actions/schedule-options";
 import { getWeekSessionStatusesAction } from "@/lib/actions/training-sessions";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
-import { getExceptionsInRangeAction, getWeeklyScheduleAction } from "@/lib/actions/weekly-schedule";
+import { getExceptionsInRangeAction, getTombstonesInRangeAction, getWeeklyScheduleAction } from "@/lib/actions/weekly-schedule";
 import { allowedBranches, resolveRequestedBranch } from "@/lib/branches/resolve-branch";
 import { resolveCalendarDate } from "@/lib/schedule/calendar";
 import { addDays } from "@/lib/utils/iso-date";
@@ -56,12 +56,13 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
   // Trainers read this page too, so the pick-lists come from the admin-client
   // action (RLS hides trainee rows from a trainer).
-  const [slotsResult, templateResult, exceptionsResult, optionsResult, statusesResult] = await Promise.all([
+  const [slotsResult, templateResult, exceptionsResult, optionsResult, statusesResult, tombstonesResult] = await Promise.all([
     getSlotsForWeekAction(weekStart, branchId),
     getWeeklyScheduleAction(weekStart, weekEnd, branchId),
     getExceptionsInRangeAction(weekStart, weekEnd, branchId),
     getSlotFormOptionsAction(branchId),
     getWeekSessionStatusesAction(weekStart, weekEnd),
+    getTombstonesInRangeAction(weekStart, weekEnd, branchId),
   ]);
 
   // Each failure degrades on its own and never renders as "nothing here".
@@ -76,7 +77,10 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const statusesLoaded = "success" in statusesResult;
   const sessionStatuses = "success" in statusesResult ? statusesResult.data : {};
 
-  const week = buildWeek({ weekStart, today, slots, bands, exceptions });
+  // Without them a build button could offer back an hour staff cancelled;
+  // the build actions read them again and refuse either way.
+  const tombstones = "success" in tombstonesResult ? tombstonesResult.data : [];
+  const week = buildWeek({ weekStart, today, slots, bands, exceptions, tombstones });
   // A branch whose standing week takes bookings (קריית אתא) opens a new
   // hand-made hour to booking by default too.
   const branchTakesBookings = bands.some((band) => band.is_bookable);

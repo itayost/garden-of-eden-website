@@ -6,6 +6,7 @@
 export {
   getBandsAction,
   getExceptionsInRangeAction,
+  getTombstonesInRangeAction,
   getOnDutyAction,
   getWeeklyScheduleAction,
 } from "./weekly-schedule-list";

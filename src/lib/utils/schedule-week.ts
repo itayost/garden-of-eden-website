@@ -41,6 +41,8 @@ export interface WeekDay {
   onDuty: OnDuty;
   /** This date's one-off additions, already inside onDuty.bands. */
   extras: OnDutyBand[];
+  /** The working stretches that have no slot on this date yet: what a build adds. */
+  unbuiltBands: OnDutyBand[];
 }
 
 export interface Week {
@@ -58,6 +60,14 @@ interface BuildWeekInput {
   slots: readonly ScheduleSlot[];
   bands: readonly WeeklyBand[];
   exceptions: readonly WeeklyException[];
+  /** Projected hours staff cancelled for one date; never rebuilt. */
+  tombstones?: readonly SlotTombstone[];
+}
+
+/** A (band, date) whose projected slot staff deleted on purpose. */
+export interface SlotTombstone {
+  readonly band_id: string;
+  readonly schedule_date: string;
 }
 
 /** The Sunday of the week containing this date. A Saturday reaches back six. */
@@ -117,12 +127,37 @@ function groupByDate(
   return groups;
 }
 
+/**
+ * Working stretches with no slot yet on this date. A stretch is on the board
+ * when a slot carries its band, or when a hand-made slot (no band) sits at its
+ * start time. Another band's slot at the same hour does not count: two groups
+ * can share an hour. A bookable hour projected ahead of time therefore no
+ * longer blocks building the rest of the day.
+ */
+export function unbuiltBands(
+  bands: readonly OnDutyBand[],
+  slots: readonly Pick<ScheduleSlot, "band_id" | "start_time">[],
+  /** Band ids cancelled for this date: they count as on the board. */
+  tombstonedBandIds: ReadonlySet<string> = new Set(),
+): OnDutyBand[] {
+  return bands.filter(
+    (band) =>
+      !(band.source === "band" && tombstonedBandIds.has(band.id)) &&
+      !slots.some(
+        (slot) =>
+          (band.source === "band" && slot.band_id === band.id) ||
+          (slot.band_id === null && slot.start_time.slice(0, 5) === band.startTime),
+      ),
+  );
+}
+
 function toWeekDay(
   date: string,
   today: string,
   slots: ScheduleSlot[],
   bands: readonly WeeklyBand[],
   exceptions: readonly WeeklyException[],
+  tombstonedBandIds: ReadonlySet<string>,
 ): WeekDay {
   // deriveOnDuty filters the exceptions by date itself, so the whole week's
   // rows can be handed to it unfiltered.
@@ -137,6 +172,7 @@ function toWeekDay(
     slots,
     onDuty,
     extras: onDuty.bands.filter((band) => band.source === "exception"),
+    unbuiltBands: unbuiltBands(onDuty.bands, slots, tombstonedBandIds),
   };
 }
 
@@ -159,12 +195,15 @@ export function buildWeek({
   slots,
   bands,
   exceptions,
+  tombstones = [],
 }: BuildWeekInput): Week {
   const dates = weekDates(weekStart);
   const byDate = groupByDate(slots, dates);
+  const tombstonedOn = (date: string): ReadonlySet<string> =>
+    new Set(tombstones.filter((t) => t.schedule_date === date).map((t) => t.band_id));
 
   const all = dates.map((date) =>
-    toWeekDay(date, today, byDate.get(date) ?? [], bands, exceptions),
+    toWeekDay(date, today, byDate.get(date) ?? [], bands, exceptions, tombstonedOn(date)),
   );
 
   const saturday = all[SATURDAY_INDEX];
@@ -180,14 +219,14 @@ export function buildWeek({
 /**
  * Whether the whole-week build would seed this day.
  *
- * Three conditions, and each one is a decision: a day that already has a board
- * is left alone rather than merged, a day already past is left to the per-day
- * button so backfilling stays deliberate, and a day the template staffs with
- * nobody has nothing to seed from.
+ * Two conditions, each a decision: a day already past is left to the per-day
+ * button so backfilling stays deliberate, and a day with no stretch missing
+ * from its board (unbuiltBands: tombstoned hours count as present) has
+ * nothing to add.
  *
  * Exported so the button and the action that does the work cannot disagree
  * about which days are offered.
  */
 export function isBuildableDay(day: WeekDay): boolean {
-  return !day.isBuilt && !day.isPast && day.onDuty.bands.length > 0;
+  return !day.isPast && day.unbuiltBands.length > 0;
 }

@@ -5,8 +5,9 @@ import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-sche
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { loadTombstones } from "@/lib/actions/shared/load-tombstones";
 import { addDays } from "@/lib/utils/iso-date";
-import { buildWeek, isBuildableDay } from "@/lib/utils/schedule-week";
+import { buildWeek, isBuildableDay, unbuiltBands } from "@/lib/utils/schedule-week";
 import { israelToday } from "@/lib/utils/tasks";
 import { deriveOnDuty } from "@/lib/utils/weekly-schedule";
 import {
@@ -95,10 +96,11 @@ function splitTrainers(rows: ReturnType<typeof slotRowsFor>) {
  * Standby stretches are skipped. "חיזוק במידת הצורך" means nobody has decided
  * it is happening, and a slot on the board asserts that it is.
  *
- * Admin-only and refuses a non-empty day, both matching duplicateDayAction:
- * rebuilding a whole day in one click is an admin decision, and "merge" has no
- * obvious meaning. As there, the gate is ergonomic rather than a containment
- * boundary — a trainer can still build the same day slot by slot.
+ * Admin-only, matching duplicateDayAction. It adds only the stretches that
+ * have no slot yet (unbuiltBands): bookable hours are projected ahead of time,
+ * so a day often already holds some of its slots, and refusing it would leave
+ * the rest to be typed by hand. The gate is ergonomic rather than a
+ * containment boundary — a trainer can still build the same day slot by slot.
  */
 export async function buildDayFromWeeklyScheduleAction(
   input: BuildDayInput,
@@ -120,14 +122,16 @@ export async function buildDayFromWeeklyScheduleAction(
   const branchCheck = await assertBranchWritable(branchId);
   if (branchCheck.error) return { error: branchCheck.error };
 
-  const { data: targetExisting } = await typedFrom(supabase, "daily_schedule_slots")
-    .select("id")
+  const { data: targetExisting, error: existingError } = await typedFrom(supabase, "daily_schedule_slots")
+    .select("band_id, start_time")
     .eq("branch_id", branchId)
-    .eq("schedule_date", date)
-    .limit(1);
+    .eq("schedule_date", date);
 
-  if ((targetExisting?.length ?? 0) > 0) {
-    return { error: "ליום זה כבר יש לוח. מחק אותו קודם או ערוך אותו ישירות." };
+  // A failed read must not read as "nothing there": building on top of an
+  // unseen board would put every hour on it twice.
+  if (existingError) {
+    console.error("Build day existing slots error:", existingError);
+    return { error: "שגיאה בטעינת הלוח" };
   }
 
   const [bandsResult, exceptionsResult] = await Promise.all([
@@ -159,7 +163,21 @@ export async function buildDayFromWeeklyScheduleAction(
     return { error: "אין שיבוץ בתבנית השבועית ליום זה" };
   }
 
-  const rows = slotRowsFor(date, onDuty, user!.id, branchId);
+  // An hour staff cancelled for this date stays cancelled; a failed read must
+  // not read as "none cancelled" and bring them all back.
+  const tombstones = await loadTombstones(supabase, branchId, date, date);
+  if ("error" in tombstones) return { error: "שגיאה בטעינת הלוח" };
+
+  const missing = unbuiltBands(
+    onDuty.bands,
+    (targetExisting ?? []) as { band_id: string | null; start_time: string }[],
+    new Set(tombstones.data.map((t) => t.band_id)),
+  );
+  if (missing.length === 0) {
+    return { error: "כל השעות של היום כבר בלוח" };
+  }
+
+  const rows = slotRowsFor(date, { ...onDuty, bands: missing }, user!.id, branchId);
 
   // One insert, unlike duplicateDayAction's loop: there is no roster to attach
   // per row, so the whole build is a single statement and either all of it
@@ -198,13 +216,13 @@ export async function buildDayFromWeeklyScheduleAction(
 }
 
 /**
- * Seeds every unbuilt day of one week in a single statement.
+ * Adds every day's missing stretches for one week in a single statement.
  *
  * Sunday morning, the admin wants six boards, not six clicks. The rules are the
  * per-day build's rules applied six times: standby is skipped, seeded slots
- * carry no roster, and a day that already has a board is left exactly as it is
- * — skipped rather than refused, because "some of this week is already built"
- * is the normal case, not an error.
+ * carry no roster, and a day's slots already on the board are left exactly as
+ * they are; only its missing stretches are added. "Some of this week is
+ * already there" is the normal case, not an error.
  *
  * Past days are skipped too. Backfilling one is legitimate, which is why the
  * per-day button still offers it, but writing today's template over a week that
@@ -261,9 +279,13 @@ export async function buildWeekFromWeeklyScheduleAction(
 
   // Saturday is excluded by buildWeek's grid: the academy does not staff it, so
   // it carries no bands and would contribute nothing to a bulk seed.
+  const tombstones = await loadTombstones(supabase, branchId, weekStart, weekEnd);
+  if ("error" in tombstones) return { error: "שגיאה בטעינת התבנית השבועית" };
+
   const { days } = buildWeek({
     weekStart,
     today: israelToday(),
+    tombstones: tombstones.data,
     slots: (slotsResult.data ?? []) as ScheduleSlot[],
     bands: (bandsResult.data ?? []) as WeeklyBand[],
     exceptions: (exceptionsResult.data ?? []) as WeeklyException[],
@@ -275,8 +297,10 @@ export async function buildWeekFromWeeklyScheduleAction(
     return { error: "אין ימים לבנות בשבוע הזה" };
   }
 
+  // Only each day's missing stretches: a day may already hold its projected
+  // bookable hours, and those must not be inserted a second time.
   const rows = buildable.flatMap((day) =>
-    slotRowsFor(day.date, day.onDuty, user!.id, branchId),
+    slotRowsFor(day.date, { ...day.onDuty, bands: day.unbuiltBands }, user!.id, branchId),
   );
 
   const { slotRows, trainerRows } = splitTrainers(rows);

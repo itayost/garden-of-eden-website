@@ -30,7 +30,7 @@ interface BuildWeekButtonProps {
 }
 
 /**
- * Seeds every unbuilt day of the week in one press.
+ * Adds the week's missing hours from the template in one press.
  *
  * Hidden rather than disabled when there is nothing to build: on a week that is
  * already done, a permanently greyed button is just noise. The per-day buttons
@@ -80,9 +80,10 @@ export function BuildWeekButton({
         <AlertDialogHeader>
           <AlertDialogTitle>בניית השבוע מהתבנית השבועית</AlertDialogTitle>
           <AlertDialogDescription>
-            ייווצרו {slotCount} סלוטים ב-{buildableCount} ימים שעדיין לא נבנו.
-            ימים שכבר יש להם לוח, וימים שעברו, לא ישתנו. רשימות המתאמנים יישארו
-            ריקות ויש להשלים אותן. רצועות ״חיזוק במידת הצורך״ לא ייבנו.
+            ייווצרו {slotCount} סלוטים ב-{buildableCount} ימים: רק שעות מהתבנית
+            שעוד אינן בלוח. שעות שכבר בלוח, שעות שבוטלו לתאריך מסוים, וימים שעברו
+            לא ישתנו. רשימות המתאמנים יישארו ריקות ויש להשלים אותן. רצועות ״חיזוק
+            במידת הצורך״ לא ייבנו.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

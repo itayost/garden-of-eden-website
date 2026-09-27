@@ -327,13 +327,25 @@ describe("isBuildableDay", () => {
     expect(isBuildableDay(day)).toBe(true);
   });
 
-  test("skips a day that already has a board", () => {
+  test("skips a day whose every hour already has a slot", () => {
     const day = dayFrom({
       today: "2026-08-10",
       bands: [band({ weekday: 0 })],
-      slots: [slot()],
+      slots: [slot({ band_id: "band-1" })],
     });
     expect(isBuildableDay(day)).toBe(false);
+  });
+
+  test("offers a day where only some hours have a slot", () => {
+    // A bookable hour projected ahead of time must not block building the
+    // day's other hours.
+    const day = dayFrom({
+      today: "2026-08-10",
+      bands: [band({ weekday: 0 }), band({ id: "band-2", weekday: 0, start_time: "18:00:00" })],
+      slots: [slot({ band_id: "band-1", start_time: "15:00:00" })],
+    });
+    expect(isBuildableDay(day)).toBe(true);
+    expect(day.unbuiltBands.map((b) => b.id)).toEqual(["band-2"]);
   });
 
   test("skips a day already past", () => {
@@ -357,5 +369,44 @@ describe("isBuildableDay", () => {
       bands: [band({ weekday: 0, is_standby: true })],
     });
     expect(isBuildableDay(day)).toBe(false);
+  });
+});
+
+describe("unbuiltBands", () => {
+  const dayFrom = (overrides: Parameters<typeof build>[0] = {}) =>
+    build({ today: "2026-08-10", ...overrides }).days[0];
+
+  test("an hour is built when a slot carries its band", () => {
+    const day = dayFrom({ bands: [band({ weekday: 0 })], slots: [slot({ band_id: "band-1", start_time: "09:00:00" })] });
+    expect(day.unbuiltBands).toEqual([]);
+  });
+
+  test("a hand-made slot at the same time counts as that hour", () => {
+    const day = dayFrom({ bands: [band({ weekday: 0 })], slots: [slot({ band_id: null, start_time: "15:00:00" })] });
+    expect(day.unbuiltBands).toEqual([]);
+  });
+
+  test("an hour cancelled for this date (tombstone) counts as built", () => {
+    // Staff deleted this date's projected slot on purpose; building must not
+    // bring it back open for booking.
+    const day = dayFrom({
+      bands: [band({ weekday: 0 })],
+      tombstones: [{ band_id: "band-1", schedule_date: SUNDAY }],
+    });
+    expect(day.unbuiltBands).toEqual([]);
+  });
+
+  test("a tombstone on another date does not", () => {
+    const day = dayFrom({
+      bands: [band({ weekday: 0 })],
+      tombstones: [{ band_id: "band-1", schedule_date: WEDNESDAY }],
+    });
+    expect(day.unbuiltBands.map((b) => b.id)).toEqual(["band-1"]);
+  });
+
+  test("another band's slot at the same time does not", () => {
+    // Two groups can share an hour; one being on the board says nothing of the other.
+    const day = dayFrom({ bands: [band({ weekday: 0 })], slots: [slot({ band_id: "band-9", start_time: "15:00:00" })] });
+    expect(day.unbuiltBands.map((b) => b.id)).toEqual(["band-1"]);
   });
 });

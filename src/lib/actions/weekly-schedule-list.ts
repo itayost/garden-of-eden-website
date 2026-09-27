@@ -4,6 +4,8 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { loadTombstones } from "@/lib/actions/shared/load-tombstones";
+import type { SlotTombstone } from "@/lib/utils/schedule-week";
 import { deriveOnDuty } from "@/lib/utils/weekly-schedule";
 import { isValidDateRange, isValidDateString, isValidUUID } from "@/lib/validations/common";
 import {
@@ -202,3 +204,27 @@ export async function getExceptionsInRangeAction(
 
   return { success: true, data: (data ?? []) as WeeklyException[] };
 }
+
+/**
+ * Projected hours staff cancelled for one date, in a date window, for a
+ * branch's bands. The calendar reads them so a build never offers to bring a
+ * cancelled hour back.
+ */
+export async function getTombstonesInRangeAction(
+  fromDate: string,
+  toDate: string,
+  branchId: string,
+): Promise<{ success: true; data: SlotTombstone[] } | { error: string }> {
+  const { error: authError } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+  if (!isValidUUID(branchId)) return { error: "מזהה סניף לא תקין" };
+  const scopeCheck = await assertBranchReadable(branchId);
+  if (scopeCheck.error) return { error: scopeCheck.error };
+  if (!isValidDateRange(fromDate, toDate)) return { error: "טווח תאריכים לא תקין" };
+
+  const supabase = await createClient();
+  const result = await loadTombstones(supabase, branchId, fromDate, toDate);
+  if ("error" in result) return { error: "שגיאה בטעינת השעות שבוטלו" };
+  return { success: true, data: result.data };
+}
+
