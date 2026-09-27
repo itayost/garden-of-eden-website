@@ -12,6 +12,7 @@ import {
   leadTabReorderSchema,
   leadTabDeleteSchema,
   deriveLeadTabSlug,
+  nextFreeLeadTabSlug,
   type LeadTabCreateInput,
   type LeadTabUpdateInput,
   type LeadTabReorderInput,
@@ -72,19 +73,14 @@ async function ensureSlugUnique(
   supabase: SupabaseClient,
   base: string,
 ): Promise<string> {
-  let candidate = base;
-  let n = 2;
-  for (let i = 0; i < 100; i += 1) {
-    const { data } = await typedFrom(supabase, "lead_tabs")
-      .select("id")
-      .eq("slug", candidate)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (!data) return candidate;
-    candidate = `${base}-${n}`.slice(0, 50);
-    n += 1;
-  }
-  return `${base}-${Date.now()}`.slice(0, 50);
+  // Deleted tabs included: the unique index on slug covers them, so a slug a
+  // deleted tab holds cannot be reused (it made every new Hebrew-named tab
+  // fail once "tab-2" belonged to a deleted tab).
+  const { data } = await typedFrom(supabase, "lead_tabs")
+    .select("slug")
+    .like("slug", `${base}%`);
+  const taken = new Set(((data ?? []) as { slug: string }[]).map((row) => row.slug));
+  return nextFreeLeadTabSlug(base, taken);
 }
 
 export async function createLeadTabAction(
