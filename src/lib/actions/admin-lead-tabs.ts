@@ -12,6 +12,7 @@ import {
   leadTabReorderSchema,
   leadTabDeleteSchema,
   deriveLeadTabSlug,
+  nextFreeLeadTabSlug,
   type LeadTabCreateInput,
   type LeadTabUpdateInput,
   type LeadTabReorderInput,
@@ -71,20 +72,17 @@ export const listLeadTabsAction = cache(
 async function ensureSlugUnique(
   supabase: SupabaseClient,
   base: string,
-): Promise<string> {
-  let candidate = base;
-  let n = 2;
-  for (let i = 0; i < 100; i += 1) {
-    const { data } = await typedFrom(supabase, "lead_tabs")
-      .select("id")
-      .eq("slug", candidate)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (!data) return candidate;
-    candidate = `${base}-${n}`.slice(0, 50);
-    n += 1;
+): Promise<string | null> {
+  // Every slug, deleted tabs included: the unique index on slug covers them,
+  // and a shortened candidate for a long base need not start with the base,
+  // so no prefix filter is safe. The table holds a few dozen rows.
+  const { data, error } = await typedFrom(supabase, "lead_tabs").select("slug");
+  if (error) {
+    console.error("Read lead tab slugs error:", error);
+    return null;
   }
-  return `${base}-${Date.now()}`.slice(0, 50);
+  const taken = new Set(((data ?? []) as { slug: string }[]).map((row) => row.slug));
+  return nextFreeLeadTabSlug(base, taken);
 }
 
 export async function createLeadTabAction(
@@ -100,6 +98,7 @@ export async function createLeadTabAction(
   const { name, color, is_default } = parsed.data;
   const requestedSlug = parsed.data.slug ?? deriveLeadTabSlug(name);
   const slug = await ensureSlugUnique(supabase, requestedSlug);
+  if (!slug) return { error: "שגיאה ביצירת טאב" };
 
   const { data: maxRow } = await typedFrom(supabase, "lead_tabs")
     .select("position")

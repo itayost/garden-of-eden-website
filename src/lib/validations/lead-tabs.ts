@@ -24,6 +24,21 @@ export function deriveLeadTabSlug(name: string): string {
   return base.length > 0 ? base : "tab";
 }
 
+/**
+ * The first free slug from `base`: base, base-2, base-3, ... `taken` must hold
+ * every existing slug (not only those starting with base), deleted tabs included: the DB's unique index on slug
+ * covers soft-deleted rows. The suffix is kept inside the 50-character limit
+ * by shortening the base, never by cutting the suffix off.
+ */
+export function nextFreeLeadTabSlug(base: string, taken: ReadonlySet<string>): string {
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n += 1) {
+    const suffix = `-${n}`;
+    const candidate = `${base.slice(0, 50 - suffix.length).replace(/[-_]+$/, "")}${suffix}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
 export const leadTabSlugSchema = z
   .string()
   .regex(SLUG_REGEX, "מזהה טאב לא תקין");
