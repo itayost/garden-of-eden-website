@@ -80,18 +80,16 @@ function revalidateCourse(): void {
  * The whole course including drafts, for the CMS. Unlike the trainee read this
  * deliberately ignores publish state -- that is the thing Eden is managing.
  */
-export async function listCourseAdminTree(slug?: string): Promise<AdminCourse | null> {
+export async function listCourseAdminTree(slug: string): Promise<AdminCourse | null> {
   const { error } = await verifyAdmin();
   if (error) return null;
 
   const db = createAdminClient();
 
-  let courseQuery = typedFrom(db, "courses")
+  const { data: courses, error: courseError } = await typedFrom(db, "courses")
     .select("*")
-    .order("order_index", { ascending: true })
+    .eq("slug", slug)
     .limit(1);
-  if (slug) courseQuery = courseQuery.eq("slug", slug);
-  const { data: courses, error: courseError } = await courseQuery;
 
   if (courseError) {
     console.error("listCourseAdminTree course failed:", courseError);
@@ -647,8 +645,13 @@ export async function deleteLesson(
 export async function listCourses(): Promise<{ slug: string; titleHe: string }[]> {
   const { error } = await verifyAdminOrTrainer();
   if (error) return [];
-  const { data } = (await typedFrom(createAdminClient(), "courses")
+  const { data, error: readError } = await createAdminClient()
+    .from("courses")
     .select("slug, title_he")
-    .order("order_index", { ascending: true })) as { data: { slug: string; title_he: string }[] | null };
+    .order("order_index", { ascending: true });
+  if (readError) {
+    console.error("listCourses failed:", readError);
+    return [];
+  }
   return (data ?? []).map((c) => ({ slug: c.slug, titleHe: c.title_he }));
 }

@@ -19,6 +19,8 @@ interface LessonVideoUploadProps {
   hasVideo: boolean;
 }
 
+const HTTP_PAYLOAD_TOO_LARGE = 413;
+
 /** Read a video's duration from the file itself, without uploading it first. */
 function readDuration(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -139,7 +141,17 @@ export function LessonVideoUpload({ lessonId, hasVideo }: LessonVideoUploadProps
         await uploadResumable(file, path, setProgress);
       } catch (uploadError) {
         console.error("lesson video upload failed:", uploadError);
-        toast.error("ההעלאה נכשלה, נסה שוב. ההעלאה תמשיך מהמקום שבו נעצרה.");
+        // A 413 is the storage size limit refusing the file: retrying will not
+        // help, so do not promise a resume.
+        const status =
+          uploadError instanceof tus.DetailedError
+            ? uploadError.originalResponse?.getStatus()
+            : undefined;
+        toast.error(
+          status === HTTP_PAYLOAD_TOO_LARGE
+            ? "הקובץ חורג ממגבלת האחסון של השרת"
+            : "ההעלאה נכשלה, נסה שוב. ההעלאה תמשיך מהמקום שבו נעצרה."
+        );
         return;
       }
 

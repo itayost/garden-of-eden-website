@@ -16,8 +16,6 @@ import { LessonView } from "./LessonView";
 import { LessonPlaylist } from "./LessonPlaylist";
 import { ChapterCompleteCard } from "./ChapterCompleteCard";
 
-
-
 interface CourseLessonPageProps {
   slug: string;
   basePath: string;

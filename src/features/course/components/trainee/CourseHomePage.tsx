@@ -14,8 +14,6 @@ import { CourseProgressRing } from "./CourseProgressRing";
 import { ResumeCard } from "./ResumeCard";
 import { ChapterList } from "./ChapterList";
 
-
-
 interface CourseHomePageProps {
   /** Which course; pages never rely on "the first published one". */
   slug: string;
@@ -32,13 +30,7 @@ export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
   ]);
 
   if (!course) {
-    return (
-      <div className="rounded-xl border border-dashed border-border bg-card/50 py-16 text-center">
-        <p className="text-sm text-muted-foreground">
-          הקורס עדיין לא פורסם. נעדכן אותך ברגע שהוא יעלה.
-        </p>
-      </div>
-    );
+    return <CourseAccessNotice message="הקורס עדיין לא פורסם. נעדכן אותך ברגע שהוא יעלה." />;
   }
 
   if (!canOpenCourse(course.activeOnly, viewer)) return <CourseAccessNotice />;
@@ -58,11 +50,7 @@ export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
       />
 
       {chapters.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card/50 py-16 text-center">
-          <p className="text-sm text-muted-foreground">
-            עוד לא פורסמו שיעורים בקורס.
-          </p>
-        </div>
+        <CourseAccessNotice message="עוד לא פורסמו שיעורים בקורס." />
       ) : (
         <div className="space-y-5">
           {resume && <ResumeCard point={resume} basePath={basePath} />}

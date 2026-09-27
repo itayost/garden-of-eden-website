@@ -78,19 +78,15 @@ function toLesson(row: RawLesson): CourseLesson {
  * keep the trainee view identical for staff, who can otherwise see drafts.
  */
 export async function getPublishedCourse(
-  slug?: string
+  slug: string
 ): Promise<CourseWithChapters | null> {
   const supabase = await createClient();
 
-  let courseQuery = typedFrom(supabase, "courses")
+  const { data: courseRows, error: courseError } = await typedFrom(supabase, "courses")
     .select("*")
+    .eq("slug", slug)
     .eq("is_published", true)
-    .order("order_index", { ascending: true })
     .limit(1);
-
-  if (slug) courseQuery = courseQuery.eq("slug", slug);
-
-  const { data: courseRows, error: courseError } = await courseQuery;
   if (courseError) {
     console.error("getPublishedCourse failed:", courseError);
     return null;
@@ -211,9 +207,11 @@ export async function getCourseViewer(): Promise<CourseViewer> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { role: null, isActive: false };
-  const { data } = (await typedFrom(supabase, "profiles")
+  const { data, error } = await supabase
+    .from("profiles")
     .select("role, is_active")
     .eq("id", user.id)
-    .maybeSingle()) as { data: { role: string | null; is_active: boolean | null } | null };
+    .maybeSingle();
+  if (error) console.error("getCourseViewer failed:", error);
   return { role: data?.role ?? null, isActive: data?.is_active === true };
 }
