@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { getTaskCountsAction } from "@/lib/actions/admin-tasks";
 import { ADMIN_PAGE_TITLES } from "@/lib/navigation/admin-nav";
-import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { MotionProvider } from "@/components/MotionProvider";
@@ -48,6 +47,8 @@ export default async function AdminLayout({
         : countsResult.data.open
       : 0;
   const navBadges = { "/admin/tasks": taskBadge };
+  // The header tile stands in for every row while the drawer is shut.
+  const menuBadge = Object.values(navBadges).reduce((sum, n) => sum + n, 0);
 
   return (
     <MotionProvider>
@@ -59,11 +60,12 @@ export default async function AdminLayout({
             profile={profile}
             titles={ADMIN_PAGE_TITLES}
             fallbackTitle="ניהול"
+            menuVariant="brand"
+            menuBadge={menuBadge}
           />
-          <main id="main-content" tabIndex={-1} className="outline-none container mx-auto px-4 pt-6 pb-20 md:pb-8">
+          <main id="main-content" tabIndex={-1} className="outline-none container mx-auto px-4 pt-6 pb-[max(env(safe-area-inset-bottom),2rem)]">
             {children}
           </main>
-          <AdminBottomNav isAdmin={isAdmin} navBadges={navBadges} />
         </SidebarInset>
       </SidebarProvider>
     </MotionProvider>

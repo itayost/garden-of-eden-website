@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { BrandMenuTrigger } from "@/components/layout/BrandMenuTrigger";
+import { cn } from "@/lib/utils";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -27,9 +29,24 @@ type AppTopBarProps = {
   profile: Profile | null;
   titles: Record<string, string>;
   fallbackTitle: string;
+  /**
+   * "brand" swaps the small ghost trigger for the ink menu tile. The staff
+   * shell uses it because it has no bottom bar, so the header button is the
+   * only way into the navigation on a phone.
+   */
+  menuVariant?: "default" | "brand";
+  /** Attention count shown on the brand tile. */
+  menuBadge?: number;
 };
 
-export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarProps) {
+export function AppTopBar({
+  user,
+  profile,
+  titles,
+  fallbackTitle,
+  menuVariant = "default",
+  menuBadge = 0,
+}: AppTopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const mounted = useSyncExternalStore(
@@ -56,6 +73,7 @@ export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarPro
     }
   };
 
+  const isBrand = menuVariant === "brand";
   const title = resolveTitle(pathname);
   const localPhone = formatPhoneToLocal(user.phone);
   const displayName = profile?.full_name || localPhone || "משתמש";
@@ -68,9 +86,21 @@ export function AppTopBar({ user, profile, titles, fallbackTitle }: AppTopBarPro
   );
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border bg-background px-4">
-      <SidebarTrigger />
-      <span className="text-lg font-semibold text-foreground">{title}</span>
+    <header
+      className={cn(
+        "sticky top-0 z-40 flex h-14 items-center border-b border-border bg-background px-4",
+        isBrand ? "gap-3" : "gap-2",
+      )}
+    >
+      {isBrand ? <BrandMenuTrigger badgeCount={menuBadge} /> : <SidebarTrigger />}
+      <span
+        className={cn(
+          "truncate text-foreground",
+          isBrand ? "text-xl font-extrabold tracking-tight" : "text-lg font-semibold",
+        )}
+      >
+        {title}
+      </span>
       {mounted ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>

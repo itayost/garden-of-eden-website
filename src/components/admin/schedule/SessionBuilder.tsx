@@ -379,7 +379,7 @@ export function SessionBuilder({
       )}
 
       {/* Sticky on mobile so the trainer never scrolls back up to save. */}
-      <div className="fixed inset-x-0 bottom-16 z-40 flex justify-between gap-2 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-6 md:static md:bg-none md:p-0">
+      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-between gap-2 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-6 md:static md:bg-none md:p-0">
         {session ? (
           <Button
             variant="outline"
