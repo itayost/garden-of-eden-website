@@ -22,15 +22,13 @@ export type NavSection = {
 
 export function splitBottomNav(
   items: NavItem[],
-  isAdmin: boolean,
 ): { main: NavItem[]; more: NavItem[] } {
-  const visible = items.filter((i) => !i.adminOnly || isAdmin);
   const byMobileOrder = (a: NavItem, b: NavItem) =>
     (a.mobileOrder ?? Number.MAX_SAFE_INTEGER) -
     (b.mobileOrder ?? Number.MAX_SAFE_INTEGER);
   return {
-    main: visible.filter((i) => i.mobilePrimary).sort(byMobileOrder),
-    more: visible.filter((i) => !i.mobilePrimary).sort(byMobileOrder),
+    main: items.filter((i) => i.mobilePrimary).sort(byMobileOrder),
+    more: items.filter((i) => !i.mobilePrimary).sort(byMobileOrder),
   };
 }
 

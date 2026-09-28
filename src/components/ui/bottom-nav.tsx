@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NavBadge } from "@/components/ui/nav-badge";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
@@ -18,12 +17,10 @@ interface BottomNavProps {
   items: BottomNavItem[];
   /** Optional trailing element (e.g. a "More" button) */
   trailing?: React.ReactNode;
-  /** Attention counts keyed by href. Missing or zero renders no badge. */
-  badges?: Record<string, number>;
   className?: string;
 }
 
-export function BottomNav({ items, trailing, badges, className }: BottomNavProps) {
+export function BottomNav({ items, trailing, className }: BottomNavProps) {
   const pathname = usePathname();
 
   const isActive = (item: BottomNavItem) => {
@@ -67,10 +64,6 @@ export function BottomNav({ items, trailing, badges, className }: BottomNavProps
               <span className="text-[10px] font-medium leading-none">
                 {item.label}
               </span>
-              <NavBadge
-                count={badges?.[item.href] ?? 0}
-                className="absolute end-1/4 top-1"
-              />
             </Link>
           );
         })}

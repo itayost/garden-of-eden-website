@@ -20,7 +20,6 @@ interface DashboardBottomNavProps {
 export function DashboardBottomNav({ tier, capabilities }: DashboardBottomNavProps) {
   const { main: mainItems, more: moreItems } = splitBottomNav(
     filterNavForCapabilities(filterNavForTier(DASHBOARD_NAV, tier), capabilities),
-    true,
   );
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
