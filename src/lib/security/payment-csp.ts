@@ -15,6 +15,21 @@ export function isPaymentPagePath(pathname: string): boolean {
   return pathname === PAYMENT_PAGE_PREFIX || pathname.startsWith(`${PAYMENT_PAGE_PREFIX}/`);
 }
 
+/**
+ * Whether the current document was loaded for this path, rather than reached
+ * by a client-side navigation from another page, which keeps that page's
+ * policy. `documentUrl` is the navigation timing entry's URL. Next strips its
+ * navigation headers before middleware, so only the browser can tell.
+ */
+export function loadedAsDocument(documentUrl: string | undefined, pathname: string): boolean {
+  if (!documentUrl) return false;
+  try {
+    return new URL(documentUrl).pathname === pathname;
+  } catch {
+    return false;
+  }
+}
+
 export function paymentPageCsp(nonce: string, { dev }: { dev: boolean }): string {
   const scripts = ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? ["'unsafe-eval'"] : [])];
   return [
