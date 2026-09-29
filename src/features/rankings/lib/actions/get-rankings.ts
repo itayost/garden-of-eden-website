@@ -23,6 +23,7 @@ import {
   calculateGroupStatistics,
   createDistributionBins,
   extractMetricValues,
+  buildAgeGroupOptions,
 } from "../utils/ranking-utils";
 
 // ===========================================
@@ -128,7 +129,8 @@ export async function getRankingsData(
   const { data: assessments, error: assessmentsError } = (await supabase
     .from("player_assessments")
     .select("*")
-    .in("user_id", filteredUserIds)) as {
+    .in("user_id", filteredUserIds)
+    .is("deleted_at", null)) as {
     data: PlayerAssessment[] | null;
     error: Error | null;
   };
@@ -211,27 +213,6 @@ export async function getRankingsData(
     currentUserRank = leaderboard.find((entry) => entry.userId === user.id) || null;
   }
 
-  // Build available age groups
-  const availableAgeGroups: AgeGroupOption[] = [{ id: "all", label: "כל הגילאים" }];
-
-  // Add age groups that have players
-  const ageGroupLabels: Record<string, string> = {
-    U10: "עד גיל 10",
-    U12: "עד גיל 12",
-    U15: "עד גיל 15",
-    U18: "עד גיל 18",
-    Senior: "בוגרים",
-  };
-
-  for (const [groupId, count] of ageGroupCounts) {
-    if (groupId !== "unknown" && count > 0) {
-      availableAgeGroups.push({
-        id: groupId,
-        label: ageGroupLabels[groupId] || groupId,
-      });
-    }
-  }
-
   return {
     categoryLeaders,
     leaderboard,
@@ -242,7 +223,7 @@ export async function getRankingsData(
     selectedCategory: category,
     selectedAgeGroup: ageGroupId,
     selectedBranch: effectiveBranch,
-    availableAgeGroups,
+    availableAgeGroups: buildAgeGroupOptions(ageGroupCounts),
     subMetricBreakdown,
   };
 }

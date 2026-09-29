@@ -6,6 +6,7 @@ import {
   calculateGroupStatistics,
   createDistributionBins,
   calculateMedian,
+  buildAgeGroupOptions,
 } from "../lib/utils/ranking-utils";
 
 // Helper to create mock assessment
@@ -271,5 +272,26 @@ describe("createDistributionBins", () => {
     // When all values are same, should have 1 bin with all values
     const totalCount = bins.reduce((sum, bin) => sum + bin.count, 0);
     expect(totalCount).toBe(5);
+  });
+});
+
+describe("buildAgeGroupOptions", () => {
+  it("labels each age group in Hebrew, not with its raw id", () => {
+    const options = buildAgeGroupOptions(new Map([["u12", 3], ["senior", 1]]));
+    expect(options).toEqual([
+      { id: "all", label: "כל הגילאים" },
+      { id: "u12", label: "עד 12" },
+      { id: "senior", label: "בוגרים" },
+    ]);
+  });
+
+  it("lists age groups youngest first, whatever order the counts arrive in", () => {
+    const options = buildAgeGroupOptions(new Map([["u18", 2], ["u10", 5], ["u15", 1]]));
+    expect(options.map((o) => o.id)).toEqual(["all", "u10", "u15", "u18"]);
+  });
+
+  it("leaves out empty groups and trainees without a birthdate", () => {
+    const options = buildAgeGroupOptions(new Map([["unknown", 4], ["u10", 0], ["u12", 2]]));
+    expect(options.map((o) => o.id)).toEqual(["all", "u12"]);
   });
 });
