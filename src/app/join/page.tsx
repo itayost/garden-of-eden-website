@@ -1,6 +1,8 @@
 import { loadKiryatAtaCatalog } from "@/features/enrollment/lib/catalog";
 import { JoinPageClient } from "@/features/enrollment/components/JoinPageClient";
 import { loadRenewalPrefill } from "@/features/plans/lib/actions/renewal-prefill";
+import { PaymentsClosedNotice } from "@/features/enrollment/components/PaymentsClosedNotice";
+import { canPayOnline } from "@/lib/payments/online-payments";
 
 interface PageProps {
   searchParams: Promise<{ product?: string; renew?: string }>;
@@ -8,6 +10,14 @@ interface PageProps {
 
 export default async function JoinPage({ searchParams }: PageProps) {
   const params = await searchParams;
+  if (!(await canPayOnline())) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-black sm:text-3xl">הרשמה לסניף קריית אתא</h1>
+        <PaymentsClosedNotice />
+      </div>
+    );
+  }
   const products = await loadKiryatAtaCatalog();
   // An invalid token falls through to a normal, unprefilled page.
   const renewal = params.renew ? await loadRenewalPrefill(params.renew) : null;

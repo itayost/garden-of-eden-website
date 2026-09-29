@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, RefreshCw } from "lucide-react";
+import { FileText, RefreshCw, SearchCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
 import { formatDateTime } from "@/lib/utils/date";
 import { formatPhoneToLocal } from "@/lib/validations/common";
 import { issueInvoiceAction, retryFulfillmentAction, type AdminOrderRow } from "../../lib/actions/admin-orders";
+import { reconcileChargingOrderAction } from "../../lib/actions/admin-orders-reconcile";
 import { PAYMENT_METHOD_LABELS_HE, type OrderStatus } from "@/types/plans";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -50,6 +51,19 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
         return;
       }
       toast.success("החשבונית הופקה");
+      router.refresh();
+    });
+
+  const reconcile = (orderId: string) =>
+    startTransition(async () => {
+      const result = await reconcileChargingOrderAction(orderId);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      if (result.outcome === "released") toast.success("לא נמצא חיוב. ההזמנה חזרה לתשלום");
+      else if (result.note) toast.warning(result.note);
+      else toast.success("החיוב נמצא וההזמנה הושלמה");
       router.refresh();
     });
 
@@ -110,6 +124,22 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                     >
                       <RefreshCw className="h-3 w-3 me-1" />
                       ניסיון חוזר
+                    </Button>
+                  </div>
+                )}
+                {order.status === "charging" && (
+                  <div className="mt-1 space-y-1">
+                    <p className="text-xs text-destructive">
+                      {order.fulfillment_error ?? "החיוב לא הסתיים"}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => reconcile(order.id)}
+                      disabled={pending}
+                    >
+                      <SearchCheck className="h-3 w-3 me-1" />
+                      בדיקה מול פלאקארד
                     </Button>
                   </div>
                 )}

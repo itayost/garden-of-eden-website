@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { PaymentForm } from "@/features/enrollment/components/PaymentForm";
+import { PaymentsClosedNotice } from "@/features/enrollment/components/PaymentsClosedNotice";
+import { canPayOnline } from "@/lib/payments/online-payments";
 import type { Order, PlanProduct } from "@/types/plans";
 
 export const metadata: Metadata = {
@@ -43,6 +45,7 @@ export default async function PayPage({ params }: PageProps) {
     .maybeSingle()) as { data: Pick<PlanProduct, "name_he" | "sessions_total" | "duration_days"> | null };
 
   const amount = Number(order.amount_ils);
+  const isOpen = await canPayOnline();
 
   return (
     <div className="space-y-6">
@@ -72,7 +75,7 @@ export default async function PayPage({ params }: PageProps) {
       </section>
 
       <section className="rounded-2xl border bg-white p-4 sm:p-6">
-        <PaymentForm orderId={order.id} amountIls={amount} />
+        {isOpen ? <PaymentForm orderId={order.id} amountIls={amount} /> : <PaymentsClosedNotice />}
       </section>
     </div>
   );

@@ -233,7 +233,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
 
         <p className="flex items-start gap-2 text-xs text-black/60">
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          הפרטים מועברים מוצפנים ישירות לחברת הסליקה ואינם נשמרים באתר. החיוב מופיע כ&quot;גארדן אוף עדן&quot;.
+          פרטי הכרטיס מועברים בחיבור מאובטח לחברת הסליקה ואינם נשמרים באתר. החיוב מופיע כ&quot;גארדן אוף עדן&quot;.
         </p>
 
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">

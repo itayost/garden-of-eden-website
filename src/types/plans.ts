@@ -62,7 +62,7 @@ export interface Order {
   morning_document_id: string | null;
   morning_document_url: string | null;
   raw_webhook: unknown | null;
-  /** Who charged the card. Morning for the hosted page, isracard for the site's own page. */
+  /** Who charged the card. Morning for the hosted page, isracard for the site's own page (through the Pelecard gateway). */
   payment_provider: "morning" | "isracard" | "manual";
   provider_transaction_id: string | null;
   approval_number: string | null;
