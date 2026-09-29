@@ -35,10 +35,15 @@ export function JoinPageClient({
     setChanging(false);
   };
 
-  // The action redirects to Morning on success and only returns on error.
+  // A full page load into the card page, so its enforced CSP applies; a
+  // client-side navigation would keep this page's report-only policy.
   const handleSubmit = async (input: EnrollmentInput): Promise<{ error?: string }> => {
     const result = await startCheckoutAction(input);
-    return result ?? {};
+    if ("payUrl" in result) {
+      window.location.assign(result.payUrl);
+      return {};
+    }
+    return result;
   };
 
   if (products.length === 0) {

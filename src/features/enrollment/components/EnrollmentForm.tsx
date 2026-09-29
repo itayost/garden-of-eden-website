@@ -92,7 +92,8 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
         setLoading(false);
       }
       // On success the action redirects to the payment page; nothing to do here.
-    } catch {
+    } catch (error) {
+      console.error("[enrollment] submit failed:", error);
       toast.error("שגיאה בשליחת הטופס. נסו שוב.");
       setLoading(false);
     }

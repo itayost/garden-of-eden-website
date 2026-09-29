@@ -155,6 +155,11 @@ describe("parseDebitResponse", () => {
     expect(cvv.message).toContain("תעודת הזהות");
   });
 
+  it("keeps Pelecard's own error text for the logs", () => {
+    const result = parseDebitResponse({ StatusCode: "004", ErrorMessage: "Refused" }, 45000);
+    expect(result).toMatchObject({ kind: "declined", statusCode: "004", providerMessage: "Refused" });
+  });
+
   it("declines an unmapped issuer refusal with a generic message", () => {
     const result = parseDebitResponse({ StatusCode: "004" }, 45000);
     expect(result).toMatchObject({ kind: "declined" });

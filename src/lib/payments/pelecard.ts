@@ -68,9 +68,14 @@ export async function chargeCard(request: CardChargeRequest): Promise<CardCharge
     case "approved":
       return { ok: true, transactionId: outcome.transactionId, approvalNumber: outcome.approvalNumber, raw: outcome.raw };
     case "declined":
+      console.warn(
+        `[pelecard] order ${request.orderId} ${path} declined, status ${outcome.statusCode}: ${outcome.providerMessage}`,
+      );
       return { ok: false, code: "declined", message: outcome.message };
     case "failed":
-      console.error(`[pelecard] order ${request.orderId} ${path} failed with status ${outcome.statusCode}`);
+      console.error(
+        `[pelecard] order ${request.orderId} ${path} failed, status ${outcome.statusCode}: ${outcome.providerMessage}`,
+      );
       return { ok: false, code: "error", message: outcome.message };
     case "unknown":
       throw new Error(`Pelecard ${path} outcome unknown: ${outcome.reason}`);
