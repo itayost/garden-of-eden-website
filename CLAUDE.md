@@ -182,7 +182,7 @@ UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
 CRON_SECRET
 ```
 
-`PLAN_RENEWAL_TOKEN_SECRET` signs renewal and agreement links and must be set in production; the app starts without it but those links throw. The card is charged on `/join/pay/[orderId]` through the adapter in `src/lib/payments/isracard.ts` (`ISRACARD_API_URL`, `ISRACARD_TERMINAL_ID`, `ISRACARD_API_KEY`; refuses politely until set), and Morning only issues the document. Optional until the payment provider is wired: `MORNING_ENV`, `MORNING_CLIENT_ID`, `MORNING_CLIENT_SECRET`, `MORNING_WEBHOOK_SECRET`. Without them `/join` shows a Hebrew notice instead of a payment page.
+`PLAN_RENEWAL_TOKEN_SECRET` signs renewal and agreement links and must be set in production; the app starts without it but those links throw. The card is charged on `/join/pay/[orderId]` through Pelecard's Services API (the gateway; Isracard is the acquirer), in `src/lib/payments/pelecard.ts` with the pure mapping in `pelecard-mapping.ts` (`PELECARD_TERMINAL`, `PELECARD_USER`, `PELECARD_PASSWORD`, optional `PELECARD_API_URL`, default production `gateway21`; refuses politely until set). Orders keep `payment_provider = isracard`. An unknown outcome (timeout, status 308) leaves the order in `charging` for an admin to reconcile. Morning only issues the document. Optional until the payment provider is wired: `MORNING_ENV`, `MORNING_CLIENT_ID`, `MORNING_CLIENT_SECRET`, `MORNING_WEBHOOK_SECRET`. Without them `/join` shows a Hebrew notice instead of a payment page.
 
 `ARBOX_IMPORT_PURCHASES=on` turns on the nightly import of Arbox cards and memberships into קריית אתא plans (fourth step of `/api/cron/arbox-sync`); preview with `npx tsx scripts/import-arbox-purchases.ts --dry-run`.
 

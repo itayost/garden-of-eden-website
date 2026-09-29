@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { detectBrand, last4 } from "@/lib/payments/card";
-import { chargeCard } from "@/lib/payments/isracard";
+import { chargeCard } from "@/lib/payments/pelecard";
 import { issueOrderInvoice } from "../invoice";
 import { cardPaymentSchema, type CardPaymentInput } from "@/lib/validations/card-payment";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
@@ -123,7 +123,7 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
     await typedFrom(db, "orders")
       .update({ fulfillment_error: "charge threw; reconcile with the acquirer" })
       .eq("id", order.id);
-    return { error: "התשלום לא אושר. אל תנסו שוב לפני שדיברתם איתנו בוואטסאפ 052-577-9446." };
+    return { error: "לא קיבלנו תשובה מחברת הסליקה, וייתכן שהחיוב בוצע. אל תנסו שוב לפני שדיברתם איתנו בוואטסאפ 052-577-9446." };
   }
   if (!charge.ok) {
     await releaseToPending();
