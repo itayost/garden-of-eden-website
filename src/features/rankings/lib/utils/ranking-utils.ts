@@ -1,8 +1,28 @@
 // Ranking Utility Functions
 
-import type { PlayerAssessment } from "@/types/assessment";
+import { AGE_GROUPS, type PlayerAssessment } from "@/types/assessment";
 import { calculatePercentile } from "@/lib/utils/math";
-import type { RankingEntry, GroupStatistics, DistributionBin } from "../../types";
+import type { RankingEntry, GroupStatistics, DistributionBin, AgeGroupOption } from "../../types";
+
+// ===========================================
+// AGE GROUP FILTER OPTIONS
+// ===========================================
+
+/**
+ * The age-group filter: "all", then every age group that has trainees,
+ * youngest first, labelled with the same Hebrew names as the rest of the app.
+ * `countsByGroup` is keyed by AgeGroup.id ("u10"...); trainees without a
+ * birthdate are counted under "unknown" and get no option.
+ */
+export function buildAgeGroupOptions(countsByGroup: ReadonlyMap<string, number>): AgeGroupOption[] {
+  return [
+    { id: "all", label: "כל הגילאים" },
+    ...AGE_GROUPS.filter((group) => (countsByGroup.get(group.id) ?? 0) > 0).map((group) => ({
+      id: group.id,
+      label: group.labelHe,
+    })),
+  ];
+}
 
 // ===========================================
 // LATEST ASSESSMENT EXTRACTION

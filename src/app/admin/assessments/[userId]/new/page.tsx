@@ -38,6 +38,7 @@ export default async function NewAssessmentPage({ params }: PageProps) {
     .from("player_assessments")
     .select("*")
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .order("assessment_date", { ascending: false })
     .limit(1);
 
