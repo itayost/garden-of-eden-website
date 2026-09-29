@@ -1,3 +1,5 @@
+import { DRIBBLING_TEST_KEYS } from "@/types/assessment";
+
 /**
  * Canonical list of numeric metric keys used across the ratings pipeline.
  * Shared between get-player-ratings.ts and fetch-benchmarks.ts.
@@ -17,6 +19,7 @@ export const NUMERIC_METRIC_KEYS = [
   "kick_power_kaiser",
   "kick_power_right_foot",
   "kick_power_left_foot",
+  ...DRIBBLING_TEST_KEYS,
 ] as const;
 
 export type NumericMetricKey = (typeof NUMERIC_METRIC_KEYS)[number];

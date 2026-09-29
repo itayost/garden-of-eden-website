@@ -32,6 +32,9 @@ function createMockAssessment(overrides: Partial<PlayerAssessment> = {}): Player
     kick_power_right_foot: null,
     kick_power_left_foot: null,
     kick_power_machine_pct: null,
+    shuffle_10m: null,
+    sprint_10m_h: null,
+    sprint_10m_h_ball: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,
@@ -223,6 +226,18 @@ describe('compareAssessments', () => {
 
     expect(result.deltas.sprint_5m?.delta).toBeNull();
     expect(result.deltas.sprint_10m?.delta).toBeNull();
+  });
+
+  it('should compare the timed dribbling tests, faster is better', () => {
+    const older = createMockAssessment({ shuffle_10m: 3.2, sprint_10m_h: 2.9, sprint_10m_h_ball: 3.4 });
+    const newer = createMockAssessment({ shuffle_10m: 3.0, sprint_10m_h: 3.1, sprint_10m_h_ball: 3.4 });
+
+    const result = compareAssessments(older, newer);
+
+    expect(result.deltas.shuffle_10m?.delta).toBeCloseTo(-0.2, 2);
+    expect(result.deltas.shuffle_10m?.isImprovement).toBe(true);
+    expect(result.deltas.sprint_10m_h?.isImprovement).toBe(false);
+    expect(result.deltas.sprint_10m_h_ball?.delta).toBe(0);
   });
 
   it('should compare categorical fields', () => {

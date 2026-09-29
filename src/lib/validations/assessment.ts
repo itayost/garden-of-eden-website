@@ -38,6 +38,11 @@ export const assessmentSchema = z.object({
   kick_power_left_foot: z.number().min(0).max(999).optional().nullable(),
   kick_power_machine_pct: z.number().min(0).max(100).optional().nullable(),
 
+  // Dribbling tests (seconds, lower is better); the DB CHECK allows 0 < x <= 30
+  shuffle_10m: z.number().positive().max(30).optional().nullable(),
+  sprint_10m_h: z.number().positive().max(30).optional().nullable(),
+  sprint_10m_h_ball: z.number().positive().max(30).optional().nullable(),
+
   // Mental notes (free text) with max length
   concentration_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
   decision_making_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
@@ -72,6 +77,9 @@ export const ASSESSMENT_FIELDS: (keyof AssessmentFormData)[] = [
   "kick_power_right_foot",
   "kick_power_left_foot",
   "kick_power_machine_pct",
+  "shuffle_10m",
+  "sprint_10m_h",
+  "sprint_10m_h_ball",
   "concentration_notes",
   "decision_making_notes",
   "work_ethic_notes",
@@ -101,6 +109,9 @@ export const DEFAULT_ASSESSMENT: AssessmentFormData = {
   kick_power_right_foot: null,
   kick_power_left_foot: null,
   kick_power_machine_pct: null,
+  shuffle_10m: null,
+  sprint_10m_h: null,
+  sprint_10m_h_ball: null,
   concentration_notes: null,
   decision_making_notes: null,
   work_ethic_notes: null,

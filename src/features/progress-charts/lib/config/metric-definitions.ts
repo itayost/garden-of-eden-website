@@ -1,6 +1,6 @@
 // Metric Definitions for Progress Charts
 
-import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS } from "@/types/assessment";
+import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS, DRIBBLING_TEST_KEYS } from "@/types/assessment";
 import type { MetricDefinition, PhysicalMetricKey, MetricCategory } from "../../types";
 
 export const METRIC_DEFINITIONS: Record<PhysicalMetricKey, MetricDefinition> = {
@@ -28,6 +28,32 @@ export const METRIC_DEFINITIONS: Record<PhysicalMetricKey, MetricDefinition> = {
     lowerIsBetter: true,
     color: "var(--chart-3)",
     category: "sprint",
+  },
+
+  // Dribbling tests (seconds, lower is better)
+  shuffle_10m: {
+    key: "shuffle_10m",
+    labelHe: ASSESSMENT_LABELS_HE.shuffle_10m,
+    unit: ASSESSMENT_UNITS.shuffle_10m,
+    lowerIsBetter: true,
+    color: "var(--chart-1)",
+    category: "dribbling",
+  },
+  sprint_10m_h: {
+    key: "sprint_10m_h",
+    labelHe: ASSESSMENT_LABELS_HE.sprint_10m_h,
+    unit: ASSESSMENT_UNITS.sprint_10m_h,
+    lowerIsBetter: true,
+    color: "var(--chart-2)",
+    category: "dribbling",
+  },
+  sprint_10m_h_ball: {
+    key: "sprint_10m_h_ball",
+    labelHe: ASSESSMENT_LABELS_HE.sprint_10m_h_ball,
+    unit: ASSESSMENT_UNITS.sprint_10m_h_ball,
+    lowerIsBetter: true,
+    color: "var(--chart-3)",
+    category: "dribbling",
   },
 
   // Jump tests (higher is better)
@@ -135,6 +161,10 @@ export const METRIC_CATEGORIES: Record<
   sprint: {
     labelHe: "ספרינטים",
     metrics: ["sprint_5m", "sprint_10m", "sprint_20m"],
+  },
+  dribbling: {
+    labelHe: "כדרור",
+    metrics: [...DRIBBLING_TEST_KEYS],
   },
   jump: {
     labelHe: "ניתורים",

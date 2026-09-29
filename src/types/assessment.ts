@@ -101,6 +101,11 @@ export interface PlayerAssessment {
   kick_power_left_foot: number | null;
   kick_power_machine_pct: number | null;
 
+  // Dribbling tests (seconds, lower is better)
+  shuffle_10m: number | null;
+  sprint_10m_h: number | null;
+  sprint_10m_h_ball: number | null;
+
   // Mental notes
   concentration_notes: string | null;
   decision_making_notes: string | null;
@@ -149,6 +154,11 @@ export const ASSESSMENT_LABELS_HE: Record<string, string> = {
   kick_power_left_foot: "עוצמת בעיטה - רגל שמאל",
   kick_power_machine_pct: "אחוזים במכשיר",
 
+  // Dribbling
+  shuffle_10m: "צעדי רדיפה 10 מטר",
+  sprint_10m_h: "ספרינט 10 מטר צורת ח",
+  sprint_10m_h_ball: "ספרינט 10 מטר צורת ח עם כדור",
+
   // Mental notes
   concentration_notes: "ריכוז",
   decision_making_notes: "קבלת החלטות",
@@ -178,15 +188,29 @@ export const ASSESSMENT_UNITS: Record<string, string> = {
   kick_power_right_foot: 'יח׳ כוח',
   kick_power_left_foot: 'יח׳ כוח',
   kick_power_machine_pct: '%',
+  shuffle_10m: "שניות",
+  sprint_10m_h: "שניות",
+  sprint_10m_h_ball: "שניות",
 };
 
 // ===========================================
 // ASSESSMENT SECTIONS FOR FORM
 // ===========================================
 
+/** The three timed dribbling tests (seconds, lower is better). */
+export const DRIBBLING_TEST_KEYS = ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"] as const;
+
+/**
+ * First assessment date on which the dribbling tests exist. Earlier
+ * assessments could not have them, so completeness ignores them there and a
+ * complete assessment from before the rollout stays at 100%.
+ */
+export const DRIBBLING_TESTS_SINCE = "2026-09-29";
+
 export type AssessmentMonthStatus = 'full' | 'partial' | 'none';
 
-export type AssessmentSectionKey = 'sprints' | 'jumps' | 'agility' | 'categorical' | 'power' | 'mental';
+export type AssessmentSectionKey =
+  'sprints' | 'dribbling' | 'jumps' | 'agility' | 'categorical' | 'power' | 'mental';
 
 export interface SectionCompleteness {
   key: AssessmentSectionKey;
@@ -200,6 +224,8 @@ export interface AssessmentSection {
   title: string;
   fields: string[];
   type: "number" | "select" | "textarea";
+  /** First assessment date the section exists; older assessments skip it. */
+  since?: string;
 }
 
 export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
@@ -208,6 +234,13 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
     title: "מבדקי ספרינט",
     fields: ["sprint_5m", "sprint_10m", "sprint_20m"],
     type: "number",
+  },
+  {
+    key: "dribbling",
+    title: "מבדקי כדרור",
+    fields: [...DRIBBLING_TEST_KEYS],
+    type: "number",
+    since: DRIBBLING_TESTS_SINCE,
   },
   {
     key: "jumps",
@@ -245,13 +278,24 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
 // HELPER FUNCTIONS
 // ===========================================
 
-// Check if a test value indicates "lower is better"
+/** The sections that existed on this assessment's date (see AssessmentSection.since). */
+function sectionsFor(assessment: Partial<PlayerAssessment>): AssessmentSection[] {
+  const date = assessment.assessment_date;
+  return ASSESSMENT_SECTIONS.filter((section) => !section.since || !date || date >= section.since);
+}
+
+const LOWER_IS_BETTER_FIELDS: ReadonlySet<string> = new Set([
+  "sprint_5m", "sprint_10m", "sprint_20m", ...DRIBBLING_TEST_KEYS,
+]);
+
+// Check if a test value indicates "lower is better" (the timed tests)
 export function isLowerBetter(fieldName: string): boolean {
-  return ["sprint_5m", "sprint_10m", "sprint_20m"].includes(fieldName);
+  return LOWER_IS_BETTER_FIELDS.has(fieldName);
 }
 
 /**
- * Returns section-level completeness for all 6 ASSESSMENT_SECTIONS.
+ * Returns section-level completeness for the ASSESSMENT_SECTIONS that apply to
+ * this assessment's date (see AssessmentSection.since).
  * Returns [] when assessment is null (trainee has no record for the month).
  * Mental (textarea) fields are completed if non-null AND non-empty string.
  * Quantitative fields are completed if non-null.
@@ -261,7 +305,7 @@ export function computeSectionCompleteness(
 ): SectionCompleteness[] {
   if (!assessment) return [];
 
-  return ASSESSMENT_SECTIONS.map((section) => {
+  return sectionsFor(assessment).map((section) => {
     const completed = section.fields.filter((field) => {
       const value = assessment[field as keyof PlayerAssessment];
       if (section.type === 'textarea') {
@@ -279,33 +323,17 @@ export function computeSectionCompleteness(
   });
 }
 
-// Get completion percentage for an assessment
+// Get completion percentage for an assessment: every numeric and categorical
+// field of the sections that apply to it (mental notes do not count).
 export function getAssessmentCompleteness(assessment: Partial<PlayerAssessment>): number {
-  const numericFields = [
-    "sprint_5m", "sprint_10m", "sprint_20m",
-    "jump_2leg_distance", "jump_right_leg", "jump_left_leg", "jump_2leg_height",
-    "blaze_spot_time",
-    "flexibility_ankle", "flexibility_knee", "flexibility_hip",
-    "kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct",
-  ];
+  const fields = sectionsFor(assessment)
+    .filter((section) => section.type !== "textarea")
+    .flatMap((section) => section.fields);
 
-  const categoricalFields = ["coordination", "leg_power_technique", "body_structure"];
-  const totalFields = numericFields.length + categoricalFields.length;
+  const completedFields = fields.filter((field) => {
+    const value = assessment[field as keyof PlayerAssessment];
+    return value !== null && value !== undefined && value !== "";
+  }).length;
 
-  let completedFields = 0;
-
-  for (const field of numericFields) {
-    if (assessment[field as keyof PlayerAssessment] !== null &&
-        assessment[field as keyof PlayerAssessment] !== undefined) {
-      completedFields++;
-    }
-  }
-
-  for (const field of categoricalFields) {
-    if (assessment[field as keyof PlayerAssessment]) {
-      completedFields++;
-    }
-  }
-
-  return Math.round((completedFields / totalFields) * 100);
+  return Math.round((completedFields / fields.length) * 100);
 }

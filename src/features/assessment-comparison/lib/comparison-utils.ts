@@ -48,6 +48,9 @@ const NUMERIC_FIELDS = [
   "kick_power_right_foot",
   "kick_power_left_foot",
   "kick_power_machine_pct",
+  "shuffle_10m",
+  "sprint_10m_h",
+  "sprint_10m_h_ball",
 ] as const;
 
 // Categorical fields that can be compared

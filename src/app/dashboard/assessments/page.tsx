@@ -15,6 +15,7 @@ import {
 } from "./AssessmentPlayerPanel";
 import {
   ASSESSMENT_LABELS_HE,
+  DRIBBLING_TEST_KEYS,
   ASSESSMENT_UNITS,
   COORDINATION_OPTIONS,
   LEG_POWER_OPTIONS,
@@ -292,6 +293,21 @@ export default async function DashboardAssessmentsPage() {
                                 {formatValue("sprint_20m", a.sprint_20m)}
                               </span>
                             </div>
+                          </div>
+                        </div>
+
+                        {/* Dribbling Tests */}
+                        <div>
+                          <h4 className="font-medium mb-2 text-sm text-muted-foreground">
+                            מבדקי כדרור
+                          </h4>
+                          <div className="space-y-1 text-sm">
+                            {DRIBBLING_TEST_KEYS.map((key) => (
+                              <div key={key} className="flex justify-between">
+                                <span>{ASSESSMENT_LABELS_HE[key]}</span>
+                                <span className="font-medium">{formatValue(key, a[key])}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
 

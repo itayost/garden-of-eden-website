@@ -3,6 +3,7 @@
  */
 
 import type { PhysicalMetricKey, GoalCelebration } from "../../types";
+import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS, DRIBBLING_TEST_KEYS, isLowerBetter } from "@/types/assessment";
 
 /** Metrics that can have new goals set. */
 export const GOAL_METRICS: PhysicalMetricKey[] = [
@@ -19,13 +20,7 @@ export const GOAL_METRICS: PhysicalMetricKey[] = [
   "flexibility_hip",
   "kick_power_right_foot",
   "kick_power_left_foot",
-];
-
-/** Metrics where lower values are better (sprints only) */
-export const LOWER_IS_BETTER_METRICS: PhysicalMetricKey[] = [
-  "sprint_5m",
-  "sprint_10m",
-  "sprint_20m",
+  ...DRIBBLING_TEST_KEYS,
 ];
 
 /** Storage key for tracking celebrated goals */
@@ -57,6 +52,9 @@ export const METRIC_LABELS_HE: Record<PhysicalMetricKey, string> = {
   kick_power_kaiser: "עוצמת בעיטה",
   kick_power_right_foot: "עוצמת בעיטה - רגל ימין",
   kick_power_left_foot: "עוצמת בעיטה - רגל שמאל",
+  shuffle_10m: ASSESSMENT_LABELS_HE.shuffle_10m,
+  sprint_10m_h: ASSESSMENT_LABELS_HE.sprint_10m_h,
+  sprint_10m_h_ball: ASSESSMENT_LABELS_HE.sprint_10m_h_ball,
 };
 
 /** Units for metrics */
@@ -75,9 +73,12 @@ export const METRIC_UNITS: Record<PhysicalMetricKey, string> = {
   kick_power_kaiser: 'יח׳ כוח',
   kick_power_right_foot: 'יח׳ כוח',
   kick_power_left_foot: 'יח׳ כוח',
+  shuffle_10m: ASSESSMENT_UNITS.shuffle_10m,
+  sprint_10m_h: ASSESSMENT_UNITS.sprint_10m_h,
+  sprint_10m_h_ball: ASSESSMENT_UNITS.sprint_10m_h_ball,
 };
 
 /** Check if a metric is lower-is-better */
 export function isLowerBetterMetric(metric: PhysicalMetricKey): boolean {
-  return LOWER_IS_BETTER_METRICS.includes(metric);
+  return isLowerBetter(metric);
 }

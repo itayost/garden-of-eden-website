@@ -270,6 +270,7 @@ const styles = StyleSheet.create({
 
 const METRIC_KEYS: (keyof PlayerAssessment)[] = [
   "sprint_5m", "sprint_10m", "sprint_20m",
+  "shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball",
   "jump_2leg_height", "jump_2leg_distance", "jump_right_leg", "jump_left_leg",
   "blaze_spot_time",
   "kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct",

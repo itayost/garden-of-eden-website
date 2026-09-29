@@ -13,10 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { ProgressStepper } from "@/components/ui/progress-stepper";
-import { AssessmentStepContent, WIZARD_STEPS } from "@/components/admin/AssessmentStepContent";
+import {
+  AssessmentStepContent,
+  WIZARD_STEPS,
+  type WizardStepKey,
+} from "@/components/admin/AssessmentStepContent";
 import { Loader2, ChevronLeft, ChevronRight, SkipForward, Check } from "lucide-react";
 import { toast } from "sonner";
-import type { PlayerAssessment } from "@/types/assessment";
+import { ASSESSMENT_SECTIONS, type AssessmentSectionKey, type PlayerAssessment } from "@/types/assessment";
 
 interface AssessmentFormProps {
   userId: string;
@@ -52,6 +56,9 @@ function getDefaultValues(existingAssessment: PlayerAssessment | null | undefine
     kick_power_right_foot: existingAssessment.kick_power_right_foot,
     kick_power_left_foot: existingAssessment.kick_power_left_foot,
     kick_power_machine_pct: existingAssessment.kick_power_machine_pct,
+    shuffle_10m: existingAssessment.shuffle_10m,
+    sprint_10m_h: existingAssessment.sprint_10m_h,
+    sprint_10m_h_ball: existingAssessment.sprint_10m_h_ball,
     concentration_notes: existingAssessment.concentration_notes,
     decision_making_notes: existingAssessment.decision_making_notes,
     work_ethic_notes: existingAssessment.work_ethic_notes,
@@ -85,6 +92,9 @@ function formDataToDbFormat(data: AssessmentFormData, userId: string, assessedBy
     kick_power_right_foot: data.kick_power_right_foot ?? null,
     kick_power_left_foot: data.kick_power_left_foot ?? null,
     kick_power_machine_pct: data.kick_power_machine_pct ?? null,
+    shuffle_10m: data.shuffle_10m ?? null,
+    sprint_10m_h: data.sprint_10m_h ?? null,
+    sprint_10m_h_ball: data.sprint_10m_h_ball ?? null,
     concentration_notes: data.concentration_notes ?? null,
     decision_making_notes: data.decision_making_notes ?? null,
     work_ethic_notes: data.work_ethic_notes ?? null,
@@ -94,17 +104,17 @@ function formDataToDbFormat(data: AssessmentFormData, userId: string, assessedBy
   };
 }
 
-// Maps each wizard step index to the DB columns it owns.
+// Maps each wizard step to the DB columns it owns: the matching assessment
+// section's fields, plus the date step and the general notes on the last step.
 // Partial updates use this to avoid sending nulls for unvisited steps.
-const STEP_DB_FIELDS: Record<number, string[]> = {
-  0: ["assessment_date"],
-  1: ["sprint_5m", "sprint_10m", "sprint_20m"],
-  2: ["jump_2leg_distance", "jump_right_leg", "jump_left_leg", "jump_2leg_height"],
-  3: ["blaze_spot_time", "flexibility_ankle", "flexibility_knee", "flexibility_hip"],
-  4: ["coordination", "leg_power_technique", "body_structure"],
-  5: ["kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct"],
-  6: ["concentration_notes", "decision_making_notes", "work_ethic_notes",
-      "recovery_notes", "nutrition_notes", "notes"],
+const SECTION_FIELDS = Object.fromEntries(
+  ASSESSMENT_SECTIONS.map((section) => [section.key, section.fields])
+) as Record<AssessmentSectionKey, string[]>;
+
+const STEP_DB_FIELDS: Record<WizardStepKey, string[]> = {
+  ...SECTION_FIELDS,
+  date: ["assessment_date"],
+  mental: [...SECTION_FIELDS.mental, "notes"],
 };
 
 export function AssessmentForm({
@@ -145,13 +155,13 @@ export function AssessmentForm({
         "@/features/player-assessments/lib/actions/record-assessment"
       );
       if (assessmentId) {
-        const stepFields = STEP_DB_FIELDS[currentStep];
-        if (!stepFields) {
+        const stepKey = WIZARD_STEPS[currentStep]?.key;
+        if (!stepKey) {
           throw new Error(`שלב ${currentStep} אינו ממופה — לא ניתן לשמור`);
         }
         type DbData = ReturnType<typeof formDataToDbFormat>;
         const partialData: Record<string, unknown> = {};
-        for (const field of stepFields) {
+        for (const field of STEP_DB_FIELDS[stepKey]) {
           partialData[field] = assessmentData[field as keyof DbData];
         }
         const result = await updateAssessment(assessmentId, partialData);

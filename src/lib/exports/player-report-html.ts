@@ -67,6 +67,7 @@ function buildSingleValueCard(
 // Spec-defined metric key lists
 const NUMERIC_METRIC_KEYS: (keyof PlayerAssessment)[] = [
   "sprint_5m", "sprint_10m", "sprint_20m",
+  "shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball",
   "jump_2leg_height", "jump_2leg_distance", "jump_right_leg", "jump_left_leg",
   "blaze_spot_time",
   "kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct",
@@ -272,9 +273,9 @@ ${(["PAC","SHO","PAS","DRI","DEF","PHY"] as const).map((label, i) => {
           : prevVal !== null && prevVal !== undefined ? String(prevVal) : "—";
 
         return `<tr style="border-bottom:1px solid #1f2937;">
-<td style="padding:4px 8px;color:#9ca3af;font-size:10px;">${ASSESSMENT_LABELS_HE[String(key)] ?? String(key)}</td>
-<td style="padding:4px 8px;text-align:center;font-size:10px;color:${isCategorical ? "inherit" : color};font-weight:${comparison ? "700" : "400"};">${displayLatest}</td>
-${previous ? `<td style="padding:4px 8px;text-align:center;font-size:10px;color:#6b7280;">${displayPrev}</td>` : ""}
+<td style="padding:2px 8px;line-height:1.3;color:#9ca3af;font-size:10px;">${ASSESSMENT_LABELS_HE[String(key)] ?? String(key)}</td>
+<td style="padding:2px 8px;line-height:1.3;text-align:center;font-size:10px;color:${isCategorical ? "inherit" : color};font-weight:${comparison ? "700" : "400"};">${displayLatest}</td>
+${previous ? `<td style="padding:2px 8px;line-height:1.3;text-align:center;font-size:10px;color:#6b7280;">${displayPrev}</td>` : ""}
 </tr>`;
       }).join("");
 
@@ -302,13 +303,17 @@ ${previous ? `<td style="padding:4px 8px;text-align:center;font-size:10px;color:
     const nonNull = assessments.filter((a) => a[key] !== null && a[key] !== undefined);
     if (nonNull.length < 2) return "";
 
-    const comparison = compareMetric(String(key), assessments[0]?.[key] ?? null, assessments[1]?.[key] ?? null);
+    // Compare the two latest recorded values, not the two latest assessments:
+    // a test skipped in the previous assessment would otherwise read as
+    // "no change" next to a chart that shows one.
+    const [latestWithValue, previousWithValue] = nonNull;
+    const comparison = compareMetric(String(key), latestWithValue[key], previousWithValue[key]);
     const color = comparison === "improved" ? "#22c55e"
       : comparison === "declined" ? "#d97706"
       : "#6b7280";
 
-    const lv = Number(assessments[0]?.[key]);
-    const pv = Number(assessments[1]?.[key]);
+    const lv = Number(latestWithValue[key]);
+    const pv = Number(previousWithValue[key]);
     const delta = Math.abs(lv - pv).toFixed(2);
     const changeLabel = comparison === "improved" ? `↑ Δ${delta} (שיפור)`
       : comparison === "declined" ? `↓ Δ${delta} (ירידה)`
@@ -407,8 +412,8 @@ ${assessments.length >= 2 ? `<div><div style="font-size:11px;color:#9ca3af;margi
 ${assessments.length === 0
   ? `<div style="color:#6b7280;font-size:12px;padding:16px 0;">אין מבדקים</div>`
   : assessments.length === 1
-  ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">${NUMERIC_METRIC_KEYS.map((key) => buildSingleValueCard(key, assessments[0]!)).filter(Boolean).join("")}</div>`
-  : `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">${miniChartsHtml}</div>`}
+  ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px;">${NUMERIC_METRIC_KEYS.map((key) => buildSingleValueCard(key, assessments[0]!)).filter(Boolean).join("")}</div>`
+  : `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px;">${miniChartsHtml}</div>`}
 
 <div class="footer">
 <span>Garden of Eden Football Academy</span><span>דף 2 מתוך 2</span><span>${today}</span>

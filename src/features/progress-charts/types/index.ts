@@ -1,5 +1,7 @@
 // Progress Charts Type Definitions
 
+import type { NumericMetricKey } from "@/lib/utils/assessment-metrics";
+
 // ===========================================
 // DATE RANGE TYPES
 // ===========================================
@@ -22,21 +24,7 @@ export interface ChartDataPoint {
   value: number;
 }
 
-export type PhysicalMetricKey =
-  | "sprint_5m"
-  | "sprint_10m"
-  | "sprint_20m"
-  | "jump_2leg_distance"
-  | "jump_2leg_height"
-  | "jump_right_leg"
-  | "jump_left_leg"
-  | "blaze_spot_time"
-  | "flexibility_ankle"
-  | "flexibility_knee"
-  | "flexibility_hip"
-  | "kick_power_kaiser"
-  | "kick_power_right_foot"
-  | "kick_power_left_foot";
+export type PhysicalMetricKey = NumericMetricKey;
 
 export interface PhysicalMetricChartData {
   metric: PhysicalMetricKey;
@@ -74,7 +62,7 @@ export interface PercentileRanking {
 // METRIC DEFINITION
 // ===========================================
 
-export type MetricCategory = "sprint" | "jump" | "agility" | "flexibility" | "power";
+export type MetricCategory = "sprint" | "dribbling" | "jump" | "agility" | "flexibility" | "power";
 
 export interface MetricDefinition {
   key: PhysicalMetricKey;

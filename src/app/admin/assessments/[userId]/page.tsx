@@ -10,6 +10,7 @@ import { PlayerCard } from "@/components/player-card/PlayerCard";
 import { DeleteAssessmentDialog } from "@/components/admin/assessments/DeleteAssessmentDialog";
 import {
   ASSESSMENT_LABELS_HE,
+  DRIBBLING_TEST_KEYS,
   ASSESSMENT_UNITS,
   COORDINATION_OPTIONS,
   LEG_POWER_OPTIONS,
@@ -116,6 +117,9 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
       kick_power_kaiser: latestAssessment.kick_power_kaiser,
       kick_power_right_foot: latestAssessment.kick_power_right_foot,
       kick_power_left_foot: latestAssessment.kick_power_left_foot,
+      shuffle_10m: latestAssessment.shuffle_10m,
+      sprint_10m_h: latestAssessment.sprint_10m_h,
+      sprint_10m_h_ball: latestAssessment.sprint_10m_h_ball,
     }
     : {};
 
@@ -294,6 +298,21 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
                               {formatValue("sprint_20m", a.sprint_20m)}
                             </span>
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Dribbling Tests */}
+                      <div>
+                        <h4 className="font-medium mb-2 text-sm text-muted-foreground">
+                          מבדקי כדרור
+                        </h4>
+                        <div className="space-y-1 text-sm">
+                          {DRIBBLING_TEST_KEYS.map((key) => (
+                            <div key={key} className="flex justify-between">
+                              <span>{ASSESSMENT_LABELS_HE[key]}</span>
+                              <span className="font-medium">{formatValue(key, a[key])}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
 

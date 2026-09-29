@@ -319,10 +319,10 @@ Benefits:
 #### FR-ASS-001: Step-by-Step Assessment Entry ✅ DONE
 **Description**: Allow trainers to fill assessments one category at a time
 **Requirements**:
-- [x] 7 steps: Date → Sprints → Jumps → Agility → Physical → Power → Mental
+- [x] 8 steps: Date → Sprints → Dribbling → Jumps → Agility → Physical → Power → Mental
 - [x] Save after each step (persist to database)
 - [x] Allow skipping categories
-- [x] Show progress indicator (e.g., "Step 3 of 7")
+- [x] Show progress indicator (e.g., "Step 3 of 8")
 - [ ] Resume incomplete assessments (partial - form saves on submit)
 - [ ] Show previous values for comparison while filling
 
@@ -340,7 +340,7 @@ Benefits:
 - [x] Rating trend charts with all 6 stats
 - [x] Date range filter (1m, 3m, 6m, 1y, all)
 - [x] Age group percentile rankings (top 3 displayed)
-- [x] Physical metrics organized by category (sprint, jump, agility, flexibility, power)
+- [x] Physical metrics organized by category (sprint, dribbling, jump, agility, flexibility, power)
 - [ ] Export chart as image (deferred)
 
 ### 4.2 User Management (Priority: HIGH)

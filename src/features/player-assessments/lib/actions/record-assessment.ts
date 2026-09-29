@@ -38,6 +38,9 @@ interface AssessmentInsertInput {
   kick_power_right_foot?: number | null;
   kick_power_left_foot?: number | null;
   kick_power_machine_pct?: number | null;
+  shuffle_10m?: number | null;
+  sprint_10m_h?: number | null;
+  sprint_10m_h_ball?: number | null;
   concentration_notes?: string | null;
   decision_making_notes?: string | null;
   work_ethic_notes?: string | null;
@@ -50,6 +53,19 @@ interface RecordResult {
   success: boolean;
   data?: PlayerAssessment;
   error?: string;
+}
+
+// Postgres check_violation: a value outside a column's CHECK range (the timed
+// dribbling tests allow 0 < x <= 30). The wizard saves without running the zod
+// schema, so this is where an out-of-range entry lands.
+const CHECK_VIOLATION = "23514";
+
+function writeErrorMessage(
+  error: { code?: string; message?: string } | null,
+  fallback: string
+): string {
+  if (error?.code === CHECK_VIOLATION) return "ערך מחוץ לטווח המותר, בדקו את המספרים שהוזנו";
+  return error?.message ?? fallback;
 }
 
 /**
@@ -74,7 +90,7 @@ export async function recordAssessment(
     .select("*")
     .single();
   if (error || !data) {
-    return { success: false, error: error?.message ?? "insert failed" };
+    return { success: false, error: writeErrorMessage(error, "insert failed") };
   }
   const assessment = data as PlayerAssessment;
 
@@ -122,7 +138,7 @@ export async function updateAssessment(
     .select("*")
     .single();
   if (error || !data) {
-    return { success: false, error: error?.message ?? "update failed" };
+    return { success: false, error: writeErrorMessage(error, "update failed") };
   }
   const assessment = data as PlayerAssessment;
 

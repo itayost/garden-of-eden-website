@@ -26,6 +26,9 @@ function makeAssessment(overrides: Partial<PlayerAssessment> = {}): PlayerAssess
     kick_power_right_foot: 250,
     kick_power_left_foot: null,
     kick_power_machine_pct: null,
+    shuffle_10m: null,
+    sprint_10m_h: null,
+    sprint_10m_h_ball: null,
     flexibility_ankle: 15,
     flexibility_knee: 12,
     flexibility_hip: 20,
@@ -174,6 +177,18 @@ describe("buildPlayerReportHtml", () => {
       mockAssets,
     );
     expect(html).toContain("#d97706");
+  });
+
+  it("mini chart compares the latest two recorded values when the previous assessment skipped the test", () => {
+    // newest-first: 3.0 now, skipped last time, 3.4 before that → improved
+    const a1 = makeAssessment({ shuffle_10m: 3.0 });
+    const a2 = makeAssessment({ shuffle_10m: null });
+    const a3 = makeAssessment({ shuffle_10m: 3.4 });
+    const html = buildPlayerReportHtml(
+      makeProps({ assessments: [a1, a2, a3] }),
+      mockAssets,
+    );
+    expect(html).toContain("↑ Δ0.40 (שיפור)");
   });
 
   it("includes radar SVG polygon when stats provided", () => {

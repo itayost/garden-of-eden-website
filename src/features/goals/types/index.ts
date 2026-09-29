@@ -2,24 +2,11 @@
  * Goals System Types
  */
 
+import type { NumericMetricKey } from "@/lib/utils/assessment-metrics";
 import type { PlayerGoalRow } from "@/types/database";
 
 /** Physical metric keys that can have goals */
-export type PhysicalMetricKey =
-  | "sprint_5m"
-  | "sprint_10m"
-  | "sprint_20m"
-  | "jump_2leg_distance"
-  | "jump_2leg_height"
-  | "jump_right_leg"
-  | "jump_left_leg"
-  | "blaze_spot_time"
-  | "flexibility_ankle"
-  | "flexibility_knee"
-  | "flexibility_hip"
-  | "kick_power_kaiser"
-  | "kick_power_right_foot"
-  | "kick_power_left_foot";
+export type PhysicalMetricKey = NumericMetricKey;
 
 /**
  * Goal with calculated progress for UI display
