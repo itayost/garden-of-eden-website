@@ -78,9 +78,9 @@ export function buildDebitRequest(
 export type PelecardOutcome =
   | { kind: "approved"; transactionId: string; approvalNumber: string | null; raw: Record<string, unknown> }
   /** The issuer refused the card. Nothing was charged; the parent may retry. */
-  | { kind: "declined"; statusCode: string; message: string }
+  | { kind: "declined"; statusCode: string; message: string; providerMessage: string }
   /** Pelecard or the terminal failed. Nothing was charged; safe to retry later. */
-  | { kind: "failed"; statusCode: string; message: string }
+  | { kind: "failed"; statusCode: string; message: string; providerMessage: string }
   /** The card may have been charged. The order must stay claimed until reconciled. */
   | { kind: "unknown"; reason: string };
 
@@ -146,6 +146,8 @@ const DECLINE_MESSAGES: Record<string, string> = {
   "999": NO_INSTALLMENTS,
 };
 
+const PROVIDER_MESSAGE_MAX = 200;
+
 const GENERIC_DECLINE = "העסקה לא אושרה על ידי חברת האשראי. נסו כרטיס אחר או פנו לחברת האשראי.";
 
 /** 308 is "duplicate transaction": an earlier attempt may already have captured. */
@@ -199,7 +201,14 @@ export function parseDebitResponse(body: unknown, expectedTotalAgorot: number): 
   }
 
   if (AMBIGUOUS_CODES.has(status)) return { kind: "unknown", reason: `status ${status}` };
+  // Pelecard's own wording, for the logs. It describes the refusal, not the card.
+  const providerMessage = String(body.ErrorMessage ?? "").slice(0, PROVIDER_MESSAGE_MAX);
   const failed = FAILED_CODES[status];
-  if (failed) return { kind: "failed", statusCode: status, message: failed };
-  return { kind: "declined", statusCode: status, message: DECLINE_MESSAGES[status] ?? GENERIC_DECLINE };
+  if (failed) return { kind: "failed", statusCode: status, message: failed, providerMessage };
+  return {
+    kind: "declined",
+    statusCode: status,
+    message: DECLINE_MESSAGES[status] ?? GENERIC_DECLINE,
+    providerMessage,
+  };
 }

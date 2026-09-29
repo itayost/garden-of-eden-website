@@ -3,7 +3,6 @@
 import { phoneVariants } from "@/lib/plans/phone-variants";
 import { planTokenSecret } from "@/lib/plans/token-secret";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { waitUntil } from "@vercel/functions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -16,7 +15,12 @@ import { enrollmentSchema, type EnrollmentInput } from "@/lib/validations/enroll
 import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
 import { loadProductById } from "../catalog";
 
-type StartResult = { error: string };
+/**
+ * The card page's address on success. The client opens it with a full page
+ * load, never a client-side navigation: the card page's enforced CSP only
+ * takes effect on a document load.
+ */
+type StartResult = { error: string } | { payUrl: string };
 
 async function clientIp(): Promise<string> {
   const h = await headers();
@@ -158,5 +162,5 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
     return { error: "שגיאה בשמירת ההסכם" };
   }
 
-  redirect(`/join/pay/${order.id}`);
+  return { payUrl: `/join/pay/${order.id}` };
 }
