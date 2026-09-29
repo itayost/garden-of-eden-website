@@ -201,8 +201,12 @@ export function parseDebitResponse(body: unknown, expectedTotalAgorot: number): 
   }
 
   if (AMBIGUOUS_CODES.has(status)) return { kind: "unknown", reason: `status ${status}` };
-  // Pelecard's own wording, for the logs. It describes the refusal, not the card.
-  const providerMessage = String(body.ErrorMessage ?? "").slice(0, PROVIDER_MESSAGE_MAX);
+  // Pelecard's own wording, for the logs. It describes the refusal, not the
+  // card. Flattened to one line so it cannot forge a log entry.
+  const providerMessage =
+    typeof body.ErrorMessage === "string"
+      ? body.ErrorMessage.replace(/\s+/g, " ").trim().slice(0, PROVIDER_MESSAGE_MAX)
+      : "";
   const failed = FAILED_CODES[status];
   if (failed) return { kind: "failed", statusCode: status, message: failed, providerMessage };
   return {

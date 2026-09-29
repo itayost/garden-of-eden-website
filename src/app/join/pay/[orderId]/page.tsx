@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -7,6 +6,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { PaymentForm } from "@/features/enrollment/components/PaymentForm";
 import { PaymentsClosedNotice } from "@/features/enrollment/components/PaymentsClosedNotice";
+import { FullLoadGuard } from "@/features/enrollment/components/FullLoadGuard";
 import { canPayOnline } from "@/lib/payments/online-payments";
 import type { Order, PlanProduct } from "@/types/plans";
 
@@ -70,12 +70,19 @@ export default async function PayPage({ params }: PageProps) {
         </dl>
         <p className="mt-3 text-xs text-black/60">
           המחיר כולל מע&quot;מ. ההסכם נחתם;{" "}
-          <Link href="/join" className="underline">חזרה לבחירת מסלול</Link> מתחילה הרשמה חדשה.
+          {/* A plain link: a client-side navigation would carry this page's strict CSP to /join. */}
+          <a href="/join" className="underline">חזרה לבחירת מסלול</a> מתחילה הרשמה חדשה.
         </p>
       </section>
 
       <section className="rounded-2xl border bg-white p-4 sm:p-6">
-        {isOpen ? <PaymentForm orderId={order.id} amountIls={amount} /> : <PaymentsClosedNotice />}
+        {isOpen ? (
+          <FullLoadGuard>
+            <PaymentForm orderId={order.id} amountIls={amount} />
+          </FullLoadGuard>
+        ) : (
+          <PaymentsClosedNotice />
+        )}
       </section>
     </div>
   );

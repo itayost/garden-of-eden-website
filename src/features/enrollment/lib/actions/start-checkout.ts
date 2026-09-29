@@ -29,7 +29,7 @@ async function clientIp(): Promise<string> {
 
 /**
  * Validates the agreement, records a pending order and the signed agreement,
- * and sends the parent to the site's own card page for that order.
+ * and returns the address of the site's own card page for that order.
  *
  * Unauthenticated by design: the parent has no account yet. No money moves
  * here, only an order row, so the checkout limiter (5 per 10 minutes per IP

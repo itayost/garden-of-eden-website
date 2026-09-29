@@ -160,6 +160,22 @@ describe("parseDebitResponse", () => {
     expect(result).toMatchObject({ kind: "declined", statusCode: "004", providerMessage: "Refused" });
   });
 
+  it("keeps Pelecard's error text on a gateway failure too", () => {
+    const result = parseDebitResponse({ StatusCode: "306", ErrorMessage: "No connection" }, 45000);
+    expect(result).toMatchObject({ kind: "failed", statusCode: "306", providerMessage: "No connection" });
+  });
+
+  it("flattens Pelecard's error text to one log line and ignores a non-string", () => {
+    const multiline = parseDebitResponse({ StatusCode: "004", ErrorMessage: "Refused\n[pelecard] forged\r\n" }, 45000);
+    expect(multiline).toMatchObject({ providerMessage: "Refused [pelecard] forged" });
+
+    const missing = parseDebitResponse({ StatusCode: "004" }, 45000);
+    expect(missing).toMatchObject({ providerMessage: "" });
+
+    const nonString = parseDebitResponse({ StatusCode: "004", ErrorMessage: { text: "x" } }, 45000);
+    expect(nonString).toMatchObject({ providerMessage: "" });
+  });
+
   it("declines an unmapped issuer refusal with a generic message", () => {
     const result = parseDebitResponse({ StatusCode: "004" }, 45000);
     expect(result).toMatchObject({ kind: "declined" });

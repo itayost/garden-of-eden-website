@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -52,6 +52,17 @@ function ddmmyyyy(iso: string): string {
 
 export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: EnrollmentFormProps) {
   const [loading, setLoading] = useState(false);
+
+  // Back from the card page can restore this page from the back/forward
+  // cache with the submit still spinning; a restored page starts idle.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setLoading(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   const today = new Date().toISOString().slice(0, 10);
 
   // The schema transforms phones and the photo answer, so its output type
@@ -91,7 +102,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
         toast.error(result.error);
         setLoading(false);
       }
-      // On success the action redirects to the payment page; nothing to do here.
+      // On success the caller loads the card page; the spinner stays until it does.
     } catch (error) {
       console.error("[enrollment] submit failed:", error);
       toast.error("שגיאה בשליחת הטופס. נסו שוב.");

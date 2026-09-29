@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPaymentPagePath, paymentPageCsp } from "../payment-csp";
+import { isPaymentPagePath, loadedAsDocument, paymentPageCsp } from "../payment-csp";
 
 function directives(csp: string): Map<string, string> {
   return new Map(
@@ -51,5 +51,23 @@ describe("isPaymentPagePath", () => {
     expect(isPaymentPagePath("/join")).toBe(false);
     expect(isPaymentPagePath("/join/payment-terms")).toBe(false);
     expect(isPaymentPagePath("/admin/orders")).toBe(false);
+  });
+});
+
+describe("loadedAsDocument", () => {
+  const PAY = "/join/pay/3f2b8c1e-9a4d-4e21-b7c6-0d5e8f9a1b2c";
+
+  it("is true when the document itself was loaded for the card page", () => {
+    expect(loadedAsDocument(`https://www.edengarden.co.il${PAY}`, PAY)).toBe(true);
+    expect(loadedAsDocument(`https://www.edengarden.co.il${PAY}?x=1`, PAY)).toBe(true);
+  });
+
+  it("is false after a client-side navigation from another page", () => {
+    expect(loadedAsDocument("https://www.edengarden.co.il/join", PAY)).toBe(false);
+  });
+
+  it("is false when the browser gives no navigation entry", () => {
+    expect(loadedAsDocument(undefined, PAY)).toBe(false);
+    expect(loadedAsDocument("not a url", PAY)).toBe(false);
   });
 });
