@@ -151,18 +151,23 @@ const GENERIC_DECLINE = "העסקה לא אושרה על ידי חברת האש�
 /** 308 is "duplicate transaction": an earlier attempt may already have captured. */
 const AMBIGUOUS_CODES = new Set(["308"]);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function statusOf(body: Record<string, unknown>): string | null {
-  const code = body.StatusCode;
-  if (typeof code === "number" && Number.isInteger(code)) return String(code).padStart(3, "0");
+/** A Pelecard or Shva result code as three digits ("0" and 0 read as "000"), or null. */
+export function normalizeCode(code: unknown): string | null {
+  if (typeof code === "number" && Number.isInteger(code) && code >= 0) return String(code).padStart(3, "0");
   if (typeof code === "string" && /^\d{1,3}$/.test(code.trim())) return code.trim().padStart(3, "0");
   return null;
 }
 
-function pickStored(data: Record<string, unknown>): Record<string, unknown> {
+export function statusOf(body: Record<string, unknown>): string | null {
+  return normalizeCode(body.StatusCode);
+}
+
+/** The response fields safe to keep on an order. */
+export function pickStored(data: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(STORED_FIELDS.filter((key) => key in data).map((key) => [key, data[key]]));
 }
 

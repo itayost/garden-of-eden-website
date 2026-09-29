@@ -8,6 +8,7 @@ import { waitUntil } from "@vercel/functions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { canPayOnline, PAYMENTS_CLOSED_MESSAGE } from "@/lib/payments/online-payments";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import { verifyRenewalToken } from "@/lib/plans/renewal-token";
 import { israelToday } from "@/lib/utils/tasks";
@@ -32,6 +33,9 @@ async function clientIp(): Promise<string> {
  * the card charge has the strict one.
  */
 export async function startCheckoutAction(input: EnrollmentInput): Promise<StartResult> {
+  // Nothing is stored for a payment that cannot happen yet.
+  if (!(await canPayOnline())) return { error: PAYMENTS_CLOSED_MESSAGE };
+
   const ip = await clientIp();
   const limit = await checkRateLimit(`ip:${ip}`, "checkout");
   waitUntil(limit.pending);
@@ -63,6 +67,16 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
     .maybeSingle();
   if (owner && owner.role !== "trainee") {
     return { error: "מספר הטלפון להתחברות שייך לחשבון צוות. השתמשו במספר אחר." };
+  }
+
+  // A charge for this phone may have gone through without an answer. Until
+  // an admin settles it, a second order would risk charging the parent twice.
+  const { count: charging } = await typedFrom(db, "orders")
+    .select("id", { count: "exact", head: true })
+    .eq("login_phone", data.loginPhone)
+    .eq("status", "charging");
+  if ((charging ?? 0) > 0) {
+    return { error: "יש תשלום קודם למספר הזה שעדיין בבדיקה. כתבו לנו בוואטסאפ 052-577-9446 ונסיים יחד." };
   }
 
   // A renewal token names the plan being renewed. It only counts when the

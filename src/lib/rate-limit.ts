@@ -55,6 +55,20 @@ const paymentLimiter = redis
   : null;
 
 /**
+ * Card attempts per order: 5 per 24 hours, keyed by order id. A decline
+ * returns the order to pending, so without this one order could be used to
+ * test stolen cards from rotating IPs. Fails closed like the payment limiter.
+ */
+const paymentOrderLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "24 h"),
+      prefix: "goe:payment-order",
+      analytics: true,
+    })
+  : null;
+
+/**
  * Checkout rate limiter: 5 order creations per 10 minutes per key.
  * Keyed by IP and again by login phone; no money moves, so it fails open.
  */
@@ -128,21 +142,21 @@ const generalLimiter = redis
  * waitUntil(result.pending);
  * ```
  */
+const LIMITERS = {
+  payment: paymentLimiter,
+  payment_order: paymentOrderLimiter,
+  checkout: checkoutLimiter,
+  booking: bookingLimiter,
+  arbox_sync: arboxSyncLimiter,
+  general: generalLimiter,
+} as const;
+
 export async function checkRateLimit(
   identifier: string,
-  type: "payment" | "checkout" | "booking" | "arbox_sync" | "general"
+  type: keyof typeof LIMITERS
 ): Promise<RateLimitResult> {
-  const limiter =
-    type === "payment"
-      ? paymentLimiter
-      : type === "checkout"
-        ? checkoutLimiter
-        : type === "booking"
-          ? bookingLimiter
-          : type === "arbox_sync"
-            ? arboxSyncLimiter
-            : generalLimiter;
-  const isSensitiveOperation = type === "payment";
+  const limiter = LIMITERS[type];
+  const isSensitiveOperation = type === "payment" || type === "payment_order";
 
   // If Redis is unavailable:
   // - For sensitive operations (payments): FAIL CLOSED - block the request

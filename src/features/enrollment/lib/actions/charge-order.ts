@@ -7,13 +7,11 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { detectBrand, last4 } from "@/lib/payments/card";
 import { chargeCard } from "@/lib/payments/pelecard";
-import { issueOrderInvoice } from "../invoice";
+import { canPayOnline, PAYMENTS_CLOSED_MESSAGE } from "@/lib/payments/online-payments";
 import { cardPaymentSchema, type CardPaymentInput } from "@/lib/validations/card-payment";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import type { Order, PlanProduct } from "@/types/plans";
-import { fulfillOrder } from "../fulfillment";
-import { markOrderPaid } from "../mark-paid";
-import { notifyOrderFulfilled } from "../notify";
+import { completeCardPayment } from "../complete-card-payment";
 
 type ChargeResult = { ok: true } | { error: string };
 
@@ -31,6 +29,8 @@ async function clientIp(): Promise<string> {
  * limit is the abuse guard, and the amount always comes from the order row.
  */
 export async function chargeOrderAction(input: CardPaymentInput): Promise<ChargeResult> {
+  if (!(await canPayOnline())) return { error: PAYMENTS_CLOSED_MESSAGE };
+
   const limit = await checkRateLimit(`ip:${await clientIp()}`, "payment");
   waitUntil(limit.pending);
   if (limit.rateLimited) {
@@ -81,6 +81,14 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
   }
   const description = `${product.name_he} - ${order.child_name}`;
 
+  // Per order, so declines cannot turn one order into a card-testing tool.
+  // Counted here, past every refusal that sends nothing to Pelecard.
+  const orderLimit = await checkRateLimit(`order:${order.id}`, "payment_order");
+  waitUntil(orderLimit.pending);
+  if (orderLimit.rateLimited) {
+    return { error: "יותר מדי ניסיונות תשלום להזמנה הזו. כתבו לנו בוואטסאפ 052-577-9446 ונשלים יחד." };
+  }
+
   // Claim the order before the card goes anywhere: a double tap, a second
   // tab, or a retry after a timeout finds nothing to claim and stops here
   // instead of charging twice.
@@ -130,34 +138,21 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
     return { error: charge.message };
   }
 
-  const brand = detectBrand(data.cardNumber);
-  const claim = await markOrderPaid(db, order.id, {
-    provider: "isracard",
-    transactionId: charge.transactionId,
-    approvalNumber: charge.approvalNumber,
-    cardBrand: brand,
-    cardLast4: last4(data.cardNumber),
-    installments: data.installments,
-    raw: charge.raw,
-  });
-  if (claim.error) {
-    // The card was charged. Leave a trail for the admin rather than fail silently.
-    console.error(`[charge-order] order ${order.id} paid but not claimed:`, claim.error);
-    await typedFrom(db, "orders")
-      .update({ fulfillment_error: `paid, claim failed: ${claim.error}` })
-      .eq("id", order.id);
-    return { ok: true };
-  }
-  if (!claim.claimed) return { ok: true };
-
-  const fulfilled = await fulfillOrder(db, order.id);
-  if (!fulfilled.ok) {
-    // fulfillment_error is already set; the admin retries from /admin/orders.
-    return { ok: true };
-  }
-
-  await issueOrderInvoice(db, order.id, { id: null, name: null });
-
-  await notifyOrderFulfilled(db, order.id);
+  // The card was charged: whatever fails from here is the admin's to finish
+  // (the helper leaves fulfillment_error), never the parent's to retry.
+  await completeCardPayment(
+    db,
+    order.id,
+    {
+      provider: "isracard",
+      transactionId: charge.transactionId,
+      approvalNumber: charge.approvalNumber,
+      cardBrand: detectBrand(data.cardNumber),
+      cardLast4: last4(data.cardNumber),
+      installments: data.installments,
+      raw: charge.raw,
+    },
+    { id: null, name: null },
+  );
   return { ok: true };
 }

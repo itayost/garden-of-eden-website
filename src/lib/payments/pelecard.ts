@@ -1,7 +1,14 @@
 import "server-only";
 
 import type { CardChargeRequest, CardChargeResult } from "./provider";
-import { buildDebitRequest, parseDebitResponse, toAgorot, type PelecardCredentials } from "./pelecard-mapping";
+import {
+  buildDebitRequest,
+  parseDebitResponse,
+  pelecardParamX,
+  toAgorot,
+  type PelecardCredentials,
+} from "./pelecard-mapping";
+import { lookupWindow, parseCompleteTransData, parseTrxLookUp, type LookupOutcome } from "./pelecard-lookup";
 
 /**
  * Pelecard adapter: the site's card page charges through Pelecard's Services
@@ -49,20 +56,11 @@ export async function chargeCard(request: CardChargeRequest): Promise<CardCharge
   }
 
   const { path, body } = buildDebitRequest(request, creds);
-  const response = await fetch(`${apiUrl()}/services/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error(`Pelecard ${path} returned HTTP ${response.status}`);
-
   let json: unknown;
   try {
-    json = await response.json();
-  } catch {
-    throw new Error(`Pelecard ${path} returned a body that is not JSON`);
+    json = await postService(path, body);
+  } catch (error) {
+    throw new Error(`Pelecard ${path} failed: ${error instanceof Error ? error.message || error.name : "request error"}`);
   }
 
   const outcome = parseDebitResponse(json, toAgorot(request.amountIls));
@@ -76,5 +74,56 @@ export async function chargeCard(request: CardChargeRequest): Promise<CardCharge
       return { ok: false, code: "error", message: outcome.message };
     case "unknown":
       throw new Error(`Pelecard ${path} outcome unknown: ${outcome.reason}`);
+  }
+}
+
+async function postService(path: string, body: Record<string, string>): Promise<unknown> {
+  const response = await fetch(`${apiUrl()}/services/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+/**
+ * Asks Pelecard whether an order stuck in charging was captured. First the
+ * terminal's transactions from an hour before the claim until now, matched
+ * on paramX and amount; when that finds nothing, TrxLookUp by paramX as a
+ * second opinion, since it also lists charges not yet transmitted to Shva.
+ * "not_found" only when both agree. Never throws; a failed call is "error",
+ * so the caller cannot mistake it for "no charge".
+ */
+export async function lookupCharge(
+  orderId: string,
+  amountIls: number,
+  chargingSince: Date,
+  now: Date = new Date(),
+): Promise<LookupOutcome> {
+  const creds = credentials();
+  if (!creds) return { kind: "error", reason: "Pelecard is not configured" };
+  const paramX = pelecardParamX(orderId);
+  try {
+    const listed = parseCompleteTransData(
+      await postService("GetCompleteTransData", { ...creds, ...lookupWindow(chargingSince, now) }),
+      paramX,
+      toAgorot(amountIls),
+    );
+    if (listed.kind !== "not_found") return listed;
+
+    const pending = parseTrxLookUp(
+      await postService("TrxLookUp", { ...creds, shopNumber: "001", paramX }),
+      paramX,
+    );
+    if (pending === "none") return { kind: "not_found" };
+    return {
+      kind: "error",
+      reason: pending === "charged" ? "TrxLookUp shows a charge for this order; check it in Pelecard" : "TrxLookUp failed",
+    };
+  } catch (error) {
+    return { kind: "error", reason: error instanceof Error ? error.message || error.name : "request failed" };
   }
 }
