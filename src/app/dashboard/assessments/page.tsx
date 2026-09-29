@@ -295,6 +295,21 @@ export default async function DashboardAssessmentsPage() {
                           </div>
                         </div>
 
+                        {/* Dribbling Tests */}
+                        <div>
+                          <h4 className="font-medium mb-2 text-sm text-muted-foreground">
+                            מבדקי כדרור
+                          </h4>
+                          <div className="space-y-1 text-sm">
+                            {(["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"] as const).map((key) => (
+                              <div key={key} className="flex justify-between">
+                                <span>{ASSESSMENT_LABELS_HE[key]}</span>
+                                <span className="font-medium">{formatValue(key, a[key])}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
                         {/* Jump Tests */}
                         <div>
                           <h4 className="font-medium mb-2 text-sm text-muted-foreground">

@@ -43,6 +43,14 @@ export const RANKING_CATEGORIES: Record<RankingCategory, CategoryConfig> = {
     lowerIsBetter: false,
     icon: "Target",
   },
+  dribbling: {
+    id: "dribbling",
+    labelHe: "כדרור",
+    metrics: ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"],
+    primaryMetric: "sprint_10m_h_ball",
+    lowerIsBetter: true,
+    icon: "Footprints",
+  },
 };
 
 export const CATEGORY_ORDER: RankingCategory[] = [
@@ -51,6 +59,7 @@ export const CATEGORY_ORDER: RankingCategory[] = [
   "agility",
   "flexibility",
   "power",
+  "dribbling",
 ];
 
 export function getCategoryConfig(category: RankingCategory): CategoryConfig {

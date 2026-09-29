@@ -6,7 +6,7 @@ import type { AgeGroup } from "@/types/assessment";
 // RANKING CATEGORIES
 // ===========================================
 
-export type RankingCategory = "sprint" | "jump" | "agility" | "flexibility" | "power";
+export type RankingCategory = "sprint" | "jump" | "agility" | "flexibility" | "power" | "dribbling";
 
 export interface CategoryConfig {
   id: RankingCategory;

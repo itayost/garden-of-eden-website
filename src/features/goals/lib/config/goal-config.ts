@@ -19,13 +19,19 @@ export const GOAL_METRICS: PhysicalMetricKey[] = [
   "flexibility_hip",
   "kick_power_right_foot",
   "kick_power_left_foot",
+  "shuffle_10m",
+  "sprint_10m_h",
+  "sprint_10m_h_ball",
 ];
 
-/** Metrics where lower values are better (sprints only) */
+/** Metrics where lower values are better (the timed tests) */
 export const LOWER_IS_BETTER_METRICS: PhysicalMetricKey[] = [
   "sprint_5m",
   "sprint_10m",
   "sprint_20m",
+  "shuffle_10m",
+  "sprint_10m_h",
+  "sprint_10m_h_ball",
 ];
 
 /** Storage key for tracking celebrated goals */
@@ -57,6 +63,9 @@ export const METRIC_LABELS_HE: Record<PhysicalMetricKey, string> = {
   kick_power_kaiser: "עוצמת בעיטה",
   kick_power_right_foot: "עוצמת בעיטה - רגל ימין",
   kick_power_left_foot: "עוצמת בעיטה - רגל שמאל",
+  shuffle_10m: "צעדי רדיפה 10 מטר",
+  sprint_10m_h: "ספרינט 10 מטר צורת ח",
+  sprint_10m_h_ball: "ספרינט 10 מטר צורת ח עם כדור",
 };
 
 /** Units for metrics */
@@ -75,6 +84,9 @@ export const METRIC_UNITS: Record<PhysicalMetricKey, string> = {
   kick_power_kaiser: 'יח׳ כוח',
   kick_power_right_foot: 'יח׳ כוח',
   kick_power_left_foot: 'יח׳ כוח',
+  shuffle_10m: "שניות",
+  sprint_10m_h: "שניות",
+  sprint_10m_h_ball: "שניות",
 };
 
 /** Check if a metric is lower-is-better */

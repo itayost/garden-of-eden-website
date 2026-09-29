@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Zap, ArrowUp, Shuffle, Move, Target } from "lucide-react";
+import { Crown, Zap, ArrowUp, Shuffle, Move, Target, Footprints } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS } from "@/types/assessment";
 import type { CategoryLeader, RankingCategory } from "../types";
@@ -20,6 +20,7 @@ const CATEGORY_ICONS: Record<RankingCategory, typeof Zap> = {
   agility: Shuffle,
   flexibility: Move,
   power: Target,
+  dribbling: Footprints,
 };
 
 const CATEGORY_COLORS: Record<RankingCategory, string> = {
@@ -28,6 +29,7 @@ const CATEGORY_COLORS: Record<RankingCategory, string> = {
   agility: "from-purple-500/20 to-pink-500/20",
   flexibility: "from-green-500/20 to-emerald-500/20",
   power: "from-red-500/20 to-rose-500/20",
+  dribbling: "from-amber-500/20 to-lime-500/20",
 };
 
 export function CategoryLeaderCards({
@@ -36,7 +38,7 @@ export function CategoryLeaderCards({
   onCategorySelect,
 }: CategoryLeaderCardsProps) {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:gap-4 md:grid-cols-5">
+    <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
       {leaders.map((leader) => {
         const Icon = CATEGORY_ICONS[leader.category];
         const config = RANKING_CATEGORIES[leader.category];

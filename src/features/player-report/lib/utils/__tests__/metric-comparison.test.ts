@@ -6,7 +6,17 @@ describe("getMetricDirection", () => {
     expect(getMetricDirection("sprint_5m")).toBe("lower_is_better");
     expect(getMetricDirection("sprint_10m")).toBe("lower_is_better");
     expect(getMetricDirection("sprint_20m")).toBe("lower_is_better");
-    expect(getMetricDirection("blaze_spot_time")).toBe("lower_is_better");
+  });
+
+  it("the timed dribbling tests are lower_is_better", () => {
+    expect(getMetricDirection("shuffle_10m")).toBe("lower_is_better");
+    expect(getMetricDirection("sprint_10m_h")).toBe("lower_is_better");
+    expect(getMetricDirection("sprint_10m_h_ball")).toBe("lower_is_better");
+  });
+
+  it("blaze spot is a hit count, so higher_is_better", () => {
+    expect(getMetricDirection("blaze_spot_time")).toBe("higher_is_better");
+    expect(compareMetric("blaze_spot_time", 50, 43)).toBe("improved");
   });
 
   it("jump and power metrics are higher_is_better", () => {

@@ -21,6 +21,9 @@ const FULL_GROUP_STATS: GroupStats = {
   kick_power_kaiser: { best: 500, worst: 50 },
   kick_power_right_foot: { best: 500, worst: 50 },
   kick_power_left_foot: { best: 500, worst: 50 },
+  shuffle_10m: { best: 2.5, worst: 3.5 },
+  sprint_10m_h: { best: 2.2, worst: 3.2 },
+  sprint_10m_h_ball: { best: 2.6, worst: 3.8 },
 };
 
 const NO_DATA_GROUP_STATS: GroupStats = {
@@ -38,6 +41,9 @@ const NO_DATA_GROUP_STATS: GroupStats = {
   kick_power_kaiser: { best: -1, worst: -1 },
   kick_power_right_foot: { best: -1, worst: -1 },
   kick_power_left_foot: { best: -1, worst: -1 },
+  shuffle_10m: { best: -1, worst: -1 },
+  sprint_10m_h: { best: -1, worst: -1 },
+  sprint_10m_h_ball: { best: -1, worst: -1 },
 };
 
 function emptyAssessment(): PlayerAssessment {
@@ -63,6 +69,9 @@ function emptyAssessment(): PlayerAssessment {
     kick_power_right_foot: null,
     kick_power_left_foot: null,
     kick_power_machine_pct: null,
+    shuffle_10m: null,
+    sprint_10m_h: null,
+    sprint_10m_h_ball: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,
@@ -101,28 +110,90 @@ describe("calculateCardRatings — Yarin's case (sprints + all 4 jumps + blaze)"
 
   const ratings = calculateCardRatings(assessment, FULL_GROUP_STATS);
 
-  it("produces real numbers for the four card slots backed by tests he did", () => {
+  it("produces real numbers for the three card slots backed by tests he did", () => {
     expect(ratings.pace).toBeTypeOf("number");
     expect(ratings.physical).toBeTypeOf("number");
-    expect(ratings.dribbling).toBeTypeOf("number");
     expect(ratings.passing).toBeTypeOf("number");
   });
 
-  it("returns null for shooting (no kick test) and defending (no flexibility tests)", () => {
+  it("returns null for shooting, defending and dribbling (tests he did not do)", () => {
     expect(ratings.shooting).toBeNull();
     expect(ratings.defending).toBeNull();
+    expect(ratings.dribbling).toBeNull();
   });
 
   it("computes overall_rating as the average of only the non-null stats", () => {
-    const realStats = [ratings.pace, ratings.physical, ratings.dribbling, ratings.passing] as number[];
+    const realStats = [ratings.pace, ratings.physical, ratings.passing] as number[];
     const expected = Math.round(realStats.reduce((a, b) => a + b, 0) / realStats.length);
     expect(ratings.overall_rating).toBe(expected);
   });
+});
 
-  it("dribbling is now driven by single-leg jumps, not by blaze", () => {
-    const noBlaze = calculateCardRatings({ ...assessment, blaze_spot_time: null }, FULL_GROUP_STATS);
-    expect(noBlaze.dribbling).toBe(ratings.dribbling);
-    expect(noBlaze.passing).toBeNull();
+describe("calculateCardRatings — physical averages all four jumps", () => {
+  it("single-leg jumps feed physical, not dribbling", () => {
+    const a: PlayerAssessment = { ...emptyAssessment(), jump_right_leg: 160 };
+    const r = calculateCardRatings(a, FULL_GROUP_STATS);
+    // (200 - 160) / (200 - 120) = 0.5 -> 99 - 34.5 = 64.5 -> 65
+    expect(r.physical).toBe(65);
+    expect(r.dribbling).toBeNull();
+  });
+
+  it("physical is the rounded mean of the four jump ratings", () => {
+    const a: PlayerAssessment = {
+      ...emptyAssessment(),
+      jump_2leg_distance: 220, // 99
+      jump_2leg_height: 25, // 30
+      jump_right_leg: 200, // 99
+      jump_left_leg: 120, // 30
+    };
+    const r = calculateCardRatings(a, FULL_GROUP_STATS);
+    expect(r.physical).toBe(65); // (99 + 30 + 99 + 30) / 4 = 64.5 -> 65
+  });
+});
+
+describe("calculateCardRatings — dribbling comes from the three timed dribbling tests", () => {
+  const midway: PlayerAssessment = {
+    ...emptyAssessment(),
+    shuffle_10m: 3.0, // midway between 2.5 and 3.5 -> 65
+    sprint_10m_h: 2.7, // midway between 2.2 and 3.2 -> 65
+    sprint_10m_h_ball: 3.2, // midway between 2.6 and 3.8 -> 65
+  };
+
+  it("averages the three tests", () => {
+    expect(calculateCardRatings(midway, FULL_GROUP_STATS).dribbling).toBe(65);
+  });
+
+  it("treats a lower time as better", () => {
+    const fastest = calculateCardRatings(
+      { ...emptyAssessment(), shuffle_10m: 2.5, sprint_10m_h: 2.2, sprint_10m_h_ball: 2.6 },
+      FULL_GROUP_STATS
+    );
+    const slowest = calculateCardRatings(
+      { ...emptyAssessment(), shuffle_10m: 3.5, sprint_10m_h: 3.2, sprint_10m_h_ball: 3.8 },
+      FULL_GROUP_STATS
+    );
+    expect(fastest.dribbling).toBe(99);
+    expect(slowest.dribbling).toBe(30);
+  });
+
+  it("uses whichever of the three tests were recorded", () => {
+    const onlyBall = calculateCardRatings(
+      { ...emptyAssessment(), sprint_10m_h_ball: 2.6 },
+      FULL_GROUP_STATS
+    );
+    expect(onlyBall.dribbling).toBe(99);
+  });
+
+  it("applies the coordination bonus", () => {
+    const r = calculateCardRatings({ ...midway, coordination: "deficient" }, FULL_GROUP_STATS);
+    expect(r.dribbling).toBe(50);
+  });
+
+  it("does not move pace, physical or passing", () => {
+    const r = calculateCardRatings(midway, FULL_GROUP_STATS);
+    expect(r.pace).toBeNull();
+    expect(r.physical).toBeNull();
+    expect(r.passing).toBeNull();
   });
 });
 
@@ -143,6 +214,9 @@ describe("calculateCardRatings — full assessment", () => {
     kick_power_kaiser: 300,
     kick_power_right_foot: 300,
     kick_power_left_foot: 280,
+    shuffle_10m: 2.9,
+    sprint_10m_h: 2.6,
+    sprint_10m_h_ball: 3.0,
     coordination: "advanced",
     body_structure: "strong_athletic",
     leg_power_technique: "normal",
@@ -210,6 +284,7 @@ describe("calculateCardRatings — sentinel groupStats (no comparison data)", ()
       blaze_spot_time: 60,
       kick_power_kaiser: 300,
       flexibility_ankle: 12,
+      shuffle_10m: 3.0,
     };
     const r = calculateCardRatings(a, NO_DATA_GROUP_STATS);
     expect(r.pace).toBeNull();

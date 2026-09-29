@@ -99,6 +99,9 @@ export interface GroupStats {
   kick_power_kaiser: { best: number; worst: number };
   kick_power_right_foot: { best: number; worst: number };
   kick_power_left_foot: { best: number; worst: number };
+  shuffle_10m: { best: number; worst: number };
+  sprint_10m_h: { best: number; worst: number };
+  sprint_10m_h_ball: { best: number; worst: number };
 }
 
 /**
@@ -122,10 +125,13 @@ export function calculateGroupStats(assessments: PlayerAssessment[]): GroupStats
   };
 
   return {
-    // Lower is better (sprints)
+    // Lower is better (sprints and timed dribbling tests)
     sprint_5m: getMinMax(assessments.map((a) => a.sprint_5m), true),
     sprint_10m: getMinMax(assessments.map((a) => a.sprint_10m), true),
     sprint_20m: getMinMax(assessments.map((a) => a.sprint_20m), true),
+    shuffle_10m: getMinMax(assessments.map((a) => a.shuffle_10m), true),
+    sprint_10m_h: getMinMax(assessments.map((a) => a.sprint_10m_h), true),
+    sprint_10m_h_ball: getMinMax(assessments.map((a) => a.sprint_10m_h_ball), true),
 
     // Higher is better (blaze spot count, jumps, flexibility, power)
     blaze_spot_time: getMinMax(assessments.map((a) => a.blaze_spot_time), false),
@@ -231,6 +237,8 @@ export const CARD_STAT_CONFIG: Readonly<Record<StatKey, StatConfig>> = {
     primary: [
       { metric: "jump_2leg_distance", lowerBetter: false },
       { metric: "jump_2leg_height", lowerBetter: false },
+      { metric: "jump_right_leg", lowerBetter: false },
+      { metric: "jump_left_leg", lowerBetter: false },
     ],
     bonuses: [(a) => getBodyStructureBonus(a.body_structure)],
   },
@@ -251,8 +259,9 @@ export const CARD_STAT_CONFIG: Readonly<Record<StatKey, StatConfig>> = {
   },
   dribbling: {
     primary: [
-      { metric: "jump_right_leg", lowerBetter: false },
-      { metric: "jump_left_leg", lowerBetter: false },
+      { metric: "shuffle_10m", lowerBetter: true },
+      { metric: "sprint_10m_h", lowerBetter: true },
+      { metric: "sprint_10m_h_ball", lowerBetter: true },
     ],
     bonuses: [(a) => getCoordinationBonus(a.coordination)],
   },
@@ -340,6 +349,9 @@ export function calculateCardRatingsAbsolute(assessment: PlayerAssessment): Calc
     kick_power_kaiser: { best: 500, worst: 50 },
     kick_power_right_foot: { best: 500, worst: 50 },
     kick_power_left_foot: { best: 500, worst: 50 },
+    shuffle_10m: { best: 2.5, worst: 4.0 },
+    sprint_10m_h: { best: 2.2, worst: 3.5 },
+    sprint_10m_h_ball: { best: 2.6, worst: 4.2 },
   };
 
   return calculateCardRatings(assessment, defaultStats);

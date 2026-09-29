@@ -38,6 +38,9 @@ interface AssessmentInsertInput {
   kick_power_right_foot?: number | null;
   kick_power_left_foot?: number | null;
   kick_power_machine_pct?: number | null;
+  shuffle_10m?: number | null;
+  sprint_10m_h?: number | null;
+  sprint_10m_h_ball?: number | null;
   concentration_notes?: string | null;
   decision_making_notes?: string | null;
   work_ethic_notes?: string | null;

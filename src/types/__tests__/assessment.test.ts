@@ -5,6 +5,9 @@ import {
   getAssessmentCompleteness,
   computeSectionCompleteness,
   ASSESSMENT_SECTIONS,
+  ASSESSMENT_LABELS_HE,
+  ASSESSMENT_UNITS,
+  DRIBBLING_TESTS_SINCE,
 } from "../assessment";
 import type { PlayerAssessment } from "../assessment";
 
@@ -16,6 +19,7 @@ function createMockAssessment(
   overrides: Partial<PlayerAssessment> = {}
 ): Partial<PlayerAssessment> {
   return {
+    assessment_date: "2026-10-15",
     sprint_5m: null,
     sprint_10m: null,
     sprint_20m: null,
@@ -34,6 +38,9 @@ function createMockAssessment(
     kick_power_right_foot: null,
     kick_power_left_foot: null,
     kick_power_machine_pct: null,
+    shuffle_10m: null,
+    sprint_10m_h: null,
+    sprint_10m_h_ball: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,
@@ -143,6 +150,21 @@ describe("isLowerBetter", () => {
     expect(isLowerBetter("sprint_20m")).toBe(true);
   });
 
+  it("returns true for the timed dribbling tests", () => {
+    expect(isLowerBetter("shuffle_10m")).toBe(true);
+    expect(isLowerBetter("sprint_10m_h")).toBe(true);
+    expect(isLowerBetter("sprint_10m_h_ball")).toBe(true);
+  });
+
+  it("labels the dribbling tests in Hebrew with seconds as the unit", () => {
+    expect(ASSESSMENT_LABELS_HE.shuffle_10m).toBe("צעדי רדיפה 10 מטר");
+    expect(ASSESSMENT_LABELS_HE.sprint_10m_h).toBe("ספרינט 10 מטר צורת ח");
+    expect(ASSESSMENT_LABELS_HE.sprint_10m_h_ball).toBe("ספרינט 10 מטר צורת ח עם כדור");
+    for (const key of ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"]) {
+      expect(ASSESSMENT_UNITS[key]).toBe("שניות");
+    }
+  });
+
   it("returns false for jump metrics", () => {
     expect(isLowerBetter("jump_2leg_distance")).toBe(false);
     expect(isLowerBetter("jump_right_leg")).toBe(false);
@@ -186,6 +208,9 @@ describe("getAssessmentCompleteness", () => {
       coordination: "advanced",
       leg_power_technique: "normal",
       body_structure: "strong_athletic",
+      shuffle_10m: 3.0,
+      sprint_10m_h: 2.8,
+      sprint_10m_h_ball: 3.3,
     });
     expect(getAssessmentCompleteness(assessment)).toBe(100);
   });
@@ -217,16 +242,48 @@ describe("getAssessmentCompleteness", () => {
   });
 });
 
+describe("dribbling tests only count from their rollout date", () => {
+  const WITHOUT_DRIBBLING: Partial<PlayerAssessment> = {
+    sprint_5m: 1.2, sprint_10m: 2.3, sprint_20m: 3.5,
+    jump_2leg_distance: 180, jump_right_leg: 160, jump_left_leg: 155, jump_2leg_height: 45,
+    blaze_spot_time: 30, flexibility_ankle: 12, flexibility_knee: 15, flexibility_hip: 20,
+    kick_power_right_foot: 85, kick_power_left_foot: 80, kick_power_machine_pct: 35,
+    coordination: "advanced", leg_power_technique: "normal", body_structure: "strong_athletic",
+  };
+
+  it("keeps an older complete assessment at 100%", () => {
+    const old = createMockAssessment({ ...WITHOUT_DRIBBLING, assessment_date: "2026-09-01" });
+    expect(getAssessmentCompleteness(old)).toBe(100);
+  });
+
+  it("requires the dribbling tests from the rollout date on", () => {
+    const onRollout = createMockAssessment({ ...WITHOUT_DRIBBLING, assessment_date: DRIBBLING_TESTS_SINCE });
+    expect(getAssessmentCompleteness(onRollout)).toBe(Math.round((17 / 20) * 100));
+  });
+
+  it("drops the dribbling section from older assessments' section list", () => {
+    const old = createMockAssessment({ assessment_date: "2026-09-01" });
+    expect(computeSectionCompleteness(old).map((s) => s.key)).not.toContain("dribbling");
+  });
+
+  it("never pushes an older assessment past 100% when a dribbling test is present", () => {
+    const old = createMockAssessment({
+      ...WITHOUT_DRIBBLING, assessment_date: "2026-09-01", shuffle_10m: 3.0,
+    });
+    expect(getAssessmentCompleteness(old)).toBe(100);
+  });
+});
+
 describe("computeSectionCompleteness", () => {
   it("returns empty array for null assessment", () => {
     expect(computeSectionCompleteness(null)).toEqual([]);
   });
 
-  it("returns 6 sections for an all-null assessment", () => {
+  it("returns 7 sections for an all-null assessment", () => {
     const result = computeSectionCompleteness(createMockAssessment());
-    expect(result).toHaveLength(6);
+    expect(result).toHaveLength(7);
     expect(result.map((s) => s.key)).toEqual([
-      "sprints", "jumps", "agility", "categorical", "power", "mental",
+      "sprints", "dribbling", "jumps", "agility", "categorical", "power", "mental",
     ]);
   });
 
@@ -270,6 +327,7 @@ describe("computeSectionCompleteness", () => {
   it("full assessment gives completed === total for all quantitative sections", () => {
     const full = createMockAssessment({
       sprint_5m: 1.1, sprint_10m: 2.2, sprint_20m: 3.3,
+      shuffle_10m: 3.0, sprint_10m_h: 2.8, sprint_10m_h_ball: 3.3,
       jump_2leg_distance: 200, jump_right_leg: 180, jump_left_leg: 175, jump_2leg_height: 60,
       blaze_spot_time: 30, flexibility_ankle: 10, flexibility_knee: 15, flexibility_hip: 20,
       coordination: "advanced", leg_power_technique: "normal", body_structure: "good_build",
@@ -291,9 +349,9 @@ describe("0% completeness edge case (spec exception)", () => {
     expect(getAssessmentCompleteness(createMockAssessment())).toBe(0);
   });
 
-  it("computeSectionCompleteness returns 6 sections all with completed=0 for all-null assessment", () => {
+  it("computeSectionCompleteness returns 7 sections all with completed=0 for all-null assessment", () => {
     const result = computeSectionCompleteness(createMockAssessment());
-    expect(result).toHaveLength(6);
+    expect(result).toHaveLength(7);
     result.forEach((s) => expect(s.completed).toBe(0));
   });
 });

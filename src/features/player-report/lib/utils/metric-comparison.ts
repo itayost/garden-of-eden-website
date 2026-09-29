@@ -6,10 +6,13 @@ const LOWER_IS_BETTER = new Set([
   "sprint_5m",
   "sprint_10m",
   "sprint_20m",
-  "blaze_spot_time",
+  "shuffle_10m",
+  "sprint_10m_h",
+  "sprint_10m_h_ball",
 ]);
 
 const HIGHER_IS_BETTER = new Set([
+  "blaze_spot_time",
   "jump_2leg_height",
   "jump_2leg_distance",
   "jump_right_leg",

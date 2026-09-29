@@ -17,6 +17,9 @@ export const NUMERIC_METRIC_KEYS = [
   "kick_power_kaiser",
   "kick_power_right_foot",
   "kick_power_left_foot",
+  "shuffle_10m",
+  "sprint_10m_h",
+  "sprint_10m_h_ball",
 ] as const;
 
 export type NumericMetricKey = (typeof NUMERIC_METRIC_KEYS)[number];

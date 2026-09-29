@@ -37,7 +37,8 @@ export function GroupStatisticsCard({ statistics, category }: GroupStatisticsCar
   const metricLabel = ASSESSMENT_LABELS_HE[config.primaryMetric] ?? config.labelHe;
 
   // For "higher is better" metrics (jump, flexibility, power, agility) the best
-  // value is the max and the worst is the min. Only sprints invert this.
+  // value is the max and the worst is the min. Timed tests (sprint, dribbling)
+  // invert this.
   const bestValue = config.lowerIsBetter ? statistics?.min : statistics?.max;
   const worstValue = config.lowerIsBetter ? statistics?.max : statistics?.min;
 

@@ -19,7 +19,10 @@ export type PhysicalMetricKey =
   | "flexibility_hip"
   | "kick_power_kaiser"
   | "kick_power_right_foot"
-  | "kick_power_left_foot";
+  | "kick_power_left_foot"
+  | "shuffle_10m"
+  | "sprint_10m_h"
+  | "sprint_10m_h_ball";
 
 /**
  * Goal with calculated progress for UI display

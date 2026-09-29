@@ -36,7 +36,10 @@ export type PhysicalMetricKey =
   | "flexibility_hip"
   | "kick_power_kaiser"
   | "kick_power_right_foot"
-  | "kick_power_left_foot";
+  | "kick_power_left_foot"
+  | "shuffle_10m"
+  | "sprint_10m_h"
+  | "sprint_10m_h_ball";
 
 export interface PhysicalMetricChartData {
   metric: PhysicalMetricKey;
@@ -74,7 +77,7 @@ export interface PercentileRanking {
 // METRIC DEFINITION
 // ===========================================
 
-export type MetricCategory = "sprint" | "jump" | "agility" | "flexibility" | "power";
+export type MetricCategory = "sprint" | "dribbling" | "jump" | "agility" | "flexibility" | "power";
 
 export interface MetricDefinition {
   key: PhysicalMetricKey;

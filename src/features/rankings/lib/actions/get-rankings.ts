@@ -158,7 +158,7 @@ export async function getRankingsData(
     entry.ageGroupId = userAgeGroups.get(entry.userId) || "unknown";
   }
 
-  // Calculate category leaders for all 5 categories
+  // Calculate category leaders for every category
   const categoryLeaders: CategoryLeader[] = [];
 
   for (const [catId, catConfig] of Object.entries(RANKING_CATEGORIES)) {

@@ -25,7 +25,9 @@ export async function fetchGroupStats(
       "jump_2leg_height_best, jump_2leg_height_worst, blaze_spot_time_best, blaze_spot_time_worst, " +
       "flexibility_ankle_best, flexibility_ankle_worst, flexibility_knee_best, flexibility_knee_worst, " +
       "flexibility_hip_best, flexibility_hip_worst, kick_power_kaiser_best, kick_power_kaiser_worst, " +
-      "kick_power_right_foot_best, kick_power_right_foot_worst, kick_power_left_foot_best, kick_power_left_foot_worst"
+      "kick_power_right_foot_best, kick_power_right_foot_worst, kick_power_left_foot_best, kick_power_left_foot_worst, " +
+      "shuffle_10m_best, shuffle_10m_worst, sprint_10m_h_best, sprint_10m_h_worst, " +
+      "sprint_10m_h_ball_best, sprint_10m_h_ball_worst"
     )
     .eq("age_group", ageGroupId)
     .single();

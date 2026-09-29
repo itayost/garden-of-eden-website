@@ -88,7 +88,13 @@ export type Database = {
           kick_power_right_foot_best: number | null
           kick_power_right_foot_worst: number | null
           player_count: number | null
+          shuffle_10m_best: number | null
+          shuffle_10m_worst: number | null
           sprint_10m_best: number | null
+          sprint_10m_h_ball_best: number | null
+          sprint_10m_h_ball_worst: number | null
+          sprint_10m_h_best: number | null
+          sprint_10m_h_worst: number | null
           sprint_10m_worst: number | null
           sprint_20m_best: number | null
           sprint_20m_worst: number | null
@@ -121,7 +127,13 @@ export type Database = {
           kick_power_right_foot_best?: number | null
           kick_power_right_foot_worst?: number | null
           player_count?: number | null
+          shuffle_10m_best?: number | null
+          shuffle_10m_worst?: number | null
           sprint_10m_best?: number | null
+          sprint_10m_h_ball_best?: number | null
+          sprint_10m_h_ball_worst?: number | null
+          sprint_10m_h_best?: number | null
+          sprint_10m_h_worst?: number | null
           sprint_10m_worst?: number | null
           sprint_20m_best?: number | null
           sprint_20m_worst?: number | null
@@ -154,7 +166,13 @@ export type Database = {
           kick_power_right_foot_best?: number | null
           kick_power_right_foot_worst?: number | null
           player_count?: number | null
+          shuffle_10m_best?: number | null
+          shuffle_10m_worst?: number | null
           sprint_10m_best?: number | null
+          sprint_10m_h_ball_best?: number | null
+          sprint_10m_h_ball_worst?: number | null
+          sprint_10m_h_best?: number | null
+          sprint_10m_h_worst?: number | null
           sprint_10m_worst?: number | null
           sprint_20m_best?: number | null
           sprint_20m_worst?: number | null
@@ -2300,7 +2318,10 @@ export type Database = {
           notes: string | null
           nutrition_notes: string | null
           recovery_notes: string | null
+          shuffle_10m: number | null
           sprint_10m: number | null
+          sprint_10m_h: number | null
+          sprint_10m_h_ball: number | null
           sprint_20m: number | null
           sprint_5m: number | null
           user_id: string
@@ -2333,7 +2354,10 @@ export type Database = {
           notes?: string | null
           nutrition_notes?: string | null
           recovery_notes?: string | null
+          shuffle_10m?: number | null
           sprint_10m?: number | null
+          sprint_10m_h?: number | null
+          sprint_10m_h_ball?: number | null
           sprint_20m?: number | null
           sprint_5m?: number | null
           user_id: string
@@ -2366,7 +2390,10 @@ export type Database = {
           notes?: string | null
           nutrition_notes?: string | null
           recovery_notes?: string | null
+          shuffle_10m?: number | null
           sprint_10m?: number | null
+          sprint_10m_h?: number | null
+          sprint_10m_h_ball?: number | null
           sprint_20m?: number | null
           sprint_5m?: number | null
           user_id?: string

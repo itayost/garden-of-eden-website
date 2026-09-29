@@ -151,6 +151,25 @@ export function AssessmentPdfDocument({
           ))}
         </View>
 
+        {/* Dribbling section */}
+        <Text style={styles.sectionTitle}>מבדקי כדרור</Text>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={styles.tableCellHeader}>תאריך</Text>
+            <Text style={styles.tableCellHeader}>צעדי רדיפה 10 מטר</Text>
+            <Text style={styles.tableCellHeader}>צורת ח</Text>
+            <Text style={styles.tableCellHeader}>צורת ח עם כדור</Text>
+          </View>
+          {assessments.map((a) => (
+            <View key={a.id} style={styles.tableRow}>
+              <Text style={styles.tableCell}>{formatDate(a.assessment_date)}</Text>
+              <Text style={styles.tableCell}>{a.shuffle_10m ?? "---"}</Text>
+              <Text style={styles.tableCell}>{a.sprint_10m_h ?? "---"}</Text>
+              <Text style={styles.tableCell}>{a.sprint_10m_h_ball ?? "---"}</Text>
+            </View>
+          ))}
+        </View>
+
         {/* Jump section */}
         <Text style={styles.sectionTitle}>מבדקי ניתור</Text>
         <View style={styles.table}>

@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Timer, Activity, Ruler, Brain, Zap } from "lucide-react";
+import { Calendar, Timer, Activity, Ruler, Brain, Zap, Footprints } from "lucide-react";
 import type { AssessmentFormData } from "@/lib/validations/assessment";
 import type { PlayerAssessment } from "@/types/assessment";
 import {
@@ -31,16 +31,20 @@ import {
   BODY_STRUCTURE_OPTIONS,
 } from "@/types/assessment";
 
-// Step definitions
+// Step definitions. Steps are addressed by key, never by position, so a new
+// step can be inserted without re-wiring the ones after it.
 export const WIZARD_STEPS = [
   { key: "date", title: "תאריך", icon: Calendar },
   { key: "sprints", title: "ספרינט", icon: Timer },
+  { key: "dribbling", title: "כדרור", icon: Footprints },
   { key: "jumps", title: "ניתור", icon: Activity },
   { key: "agility", title: "זריזות וגמישות", icon: Ruler },
   { key: "categorical", title: "הערכות", icon: Activity },
   { key: "power", title: "כוח", icon: Zap },
   { key: "mental", title: "מנטלי", icon: Brain },
-];
+] as const;
+
+export type WizardStepKey = (typeof WIZARD_STEPS)[number]["key"];
 
 // Helper to get previous value for comparison
 function getPreviousValue(
@@ -213,8 +217,8 @@ export function AssessmentStepContent({
   previousAssessment,
 }: AssessmentStepContentProps) {
   // Render content based on step
-  switch (step) {
-    case 0: // Date
+  switch (WIZARD_STEPS[step]?.key) {
+    case "date":
       return (
         <Card>
           <CardHeader>
@@ -249,7 +253,7 @@ export function AssessmentStepContent({
         </Card>
       );
 
-    case 1: // Sprint Tests
+    case "sprints":
       return (
         <Card>
           <CardHeader>
@@ -269,7 +273,27 @@ export function AssessmentStepContent({
         </Card>
       );
 
-    case 2: // Jump Tests
+    case "dribbling":
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Footprints className="h-5 w-5" />
+              מבדקי כדרור
+            </CardTitle>
+            <CardDescription>
+              הזן את הזמנים בשניות (ערך נמוך = מהיר יותר)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid sm:grid-cols-3 gap-6">
+            <NumberInput name="shuffle_10m" step="0.001" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="sprint_10m_h" step="0.001" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="sprint_10m_h_ball" step="0.001" form={form} previousAssessment={previousAssessment} />
+          </CardContent>
+        </Card>
+      );
+
+    case "jumps":
       return (
         <Card>
           <CardHeader>
@@ -290,7 +314,7 @@ export function AssessmentStepContent({
         </Card>
       );
 
-    case 3: // Agility & Flexibility
+    case "agility":
       return (
         <Card>
           <CardHeader>
@@ -311,7 +335,7 @@ export function AssessmentStepContent({
         </Card>
       );
 
-    case 4: // Categorical Assessments
+    case "categorical":
       return (
         <Card>
           <CardHeader>
@@ -331,7 +355,7 @@ export function AssessmentStepContent({
         </Card>
       );
 
-    case 5: // Power
+    case "power":
       return (
         <Card>
           <CardHeader>
@@ -351,7 +375,7 @@ export function AssessmentStepContent({
         </Card>
       );
 
-    case 6: // Mental Notes
+    case "mental":
       return (
         <Card>
           <CardHeader>
