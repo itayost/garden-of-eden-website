@@ -303,13 +303,17 @@ ${previous ? `<td style="padding:2px 8px;line-height:1.3;text-align:center;font-
     const nonNull = assessments.filter((a) => a[key] !== null && a[key] !== undefined);
     if (nonNull.length < 2) return "";
 
-    const comparison = compareMetric(String(key), assessments[0]?.[key] ?? null, assessments[1]?.[key] ?? null);
+    // Compare the two latest recorded values, not the two latest assessments:
+    // a test skipped in the previous assessment would otherwise read as
+    // "no change" next to a chart that shows one.
+    const [latestWithValue, previousWithValue] = nonNull;
+    const comparison = compareMetric(String(key), latestWithValue[key], previousWithValue[key]);
     const color = comparison === "improved" ? "#22c55e"
       : comparison === "declined" ? "#d97706"
       : "#6b7280";
 
-    const lv = Number(assessments[0]?.[key]);
-    const pv = Number(assessments[1]?.[key]);
+    const lv = Number(latestWithValue[key]);
+    const pv = Number(previousWithValue[key]);
     const delta = Math.abs(lv - pv).toFixed(2);
     const changeLabel = comparison === "improved" ? `↑ Δ${delta} (שיפור)`
       : comparison === "declined" ? `↓ Δ${delta} (ירידה)`

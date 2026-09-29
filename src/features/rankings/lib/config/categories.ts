@@ -1,5 +1,6 @@
 // Ranking Categories Configuration
 
+import { DRIBBLING_TEST_KEYS } from "@/types/assessment";
 import type { RankingCategory, CategoryConfig } from "../../types";
 
 export const RANKING_CATEGORIES: Record<RankingCategory, CategoryConfig> = {
@@ -46,7 +47,7 @@ export const RANKING_CATEGORIES: Record<RankingCategory, CategoryConfig> = {
   dribbling: {
     id: "dribbling",
     labelHe: "כדרור",
-    metrics: ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"],
+    metrics: [...DRIBBLING_TEST_KEYS],
     primaryMetric: "sprint_10m_h_ball",
     lowerIsBetter: true,
     icon: "Footprints",

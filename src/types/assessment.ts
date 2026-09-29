@@ -197,6 +197,16 @@ export const ASSESSMENT_UNITS: Record<string, string> = {
 // ASSESSMENT SECTIONS FOR FORM
 // ===========================================
 
+/** The three timed dribbling tests (seconds, lower is better). */
+export const DRIBBLING_TEST_KEYS = ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"] as const;
+
+/**
+ * First assessment date on which the dribbling tests exist. Earlier
+ * assessments could not have them, so completeness ignores them there and a
+ * complete assessment from before the rollout stays at 100%.
+ */
+export const DRIBBLING_TESTS_SINCE = "2026-09-29";
+
 export type AssessmentMonthStatus = 'full' | 'partial' | 'none';
 
 export type AssessmentSectionKey =
@@ -214,6 +224,8 @@ export interface AssessmentSection {
   title: string;
   fields: string[];
   type: "number" | "select" | "textarea";
+  /** First assessment date the section exists; older assessments skip it. */
+  since?: string;
 }
 
 export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
@@ -226,8 +238,9 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
   {
     key: "dribbling",
     title: "מבדקי כדרור",
-    fields: ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"],
+    fields: [...DRIBBLING_TEST_KEYS],
     type: "number",
+    since: DRIBBLING_TESTS_SINCE,
   },
   {
     key: "jumps",
@@ -265,35 +278,24 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
 // HELPER FUNCTIONS
 // ===========================================
 
-/**
- * First assessment date on which the three dribbling tests exist. Earlier
- * assessments could not have them, so completeness ignores them there and a
- * complete assessment from before the rollout stays at 100%.
- */
-export const DRIBBLING_TESTS_SINCE = "2026-10-01";
-
-function countsDribblingTests(assessment: Partial<PlayerAssessment>): boolean {
-  const date = assessment.assessment_date;
-  return !date || date >= DRIBBLING_TESTS_SINCE;
-}
-
+/** The sections that existed on this assessment's date (see AssessmentSection.since). */
 function sectionsFor(assessment: Partial<PlayerAssessment>): AssessmentSection[] {
-  return countsDribblingTests(assessment)
-    ? ASSESSMENT_SECTIONS
-    : ASSESSMENT_SECTIONS.filter((section) => section.key !== "dribbling");
+  const date = assessment.assessment_date;
+  return ASSESSMENT_SECTIONS.filter((section) => !section.since || !date || date >= section.since);
 }
 
-// Check if a test value indicates "lower is better"
+const LOWER_IS_BETTER_FIELDS: ReadonlySet<string> = new Set([
+  "sprint_5m", "sprint_10m", "sprint_20m", ...DRIBBLING_TEST_KEYS,
+]);
+
+// Check if a test value indicates "lower is better" (the timed tests)
 export function isLowerBetter(fieldName: string): boolean {
-  return [
-    "sprint_5m", "sprint_10m", "sprint_20m",
-    "shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball",
-  ].includes(fieldName);
+  return LOWER_IS_BETTER_FIELDS.has(fieldName);
 }
 
 /**
  * Returns section-level completeness for the ASSESSMENT_SECTIONS that apply to
- * this assessment (dribbling only from DRIBBLING_TESTS_SINCE).
+ * this assessment's date (see AssessmentSection.since).
  * Returns [] when assessment is null (trainee has no record for the month).
  * Mental (textarea) fields are completed if non-null AND non-empty string.
  * Quantitative fields are completed if non-null.

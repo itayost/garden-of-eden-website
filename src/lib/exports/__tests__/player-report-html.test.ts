@@ -179,6 +179,18 @@ describe("buildPlayerReportHtml", () => {
     expect(html).toContain("#d97706");
   });
 
+  it("mini chart compares the latest two recorded values when the previous assessment skipped the test", () => {
+    // newest-first: 3.0 now, skipped last time, 3.4 before that → improved
+    const a1 = makeAssessment({ shuffle_10m: 3.0 });
+    const a2 = makeAssessment({ shuffle_10m: null });
+    const a3 = makeAssessment({ shuffle_10m: 3.4 });
+    const html = buildPlayerReportHtml(
+      makeProps({ assessments: [a1, a2, a3] }),
+      mockAssets,
+    );
+    expect(html).toContain("↑ Δ0.40 (שיפור)");
+  });
+
   it("includes radar SVG polygon when stats provided", () => {
     const html = buildPlayerReportHtml(makeProps({ stats: mockStats }), mockAssets);
     expect(html).toContain("rgba(34,197,94,0.2)");

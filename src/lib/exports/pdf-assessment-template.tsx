@@ -156,7 +156,7 @@ export function AssessmentPdfDocument({
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={styles.tableCellHeader}>תאריך</Text>
-            <Text style={styles.tableCellHeader}>צעדי רדיפה 10 מטר</Text>
+            <Text style={styles.tableCellHeader}>צעדי רדיפה</Text>
             <Text style={styles.tableCellHeader}>צורת ח</Text>
             <Text style={styles.tableCellHeader}>צורת ח עם כדור</Text>
           </View>

@@ -1,6 +1,6 @@
 // Metric Definitions for Progress Charts
 
-import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS } from "@/types/assessment";
+import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS, DRIBBLING_TEST_KEYS } from "@/types/assessment";
 import type { MetricDefinition, PhysicalMetricKey, MetricCategory } from "../../types";
 
 export const METRIC_DEFINITIONS: Record<PhysicalMetricKey, MetricDefinition> = {
@@ -164,7 +164,7 @@ export const METRIC_CATEGORIES: Record<
   },
   dribbling: {
     labelHe: "כדרור",
-    metrics: ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"],
+    metrics: [...DRIBBLING_TEST_KEYS],
   },
   jump: {
     labelHe: "ניתורים",

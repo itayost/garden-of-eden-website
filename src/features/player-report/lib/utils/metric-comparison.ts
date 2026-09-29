@@ -1,15 +1,8 @@
+import { isLowerBetter } from "@/types/assessment";
+
 export type MetricDirection = "lower_is_better" | "higher_is_better" | "categorical";
 
 export type ComparisonResult = "improved" | "declined" | "unchanged" | "categorical";
-
-const LOWER_IS_BETTER = new Set([
-  "sprint_5m",
-  "sprint_10m",
-  "sprint_20m",
-  "shuffle_10m",
-  "sprint_10m_h",
-  "sprint_10m_h_ball",
-]);
 
 const HIGHER_IS_BETTER = new Set([
   "blaze_spot_time",
@@ -26,7 +19,7 @@ const HIGHER_IS_BETTER = new Set([
 ]);
 
 export function getMetricDirection(key: string): MetricDirection {
-  if (LOWER_IS_BETTER.has(key)) return "lower_is_better";
+  if (isLowerBetter(key)) return "lower_is_better";
   if (HIGHER_IS_BETTER.has(key)) return "higher_is_better";
   return "categorical";
 }

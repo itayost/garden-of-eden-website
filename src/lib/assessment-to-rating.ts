@@ -8,6 +8,8 @@
  */
 
 import type { PlayerAssessment, CoordinationLevel, BodyStructure, LegPowerTechnique } from "@/types/assessment";
+import { DRIBBLING_TEST_KEYS } from "@/types/assessment";
+import type { NumericMetricKey } from "@/lib/utils/assessment-metrics";
 
 // ===========================================
 // RATING CALCULATION FUNCTIONS
@@ -84,69 +86,8 @@ export function getLatestAssessmentsPerUser(assessments: readonly PlayerAssessme
 // GROUP STATISTICS
 // ===========================================
 
-export interface GroupStats {
-  sprint_5m: { best: number; worst: number };
-  sprint_10m: { best: number; worst: number };
-  sprint_20m: { best: number; worst: number };
-  jump_2leg_distance: { best: number; worst: number };
-  jump_right_leg: { best: number; worst: number };
-  jump_left_leg: { best: number; worst: number };
-  jump_2leg_height: { best: number; worst: number };
-  blaze_spot_time: { best: number; worst: number };
-  flexibility_ankle: { best: number; worst: number };
-  flexibility_knee: { best: number; worst: number };
-  flexibility_hip: { best: number; worst: number };
-  kick_power_kaiser: { best: number; worst: number };
-  kick_power_right_foot: { best: number; worst: number };
-  kick_power_left_foot: { best: number; worst: number };
-  shuffle_10m: { best: number; worst: number };
-  sprint_10m_h: { best: number; worst: number };
-  sprint_10m_h_ball: { best: number; worst: number };
-}
-
-/**
- * Calculate best/worst values for each test from a group of assessments
- */
-export function calculateGroupStats(assessments: PlayerAssessment[]): GroupStats {
-  const getMinMax = (values: (number | null)[], lowerIsBetter: boolean) => {
-    const validValues = values.filter((v): v is number => v !== null && v !== undefined && !isNaN(v));
-    if (validValues.length === 0) {
-      // Return sentinel values that will be handled by rating functions
-      // Using -1 for best indicates "no data available"
-      return { best: -1, worst: -1 };
-    }
-
-    const min = Math.min(...validValues);
-    const max = Math.max(...validValues);
-
-    return lowerIsBetter
-      ? { best: min, worst: max }
-      : { best: max, worst: min };
-  };
-
-  return {
-    // Lower is better (sprints and timed dribbling tests)
-    sprint_5m: getMinMax(assessments.map((a) => a.sprint_5m), true),
-    sprint_10m: getMinMax(assessments.map((a) => a.sprint_10m), true),
-    sprint_20m: getMinMax(assessments.map((a) => a.sprint_20m), true),
-    shuffle_10m: getMinMax(assessments.map((a) => a.shuffle_10m), true),
-    sprint_10m_h: getMinMax(assessments.map((a) => a.sprint_10m_h), true),
-    sprint_10m_h_ball: getMinMax(assessments.map((a) => a.sprint_10m_h_ball), true),
-
-    // Higher is better (blaze spot count, jumps, flexibility, power)
-    blaze_spot_time: getMinMax(assessments.map((a) => a.blaze_spot_time), false),
-    jump_2leg_distance: getMinMax(assessments.map((a) => a.jump_2leg_distance), false),
-    jump_right_leg: getMinMax(assessments.map((a) => a.jump_right_leg), false),
-    jump_left_leg: getMinMax(assessments.map((a) => a.jump_left_leg), false),
-    jump_2leg_height: getMinMax(assessments.map((a) => a.jump_2leg_height), false),
-    flexibility_ankle: getMinMax(assessments.map((a) => a.flexibility_ankle), false),
-    flexibility_knee: getMinMax(assessments.map((a) => a.flexibility_knee), false),
-    flexibility_hip: getMinMax(assessments.map((a) => a.flexibility_hip), false),
-    kick_power_kaiser: getMinMax(assessments.map((a) => a.kick_power_kaiser), false),
-    kick_power_right_foot: getMinMax(assessments.map((a) => a.kick_power_right_foot), false),
-    kick_power_left_foot: getMinMax(assessments.map((a) => a.kick_power_left_foot), false),
-  };
-}
+/** Best and worst value of every numeric test within an age group. */
+export type GroupStats = Record<NumericMetricKey, { best: number; worst: number }>;
 
 // ===========================================
 // CATEGORICAL BONUSES
@@ -259,9 +200,7 @@ export const CARD_STAT_CONFIG: Readonly<Record<StatKey, StatConfig>> = {
   },
   dribbling: {
     primary: [
-      { metric: "shuffle_10m", lowerBetter: true },
-      { metric: "sprint_10m_h", lowerBetter: true },
-      { metric: "sprint_10m_h_ball", lowerBetter: true },
+      ...DRIBBLING_TEST_KEYS.map((metric) => ({ metric, lowerBetter: true })),
     ],
     bonuses: [(a) => getCoordinationBonus(a.coordination)],
   },
@@ -326,35 +265,6 @@ export function calculateCardRatings(
     ...stats,
     overall_rating: avgOrNull(STAT_KEYS.map((k) => stats[k])),
   };
-}
-
-/**
- * Calculate ratings with default group stats (for single player or no comparison data)
- * Uses absolute benchmarks instead of relative comparison
- */
-export function calculateCardRatingsAbsolute(assessment: PlayerAssessment): CalculatedRatings {
-  // Default benchmarks based on typical youth soccer values
-  const defaultStats: GroupStats = {
-    sprint_5m: { best: 0.9, worst: 1.5 },
-    sprint_10m: { best: 1.6, worst: 2.5 },
-    sprint_20m: { best: 2.8, worst: 4.0 },
-    jump_2leg_distance: { best: 250, worst: 150 },
-    jump_right_leg: { best: 200, worst: 120 },
-    jump_left_leg: { best: 200, worst: 120 },
-    jump_2leg_height: { best: 50, worst: 25 },
-    blaze_spot_time: { best: 80, worst: 20 },
-    flexibility_ankle: { best: 15, worst: 5 },
-    flexibility_knee: { best: 20, worst: 8 },
-    flexibility_hip: { best: 25, worst: 10 },
-    kick_power_kaiser: { best: 500, worst: 50 },
-    kick_power_right_foot: { best: 500, worst: 50 },
-    kick_power_left_foot: { best: 500, worst: 50 },
-    shuffle_10m: { best: 2.5, worst: 4.0 },
-    sprint_10m_h: { best: 2.2, worst: 3.5 },
-    sprint_10m_h_ball: { best: 2.6, worst: 4.2 },
-  };
-
-  return calculateCardRatings(assessment, defaultStats);
 }
 
 /**

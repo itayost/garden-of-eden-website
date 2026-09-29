@@ -9,7 +9,6 @@ export * from "./types";
 // Config
 export {
   GOAL_METRICS,
-  LOWER_IS_BETTER_METRICS,
   METRIC_LABELS_HE,
   METRIC_UNITS,
   isLowerBetterMetric,

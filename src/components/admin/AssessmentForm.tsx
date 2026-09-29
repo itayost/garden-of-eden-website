@@ -20,7 +20,7 @@ import {
 } from "@/components/admin/AssessmentStepContent";
 import { Loader2, ChevronLeft, ChevronRight, SkipForward, Check } from "lucide-react";
 import { toast } from "sonner";
-import type { PlayerAssessment } from "@/types/assessment";
+import { ASSESSMENT_SECTIONS, type AssessmentSectionKey, type PlayerAssessment } from "@/types/assessment";
 
 interface AssessmentFormProps {
   userId: string;
@@ -104,18 +104,17 @@ function formDataToDbFormat(data: AssessmentFormData, userId: string, assessedBy
   };
 }
 
-// Maps each wizard step to the DB columns it owns.
+// Maps each wizard step to the DB columns it owns: the matching assessment
+// section's fields, plus the date step and the general notes on the last step.
 // Partial updates use this to avoid sending nulls for unvisited steps.
+const SECTION_FIELDS = Object.fromEntries(
+  ASSESSMENT_SECTIONS.map((section) => [section.key, section.fields])
+) as Record<AssessmentSectionKey, string[]>;
+
 const STEP_DB_FIELDS: Record<WizardStepKey, string[]> = {
+  ...SECTION_FIELDS,
   date: ["assessment_date"],
-  sprints: ["sprint_5m", "sprint_10m", "sprint_20m"],
-  dribbling: ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"],
-  jumps: ["jump_2leg_distance", "jump_right_leg", "jump_left_leg", "jump_2leg_height"],
-  agility: ["blaze_spot_time", "flexibility_ankle", "flexibility_knee", "flexibility_hip"],
-  categorical: ["coordination", "leg_power_technique", "body_structure"],
-  power: ["kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct"],
-  mental: ["concentration_notes", "decision_making_notes", "work_ethic_notes",
-      "recovery_notes", "nutrition_notes", "notes"],
+  mental: [...SECTION_FIELDS.mental, "notes"],
 };
 
 export function AssessmentForm({
@@ -157,13 +156,12 @@ export function AssessmentForm({
       );
       if (assessmentId) {
         const stepKey = WIZARD_STEPS[currentStep]?.key;
-        const stepFields = stepKey ? STEP_DB_FIELDS[stepKey] : undefined;
-        if (!stepFields) {
+        if (!stepKey) {
           throw new Error(`שלב ${currentStep} אינו ממופה — לא ניתן לשמור`);
         }
         type DbData = ReturnType<typeof formDataToDbFormat>;
         const partialData: Record<string, unknown> = {};
-        for (const field of stepFields) {
+        for (const field of STEP_DB_FIELDS[stepKey]) {
           partialData[field] = assessmentData[field as keyof DbData];
         }
         const result = await updateAssessment(assessmentId, partialData);

@@ -8,6 +8,7 @@ import {
   ASSESSMENT_LABELS_HE,
   ASSESSMENT_UNITS,
   DRIBBLING_TESTS_SINCE,
+  DRIBBLING_TEST_KEYS,
 } from "../assessment";
 import type { PlayerAssessment } from "../assessment";
 
@@ -160,7 +161,7 @@ describe("isLowerBetter", () => {
     expect(ASSESSMENT_LABELS_HE.shuffle_10m).toBe("צעדי רדיפה 10 מטר");
     expect(ASSESSMENT_LABELS_HE.sprint_10m_h).toBe("ספרינט 10 מטר צורת ח");
     expect(ASSESSMENT_LABELS_HE.sprint_10m_h_ball).toBe("ספרינט 10 מטר צורת ח עם כדור");
-    for (const key of ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"]) {
+    for (const key of DRIBBLING_TEST_KEYS) {
       expect(ASSESSMENT_UNITS[key]).toBe("שניות");
     }
   });
