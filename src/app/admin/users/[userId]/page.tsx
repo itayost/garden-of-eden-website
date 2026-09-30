@@ -16,7 +16,6 @@ import { UserEditForm } from "@/components/admin/UserEditForm";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { AccessTierCard } from "@/components/admin/users/AccessTierCard";
-import { AgeGroupCard } from "@/components/admin/users/AgeGroupCard";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
 import { CommunicationHistoryCard } from "@/components/admin/users/CommunicationHistoryCard";
@@ -227,18 +226,6 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
           )}
 
           {health && <HealthCard traineeId={userId} health={health} />}
-
-          {/* Which group this trainee is ranked and rated in (admins and branch trainers) */}
-          {userToEdit.role === "trainee" && (
-            <AgeGroupCard
-              userId={userId}
-              profile={{
-                birthdate: userToEdit.birthdate,
-                age_group_override: userToEdit.age_group_override,
-                age_group_override_until: userToEdit.age_group_override_until,
-              }}
-            />
-          )}
 
           {/* Which content this trainee can reach, and why (admin only) */}
           {isAdmin && userToEdit.role === "trainee" && (
