@@ -20,7 +20,6 @@ import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import {
   AGE_GROUPS,
   ASSESSMENT_SECTIONS,
-  getAgeGroup,
   getAssessmentCompleteness,
 } from "@/types/assessment";
 import type { AssessmentSectionKey, PlayerAssessment } from "@/types/assessment";
@@ -29,6 +28,8 @@ import { getAssessmentsPaginated } from "@/lib/actions/admin-assessments-list";
 import { positionFilterOptions, POSITION_FILTER_ALL } from "@/lib/admin/position-filter";
 import { BRANCH_FILTER_ALL, buildBranchFilterOptions } from "@/lib/admin/branch-filter";
 import type { BranchOption } from "@/types/branches";
+import { AgeGroupBadge } from "@/components/admin/assessments/AgeGroupBadge";
+import { resolveAgeGroup } from "@/lib/age-group-override";
 
 interface AssessmentsTableProps {
   initialProfiles: Profile[];
@@ -214,7 +215,6 @@ export function AssessmentsTable({
             {profiles.map((profile) => {
               const userAssessments = assessmentsByUser[profile.id] || [];
               const latestAssessment = userAssessments[0];
-              const group = getAgeGroup(profile.birthdate);
               const completeness = latestAssessment
                 ? getAssessmentCompleteness(latestAssessment)
                 : 0;
@@ -226,11 +226,7 @@ export function AssessmentsTable({
                       {profile.full_name || "ללא שם"}
                     </span>
                     <div className="flex items-center gap-1.5">
-                      {group && (
-                        <Badge variant="outline" className="text-xs">
-                          {group.label}
-                        </Badge>
-                      )}
+                      <AgeGroupBadge profile={profile} className="text-xs" />
                       <Badge variant="secondary" className="text-xs">
                         {userAssessments.length} מבדקים
                       </Badge>
@@ -304,7 +300,7 @@ export function AssessmentsTable({
                 {profiles.map((profile) => {
                   const userAssessments = assessmentsByUser[profile.id] || [];
                   const latestAssessment = userAssessments[0];
-                  const group = getAgeGroup(profile.birthdate);
+                  const group = resolveAgeGroup(profile);
                   const completeness = latestAssessment
                     ? getAssessmentCompleteness(latestAssessment)
                     : 0;
@@ -316,7 +312,7 @@ export function AssessmentsTable({
                       </TableCell>
                       <TableCell>
                         {group ? (
-                          <Badge variant="outline">{group.label}</Badge>
+                          <AgeGroupBadge profile={profile} />
                         ) : (
                           <span className="text-muted-foreground text-sm">
                             לא הוגדר

@@ -6,7 +6,7 @@ import { getRankingsData } from "@/features/rankings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadBranchIdsByProfile, loadBranchOptions } from "@/features/branches/lib/memberships";
 import { ALL_BRANCHES } from "@/features/rankings/lib/config/branches";
-import { getAgeGroup } from "@/types/assessment";
+import { resolveAgeGroup } from "@/lib/age-group-override";
 
 const RankingsView = dynamic(
   () => import("@/features/rankings").then(m => ({ default: m.RankingsView }))
@@ -27,10 +27,10 @@ export default async function RankingsPage() {
     redirect("/auth/login?redirect=/dashboard/rankings");
   }
 
-  // Fetch user profile to get role and birthdate
+  // Fetch user profile to get role and age group
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, birthdate")
+    .select("role, birthdate, age_group_override, age_group_override_until")
     .eq("id", user.id)
     .single();
 
@@ -61,8 +61,8 @@ export default async function RankingsPage() {
   let userAgeGroupId: string | null = null;
   let userAgeGroupLabel: string | null = null;
 
-  if (isTrainee && profile?.birthdate) {
-    const ageGroup = getAgeGroup(profile.birthdate);
+  if (isTrainee && profile) {
+    const ageGroup = resolveAgeGroup(profile);
     if (ageGroup) {
       userAgeGroupId = ageGroup.id;
       userAgeGroupLabel = ageGroup.labelHe;

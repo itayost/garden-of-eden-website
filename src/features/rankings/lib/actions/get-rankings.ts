@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { PlayerAssessment } from "@/types/assessment";
-import { getAgeGroup, ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS } from "@/types/assessment";
+import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS } from "@/types/assessment";
 import type {
   RankingEntry,
   CategoryLeader,
@@ -25,6 +25,7 @@ import {
   extractMetricValues,
   buildAgeGroupOptions,
 } from "../utils/ranking-utils";
+import { resolveAgeGroup, type AgeGroupProfile } from "@/lib/age-group-override";
 
 // ===========================================
 // TYPES
@@ -81,13 +82,13 @@ export async function getRankingsData(
 
   let profilesQuery = supabase
     .from("profiles")
-    .select("id, full_name, birthdate")
+    .select("id, full_name, birthdate, age_group_override, age_group_override_until")
     .eq("role", "trainee");
   if (memberIds !== null) {
     profilesQuery = profilesQuery.in("id", memberIds);
   }
   const { data: profiles, error: profilesError } = (await profilesQuery) as {
-    data: { id: string; full_name: string | null; birthdate: string | null }[] | null;
+    data: ({ id: string; full_name: string | null } & AgeGroupProfile)[] | null;
     error: Error | null;
   };
 
@@ -107,7 +108,7 @@ export async function getRankingsData(
 
   for (const profile of profiles) {
     userNames.set(profile.id, profile.full_name || "Unknown");
-    const ageGroup = getAgeGroup(profile.birthdate);
+    const ageGroup = resolveAgeGroup(profile);
     const ageGroupKey = ageGroup?.id || "unknown";
     userAgeGroups.set(profile.id, ageGroupKey);
 

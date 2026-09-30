@@ -21,7 +21,6 @@ import { MonthPicker } from "@/components/admin/assessments/MonthPicker";
 import { SimpleTablePagination } from "@/components/admin/TablePagination";
 import {
   AGE_GROUPS,
-  getAgeGroup,
   getAssessmentCompleteness,
   computeSectionCompleteness,
 } from "@/types/assessment";
@@ -35,6 +34,8 @@ import type { AssessmentMonthResult } from "@/lib/actions/admin-assessments-mont
 import type { AssessmentMonthStatus } from "@/types/assessment";
 import type { Profile } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
+import { AgeGroupBadge } from "@/components/admin/assessments/AgeGroupBadge";
+import { resolveAgeGroup } from "@/lib/age-group-override";
 
 interface AssessmentsMonthViewProps {
   month: number;
@@ -337,7 +338,7 @@ export function AssessmentsMonthView({ month, year, branches }: AssessmentsMonth
                       const status = data.statusByUser[profile.id];
                       const assessment = data.assessmentByUser[profile.id];
                       const sections = data.sectionsByUser[profile.id] ?? [];
-                      const group = getAgeGroup(profile.birthdate);
+                      const group = resolveAgeGroup(profile);
                       const completeness = assessment
                         ? getAssessmentCompleteness(assessment)
                         : null;
@@ -349,7 +350,7 @@ export function AssessmentsMonthView({ month, year, branches }: AssessmentsMonth
                           </TableCell>
                           <TableCell>
                             {group ? (
-                              <Badge variant="outline">{group.label}</Badge>
+                              <AgeGroupBadge profile={profile} />
                             ) : (
                               <span className="text-muted-foreground text-sm">
                                 לא הוגדר
@@ -433,7 +434,6 @@ export function AssessmentsMonthView({ month, year, branches }: AssessmentsMonth
                 {data.profiles.map((profile) => {
                   const status = data.statusByUser[profile.id];
                   const assessment = data.assessmentByUser[profile.id];
-                  const group = getAgeGroup(profile.birthdate);
                   const completeness = assessment
                     ? getAssessmentCompleteness(assessment)
                     : null;
@@ -448,11 +448,7 @@ export function AssessmentsMonthView({ month, year, branches }: AssessmentsMonth
                           {profile.full_name || "ללא שם"}
                         </span>
                         <div className="flex items-center gap-1.5">
-                          {group && (
-                            <Badge variant="outline" className="text-xs">
-                              {group.label}
-                            </Badge>
-                          )}
+                          <AgeGroupBadge profile={profile} className="text-xs" />
                           <AssessmentStatusBadge status={status} />
                         </div>
                       </div>

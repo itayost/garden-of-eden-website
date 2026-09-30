@@ -9,6 +9,7 @@ import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
+import { resolveAgeGroup } from "@/lib/age-group-override";
 
 export interface AssessmentQueryParams {
   page: number;
@@ -144,12 +145,9 @@ export async function getAssessmentsPaginated(
     if (!allProfiles || allProfiles.length === 0)
       return { ...empty, total: 0 };
 
-    // Import getAgeGroup dynamically to filter
-    const { getAgeGroup } = await import("@/types/assessment");
-    const filtered = allProfiles.filter((p) => {
-      const group = getAgeGroup(p.birthdate);
-      return group?.id === params.ageGroupId;
-    });
+    const filtered = allProfiles.filter(
+      (p) => resolveAgeGroup(p)?.id === params.ageGroupId
+    );
 
     const paginatedProfiles = filtered.slice(from, from + params.pageSize);
     const profileIds = paginatedProfiles.map((p) => p.id);

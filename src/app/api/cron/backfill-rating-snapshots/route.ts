@@ -1,7 +1,11 @@
 // src/app/api/cron/backfill-rating-snapshots/route.ts
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { writeRatingSnapshot } from "@/features/player-assessments/lib/snapshot";
+import {
+  AGE_GROUP_PROFILE_COLUMNS,
+  writeRatingSnapshot,
+} from "@/features/player-assessments/lib/snapshot";
+import type { AgeGroupProfile } from "@/lib/age-group-override";
 import { grantAssessmentBadges } from "@/features/achievements/lib/actions/grant-assessment-badges";
 import type { PlayerAssessment } from "@/types/assessment";
 
@@ -41,22 +45,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, processed: 0, found: 0 });
   }
 
-  // Batch-fetch birthdates for every distinct user once, instead of one
-  // round-trip per orphan assessment.
+  // Batch-fetch the age-group columns for every distinct user once, instead
+  // of one round-trip per orphan assessment.
   const userIds = Array.from(new Set(missing.map((a) => a.user_id)));
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, birthdate")
+    .select(`id, ${AGE_GROUP_PROFILE_COLUMNS}`)
     .in("id", userIds);
-  const birthdateByUser = new Map<string, string | null>();
-  for (const p of (profiles ?? []) as { id: string; birthdate: string | null }[]) {
-    birthdateByUser.set(p.id, p.birthdate);
+  const profileByUser = new Map<string, AgeGroupProfile>();
+  for (const p of (profiles ?? []) as ({ id: string } & AgeGroupProfile)[]) {
+    profileByUser.set(p.id, p);
   }
 
   let processed = 0;
   for (const a of missing) {
-    const birthdate = birthdateByUser.get(a.user_id) ?? null;
-    const result = await writeRatingSnapshot(supabase, a, birthdate);
+    const result = await writeRatingSnapshot(supabase, a, profileByUser.get(a.user_id) ?? null);
     if (result.ok) {
       await grantAssessmentBadges(supabase, a, { preCelebrated: true });
       processed++;

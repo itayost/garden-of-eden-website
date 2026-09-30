@@ -10,7 +10,7 @@
 // Usage: npx tsx scripts/backfill-rating-snapshots.ts [--dry-run]
 import { createClient } from "@supabase/supabase-js";
 import * as fs from "fs";
-import { writeRatingSnapshot } from "../src/features/player-assessments/lib/snapshot";
+import { AGE_GROUP_PROFILE_COLUMNS, writeRatingSnapshot } from "../src/features/player-assessments/lib/snapshot";
 import { grantAssessmentBadges } from "../src/features/achievements/lib/actions/grant-assessment-badges";
 import type { PlayerAssessment } from "../src/types/assessment";
 
@@ -38,7 +38,7 @@ async function main() {
   // Process per user, in date order, so badge deltas are computed correctly.
   const { data: profiles, error: pErr } = await supabase
     .from("profiles")
-    .select("id, birthdate")
+    .select(`id, ${AGE_GROUP_PROFILE_COLUMNS}`)
     .eq("role", "trainee");
   if (pErr) throw pErr;
 
@@ -66,7 +66,7 @@ async function main() {
         snapshotCount++;
         continue;
       }
-      const result = await writeRatingSnapshot(supabase, a, p.birthdate);
+      const result = await writeRatingSnapshot(supabase, a, p);
       if (result.ok) snapshotCount++;
       else if (result.reason !== "no_age_group" && result.reason !== "no_benchmarks") {
         console.error(`snapshot failed for assessment ${a.id}:`, result.reason);

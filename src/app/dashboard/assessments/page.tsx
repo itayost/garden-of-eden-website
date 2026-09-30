@@ -20,7 +20,6 @@ import {
   COORDINATION_OPTIONS,
   LEG_POWER_OPTIONS,
   BODY_STRUCTURE_OPTIONS,
-  getAgeGroup,
   getAssessmentCompleteness,
 } from "@/types/assessment";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
@@ -33,6 +32,7 @@ const AssessmentChartsWrapper = dynamic(
   () => import("./AssessmentChartsWrapper").then(m => ({ default: m.AssessmentChartsWrapper }))
 );
 import { ComparisonSelector } from "@/features/assessment-comparison";
+import { resolveAgeGroup } from "@/lib/age-group-override";
 
 export default async function DashboardAssessmentsPage() {
   const supabase = await createClient();
@@ -60,7 +60,7 @@ export default async function DashboardAssessmentsPage() {
   ]);
 
   // Get age group
-  const ageGroup = getAgeGroup(profile?.birthdate || null);
+  const ageGroup = profile ? resolveAgeGroup(profile) : null;
 
   // FIFA-style ratings: read latest snapshot + full history for the chart.
   const hasAssessments = assessments && assessments.length > 0;

@@ -142,6 +142,25 @@ describe("getAgeGroup", () => {
     const result = getAgeGroup("1970-01-01");
     expect(result?.id).toBe("senior");
   });
+
+  it("returns null for a birthdate in the future", () => {
+    // Arbox sent birthdates such as 2027-02-07; they used to fall through to Senior
+    expect(getAgeGroup("2027-02-07")).toBeNull();
+  });
+
+  it("returns null for an invalid date", () => {
+    expect(getAgeGroup("not-a-date")).toBeNull();
+  });
+
+  it("uses the as-of date instead of today", () => {
+    // Born 2015-06-01: 10 on 2025-11-01 (U12), 9 on 2025-05-01 (U10)
+    expect(getAgeGroup("2015-06-01", "2025-11-01")?.id).toBe("u12");
+    expect(getAgeGroup("2015-06-01", "2025-05-01")?.id).toBe("u10");
+  });
+
+  it("returns null when born after the as-of date", () => {
+    expect(getAgeGroup("2026-01-10", "2025-12-01")).toBeNull();
+  });
 });
 
 describe("isLowerBetter", () => {
