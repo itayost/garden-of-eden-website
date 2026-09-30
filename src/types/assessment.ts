@@ -47,17 +47,29 @@ export const AGE_GROUPS: AgeGroup[] = [
   { id: "senior", label: "Senior", labelHe: "בוגרים", minAge: 18, maxAge: 99 },
 ];
 
-export function getAgeGroup(birthdate: Date | string | null): AgeGroup | null {
+/**
+ * The age group a player was in on `asOf` (default: today). A rating snapshot
+ * passes the assessment date, so an old assessment keeps the group the player
+ * was in when tested. A birthdate that is invalid or after `asOf` has no group,
+ * matching compute_age_group() in the database.
+ */
+export function getAgeGroup(
+  birthdate: Date | string | null,
+  asOf: Date | string = new Date()
+): AgeGroup | null {
   if (!birthdate) return null;
 
   const birth = new Date(birthdate);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
+  const on = new Date(asOf);
+  if (Number.isNaN(birth.getTime()) || Number.isNaN(on.getTime())) return null;
 
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+  let age = on.getFullYear() - birth.getFullYear();
+  const monthDiff = on.getMonth() - birth.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && on.getDate() < birth.getDate())) {
     age--;
   }
+  if (age < 0) return null;
 
   return AGE_GROUPS.find(g => age >= g.minAge && age <= g.maxAge) || AGE_GROUPS[AGE_GROUPS.length - 1];
 }
