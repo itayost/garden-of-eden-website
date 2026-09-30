@@ -34,6 +34,7 @@ import { Loader2, Save } from "lucide-react";
 import type { Profile, UserRole } from "@/types/database";
 import { BranchCheckboxGroup } from "@/features/branches/components/BranchCheckboxGroup";
 import type { BranchOption } from "@/types/branches";
+import { AgeGroupPicker } from "@/components/admin/users/AgeGroupPicker";
 
 interface UserEditFormProps {
   user: Profile;
@@ -76,6 +77,9 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
   };
 
   const isAdmin = currentUserRole === "admin";
+  // The age group's end date comes from the saved birthdate, so the picker
+  // waits while the field holds an unsaved edit.
+  const isBirthdateEdited = (form.watch("birthdate") || "") !== (user.birthdate || "");
 
   return (
     <Form {...form}>
@@ -137,6 +141,17 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
                 />
               </FormControl>
               <FormMessage />
+              {user.role === "trainee" && (
+                <AgeGroupPicker
+                  userId={user.id}
+                  profile={{
+                    birthdate: user.birthdate,
+                    age_group_override: user.age_group_override,
+                    age_group_override_until: user.age_group_override_until,
+                  }}
+                  isBirthdateEdited={isBirthdateEdited}
+                />
+              )}
             </FormItem>
           )}
         />
