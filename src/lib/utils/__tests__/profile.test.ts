@@ -30,6 +30,8 @@ function createProfile(overrides: Partial<Profile> = {}): Profile {
     arbox_paid_training: false,
     arbox_bought_course: false,
     access_override: null,
+    age_group_override: null,
+    age_group_override_until: null,
     arbox_access_synced_at: null,
     branches_set_by_admin_at: null,
     guardian_name: null,

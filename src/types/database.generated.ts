@@ -182,6 +182,33 @@ export type Database = {
         }
         Relationships: []
       }
+      assessment_cleanup_backup: {
+        Row: {
+          backed_up_at: string
+          column_name: string
+          new_value: number | null
+          old_value: number | null
+          row_id: string
+          source_table: string
+        }
+        Insert: {
+          backed_up_at?: string
+          column_name: string
+          new_value?: number | null
+          old_value?: number | null
+          row_id: string
+          source_table: string
+        }
+        Update: {
+          backed_up_at?: string
+          column_name?: string
+          new_value?: number | null
+          old_value?: number | null
+          row_id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       book_age_rows: {
         Row: {
           age_group: string
@@ -2914,6 +2941,8 @@ export type Database = {
       profiles: {
         Row: {
           access_override: string | null
+          age_group_override: string | null
+          age_group_override_until: string | null
           arbox_access_synced_at: string | null
           arbox_bought_course: boolean
           arbox_paid_training: boolean
@@ -2945,6 +2974,8 @@ export type Database = {
         }
         Insert: {
           access_override?: string | null
+          age_group_override?: string | null
+          age_group_override_until?: string | null
           arbox_access_synced_at?: string | null
           arbox_bought_course?: boolean
           arbox_paid_training?: boolean
@@ -2976,6 +3007,8 @@ export type Database = {
         }
         Update: {
           access_override?: string | null
+          age_group_override?: string | null
+          age_group_override_until?: string | null
           arbox_access_synced_at?: string | null
           arbox_bought_course?: boolean
           arbox_paid_training?: boolean
@@ -4723,6 +4756,10 @@ export type Database = {
       drop_slot_workout_session: {
         Args: { p_slot_id: string; p_trainee_id: string }
         Returns: boolean
+      }
+      effective_age_group: {
+        Args: { p_birthdate: string; p_override: string; p_until: string }
+        Returns: string
       }
       get_user_role: {
         Args: { user_id: string }

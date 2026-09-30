@@ -11,7 +11,6 @@ import { ArrowLeft, Salad, TrendingUp } from "lucide-react";
 import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
-import { getAgeGroup } from "@/types/assessment";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
 import { hebrewWeekday } from "@/lib/utils/date";
 import { israelToday } from "@/lib/utils/tasks";
@@ -35,6 +34,7 @@ import { MyPlanCard } from "@/features/plans/components/MyPlanCard";
 import { NextTrainingCard } from "@/features/booking/components/NextTrainingCard";
 import { loadNextBooking } from "@/features/booking/lib/next-booking";
 import type { UserAchievementRow } from "@/types/database";
+import { resolveAgeGroup } from "@/lib/age-group-override";
 
 const MiniRatingChartWrapper = dynamic(
   () => import("./MiniRatingChartWrapper").then(m => ({ default: m.MiniRatingChartWrapper }))
@@ -61,7 +61,7 @@ export default async function DashboardPage() {
     { data: goalsData },
     { data: achievementsData },
   ] = await Promise.all([
-    supabase.from("profiles").select("full_name, birthdate, position, created_at, processed_avatar_url, avatar_url").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
+    supabase.from("profiles").select("full_name, birthdate, age_group_override, age_group_override_until, position, created_at, processed_avatar_url, avatar_url").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
     supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").limit(1).maybeSingle() as unknown as { data: { id: string } | null },
     supabase.from("player_assessments").select("*").eq("user_id", user?.id || "").order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
     supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
 
   // Age group + FIFA-style ratings: ratings come from the latest snapshot row,
   // which was frozen at assessment write time (stable history, no moving baseline).
-  const ageGroup = getAgeGroup(profile?.birthdate || null);
+  const ageGroup = profile ? resolveAgeGroup(profile) : null;
   const hasAssessments = assessments && assessments.length > 0;
   const calculatedRatings = hasAssessments && user
     ? (await getPlayerRatings(supabase, user.id)).ratings

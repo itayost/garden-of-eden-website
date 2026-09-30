@@ -15,7 +15,6 @@ import {
   COORDINATION_OPTIONS,
   LEG_POWER_OPTIONS,
   BODY_STRUCTURE_OPTIONS,
-  getAgeGroup,
   getAssessmentCompleteness,
 } from "@/types/assessment";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
@@ -24,6 +23,7 @@ import type { Profile, PlayerGoalRow } from "@/types/database";
 import { GoalManagementPanel, type PhysicalMetricKey } from "@/features/goals";
 import { AssessmentExportButton } from "@/components/admin/exports/AssessmentExportButton";
 import { AssessmentPdfButton } from "@/components/admin/exports/AssessmentPdfButton";
+import { resolveAgeGroup } from "@/lib/age-group-override";
 
 interface PageProps {
   params: Promise<{ userId: string }>;
@@ -68,7 +68,7 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
   }
 
   // Get age group
-  const ageGroup = getAgeGroup(profile.birthdate);
+  const ageGroup = resolveAgeGroup(profile);
 
   // Ratings: read latest snapshot row (frozen at assessment write time).
   const calculatedRatings =

@@ -3,7 +3,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
 import {
-  getAgeGroup,
   getAssessmentCompleteness,
   computeSectionCompleteness,
 } from "@/types/assessment";
@@ -12,6 +11,7 @@ import type { Profile } from "@/types/database";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
+import { resolveAgeGroup } from "@/lib/age-group-override";
 
 export interface AssessmentMonthParams {
   month: number;      // 1–12
@@ -101,7 +101,7 @@ export async function getAssessmentsByMonth(
 
     // Age-group filtering in JS (same pattern as getAssessmentsPaginated)
     const filteredProfiles = params.ageGroupId
-      ? allProfiles.filter((p) => getAgeGroup(p.birthdate)?.id === params.ageGroupId)
+      ? allProfiles.filter((p) => resolveAgeGroup(p)?.id === params.ageGroupId)
       : allProfiles;
 
     if (filteredProfiles.length === 0) return empty;
