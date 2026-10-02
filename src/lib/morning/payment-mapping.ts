@@ -25,6 +25,17 @@ export const MORNING_CARD_TYPE: Record<CardBrand, number> = {
   unknown: 0,
 };
 
+/**
+ * Item vatType 1: the price already includes VAT. Our amounts are what the
+ * parent paid; the default (0) adds VAT on top for an עוסק מורשה, the total
+ * then exceeds the payment and Morning refuses the document (errorCode 2422).
+ */
+const MORNING_ITEM_VAT_INCLUDED = 1;
+
+export function morningIncomeRow(description: string, amountIls: number): Record<string, unknown> {
+  return { description, quantity: 1, price: amountIls, currency: "ILS", vatType: MORNING_ITEM_VAT_INCLUDED };
+}
+
 export function morningPaymentObject(
   payment: ReceiptPayment,
   amountIls: number,

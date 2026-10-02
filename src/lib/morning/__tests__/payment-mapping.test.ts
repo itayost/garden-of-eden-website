@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { morningPaymentObject, receiptRemarks } from "../payment-mapping";
+import { morningIncomeRow, morningPaymentObject, receiptRemarks } from "../payment-mapping";
 
 const DATE = "2026-09-11";
+
+describe("morningIncomeRow", () => {
+  // vatType 0 adds VAT on top for an עוסק מורשה, so the document total no
+  // longer matches the payment and Morning refuses it (errorCode 2422).
+  it("marks the price as VAT-included so the total equals what was paid", () => {
+    expect(morningIncomeRow("מנוי חודשי - דני", 850)).toEqual({
+      description: "מנוי חודשי - דני",
+      quantity: 1,
+      price: 850,
+      currency: "ILS",
+      vatType: 1,
+    });
+  });
+});
 
 describe("morningPaymentObject", () => {
   it("describes a Visa card with installments", () => {
