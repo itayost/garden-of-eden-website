@@ -2,7 +2,7 @@ import "server-only";
 
 import { getMorningAccessToken } from "./auth";
 import { getMorningConfig } from "./config";
-import { morningPaymentObject, receiptRemarks, type ReceiptPayment } from "./payment-mapping";
+import { morningIncomeRow, morningPaymentObject, receiptRemarks, type ReceiptPayment } from "./payment-mapping";
 
 export interface ReceiptInput {
   description: string;
@@ -57,9 +57,7 @@ export async function createReceiptDocument(input: ReceiptInput): Promise<Receip
       emails: input.client.email ? [input.client.email] : [],
       add: true,
     },
-    income: [
-      { description: input.description, quantity: 1, price: input.amountIls, currency: "ILS", vatType: 0 },
-    ],
+    income: [morningIncomeRow(input.description, input.amountIls)],
     payment: [morningPaymentObject(input.payment, input.amountIls, input.paidOn)],
     ...(remarks ? { remarks } : {}),
   };

@@ -2,6 +2,7 @@ import "server-only";
 
 import { getMorningAccessToken } from "./auth";
 import { getMorningConfig } from "./config";
+import { morningIncomeRow } from "./payment-mapping";
 
 export interface PaymentFormInput {
   /** Our order id; echoed back as `custom`. */
@@ -66,15 +67,7 @@ export async function createPaymentForm(input: PaymentFormInput): Promise<Paymen
       emails: input.client.email ? [input.client.email] : [],
       add: true,
     },
-    income: [
-      {
-        description: input.description,
-        quantity: 1,
-        price: input.amountIls,
-        currency: "ILS",
-        vatType: 0,
-      },
-    ],
+    income: [morningIncomeRow(input.description, input.amountIls)],
     successUrl: input.successUrl,
     failureUrl: input.failureUrl,
     notifyUrl: input.notifyUrl,
