@@ -20,11 +20,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { enrollmentSchema, type EnrollmentInput } from "@/lib/validations/enrollment";
 import type { PlanProduct } from "@/types/plans";
+import type { RenewalLocks } from "@/lib/plans/bound-renewal";
 import { AgreementDeclarations } from "./AgreementDeclarations";
 
 interface EnrollmentFormProps {
   product: PlanProduct;
   prefill?: Partial<EnrollmentInput>;
+  /** Renewal: child fields taken from the account, shown read-only. */
+  locks?: RenewalLocks;
   renewalToken?: string;
   onSubmit: (input: EnrollmentInput) => Promise<{ error?: string }>;
 }
@@ -46,11 +49,13 @@ function Section({ children }: { children: React.ReactNode }) {
 }
 
 
+const LOCKED_NOTE = "מהחשבון הקיים של החניך. לשינוי דברו איתנו בוואטסאפ.";
+
 function ddmmyyyy(iso: string): string {
   return iso.split("-").reverse().join("/");
 }
 
-export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: EnrollmentFormProps) {
+export function EnrollmentForm({ product, prefill, locks, renewalToken, onSubmit }: EnrollmentFormProps) {
   const [loading, setLoading] = useState(false);
 
   // Back from the card page can restore this page from the back/forward
@@ -165,9 +170,11 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel required>טלפון וואטסאפ של החניך (להתחברות לאפליקציה)</FormLabel>
                   <FormControl>
-                    <Input {...field} type="tel" autoComplete="section-child tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right" placeholder="0521234567" disabled={loading} />
+                    <Input {...field} type="tel" autoComplete="section-child tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right read-only:bg-muted" placeholder="0521234567" disabled={loading} readOnly={locks?.loginPhone} />
                   </FormControl>
-                  <FormDescription>קוד ההתחברות נשלח למספר הזה בוואטסאפ</FormDescription>
+                  <FormDescription>
+                    {locks?.loginPhone ? LOCKED_NOTE : "קוד ההתחברות נשלח למספר הזה בוואטסאפ"}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -198,7 +205,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel required>שם מלא</FormLabel>
                   <FormControl>
-                    <Input {...field} autoComplete="section-child name" className="h-12 rounded-xl text-base" disabled={loading} />
+                    <Input {...field} autoComplete="section-child name" className="h-12 rounded-xl text-base read-only:bg-muted" disabled={loading} readOnly={locks?.childName} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -211,7 +218,7 @@ export function EnrollmentForm({ product, prefill, renewalToken, onSubmit }: Enr
                 <FormItem>
                   <FormLabel required>תאריך לידה</FormLabel>
                   <FormControl>
-                    <Input {...field} autoComplete="section-child bday" className="h-12 rounded-xl text-base" type="date" max={today} disabled={loading} />
+                    <Input {...field} autoComplete="section-child bday" className="h-12 rounded-xl text-base read-only:bg-muted" type="date" max={today} disabled={loading} readOnly={locks?.childBirthdate} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

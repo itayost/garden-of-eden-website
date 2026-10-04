@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { PlanProduct } from "@/types/plans";
 import type { EnrollmentInput } from "@/lib/validations/enrollment";
+import type { RenewalLocks } from "@/lib/plans/bound-renewal";
 import { startCheckoutAction } from "../lib/actions/start-checkout";
 import { EnrollmentForm } from "./EnrollmentForm";
 import { PlanCatalog } from "./PlanCatalog";
@@ -12,6 +13,7 @@ interface JoinPageClientProps {
   initialProductId: string | null;
   renewalToken: string | null;
   prefill?: Partial<EnrollmentInput>;
+  locks?: RenewalLocks;
 }
 
 export function JoinPageClient({
@@ -19,6 +21,7 @@ export function JoinPageClient({
   initialProductId,
   renewalToken,
   prefill,
+  locks,
 }: JoinPageClientProps) {
   const [selected, setSelected] = useState<PlanProduct | null>(
     products.find((p) => p.id === initialProductId) ?? null,
@@ -99,6 +102,7 @@ export function JoinPageClient({
             key={selected.id}
             product={selected}
             prefill={prefill}
+            locks={locks}
             renewalToken={renewalToken ?? undefined}
             onSubmit={handleSubmit}
           />

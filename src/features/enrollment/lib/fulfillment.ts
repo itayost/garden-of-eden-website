@@ -74,7 +74,7 @@ export async function fulfillFromInput(
     const { data: profile } = await db
       .from("profiles")
       .select(
-        "full_name, birthdate, role, guardian_name, guardian_phone, medical_notes, emergency_contact_name, emergency_contact_phone, photo_consent",
+        "full_name, birthdate, role, phone, guardian_name, guardian_phone, medical_notes, emergency_contact_name, emergency_contact_phone, photo_consent",
       )
       .eq("id", profileId)
       .single();
@@ -85,12 +85,25 @@ export async function fulfillFromInput(
       throw new Error(`login phone belongs to a ${profile.role} account`);
     }
 
+    // A Renewal bound to an account with no phone gives it the order's login
+    // phone, on the auth user that login matches and on the profile, or the
+    // child could never log in and a later signup would open a second account.
+    const givesPhone = Boolean(order.profile_id) && !profile?.phone;
+    if (givesPhone) {
+      const { error: phoneError } = await db.auth.admin.updateUserById(profileId, {
+        phone: order.login_phone,
+        phone_confirm: true,
+      });
+      if (phoneError) throw new Error(`login phone update failed: ${phoneError.message}`);
+    }
+
     // Existing values win: a renewal or a second plan must not let whoever
     // paid rewrite the guardian, medical notes, or emergency contact that
     // staff may have corrected. Staff edit those on the trainee page.
     const { error: profileError } = await db
       .from("profiles")
       .update({
+        ...(givesPhone ? { phone: order.login_phone } : {}),
         full_name: profile?.full_name || order.child_name,
         birthdate: profile?.birthdate || order.child_birthdate,
         role: "trainee",

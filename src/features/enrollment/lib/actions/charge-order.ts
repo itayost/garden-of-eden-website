@@ -10,6 +10,7 @@ import { chargeCard } from "@/lib/payments/pelecard";
 import { canPayOnline, PAYMENTS_CLOSED_MESSAGE } from "@/lib/payments/online-payments";
 import { cardPaymentSchema, type CardPaymentInput } from "@/lib/validations/card-payment";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
+import { sameTraineeOrders } from "@/lib/plans/bound-renewal";
 import type { Order, PlanProduct } from "@/types/plans";
 import { completeCardPayment } from "../complete-card-payment";
 
@@ -72,7 +73,7 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
   if (product.once_per_trainee) {
     const { count } = await typedFrom(db, "orders")
       .select("id", { count: "exact", head: true })
-      .eq("login_phone", order.login_phone)
+      .or(sameTraineeOrders(order.login_phone, order.profile_id))
       .eq("status", "paid")
       .eq("product_id", product.id);
     if (!isIntroPackEligible(product, count ?? 0)) {
