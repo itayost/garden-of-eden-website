@@ -56,7 +56,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
         .maybeSingle() as Promise<{ data: { id: string } | null }>,
       db
         .from("profiles")
-        .select("welcome_message_sent_at, full_name")
+        .select("welcome_message_sent_at, full_name, phone")
         .eq("id", order.profile_id)
         .maybeSingle(),
       typedFrom(db, "plan_products")
@@ -66,7 +66,12 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
     ]);
 
   let welcome: WhatsAppResult | null = null;
-  if (profile && !profile.welcome_message_sent_at) {
+  // The welcome says "log in with this number". An account with no login phone
+  // (an old record renewed through a link) cannot, and a link never assigns
+  // one: whoever holds it could take the account. Staff set the phone first.
+  if (profile && !profile.phone) {
+    console.warn(`[notify] order ${order.id}: trainee ${order.profile_id} has no login phone; welcome skipped, staff must set it`);
+  } else if (profile && !profile.welcome_message_sent_at) {
     welcome = await sendWelcomeMessage(order.login_phone, profile.full_name);
     if (welcome.success) {
       await db
