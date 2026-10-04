@@ -11,7 +11,7 @@ A player enrolled in the academy. The subject of assessments, nutrition plans an
 _Avoid_: Player, athlete, student, user
 
 **Trainer**:
-A member of staff who runs sessions and works shifts.
+A member of staff who runs sessions and works shifts. Sees only the branches they are assigned to; some are assigned to both.
 _Avoid_: Coach, instructor
 
 **Admin**:
@@ -19,7 +19,7 @@ The person who manages the whole academy, across every branch — creates traine
 _Avoid_: Manager (bare), owner, staff
 
 **Branch manager**:
-A member of staff with an Admin's powers over the branches they manage, and none over the others. Every Admin sees what a Branch manager does.
+A member of staff with an Admin's powers over the branches they manage, and none over the others. Like every member of staff, they see only the branches they are assigned to. Every Admin sees what a Branch manager does.
 _Avoid_: Admin, manager (bare), branch admin
 
 **Lead**:
