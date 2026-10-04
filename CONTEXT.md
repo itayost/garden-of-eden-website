@@ -15,8 +15,12 @@ A member of staff who runs sessions and works shifts.
 _Avoid_: Coach, instructor
 
 **Admin**:
-The person who manages the academy — creates trainees, assigns work to trainers, and reviews what was done.
-_Avoid_: Manager, owner, staff
+The person who manages the whole academy, across every branch — creates trainees, assigns work to trainers, and reviews what was done.
+_Avoid_: Manager (bare), owner, staff
+
+**Branch manager**:
+A member of staff with an Admin's powers over the branches they manage, and none over the others. Every Admin sees what a Branch manager does.
+_Avoid_: Admin, manager (bare), branch admin
 
 **Lead**:
 A prospective customer who has not enrolled. Not a Trainee and not an account holder.
@@ -169,3 +173,101 @@ _Avoid_: Module, unit, section
 **Lesson**:
 One video in the Course, and the unit a Trainee completes. A Lesson counts as complete at 90% watched, or when the Trainee marks it done. A Lesson is never a thing that happens on the pitch — that is a Slot, which is why Slot lists "lesson" as a word to avoid.
 _Avoid_: Episode, clip, video
+
+### Plans and payments
+
+**Plan product**:
+One item in a branch's price list: what is sold, at what price, for how long, and with how many sessions if any. Changing it never changes a Plan already sold.
+_Avoid_: Package, membership, sub
+
+**Single-session price** (מחיר אימון בודד):
+The value of one session in a branch's price list. Never sold on its own; it prices the sessions already used when a Card is cancelled.
+_Avoid_: Session price, drop-in price
+
+**Plan**:
+One Trainee's purchase of a Plan product, with its own start date, end date and, for a Card, its own session count. What the Trainee holds, as distinct from the Plan product that was sold.
+_Avoid_: Sub, subscription (bare), membership, package
+
+**Subscription** (מנוי):
+A Plan with a weekly cap and no session count, bought one month at a time.
+_Avoid_: Sub, membership, monthly (bare)
+
+**Card** (כרטיסייה):
+A Plan with a fixed number of sessions and an expiry date. It ends when the sessions run out or the date passes, whichever comes first.
+_Avoid_: Punch card, ticket, session card
+
+**Intro pack** (חבילת היכרות):
+A small Card sold once to each new Trainee.
+_Avoid_: Trial, starter
+
+**Term** (מתקדמים):
+A Plan with a weekly cap and no session count, bought for several months in one payment.
+_Avoid_: Long subscription, advanced plan
+
+**Add-on**:
+A Plan for mental, nutrition or tactical sessions. Never the Trainee's training Plan: it neither hides one nor uses up its sessions.
+_Avoid_: Extra, bonus
+
+**Current plan**:
+The one training Plan a Trainee is training on today. A Trainee has at most one; Add-ons are never it.
+_Avoid_: Active plan, relevant plan, running plan
+
+**Queued plan**:
+A paid training Plan waiting behind the Current plan. It starts the day the Plan ahead of it ends, by its end date or, for a Card, by its last session, whichever comes first, so its start date is not fixed until then.
+_Avoid_: Future plan, scheduled plan, renewal (a renewal is a purchase, not a state)
+
+**Void** (ביטול רישום):
+Undoing a Plan that was recorded by mistake, as if it was never sold. The whole amount goes back and the receipt is credited.
+_Avoid_: Cancel, delete
+
+**Cancellation** (ביטול עסקה):
+The parent's right under the cancellation policy to stop a Plan. It ends today, sessions already used stay used, and the refund follows the policy's formula.
+_Avoid_: Void, termination, freeze
+
+**Early end**:
+An admin ending the Current plan today so the Queued plan behind it starts. What is left on it is forfeited and no money moves.
+_Avoid_: Cancel, switch, upgrade
+
+**Used session**:
+A session counted against a Card: the Trainee was on the Roster of a Slot that took place, whether or not they came. Absence is not a refund.
+_Avoid_: Attendance, check-in, punch
+
+**Called off** (בוטל ע"י האקדמיה):
+A Slot that was planned but did not take place because of the academy, such as weather, no pitch or no Trainer. Its Roster stays on record, but nobody on it uses a session.
+_Avoid_: Cancelled (bare), deleted
+
+**Adjustment** (תיקון יתרה):
+An Admin's or Branch manager's deliberate change to the sessions on a Card, with a reason, for what the Roster cannot explain, such as matching Arbox or a goodwill grant.
+_Avoid_: Correction, top-up, bonus sessions
+
+**Plan queue**:
+A Trainee's Current plan and the Queued plans behind it, in order. Renewal reminders follow the end of the queue, never the Current plan alone.
+_Avoid_: Line, chain, plan history
+
+**Booking**:
+A Trainee's own reservation of a seat in a future Slot. Bookings are charged down the Plan queue in date order: the earliest goes to the Current plan, and those beyond it to the Queued plan behind.
+_Avoid_: Reservation, registration, signup
+
+**Sessions left**:
+What a Trainee can still book: the sessions on the Cards in their Plan queue, minus Used sessions, minus future Bookings. The one meaning of "remaining" on every screen.
+_Avoid_: Balance (bare), remaining (bare), credits
+
+**Freeze** (הקפאה):
+A stretch of dates, backed by a medical certificate, when the Current plan does not run: no Bookings and nothing counted. Afterwards its end date moves by the frozen days, and the queue behind it moves with it. Never for a vacation.
+_Avoid_: Pause, hold, suspension
+
+**Enrollment**:
+The first purchase for a child who has no account yet. It creates the Trainee.
+_Avoid_: Signup, registration, join
+
+**Renewal**:
+Any purchase of a Plan for an existing Trainee, whoever starts it: a parent from a link or the app, or staff. It always lands on that Trainee and joins the end of their Plan queue.
+_Avoid_: Re-signup, extension, top-up
+
+**Payment link** (קישור לתשלום):
+A Renewal that staff send a parent for one Trainee and one Plan product at a fixed price. The parent signs and pays by card; it becomes a sale only when the card is charged.
+_Avoid_: Invoice, payment request, checkout link
+
+**Refund** (החזר):
+Money returned to the payer after a Void or Cancellation, by the method they paid with. A person moves the money; the academy's record of it always carries a credit note.
+_Avoid_: Chargeback, credit, reimbursement
