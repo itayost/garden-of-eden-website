@@ -21,6 +21,12 @@ export type BoundResult =
   | { ok: true; childName: string; childBirthdate: string; loginPhone: string }
   | { ok: false; error: string };
 
+/** The stored values the form accepts, plus whether a stored phone was unreadable. */
+export interface UsableAccount extends BoundAccount {
+  /** A phone is stored but is not a valid Israeli number: binding must fail closed. */
+  unreadablePhone: boolean;
+}
+
 export interface RenewalLocks {
   childName: boolean;
   childBirthdate: boolean;
@@ -32,13 +38,15 @@ export interface RenewalLocks {
  * the form would reject counts as missing: locking it read-only would leave the
  * parent stuck on a validation error they cannot fix.
  */
-export function usableAccount(account: BoundAccount): BoundAccount {
+export function usableAccount(account: BoundAccount): UsableAccount {
   const name = childNameField.safeParse(account.fullName ?? "");
   const birthdate = childBirthdateField.safeParse(account.birthdate ?? "");
+  const readable = isValidPhoneIL(account.phone);
   return {
     fullName: name.success ? name.data : null,
     birthdate: birthdate.success ? birthdate.data : null,
-    phone: isValidPhoneIL(account.phone) ? toE164(account.phone) : null,
+    phone: readable && account.phone ? toE164(account.phone) : null,
+    unreadablePhone: Boolean(account.phone?.trim()) && !readable,
   };
 }
 
@@ -61,7 +69,14 @@ export function renewalLocks(usable: BoundAccount): RenewalLocks {
  * win over the form, and a login phone other than the account's is refused:
  * it would sign the parent up under a number the child cannot log in with.
  */
-export function bindRenewal(usable: BoundAccount, input: BoundInput): BoundResult {
+export function bindRenewal(usable: UsableAccount, input: BoundInput): BoundResult {
+  // A stored phone we cannot read is still a phone: never let the form replace it.
+  if (usable.unreadablePhone) {
+    return {
+      ok: false,
+      error: "לא הצלחנו לאמת את מספר הטלפון של החשבון. כתבו לנו בוואטסאפ ונשלים את החידוש יחד.",
+    };
+  }
   if (usable.phone !== null && usable.phone !== toE164(input.loginPhone)) {
     return {
       ok: false,

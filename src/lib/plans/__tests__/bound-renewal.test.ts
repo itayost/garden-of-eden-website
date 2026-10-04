@@ -45,8 +45,12 @@ describe("bindRenewal", () => {
     expect(result.ok && result.childName).toBe("יואב");
   });
 
-  it("treats a stored value the form would reject as missing", () => {
-    const stale = { fullName: "י", birthdate: "1980-01-01", phone: "not-a-phone" };
+  it("refuses when the account has a phone it cannot read, instead of taking any", () => {
+    expect(bind({ ...account, phone: "not-a-phone" }, input).ok).toBe(false);
+  });
+
+  it("treats a stored name or birthdate the form would reject as missing", () => {
+    const stale = { fullName: "י", birthdate: "1980-01-01", phone: null };
     expect(bind(stale, input)).toEqual({
       ok: true,
       childName: "יואב",
@@ -81,7 +85,16 @@ describe("usableAccount", () => {
       fullName: "יואב כהן",
       birthdate: "2014-03-02",
       phone: "+972521234567",
+      unreadablePhone: false,
     });
+  });
+
+  it("flags a stored phone it cannot read, rather than dropping it silently", () => {
+    expect(usableAccount({ ...account, phone: "not-a-phone" })).toMatchObject({
+      phone: null,
+      unreadablePhone: true,
+    });
+    expect(usableAccount({ ...account, phone: null }).unreadablePhone).toBe(false);
   });
 });
 
