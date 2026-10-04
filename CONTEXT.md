@@ -11,7 +11,7 @@ A player enrolled in the academy. The subject of assessments, nutrition plans an
 _Avoid_: Player, athlete, student, user
 
 **Trainer**:
-A member of staff who runs sessions and works shifts. Sees only the branches they are assigned to; some are assigned to both.
+A member of staff who runs sessions and works shifts. Sees only the branches they are assigned to; some are assigned to both, and one with none sees no Trainees.
 _Avoid_: Coach, instructor
 
 **Admin**:
