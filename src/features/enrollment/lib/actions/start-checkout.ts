@@ -10,7 +10,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { canPayOnline, PAYMENTS_CLOSED_MESSAGE } from "@/lib/payments/online-payments";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import { verifyRenewalToken } from "@/lib/plans/renewal-token";
-import { bindRenewal, sameTraineeOrders } from "@/lib/plans/bound-renewal";
+import { bindRenewal, isActiveTrainee, sameTraineeOrders, usableAccount } from "@/lib/plans/bound-renewal";
 import { israelToday } from "@/lib/utils/tasks";
 import { enrollmentSchema, type EnrollmentInput } from "@/lib/validations/enrollment";
 import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
@@ -61,30 +61,37 @@ async function resolvePurchaser(
   const verified = verifyRenewalToken(data.renewalToken, planTokenSecret(), Math.floor(Date.now() / 1000));
   if (!verified) return fresh;
 
-  const { data: renewed } = (await typedFrom(db, "trainee_plans")
-    .select("id, profile:profiles!inner(id, full_name, birthdate, phone, role, deleted_at)")
+  // Two foreign keys reach profiles (profile_id, created_by): name the one.
+  const { data: renewed, error: lookupError } = await db
+    .from("trainee_plans")
+    .select("id, profile:profiles!trainee_plans_profile_id_fkey(id, full_name, birthdate, phone, role, deleted_at)")
     .eq("id", verified.planId)
-    .maybeSingle()) as {
-    data: {
-      id: string;
-      profile: {
-        id: string;
-        full_name: string | null;
-        birthdate: string | null;
-        phone: string | null;
-        role: string;
-        deleted_at: string | null;
-      } | null;
-    } | null;
-  };
+    .maybeSingle();
+  if (lookupError) {
+    console.error("[checkout] renewal lookup failed:", lookupError.message);
+    return { error: "לא הצלחנו לאמת את קישור החידוש. נסו שוב בעוד רגע." };
+  }
   const account = renewed?.profile;
-  if (!renewed || !account || account.deleted_at !== null || account.role !== "trainee") return fresh;
+  if (!renewed || !account || !isActiveTrainee(account)) return fresh;
 
-  const bound = bindRenewal(
-    { fullName: account.full_name, birthdate: account.birthdate, phone: account.phone },
-    { childName: data.childName, childBirthdate: data.childBirthdate, loginPhone: data.loginPhone },
-  );
+  const usable = usableAccount({ fullName: account.full_name, birthdate: account.birthdate, phone: account.phone });
+  const bound = bindRenewal(usable, data);
   if (!bound.ok) return { error: bound.error };
+
+  // An account with no phone stored takes the typed one on the order, but never
+  // another child's: the order would carry that child's login phone.
+  if (usable.phone === null) {
+    const { data: other } = await db
+      .from("profiles")
+      .select("id")
+      .in("phone", phoneVariants(bound.loginPhone))
+      .neq("id", account.id)
+      .eq("role", "trainee")
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (other) return { error: "מספר הטלפון הזה שייך לחניך אחר. הזינו את המספר של החניך שבקישור." };
+  }
   return {
     profileId: account.id,
     renewalOfPlanId: renewed.id,
@@ -130,43 +137,41 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
   const purchaser = await resolvePurchaser(db, data);
   if ("error" in purchaser) return purchaser;
 
+  const purchaserOrders = sameTraineeOrders(purchaser.loginPhone, purchaser.profileId);
+  const [{ data: owner }, { count: charging }, paidIntros] = await Promise.all([
+    db
+      .from("profiles")
+      .select("role")
+      .in("phone", phoneVariants(purchaser.loginPhone))
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle(),
+    typedFrom(db, "orders")
+      .select("id", { count: "exact", head: true })
+      .or(purchaserOrders)
+      .eq("status", "charging"),
+    product.once_per_trainee
+      ? typedFrom(db, "orders")
+          .select("id", { count: "exact", head: true })
+          .or(purchaserOrders)
+          .eq("status", "paid")
+          .eq("product_id", product.id)
+          .then(({ count }: { count: number | null }) => count ?? 0)
+      : Promise.resolve(0),
+  ]);
+
   // The login phone may already be a trainee (renewal, second plan) but never
   // a staff account: fulfillment would otherwise rewrite it.
-  const { data: owner } = await db
-    .from("profiles")
-    .select("id, role")
-    .in("phone", phoneVariants(purchaser.loginPhone))
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
   if (owner && owner.role !== "trainee") {
     return { error: "מספר הטלפון להתחברות שייך לחשבון צוות. השתמשו במספר אחר." };
   }
-  // A renewal of an account with no phone stored takes the typed one, but never
-  // another child's: the order would carry that child's login phone.
-  if (owner && purchaser.profileId && owner.id !== purchaser.profileId) {
-    return { error: "מספר הטלפון הזה שייך לחניך אחר. הזינו את המספר של החניך שבקישור." };
-  }
-
   // A charge for this phone may have gone through without an answer. Until
   // an admin settles it, a second order would risk charging the parent twice.
-  const { count: charging } = await typedFrom(db, "orders")
-    .select("id", { count: "exact", head: true })
-    .or(sameTraineeOrders(purchaser.loginPhone, purchaser.profileId))
-    .eq("status", "charging");
   if ((charging ?? 0) > 0) {
     return { error: "יש תשלום קודם למספר הזה שעדיין בבדיקה. כתבו לנו בוואטסאפ 052-577-9446 ונסיים יחד." };
   }
-
-  if (product.once_per_trainee) {
-    const { count } = await typedFrom(db, "orders")
-      .select("id", { count: "exact", head: true })
-      .or(sameTraineeOrders(purchaser.loginPhone, purchaser.profileId))
-      .eq("status", "paid")
-      .eq("product_id", product.id);
-    if (!isIntroPackEligible(product, count ?? 0)) {
-      return { error: "חבילת ההיכרות היא לשחקן חדש בלבד. בחרו מסלול אחר." };
-    }
+  if (!isIntroPackEligible(product, paidIntros)) {
+    return { error: "חבילת ההיכרות היא לשחקן חדש בלבד. בחרו מסלול אחר." };
   }
 
   const { data: order, error: orderError } = (await typedFrom(db, "orders")

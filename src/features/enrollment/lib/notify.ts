@@ -66,9 +66,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
     ]);
 
   let welcome: WhatsAppResult | null = null;
-  // The welcome says "log in with this number". An account with no login phone
-  // (an old record renewed through a link) cannot, and a link never assigns
-  // one: whoever holds it could take the account. Staff set the phone first.
+  // No login phone: a link never assigns one (it could take the account); staff set it.
   if (profile && !profile.phone) {
     console.warn(`[notify] order ${order.id}: trainee ${order.profile_id} has no login phone; welcome skipped, staff must set it`);
   } else if (profile && !profile.welcome_message_sent_at) {

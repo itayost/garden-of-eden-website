@@ -1,12 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { bindRenewal, renewalLocks, sameTraineeOrders } from "../bound-renewal";
+import { bindRenewal, renewalLocks, sameTraineeOrders, usableAccount } from "../bound-renewal";
 
 const account = { fullName: "יואב כהן", birthdate: "2014-03-02", phone: "0521234567" };
 const input = { childName: "יואב", childBirthdate: "2015-01-01", loginPhone: "+972521234567" };
 
+type Stored = Parameters<typeof usableAccount>[0];
+// Callers pass the checked account; these helpers do the same with raw rows.
+const bind = (stored: Stored, form: typeof input) => bindRenewal(usableAccount(stored), form);
+const locksOf = (stored: Stored) => renewalLocks(usableAccount(stored));
+
 describe("bindRenewal", () => {
   it("keeps the account's name and birthdate whatever the form sent", () => {
-    expect(bindRenewal(account, input)).toEqual({
+    expect(bind(account, input)).toEqual({
       ok: true,
       childName: "יואב כהן",
       childBirthdate: "2014-03-02",
@@ -14,18 +19,20 @@ describe("bindRenewal", () => {
     });
   });
 
-  it("accepts the account's phone in any stored spelling", () => {
-    expect(bindRenewal({ ...account, phone: "+972521234567" }, input).ok).toBe(true);
-    expect(bindRenewal({ ...account, phone: "972521234567" }, input).ok).toBe(true);
-  });
+  it.each(["+972521234567", "972521234567", "052-123-4567", "+972 52 123 4567"])(
+    "accepts the account's phone stored as %s",
+    (phone) => {
+      expect(bind({ ...account, phone }, input).ok).toBe(true);
+    },
+  );
 
   it("refuses a login phone that is not the account's", () => {
-    const result = bindRenewal(account, { ...input, loginPhone: "+972541111111" });
+    const result = bind(account, { ...input, loginPhone: "+972541111111" });
     expect(result.ok).toBe(false);
   });
 
   it("takes the form's values for what the account is missing", () => {
-    expect(bindRenewal({ fullName: null, birthdate: null, phone: null }, input)).toEqual({
+    expect(bind({ fullName: null, birthdate: null, phone: null }, input)).toEqual({
       ok: true,
       childName: "יואב",
       childBirthdate: "2015-01-01",
@@ -34,18 +41,46 @@ describe("bindRenewal", () => {
   });
 
   it("treats a blank stored name as missing", () => {
-    const result = bindRenewal({ ...account, fullName: "  " }, input);
+    const result = bind({ ...account, fullName: "  " }, input);
     expect(result.ok && result.childName).toBe("יואב");
+  });
+
+  it("treats a stored value the form would reject as missing", () => {
+    const stale = { fullName: "י", birthdate: "1980-01-01", phone: "not-a-phone" };
+    expect(bind(stale, input)).toEqual({
+      ok: true,
+      childName: "יואב",
+      childBirthdate: "2015-01-01",
+      loginPhone: "+972521234567",
+    });
   });
 });
 
 describe("renewalLocks", () => {
   it("locks exactly the fields the account already has", () => {
-    expect(renewalLocks(account)).toEqual({ childName: true, childBirthdate: true, loginPhone: true });
-    expect(renewalLocks({ fullName: "יואב כהן", birthdate: null, phone: null })).toEqual({
+    expect(locksOf(account)).toEqual({ childName: true, childBirthdate: true, loginPhone: true });
+    expect(locksOf({ fullName: "יואב כהן", birthdate: null, phone: null })).toEqual({
       childName: true,
       childBirthdate: false,
       loginPhone: false,
+    });
+  });
+
+  it("never locks a value the parent could not submit", () => {
+    expect(locksOf({ fullName: "י", birthdate: "1980-01-01", phone: "not-a-phone" })).toEqual({
+      childName: false,
+      childBirthdate: false,
+      loginPhone: false,
+    });
+  });
+});
+
+describe("usableAccount", () => {
+  it("returns the stored values the form accepts, phone as E.164", () => {
+    expect(usableAccount({ ...account, fullName: " יואב כהן ", phone: "052-123-4567" })).toEqual({
+      fullName: "יואב כהן",
+      birthdate: "2014-03-02",
+      phone: "+972521234567",
     });
   });
 });

@@ -49,7 +49,12 @@ function Section({ children }: { children: React.ReactNode }) {
 }
 
 
-const LOCKED_NOTE = "מהחשבון הקיים של החניך. לשינוי דברו איתנו בוואטסאפ.";
+/** A renewal never assigns a login phone; staff connect a missing one. */
+function loginPhoneNote(locks: RenewalLocks | undefined): string {
+  if (locks?.loginPhone) return "מהחשבון הקיים של החניך. לשינוי דברו איתנו בוואטסאפ.";
+  if (locks) return "לחשבון הקיים עוד אין מספר להתחברות. נחבר את המספר הזה לאחר בדיקה ונעדכן בוואטסאפ.";
+  return "קוד ההתחברות נשלח למספר הזה בוואטסאפ";
+}
 
 function ddmmyyyy(iso: string): string {
   return iso.split("-").reverse().join("/");
@@ -173,7 +178,7 @@ export function EnrollmentForm({ product, prefill, locks, renewalToken, onSubmit
                     <Input {...field} type="tel" autoComplete="section-child tel" inputMode="tel" dir="ltr" className="h-12 rounded-xl text-base text-right read-only:bg-muted" placeholder="0521234567" disabled={loading} readOnly={locks?.loginPhone} />
                   </FormControl>
                   <FormDescription>
-                    {locks?.loginPhone ? LOCKED_NOTE : "קוד ההתחברות נשלח למספר הזה בוואטסאפ"}
+                    {loginPhoneNote(locks)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

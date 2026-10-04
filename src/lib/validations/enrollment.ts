@@ -31,6 +31,13 @@ export const emailOrEmpty = z
   .transform((v) => (v === "" ? null : v));
 
 /** A trainee's birthdate: a real date and an age between 4 and 25. */
+export const childNameField = z
+  .string()
+  .trim()
+  .min(2, "נדרש שם החניך")
+  .max(100, "שם ארוך מדי")
+  .regex(SINGLE_LINE, "שם בשורה אחת");
+
 export const childBirthdateField = z
   .string()
   .refine((date) => {
@@ -62,7 +69,7 @@ export const enrollmentSchema = z
     loginPhone: phoneField,
     email: emailOrEmpty,
 
-    childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי").regex(SINGLE_LINE, "שם בשורה אחת"),
+    childName: childNameField,
     childBirthdate: childBirthdateField,
     medicalNotes: optionalText(500),
 
