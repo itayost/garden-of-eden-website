@@ -28,7 +28,6 @@ NUTRITION:
 POST /api/nutrition/upload-pdf             Upload meal plan PDF to Storage (avatars bucket)
 
 PAYMENTS:
-POST /api/payments/create                  Meshulam payment page creation
 
 SHIFTS:
 POST /api/shifts/sync                      Sync shift data from external source

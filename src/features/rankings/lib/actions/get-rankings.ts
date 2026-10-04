@@ -80,10 +80,15 @@ export async function getRankingsData(
   }
   const effectiveBranch = memberIds === null ? ALL_BRANCHES : branchId;
 
-  let profilesQuery = supabase
+  // Trainees cannot read each other's profiles under RLS (medical and parent
+  // details live on the same row), so the ranked set is read with the service
+  // role, past the login gate above, and only these ranking columns leave it.
+  let profilesQuery = createAdminClient()
     .from("profiles")
     .select("id, full_name, birthdate, age_group_override, age_group_override_until")
-    .eq("role", "trainee");
+    .eq("role", "trainee")
+    // RLS used to hide soft-deleted trainees; the service role does not.
+    .is("deleted_at", null);
   if (memberIds !== null) {
     profilesQuery = profilesQuery.in("id", memberIds);
   }

@@ -27,7 +27,6 @@ Warnings logged in development if missing. Features degrade gracefully.
 | Variable | Description | Feature |
 |----------|-------------|---------|
 | `NEXT_PUBLIC_SITE_URL` | Site URL for auth callbacks | Auth redirects |
-| `GROW_USER_ID` | Meshulam user ID | Payments |
 | `GROW_PAGE_CODE` | Meshulam page code | Payments |
 | `GROW_PAGE_CODE_RECURRING` | Meshulam recurring page code | Recurring payments |
 | `GROW_WEBHOOK_SECRET` | HMAC-SHA256 webhook signature secret | Webhook verification |

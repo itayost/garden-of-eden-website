@@ -135,7 +135,6 @@ Create a `.env.local` file based on `.env.local.example`. The following variable
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key (public) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server only) |
 | `NEXT_PUBLIC_SITE_URL` | Site URL for auth callbacks |
-| `GROW_USER_ID` | Meshulam payment gateway user ID |
 | `GROW_PAGE_CODE` | Meshulam page code |
 | `GROW_API_URL` | Meshulam API endpoint |
 | `GROW_WEBHOOK_SECRET` | HMAC-SHA256 webhook signature secret |

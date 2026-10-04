@@ -153,6 +153,9 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
     authorizes_payment: data.authorizesPayment,
     photo_consent: data.photoConsent,
     signature_name: data.signatureName,
+    // The parent signs here, before paying; an unsigned online agreement would
+    // reopen the signing form to anyone holding its link.
+    signed_at: new Date().toISOString(),
     signed_ip: ip,
   });
 
