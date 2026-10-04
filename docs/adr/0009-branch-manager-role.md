@@ -1,0 +1,3 @@
+# A branch manager is not a second admin
+
+קריית אתא has its own manager (בן גנון) next to Eden, who runs both branches. We added a Branch manager role with an Admin's powers limited to the branches they manage, instead of making him a full Admin. A full Admin sees every branch, including Haifa children's medical notes and parent phones. The money powers that make "admin" matter are per branch anyway: undoing sales, cancellations and refunds. Every Admin still sees what a Branch manager does. The cost is that every admin-only action now has to ask "Admin, or manager of this trainee's branch?" rather than checking one role.
