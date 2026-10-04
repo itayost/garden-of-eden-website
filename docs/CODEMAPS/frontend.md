@@ -49,7 +49,6 @@ app/
     ├── cron/*                        8 cron handlers (arbox-sync, auto-clockout, retention-report, …)
     ├── images/*                      Upload + background-removal pipeline
     ├── nutrition/upload-pdf/         Meal-plan PDF upload
-    ├── payments/create/              Meshulam payment init
     ├── player-report/pdf/            React-PDF generation endpoint
     ├── shifts/sync/                  Offline queue flush
     ├── webhooks/grow/ + leads/       Payment + lead webhooks
