@@ -70,6 +70,11 @@ export function rowCounts(row: Pick<RosterRowLite, "cancelled_at" | "late_cancel
   return row.cancelled_at === null || row.late_cancel;
 }
 
+/** The ids of the rows that use a session: the set the booking and adjust functions compare. */
+export function countedRowIds(rows: readonly (Pick<RosterRowLite, "cancelled_at" | "late_cancel" | "called_off"> & { id: string })[]): string[] {
+  return rows.filter(rowCounts).map((r) => r.id);
+}
+
 /** Trainings in the slot's week that count against a weekly cap (staff-added too). */
 export function weeklyBookingCount(
   rows: readonly RosterRowLite[],

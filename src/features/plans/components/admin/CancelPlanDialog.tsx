@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   type CancellationPreview,
 } from "../../lib/actions/cancel-plan";
 import { AffectedBookings, CreditNoteStep, RefundMethodSelect } from "./RefundParts";
+import { usePlanPreview } from "../../hooks/usePlanPreview";
 
 const shekels = (n: number) => `${n < 0 ? "−" : ""}${Math.abs(n).toLocaleString("he-IL", { maximumFractionDigits: 2 })} ₪`;
 
@@ -29,8 +30,6 @@ const shekels = (n: number) => `${n < 0 ? "−" : ""}${Math.abs(n).toLocaleStrin
 export function CancelPlanDialog({ planId, onClose: close }: { planId: string; onClose: () => void }) {
   const router = useRouter();
   const [defect, setDefect] = useState(false);
-  const [preview, setPreview] = useState<CancellationPreview | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [method, setMethod] = useState<RefundMethod>("none");
   const [amount, setAmount] = useState(0);
@@ -44,22 +43,14 @@ export function CancelPlanDialog({ planId, onClose: close }: { planId: string; o
   };
 
   // The proposal changes with the defect box; the amount follows the proposal.
-  useEffect(() => {
-    let cancelled = false;
-    previewCancellationAction(planId, defect).then((result) => {
-      if (cancelled) return;
-      if ("error" in result) {
-        setLoadError(result.error);
-        return;
-      }
-      setPreview(result);
+  const { preview, loadError } = usePlanPreview<CancellationPreview>(
+    `${planId}:${defect}`,
+    () => previewCancellationAction(planId, defect),
+    (result) => {
       setMethod((m) => (m === "none" ? result.suggestedMethod : m));
       setAmount(result.proposal?.proposed ?? 0);
-    }).catch(() => !cancelled && setLoadError("הטעינה נכשלה. סגרו ופתחו שוב."));
-    return () => {
-      cancelled = true;
-    };
-  }, [planId, defect]);
+    },
+  );
 
   const proposed = preview?.proposal?.proposed ?? 0;
   const overridden = preview !== null && amount !== proposed;

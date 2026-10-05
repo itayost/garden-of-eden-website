@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { RefundMethod } from "@/lib/validations/plans-admin";
 import { previewVoidAction, voidPlanAction, type VoidPreview } from "../../lib/actions/void-plan";
 import { AffectedBookings, CreditNoteStep, RefundMethodSelect } from "./RefundParts";
+import { usePlanPreview } from "../../hooks/usePlanPreview";
 
 /**
  * Void: undo a Plan recorded by mistake, as if never sold. Shows first what
@@ -21,8 +22,6 @@ import { AffectedBookings, CreditNoteStep, RefundMethodSelect } from "./RefundPa
  */
 export function VoidPlanDialog({ planId, onClose: close }: { planId: string; onClose: () => void }) {
   const router = useRouter();
-  const [preview, setPreview] = useState<VoidPreview | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [method, setMethod] = useState<RefundMethod>("none");
   const [amount, setAmount] = useState(0);
@@ -36,22 +35,10 @@ export function VoidPlanDialog({ planId, onClose: close }: { planId: string; onC
     close();
   };
 
-  useEffect(() => {
-    let cancelled = false;
-    previewVoidAction(planId).then((result) => {
-      if (cancelled) return;
-      if ("error" in result) {
-        setLoadError(result.error);
-        return;
-      }
-      setPreview(result);
-      setMethod(result.suggestedMethod);
-      setAmount(result.amountPaid ?? 0);
-    }).catch(() => !cancelled && setLoadError("הטעינה נכשלה. סגרו ופתחו שוב."));
-    return () => {
-      cancelled = true;
-    };
-  }, [planId]);
+  const { preview, loadError } = usePlanPreview<VoidPreview>(planId, () => previewVoidAction(planId), (result) => {
+    setMethod(result.suggestedMethod);
+    setAmount(result.amountPaid ?? 0);
+  });
 
   const confirm = () =>
     startTransition(async () => {

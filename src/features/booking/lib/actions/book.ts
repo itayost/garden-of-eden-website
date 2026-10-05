@@ -14,12 +14,12 @@ import {
   bookingClosed,
   cancelState,
   isWithinBookingWindow,
-  rowCounts,
+  countedRowIds,
   type BookingBlock,
 } from "@/lib/schedule/booking-rules";
 import { bookingVerdict, resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
-import { loadStoredPlans } from "@/features/plans/lib/queries";
+import { loadStoredPlans, planStamps } from "@/features/plans/lib/queries";
 import type { ScheduleSlot } from "@/types/schedule";
 import { loadTraineeRosterRows } from "../queries";
 
@@ -34,6 +34,7 @@ const RPC_ERRORS: Record<string, { message: string; block: BookingBlock }> = {
 };
 /** The trainee's roster changed between the read and the lock; the verdict is stale. */
 const ROSTER_CHANGED = "roster_changed";
+const PLANS_CHANGED = "plans_changed";
 
 function blocked(block: BookingBlock): BookResult {
   return { error: BOOKING_BLOCK_LABELS_HE[block], block };
@@ -108,17 +109,19 @@ export async function bookSlotAction(slotId: string): Promise<BookResult> {
   const rpcClient = db as unknown as {
     rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
   };
-  // The verdict holds only for the rows it was made on. The function compares
-  // them with the trainee's rows under a per-trainee lock, so parallel
-  // requests cannot all pass on the same picture.
+  // The verdict holds only for the rows and Plans it was made on. The function
+  // compares both with the trainee's under a per-trainee lock, so parallel
+  // requests, or an Adjustment or Void in between, cannot pass on a stale picture.
   const { error } = await rpcClient.rpc("book_slot_checked", {
     p_slot_id: slot.id,
     p_trainee_id: user.id,
     p_trainee_name: profile.data.full_name ?? "מתאמן",
-    p_counted_row_ids: rows.filter(rowCounts).map((r) => r.id),
+    p_counted_row_ids: countedRowIds(rows),
+    p_plan_stamps: planStamps(plans),
   });
   if (error) {
     if (error.message.includes(ROSTER_CHANGED)) return { error: "ההרשמות שלך השתנו הרגע. נסו שוב." };
+    if (error.message.includes(PLANS_CHANGED)) return { error: "המסלול שלך עודכן הרגע. נסו שוב." };
     const known = Object.keys(RPC_ERRORS).find((key) => error.message.includes(key));
     if (known) return { error: RPC_ERRORS[known].message, block: RPC_ERRORS[known].block };
     console.error(`[book] rpc failed for ${slot.id}:`, error.message);

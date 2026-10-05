@@ -5,6 +5,7 @@ import {
   isValidPhoneIL,
   isValidDateString,
 } from "@/lib/validations/common";
+import { MAX_CARD_BALANCE } from "@/lib/plans/adjustment";
 
 const uuid = z.string().regex(UUID_REGEX, "מזהה לא תקין");
 const isoDate = z.string().refine(isValidDateString, "תאריך לא תקין");
@@ -30,6 +31,9 @@ export const manualPaymentMethodSchema = z.enum(["cash", "transfer", "bit"]);
 export type ManualPaymentMethod = z.infer<typeof manualPaymentMethodSchema>;
 
 const singleLine = /^[^\r\n\t]+$/;
+
+/** Why staff changed, undid or corrected something: every audit row carries one. */
+const reason = z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי");
 
 /**
  * A new trainee signed up at the field. Staff type only what the parent
@@ -94,11 +98,28 @@ export type ArboxPlanInput = z.input<typeof arboxPlanSchema>;
 export const issueInvoiceSchema = z.object({ orderId: uuid });
 export const resendAgreementSchema = z.object({ agreementId: uuid });
 
-export const extendPlanSchema = z.object({ planId: uuid, endsOn: isoDate });
-export const addSessionsSchema = z.object({
+/**
+ * A new end date goes on the audit trail with a reason; expectedEndsOn is the
+ * end the dialog read (the database refuses if it changed).
+ */
+export const extendPlanSchema = z.object({
   planId: uuid,
-  sessions: z.number().int().min(1, "לפחות אימון אחד").max(50, "יותר מדי אימונים"),
+  endsOn: isoDate,
+  expectedEndsOn: isoDate,
+  reason,
 });
+
+/**
+ * An Adjustment: the balance a Card should show (sessions not yet used), the
+ * total the dialog read (the database refuses if it changed), and why.
+ */
+export const adjustSessionsSchema = z.object({
+  planId: uuid,
+  target: z.number().int("יתרה היא מספר שלם").min(0, "יתרה לא יכולה להיות שלילית").max(MAX_CARD_BALANCE, "יתרה גבוהה מדי"),
+  expectedTotal: z.number().int().min(1),
+  reason,
+});
+export type AdjustSessionsInput = z.input<typeof adjustSessionsSchema>;
 
 export const productSchema = z.object({
   name_he: z.string().trim().min(1, "נדרש שם").max(80, "שם ארוך מדי"),
@@ -128,7 +149,7 @@ export type RefundMethod = z.infer<typeof refundMethodSchema>;
 export const voidPlanSchema = z
   .object({
     planId: uuid,
-    reason: z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי"),
+    reason,
     method: refundMethodSchema,
     reference: optionalText(60),
     amountIls: z.number().min(0, "סכום לא תקין").max(100_000, "סכום לא תקין"),
@@ -152,7 +173,7 @@ export const creditNoteSchema = z.object({
 export const cancelPlanWithRefundSchema = z
   .object({
     planId: uuid,
-    reason: z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי"),
+    reason,
     defect: z.boolean(),
     method: refundMethodSchema,
     reference: optionalText(60),
@@ -168,6 +189,6 @@ export type CancelPlanWithRefundInput = z.input<typeof cancelPlanWithRefundSchem
 /** An Early end: the Current plan ends today so the next one starts. Reason required. */
 export const earlyEndSchema = z.object({
   planId: uuid,
-  reason: z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי"),
+  reason,
 });
 export type EarlyEndInput = z.input<typeof earlyEndSchema>;

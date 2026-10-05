@@ -13,6 +13,7 @@ import {
 import { shortDate } from "@/lib/utils/iso-date";
 import type { AdminPlanRow } from "../lib/actions/admin-plans";
 import { PlanActionsDialog } from "./admin/PlanActionsDialog";
+import { AdjustSessionsDialog } from "./admin/AdjustSessionsDialog";
 import { VoidPlanDialog } from "./admin/VoidPlanDialog";
 import { PlanHistoryList } from "./PlanHistoryList";
 import { PlanStatusBadge } from "./PlanStatusBadge";
@@ -33,6 +34,7 @@ export function UserPlanCard({ row, isAdmin, canManage = isAdmin, traineeId }: U
   const [actionsOpen, setActionsOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [voidFor, setVoidFor] = useState<string | null>(null);
+  const [adjustFor, setAdjustFor] = useState<string | null>(null);
   return (
     <Card>
       <CardHeader>
@@ -80,7 +82,11 @@ export function UserPlanCard({ row, isAdmin, canManage = isAdmin, traineeId }: U
             {row.history && row.history.length > 1 && (
               <div className="space-y-2 pt-2">
                 <span className="text-muted-foreground">כל המסלולים</span>
-                <PlanHistoryList rows={row.history} onVoid={canManage ? setVoidFor : undefined} />
+                <PlanHistoryList
+                  rows={row.history}
+                  onVoid={canManage ? setVoidFor : undefined}
+                  onAdjust={canManage ? setAdjustFor : undefined}
+                />
               </div>
             )}
           </>
@@ -98,6 +104,7 @@ export function UserPlanCard({ row, isAdmin, canManage = isAdmin, traineeId }: U
         </div>
         {actionsOpen && row && <PlanActionsDialog row={row} onClose={() => setActionsOpen(false)} />}
         {voidFor && <VoidPlanDialog key={voidFor} planId={voidFor} onClose={() => setVoidFor(null)} />}
+        {adjustFor && <AdjustSessionsDialog key={adjustFor} planId={adjustFor} onClose={() => setAdjustFor(null)} />}
         <StaffPaymentSheet traineeId={traineeId} isAdmin={isAdmin} open={payOpen} onOpenChange={setPayOpen} />
       </CardContent>
     </Card>

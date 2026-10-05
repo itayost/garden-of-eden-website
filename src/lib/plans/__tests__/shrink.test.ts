@@ -169,3 +169,15 @@ describe("earlyEndRefusal when the next Plan cannot start today", () => {
     );
   });
 });
+
+describe("shrinkImpact for an Adjustment down", () => {
+  it("cancels the Bookings beyond the new balance, latest first", () => {
+    const only = card("only", 10);
+    const lowered = { ...only, sessionsTotal: 2 };
+    const rows = [booking("2026-10-01"), booking("2026-10-07"), booking("2026-10-09"), booking("2026-10-12")];
+
+    const impact = shrinkImpact([only], [lowered], rows, TODAY);
+
+    expect(impact.cancelled.map((r) => r.schedule_date)).toEqual(["2026-10-12", "2026-10-09"]);
+  });
+});

@@ -633,3 +633,29 @@ describe("Called off Slots and recorded Roster removals", () => {
     expect(resolvePlanQueue([only], rows, TODAY).sessionsLeft).toBe(9);
   });
 });
+
+describe("an Adjustment", () => {
+  const rows = () => [session("2026-09-28"), session("2026-10-01"), session("2026-10-07")];
+
+  it("raising a Card keeps the Queued plan waiting longer", () => {
+    const current = card(3, { notBefore: "2026-09-20" });
+    const queued = subscription({ notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    const before = resolvePlanQueue([current, queued], rows(), TODAY);
+    const after = resolvePlanQueue([{ ...current, sessionsTotal: 6 }, queued], rows(), TODAY);
+
+    expect(before.queued[0].startsOn).toBe("2026-10-07");
+    expect(after.current?.sessionsLeft).toBe(3);
+    expect(after.queued[0].startsOn).toBe("2026-11-19");
+  });
+
+  it("lowering a Card hands over to the Queued plan sooner", () => {
+    const current = card(6, { notBefore: "2026-09-20" });
+    const queued = subscription({ notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    const after = resolvePlanQueue([{ ...current, sessionsTotal: 2 }, queued], rows(), TODAY);
+
+    expect(after.plans[0].endsOn).toBe("2026-10-01");
+    expect(after.current?.plan.id).toBe(queued.id);
+  });
+});
