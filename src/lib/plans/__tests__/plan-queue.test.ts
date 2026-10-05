@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  alreadyRenewedUntil,
   bookingVerdict,
   dueReminder,
   placeNewPlan,
+  planStart,
   queueBookingBlock,
   resolvePlanQueue,
   type NewPlanTerms,
@@ -343,8 +345,14 @@ describe("dueReminder", () => {
     reminded_3_days_at: string | null;
     reminded_last_session_at: string | null;
     reminded_expired_at: string | null;
+    paidInArbox: boolean;
   };
-  const unstamped: Stamps = { reminded_3_days_at: null, reminded_last_session_at: null, reminded_expired_at: null };
+  const unstamped: Stamps = {
+    reminded_3_days_at: null,
+    reminded_last_session_at: null,
+    reminded_expired_at: null,
+    paidInArbox: false,
+  };
   const withStamps = (p: QueuePlan, stamps: Partial<Stamps> = {}) => ({ ...p, ...unstamped, ...stamps });
 
   it("sends nothing while a paid Plan is queued", () => {
@@ -437,5 +445,91 @@ describe("placeNewPlan", () => {
       startsOn: TODAY,
       endsOn: "2026-11-03",
     });
+  });
+});
+
+describe("dueReminder for Arbox-paid queues", () => {
+  const ours = { reminded_3_days_at: null, reminded_last_session_at: null, reminded_expired_at: null, paidInArbox: false };
+  const arbox = { ...ours, paidInArbox: true };
+
+  it("sends nothing when the Plan at the end of the queue was paid in Arbox, even one that ended yesterday", () => {
+    const endedYesterday = { ...subscription({ notBefore: "2026-09-04", fixedEndsOn: "2026-10-04" }), ...arbox };
+    const endingSoon = { ...subscription({ notBefore: "2026-09-10", fixedEndsOn: "2026-10-07" }), ...arbox };
+
+    expect(dueReminder(resolvePlanQueue([endedYesterday], [], TODAY))).toBeNull();
+    expect(dueReminder(resolvePlanQueue([endingSoon], [], TODAY))).toBeNull();
+  });
+
+  it("goes by how the Plan was paid, not by its end date: an Arbox order without a fixed end is still Arbox", () => {
+    const legacy = { ...subscription({ notBefore: "2026-09-08" }), ...arbox }; // to 7.10, no fixed end
+
+    expect(dueReminder(resolvePlanQueue([legacy], [], TODAY))).toBeNull();
+  });
+
+  it("still reminds at the end of our own Plan queued behind an Arbox one", () => {
+    const first = { ...subscription({ notBefore: "2026-09-01", fixedEndsOn: "2026-09-30" }), ...arbox };
+    // Starts 1.10 when the Arbox Plan ends, and runs 8 days to 8.10.
+    const last = { ...subscription({ notBefore: "2026-09-09", durationDays: 8, createdAt: "2026-09-09T09:00:00Z" }), ...ours };
+
+    expect(dueReminder(resolvePlanQueue([first, last], [], TODAY))?.plan.id).toBe(last.id);
+  });
+
+  it("an Arbox Plan queued past its own end never runs, so it does not silence our Plan ahead of it", () => {
+    const own = { ...subscription({ notBefore: "2026-09-09", durationDays: 32 }), ...ours }; // to 10.10
+    const deadArbox = {
+      ...subscription({ notBefore: "2026-10-01", fixedEndsOn: "2026-10-08", createdAt: "2026-10-01T09:00:00Z" }),
+      ...arbox,
+    };
+
+    expect(dueReminder(resolvePlanQueue([own, deadArbox], [], "2026-10-08"))?.plan.id).toBe(own.id);
+  });
+});
+
+describe("planStart", () => {
+  it("says today, a date, or after the current Card, from the Plan's place in the queue", () => {
+    const sub = subscription({ notBefore: "2026-09-20" }); // to 2026-10-19
+    const afterSub = card(10, { notBefore: "2026-10-05", createdAt: "2026-10-05T09:00:00Z" });
+    const runningCard = card(10, { notBefore: "2026-09-20" });
+    const afterCard = subscription({ notBefore: "2026-10-05", createdAt: "2026-10-05T09:00:00Z" });
+    const alone = subscription({ notBefore: TODAY });
+
+    expect(planStart(resolvePlanQueue([alone], [], TODAY), alone.id, TODAY)).toEqual({ kind: "today" });
+    expect(planStart(resolvePlanQueue([sub, afterSub], [], TODAY), afterSub.id, TODAY)).toEqual({
+      kind: "on",
+      date: "2026-10-20",
+    });
+    expect(planStart(resolvePlanQueue([runningCard, afterCard], [], TODAY), afterCard.id, TODAY)).toEqual({
+      kind: "after_card",
+      latest: "2026-11-19",
+    });
+  });
+
+  it("stays tied to the Card when its sessions are all booked, since a cancelled Booking moves it", () => {
+    const fullyBooked = card(2, { notBefore: "2026-09-20" });
+    const next = subscription({ notBefore: "2026-10-05", createdAt: "2026-10-05T09:00:00Z" });
+    const rows = [session("2026-10-07"), session("2026-10-20")];
+
+    expect(planStart(resolvePlanQueue([fullyBooked, next], rows, TODAY), next.id, TODAY)).toEqual({
+      kind: "after_card",
+      latest: "2026-10-20",
+    });
+  });
+});
+
+describe("alreadyRenewedUntil", () => {
+  it("agrees with the queue's end when the waiting Card's sessions are all booked", () => {
+    const current = subscription({ notBefore: "2026-09-20" }); // to 19.10
+    const queued = card(2, { notBefore: "2026-10-02", createdAt: "2026-10-02T09:00:00Z", durationDays: 60 });
+    const rows = [session("2026-10-21"), session("2026-10-28")];
+
+    expect(alreadyRenewedUntil(resolvePlanQueue([current, queued], rows, TODAY))).toBe("2026-10-28");
+  });
+
+  it("names the end of the queue when a paid Plan is waiting, and nothing otherwise", () => {
+    const current = subscription({ notBefore: "2026-09-20" });
+    const queued = card(10, { notBefore: "2026-10-02", createdAt: "2026-10-02T09:00:00Z", durationDays: 60 });
+
+    expect(alreadyRenewedUntil(resolvePlanQueue([current], [], TODAY))).toBeNull();
+    expect(alreadyRenewedUntil(resolvePlanQueue([current, queued], [], TODAY))).toBe("2026-12-18");
   });
 });

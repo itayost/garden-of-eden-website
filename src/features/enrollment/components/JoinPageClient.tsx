@@ -5,6 +5,7 @@ import type { PlanProduct } from "@/types/plans";
 import type { EnrollmentInput } from "@/lib/validations/enrollment";
 import type { RenewalLocks } from "@/lib/plans/bound-renewal";
 import { startCheckoutAction } from "../lib/actions/start-checkout";
+import { AlreadyRenewedNotice } from "./AlreadyRenewedNotice";
 import { EnrollmentForm } from "./EnrollmentForm";
 import { PlanCatalog } from "./PlanCatalog";
 
@@ -14,6 +15,8 @@ interface JoinPageClientProps {
   renewalToken: string | null;
   prefill?: Partial<EnrollmentInput>;
   locks?: RenewalLocks;
+  /** A renewal link for a Trainee with a Plan already waiting: warn first. */
+  renewedUntil?: string | null;
 }
 
 export function JoinPageClient({
@@ -22,7 +25,11 @@ export function JoinPageClient({
   renewalToken,
   prefill,
   locks,
+  renewedUntil = null,
 }: JoinPageClientProps) {
+  // Paying twice for the same month is the usual mistake; buying ahead on
+  // purpose stays one tap away.
+  const [buyAnyway, setBuyAnyway] = useState(false);
   const [selected, setSelected] = useState<PlanProduct | null>(
     products.find((p) => p.id === initialProductId) ?? null,
   );
@@ -55,6 +62,10 @@ export function JoinPageClient({
         אין כרגע מסלולים פתוחים להרשמה. דברו איתנו בוואטסאפ.
       </p>
     );
+  }
+
+  if (renewedUntil && !buyAnyway) {
+    return <AlreadyRenewedNotice until={renewedUntil} onBuyAnyway={() => setBuyAnyway(true)} />;
   }
 
   return (

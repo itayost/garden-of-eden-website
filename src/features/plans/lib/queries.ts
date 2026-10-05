@@ -5,8 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import {
+  planStart,
   resolvePlanQueue,
   type PlanInQueue,
+  type PlanStart,
   type PlanQueue,
   type QueuePlan,
   type QueueRow,
@@ -17,7 +19,10 @@ import type { PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
 type ProductBits = Pick<PlanProduct, "name_he" | "kind">;
 
 /** A stored Plan with its product and its sale-time terms in the queue's shape. */
-export type StoredPlan = TraineePlan & { product: ProductBits | null } & QueuePlan;
+export type StoredPlan = TraineePlan & { product: ProductBits | null } & QueuePlan & {
+  /** Its order was paid in Arbox: it renews there. */
+  paidInArbox: boolean;
+};
 
 /** What every screen shows for one Trainee, all from the one Plan queue. */
 export interface PlanQueueView {
@@ -44,17 +49,20 @@ export async function loadStoredPlans(
   const result = new Map<string, StoredPlan[]>();
   if (profileIds.length === 0) return result;
   const { data, error } = (await typedFrom(db, "trainee_plans")
-    .select("*, product:plan_products(name_he, kind)")
+    .select("*, product:plan_products(name_he, kind), order:orders!trainee_plans_order_id_fkey(payment_method)")
     .in("profile_id", [...profileIds])) as {
-    data: (TraineePlan & { product: ProductBits | null })[] | null;
+    data:
+      | (TraineePlan & { product: ProductBits | null; order: { payment_method: string | null } | null })[]
+      | null;
     error: { message: string } | null;
   };
   if (error) {
     console.error("loadStoredPlans error:", error);
     return result;
   }
-  for (const row of data ?? []) {
-    result.set(row.profile_id, [...(result.get(row.profile_id) ?? []), toQueuePlan(row)]);
+  for (const { order, ...row } of data ?? []) {
+    const stored: StoredPlan = { ...toQueuePlan(row), paidInArbox: order?.payment_method === "arbox" };
+    result.set(row.profile_id, [...(result.get(row.profile_id) ?? []), stored]);
   }
   return result;
 }
@@ -159,4 +167,24 @@ export async function loadOwnPlanQueue(today: string): Promise<PlanQueueView | n
   if (!user) return null;
   const map = await loadPlanQueues(createAdminClient(), [user.id], today);
   return map.get(user.id) ?? null;
+}
+
+/**
+ * Where the Plan an order bought sits in its Trainee's queue: when it starts,
+ * in a parent's words, and its own last day. Null when there is no such Plan.
+ */
+export async function loadPlanPlacement(
+  db: SupabaseClient,
+  profileId: string,
+  orderId: string,
+  today: string,
+): Promise<{ start: PlanStart | null; endsOn: string } | null> {
+  const [plans, rows] = await Promise.all([loadStoredPlans(db, [profileId]), loadQueueRows(db, [profileId])]);
+  const own = plans.get(profileId) ?? [];
+  const stored = own.find((p) => p.order_id === orderId);
+  if (!stored) return null;
+  const queue = resolvePlanQueue(own, rows.get(profileId) ?? [], today);
+  const entry = queue.plans.find((e) => e.plan.id === stored.id);
+  // An Add-on is outside the queue and keeps its stored window.
+  return { start: planStart(queue, stored.id, today), endsOn: entry?.expiresOn ?? stored.ends_on };
 }

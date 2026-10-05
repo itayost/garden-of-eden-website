@@ -279,7 +279,10 @@ export type ReminderMilestone = "three_days" | "last_session" | "expired";
 type ReminderStamps = Pick<
   TraineePlan,
   "reminded_3_days_at" | "reminded_last_session_at" | "reminded_expired_at"
->;
+> & {
+  /** The Plan's order was paid in Arbox: it renews there, not through our link. */
+  paidInArbox: boolean;
+};
 
 /**
  * The renewal reminder due for a queue, if any, and the Plan whose stamp
@@ -289,8 +292,12 @@ type ReminderStamps = Pick<
 export function dueReminder<P extends QueuePlan & ReminderStamps>(
   queue: PlanQueue<P>,
 ): { milestone: ReminderMilestone; plan: P } | null {
-  const tail = queue.plans.at(-1);
+  // The last Plan that runs: one queued past its own end never does.
+  const tail = queue.plans.filter((e) => e.startsOn <= e.endsOn).at(-1);
   if (!tail) return null;
+  // A queue that ends on a Plan paid in Arbox renews in Arbox: our link would
+  // contradict it, even the day after it ran out.
+  if (tail.plan.paidInArbox) return null;
 
   let milestone: ReminderMilestone;
   if (queue.status === "expired") {
@@ -303,4 +310,29 @@ export function dueReminder<P extends QueuePlan & ReminderStamps>(
     return null;
   }
   return tail.plan[REMINDED_COLUMN[milestone]] ? null : { milestone, plan: tail.plan };
+}
+
+export type PlanStart =
+  | { kind: "today" }
+  | { kind: "on"; date: string }
+  /** A Card ahead can run out sooner; this is the latest it starts. */
+  | { kind: "after_card"; latest: string };
+
+/** When a Plan starts, in the words a parent needs; null when it is not in the queue. */
+export function planStart<P extends QueuePlan>(queue: PlanQueue<P>, planId: string, today: string): PlanStart | null {
+  const index = queue.plans.findIndex((e) => e.plan.id === planId);
+  if (index === -1) return null;
+  const entry = queue.plans[index];
+  if (entry.startsOn <= today) return { kind: "today" };
+  // A Card still ahead decides the start, even when its sessions are all
+  // booked: a cancelled Booking hands it more time.
+  const cardMayMoveIt = queue.ahead.some(
+    (e) => e.sessionsLeft !== null && queue.plans.indexOf(e) < index,
+  );
+  return cardMayMoveIt ? { kind: "after_card", latest: entry.startsOn } : { kind: "on", date: entry.startsOn };
+}
+
+/** The last day of the queue when a paid Plan is waiting in it; null when none is. */
+export function alreadyRenewedUntil<P extends QueuePlan>(queue: PlanQueue<P>): string | null {
+  return queue.queued.length > 0 ? queue.endsOn : null;
 }

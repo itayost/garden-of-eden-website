@@ -24,8 +24,8 @@ import { signAgreementSchema, type SignAgreementInput } from "@/lib/validations/
 import type { EnrollmentAgreement } from "@/types/plans";
 import { signAgreementAction } from "../lib/actions/sign-agreement";
 import { AgreementDeclarations } from "./AgreementDeclarations";
+import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 
-const ddmmyyyy = (iso: string) => iso.split("-").reverse().join("/");
 const field = "h-12 rounded-xl text-base";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

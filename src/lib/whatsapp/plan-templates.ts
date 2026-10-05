@@ -4,8 +4,8 @@ interface PlanConfirmedParams {
   parentName: string;
   childName: string;
   planName: string;
-  /** DD/MM/YYYY for the message body. */
-  endsOn: string;
+  /** {{4}} after "המסלול בתוקף עד": the end date, plus the start when the Plan waits in the queue (validityText). */
+  validity: string;
   agreementUrl: string;
 }
 
@@ -33,7 +33,7 @@ function templateMessage(
 
 /**
  * Meta-approved template WHATSAPP_PLAN_CONFIRMED_TEMPLATE_NAME with body
- * parameters {{1}} parent, {{2}} child, {{3}} plan, {{4}} end date, {{5}} link.
+ * parameters {{1}} parent, {{2}} child, {{3}} plan, {{4}} validity, {{5}} link.
  */
 export async function sendPlanConfirmed(
   phone: string,
@@ -51,7 +51,7 @@ export async function sendPlanConfirmed(
       params.parentName,
       params.childName,
       params.planName,
-      params.endsOn,
+      params.validity,
       params.agreementUrl,
     ]),
   );
