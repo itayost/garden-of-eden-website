@@ -60,6 +60,7 @@ export const FIELD_LABELS_HE: Record<string, string> = {
   phone: "טלפון",
   birthdate: "תאריך לידה",
   role: "תפקיד",
+  managed_branches: "מנהל/ת סניף",
   is_active: "סטטוס",
   position: "עמדה",
   avatar_url: "תמונת פרופיל",

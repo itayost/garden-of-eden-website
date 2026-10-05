@@ -26,7 +26,7 @@ import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
 import { parseAccessOverride } from "@/lib/access/course-access";
 import type { Profile, UserRole } from "@/types/database";
 import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
-import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
+import { loadBranchIdsByProfile, loadManagedBranchIds } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { allowedBranches } from "@/lib/branches/resolve-branch";
@@ -34,6 +34,7 @@ import { isTraineeInScope } from "@/features/branches/lib/memberships";
 import { getPlanForProfileAction } from "@/features/plans/lib/actions/admin-plans";
 import { getTraineeHealthAction } from "@/features/plans/lib/actions/trainee-health";
 import { UserPlanCard } from "@/features/plans/components/UserPlanCard";
+import { canManageBranches } from "@/lib/branches/branch-scope";
 import { HealthCard } from "@/features/plans/components/HealthCard";
 
 interface UserEditPageProps {
@@ -105,6 +106,9 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   }
   const branches = allowedBranches(scope, activeBranches);
   const initialBranchIds = membershipMap.get(userId) ?? [];
+  // Only an Admin sees or sets which branches a trainer manages.
+  const initialManagedBranchIds =
+    isAdmin && userToEdit.role === "trainer" ? await loadManagedBranchIds(adminClient, userId) : [];
 
   // Compute player ratings for radar chart (trainees only)
   let stats: {
@@ -199,6 +203,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
                 currentUserRole={currentProfile?.role as UserRole}
                 branches={branches}
                 initialBranchIds={initialBranchIds}
+                initialManagedBranchIds={initialManagedBranchIds}
               />
             </CardContent>
           </Card>
@@ -222,7 +227,15 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
           )}
 
           {userToEdit.role === "trainee" && (
-            <UserPlanCard row={planRow} isAdmin={isAdmin} traineeId={userId} />
+            <UserPlanCard
+              row={planRow}
+              isAdmin={isAdmin}
+              canManage={
+                planRow !== null &&
+                canManageBranches(currentProfile?.role ?? "", scopeResult.data.managedBranchIds, [planRow.plan.branch_id])
+              }
+              traineeId={userId}
+            />
           )}
 
           {health && <HealthCard traineeId={userId} health={health} />}

@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyAdmin } from "@/lib/actions/shared";
+import { getBranchScopeAction, verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
@@ -20,15 +21,36 @@ type ActionResult = { success: true } | { error: string };
 
 const ORDERS_LIMIT = 200;
 
+type Db = ReturnType<typeof createAdminClient>;
+
+/** Admin, or Branch manager of the order's branch; null when allowed. */
+async function denyUnlessManagesOrder(db: Db, orderId: string): Promise<string | null> {
+  const { data: order } = (await typedFrom(db, "orders")
+    .select("branch_id")
+    .eq("id", orderId)
+    .maybeSingle()) as { data: { branch_id: string } | null };
+  if (!order) return "ההזמנה לא נמצאה";
+  return verifyAdminOrBranchManager([order.branch_id]);
+}
+
+/** Every order for an Admin; a Branch manager's branches for a Branch manager. */
 export async function listOrdersAction(): Promise<AdminOrderRow[]> {
-  const { error } = await verifyAdmin();
+  const { error, profile } = await verifyAdminOrTrainer();
   if (error) return [];
+  let managed: string[] | null = null;
+  if (profile!.role !== "admin") {
+    const scope = await getBranchScopeAction();
+    if ("error" in scope || scope.data.managedBranchIds.length === 0) return [];
+    managed = scope.data.managedBranchIds;
+  }
   const db = createAdminClient();
 
-  const { data } = (await typedFrom(db, "orders")
+  let query = typedFrom(db, "orders")
     .select("*, product:plan_products(name_he), agreement:enrollment_agreements(id), receiver:profiles!orders_received_by_fkey(full_name)")
     .order("created_at", { ascending: false })
-    .limit(ORDERS_LIMIT)) as {
+    .limit(ORDERS_LIMIT);
+  if (managed) query = query.in("branch_id", managed);
+  const { data } = (await query) as {
     data:
       | (Order & {
           product: { name_he: string } | null;
@@ -49,11 +71,13 @@ export async function listOrdersAction(): Promise<AdminOrderRow[]> {
 
 /** Re-runs fulfillment for a paid order that failed; every step is idempotent. */
 export async function retryFulfillmentAction(orderId: string): Promise<ActionResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   if (!isValidUUID(orderId)) return { error: "מזהה הזמנה לא תקין" };
 
   const db = createAdminClient();
+  const denied = await denyUnlessManagesOrder(db, orderId);
+  if (denied) return { error: denied };
   const { data: before } = (await typedFrom(db, "orders")
     .select("fulfilled_at, payment_method")
     .eq("id", orderId)
@@ -73,13 +97,16 @@ export async function retryFulfillmentAction(orderId: string): Promise<ActionRes
 
 /** Issues (or re-issues after a failure) the Morning receipt for a paid order. */
 export async function issueInvoiceAction(orderId: string): Promise<ActionResult & { url?: string | null }> {
-  const { error: authError, user, adminProfile } = await verifyAdmin();
+  const { error: authError, user, profile } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   if (!isValidUUID(orderId)) return { error: "מזהה הזמנה לא תקין" };
 
-  const outcome = await issueOrderInvoice(createAdminClient(), orderId, {
+  const db = createAdminClient();
+  const denied = await denyUnlessManagesOrder(db, orderId);
+  if (denied) return { error: denied };
+  const outcome = await issueOrderInvoice(db, orderId, {
     id: user!.id,
-    name: adminProfile?.full_name ?? null,
+    name: profile?.full_name ?? null,
   });
   if (!outcome.ok) return { error: outcome.skipped ? "Morning אינו מוגדר עדיין" : `החשבונית לא הופקה: ${outcome.error}` };
   revalidatePath("/admin/orders");

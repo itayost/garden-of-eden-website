@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveBranchScope, isInBranchScope } from "../branch-scope";
+import { canManageBranches, isInBranchScope, resolveBranchScope } from "../branch-scope";
 
 describe("resolveBranchScope", () => {
   it("gives admins everything regardless of memberships", () => {
@@ -14,8 +14,8 @@ describe("resolveBranchScope", () => {
     });
   });
 
-  it("fails open for a trainer with no branch", () => {
-    expect(resolveBranchScope("trainer", [])).toEqual({ kind: "all" });
+  it("gives a trainer with no branch nobody, until an admin assigns one", () => {
+    expect(resolveBranchScope("trainer", [])).toEqual({ kind: "branches", ids: [] });
   });
 });
 
@@ -30,5 +30,26 @@ describe("isInBranchScope", () => {
     expect(isInBranchScope(scope, ["b2", "b3"])).toBe(true);
     expect(isInBranchScope(scope, ["b3"])).toBe(false);
     expect(isInBranchScope(scope, [])).toBe(false);
+  });
+});
+
+describe("canManageBranches", () => {
+  it("lets an admin manage any branch", () => {
+    expect(canManageBranches("admin", [], ["b1"])).toBe(true);
+  });
+
+  it("lets a trainer manage only branches they manage", () => {
+    expect(canManageBranches("trainer", ["b1"], ["b1"])).toBe(true);
+    expect(canManageBranches("trainer", ["b1"], ["b2"])).toBe(false);
+    expect(canManageBranches("trainer", ["b1"], ["b2", "b1"])).toBe(true);
+  });
+
+  it("refuses a trainer who manages nothing, and an empty target", () => {
+    expect(canManageBranches("trainer", [], ["b1"])).toBe(false);
+    expect(canManageBranches("trainer", ["b1"], [])).toBe(false);
+  });
+
+  it("refuses any other role", () => {
+    expect(canManageBranches("trainee", ["b1"], ["b1"])).toBe(false);
   });
 });

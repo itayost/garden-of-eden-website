@@ -41,15 +41,23 @@ interface UserEditFormProps {
   currentUserRole: UserRole;
   branches: BranchOption[];
   initialBranchIds: string[];
+  /** Branches the trainer manages; empty unless the viewer is an Admin. */
+  initialManagedBranchIds?: string[];
 }
 
-export function UserEditForm({ user, currentUserRole, branches, initialBranchIds }: UserEditFormProps) {
+export function UserEditForm({
+  user,
+  currentUserRole,
+  branches,
+  initialBranchIds,
+  initialManagedBranchIds = [],
+}: UserEditFormProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const form = useForm<UserEditFormData>({
     resolver: zodResolver(userEditSchema),
-    defaultValues: getUserEditDefaults(user, initialBranchIds),
+    defaultValues: getUserEditDefaults(user, initialBranchIds, initialManagedBranchIds),
   });
 
   const onSubmit = async (data: UserEditFormData) => {
@@ -187,7 +195,12 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
                 <BranchCheckboxGroup
                   branches={branches}
                   value={field.value ?? []}
-                  onChange={field.onChange}
+                  onChange={(next) => {
+                    field.onChange(next);
+                    // A trainer cannot manage a branch they just left.
+                    const managed = form.getValues("managed_branch_ids") ?? [];
+                    form.setValue("managed_branch_ids", managed.filter((id) => next.includes(id)));
+                  }}
                   disabled={loading}
                   idPrefix="edit-branch"
                 />
@@ -198,6 +211,32 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
           )}
         />
 
+        {/* Branch manager (Admin only, trainers only) */}
+        {isAdmin && form.watch("role") === "trainer" && (form.watch("branch_ids") ?? []).length > 0 && (
+          <FormField
+            control={form.control}
+            name="managed_branch_ids"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>מנהל/ת סניף</FormLabel>
+                <FormControl>
+                  <BranchCheckboxGroup
+                    branches={branches.filter((b) => (form.watch("branch_ids") ?? []).includes(b.id))}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                    disabled={loading}
+                    idPrefix="edit-managed-branch"
+                  />
+                </FormControl>
+                <FormDescription>
+                  מנהל/ת סניף יכול/ה לבטל, להאריך ולתקן מסלולים ולטפל בהזמנות של הסניף, כמו מנהל.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         {/* Role (Admin Only) */}
         {isAdmin && (
           <FormField
@@ -207,7 +246,11 @@ export function UserEditForm({ user, currentUserRole, branches, initialBranchIds
               <FormItem>
                 <FormLabel>תפקיד</FormLabel>
                 <Select
-                  onValueChange={field.onChange}
+                  onValueChange={(next) => {
+                    field.onChange(next);
+                    // Only a trainer manages a branch; the hidden field must not block the save.
+                    if (next !== "trainer") form.setValue("managed_branch_ids", []);
+                  }}
                   defaultValue={field.value}
                   disabled={loading}
                 >

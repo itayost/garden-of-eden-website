@@ -21,11 +21,13 @@ interface UserPlanCardProps {
   /** Null when the trainee has no plan yet. */
   row: AdminPlanRow | null;
   isAdmin: boolean;
+  /** Admin, or Branch manager of the plan's branch: the plan actions. */
+  canManage?: boolean;
   traineeId: string;
 }
 
 /** The trainee's current plan for staff, with the payment entry point. */
-export function UserPlanCard({ row, isAdmin, traineeId }: UserPlanCardProps) {
+export function UserPlanCard({ row, isAdmin, canManage = isAdmin, traineeId }: UserPlanCardProps) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   return (
@@ -80,7 +82,7 @@ export function UserPlanCard({ row, isAdmin, traineeId }: UserPlanCardProps) {
             <Banknote className="h-4 w-4 me-2" />
             {row ? "רישום תשלום / חידוש" : "רישום תשלום"}
           </Button>
-          {isAdmin && row && (
+          {canManage && row && (
             <Button variant="outline" onClick={() => setActionsOpen(true)}>
               פעולות
             </Button>

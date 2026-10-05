@@ -11,18 +11,31 @@ export type BranchScope =
 export const ALL_BRANCHES_SCOPE: BranchScope = { kind: "all" };
 
 /**
- * Admins see everything. A trainer sees their branches. A trainer with no
- * branch assigned yet also sees everything: failing open matches the access
- * tier convention, and an unassigned trainer staring at an empty academy
- * during rollout would be worse than a trainer seeing one extra branch.
+ * Admins see everything. Every other member of staff sees only the branches
+ * they are assigned to, so one with none sees nobody until an Admin assigns
+ * a branch.
  */
 export function resolveBranchScope(
   role: string,
   memberBranchIds: readonly string[],
 ): BranchScope {
   if (role === "admin") return ALL_BRANCHES_SCOPE;
-  if (memberBranchIds.length === 0) return ALL_BRANCHES_SCOPE;
   return { kind: "branches", ids: [...memberBranchIds] };
+}
+
+/**
+ * Whether a member of staff may act as an Admin for something in these
+ * branches: an Admin always, a Trainer only for a branch they manage (a
+ * Branch manager, ADR-0009).
+ */
+export function canManageBranches(
+  role: string,
+  managedBranchIds: readonly string[],
+  targetBranchIds: readonly string[],
+): boolean {
+  if (role === "admin") return true;
+  if (role !== "trainer") return false;
+  return targetBranchIds.some((id) => managedBranchIds.includes(id));
 }
 
 /** A user is in scope when they share at least one branch with the scope. */

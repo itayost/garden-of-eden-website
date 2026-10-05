@@ -51,6 +51,7 @@ describe("userEditSchema branch membership", () => {
     role: "trainee" as const,
     is_active: true,
     branch_ids: [BRANCH],
+    managed_branch_ids: [] as string[],
   };
 
   it("refuses to strip a trainee's last branch", () => {
@@ -72,5 +73,27 @@ describe("userEditSchema branch membership", () => {
 
   it("keeps an ordinary edit working", () => {
     expect(userEditSchema.safeParse(BASE).success).toBe(true);
+  });
+
+  it("lets a trainer manage a branch they belong to", () => {
+    expect(
+      userEditSchema.safeParse({ ...BASE, role: "trainer", managed_branch_ids: [BRANCH] }).success,
+    ).toBe(true);
+  });
+
+  it("refuses managing a branch the user does not belong to", () => {
+    const other = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+    expect(
+      userEditSchema.safeParse({ ...BASE, role: "trainer", managed_branch_ids: [other] }).success,
+    ).toBe(false);
+  });
+
+  it("refuses a branch manager who is not a trainer", () => {
+    expect(userEditSchema.safeParse({ ...BASE, managed_branch_ids: [BRANCH] }).success).toBe(false);
+  });
+
+  it("starts the form with the branches the user manages", () => {
+    expect(getUserEditDefaults(PROFILE, [BRANCH], [BRANCH]).managed_branch_ids).toEqual([BRANCH]);
+    expect(getUserEditDefaults(PROFILE, [BRANCH]).managed_branch_ids).toEqual([]);
   });
 });
