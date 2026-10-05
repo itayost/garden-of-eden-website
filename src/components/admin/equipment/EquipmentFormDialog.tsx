@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -74,12 +74,14 @@ export function EquipmentFormDialog({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = form;
 
-  const nameValue = watch("name");
+  // useWatch, not watch(): the React Compiler can memoize a subscription.
+  const nameValue = useWatch({ control, name: "name" });
+  const isActiveValue = useWatch({ control, name: "isActive" });
   const formError = Object.entries(errors).find(
     ([field]) => field !== "name",
   )?.[1]?.message;
@@ -159,7 +161,7 @@ export function EquipmentFormDialog({
               </div>
               <Switch
                 id="equipment-active"
-                checked={watch("isActive")}
+                checked={isActiveValue}
                 onCheckedChange={(next) =>
                   setValue("isActive", next, { shouldDirty: true })
                 }

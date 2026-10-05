@@ -35,7 +35,6 @@ export default async function OnboardingProfilePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A1F0A] to-[#142814] p-4">
       <ProfileCompletionForm
-        userId={user.id}
         fullName={profile?.full_name || ""}
         initialData={{
           birthdate: profile?.birthdate,

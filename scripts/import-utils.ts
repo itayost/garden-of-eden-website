@@ -143,7 +143,7 @@ export function parseKaiserHeight(value: string): KaiserHeightResult {
   // Find the index of the kick power number to exclude it
   if (kickPowerStr) {
     const percentIndex = value.indexOf(percentMatch![0]);
-    usedKickPowerIndex = allNumbers.findIndex((n, i) => {
+    usedKickPowerIndex = allNumbers.findIndex((n) => {
       const nIndex = value.indexOf(n);
       return n === kickPowerStr && nIndex < percentIndex + percentMatch![0].length;
     });

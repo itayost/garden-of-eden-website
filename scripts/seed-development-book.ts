@@ -364,11 +364,6 @@ function parseVerbalPanel(card: HTMLElement): { verbalText?: string; verbalTip?:
 // Merge drill.connect_he into existing drills by English name match.
 // ---------------------------------------------------------------------------
 
-interface DrillsHtmlDrill {
-  name_en: string;
-  connect_he?: string;
-}
-
 function parseDrillsHtml(): Map<string, string> {
   const raw = readFileSync(path.join(DIR, "garden-of-eden-drills.html"), "utf8");
   const doc = parseHtml(raw);
@@ -443,7 +438,6 @@ function parseDrillCard(): ParsedDrillCard | null {
   const phases = phaseCards.map((phase, phaseIdx) => {
     const numEl = phase.querySelector(".phase-num");
     const nameEl = phase.querySelector(".phase-name");
-    const cueEl = phase.querySelector(".phase-cue");
     const drillBoxEl = phase.querySelector(".drill-box p");
 
     const numText = numEl ? numEl.textContent.trim() : "";

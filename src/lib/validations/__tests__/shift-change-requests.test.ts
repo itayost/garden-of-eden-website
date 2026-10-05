@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterAll, beforeAll, describe, it, expect, vi } from "vitest";
 import {
   validateShiftChangeRequestInput,
   resolveApprovalMode,
@@ -14,6 +14,16 @@ const VALID_UUID_B = "22222222-2222-4222-8222-222222222222";
 const VALID_UUID_C = "33333333-3333-4333-8333-333333333333";
 
 const HOUR_MS = 60 * 60 * 1000;
+
+// The clock stands still for this file: two offsets read a millisecond apart
+// made "exactly 12 hours" come out a millisecond long, and fail now and then.
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-05T12:00:00.000Z"));
+});
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 function isoHoursAgo(hours: number): string {
   return new Date(Date.now() - hours * HOUR_MS).toISOString();

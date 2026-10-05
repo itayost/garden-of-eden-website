@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState, useTransition } from "react";
+import { useForm, useFormState, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -84,35 +84,37 @@ export function MeasurementForm({
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Track manual edits — once the user touches age/bmi, stop auto-recomputing.
-  const ageTouched = useRef(Boolean(existing?.age));
-  const bmiTouched = useRef(Boolean(existing?.bmi));
-
   const form = useForm<MeasurementFormData>({
     resolver: zodResolver(nutritionMeasurementSchema),
     defaultValues: getDefaults(existing, dateOfBirth),
   });
 
-  const { register, handleSubmit, setValue, watch, formState } = form;
+  const { register, handleSubmit, setValue, control, formState } = form;
 
-  const measurementDate = watch("measurement_date");
-  const heightCm = watch("height_cm");
-  const weightKg = watch("weight_kg");
+  // useWatch, not watch(): the React Compiler can memoize a subscription.
+  const measurementDate = useWatch({ control, name: "measurement_date" });
+  const heightCm = useWatch({ control, name: "height_cm" });
+  const weightKg = useWatch({ control, name: "weight_kg" });
+  // A value saved before, or typed by the user, is kept: auto-fill stops.
+  // setValue(..., { shouldDirty: false }) below never marks a field dirty.
+  const { dirtyFields } = useFormState({ control, name: ["age", "bmi"] });
+  const keepAge = Boolean(existing?.age) || Boolean(dirtyFields.age);
+  const keepBmi = Boolean(existing?.bmi) || Boolean(dirtyFields.bmi);
 
   // Auto-fill age when measurement date changes, unless user has edited it.
   useEffect(() => {
-    if (ageTouched.current) return;
+    if (keepAge) return;
     if (!dateOfBirth || !measurementDate) return;
     const computed = calculateAge(measurementDate, dateOfBirth);
     setValue("age", computed, { shouldDirty: false });
-  }, [measurementDate, dateOfBirth, setValue]);
+  }, [keepAge, measurementDate, dateOfBirth, setValue]);
 
   // Auto-compute BMI from height + weight, unless user has edited BMI directly.
   useEffect(() => {
-    if (bmiTouched.current) return;
+    if (keepBmi) return;
     const computed = computeBmi(heightCm ?? null, weightKg ?? null);
     setValue("bmi", computed, { shouldDirty: false });
-  }, [heightCm, weightKg, setValue]);
+  }, [keepBmi, heightCm, weightKg, setValue]);
 
   const onSubmit = (data: MeasurementFormData) => {
     setFormError(null);
@@ -160,9 +162,6 @@ export function MeasurementForm({
             {...register("age", {
               setValueAs: (v) =>
                 v === "" || v === null || v === undefined ? null : Number(v),
-              onChange: () => {
-                ageTouched.current = true;
-              },
             })}
           />
         </div>
@@ -227,9 +226,6 @@ export function MeasurementForm({
             {...register("bmi", {
               setValueAs: (v) =>
                 v === "" || v === null || v === undefined ? null : Number(v),
-              onChange: () => {
-                bmiTouched.current = true;
-              },
             })}
           />
           <p className="text-xs text-muted-foreground">
