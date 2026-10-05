@@ -28,6 +28,7 @@ export default async function AdminPlansPage({ searchParams }: PageProps) {
   const isAdmin = profile!.role === "admin";
   const scopeResult = await getBranchScopeAction();
   if ("error" in scopeResult) redirect("/admin");
+  const { managedBranchIds } = scopeResult.data;
 
   const params = await searchParams;
   const status = STATUSES.find((s) => s === params.status);
@@ -56,14 +57,14 @@ export default async function AdminPlansPage({ searchParams }: PageProps) {
         </div>
         <div className="flex flex-wrap gap-2">
           {isAdmin && (
-            <>
-              <Button variant="outline" asChild>
-                <Link href="/admin/plans/products">קטלוג</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/admin/orders">הזמנות</Link>
-              </Button>
-            </>
+            <Button variant="outline" asChild>
+              <Link href="/admin/plans/products">קטלוג</Link>
+            </Button>
+          )}
+          {(isAdmin || managedBranchIds.length > 0) && (
+            <Button variant="outline" asChild>
+              <Link href="/admin/orders">הזמנות</Link>
+            </Button>
           )}
           {products.length > 0 && (
             <NewTraineeSheet products={products} morningConfigured={isMorningConfigured()} isAdmin={isAdmin} />
@@ -83,7 +84,7 @@ export default async function AdminPlansPage({ searchParams }: PageProps) {
           ))}
         </div>
       </div>
-      <PlansTable rows={rows} isAdmin={isAdmin} />
+      <PlansTable rows={rows} isAdmin={isAdmin} managedBranchIds={managedBranchIds} />
     </div>
   );
 }

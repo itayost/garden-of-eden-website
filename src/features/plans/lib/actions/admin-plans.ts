@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getBranchScopeAction, verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
+import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -120,17 +121,19 @@ export async function extendPlanAction(input: {
   planId: string;
   endsOn: string;
 }): Promise<ActionResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   const parsed = extendPlanSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
 
   const db = createAdminClient();
   const { data: existing } = (await typedFrom(db, "trainee_plans")
-    .select("starts_on")
+    .select("starts_on, branch_id")
     .eq("id", parsed.data.planId)
-    .maybeSingle()) as { data: { starts_on: string } | null };
+    .maybeSingle()) as { data: { starts_on: string; branch_id: string } | null };
   if (!existing) return { error: "המסלול לא נמצא" };
+  const denied = await verifyAdminOrBranchManager([existing.branch_id]);
+  if (denied) return { error: denied };
   if (parsed.data.endsOn < existing.starts_on) {
     return { error: "תאריך הסיום קודם לתאריך ההתחלה" };
   }
@@ -154,17 +157,21 @@ export async function addSessionsAction(input: {
   planId: string;
   sessions: number;
 }): Promise<ActionResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   const parsed = addSessionsSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
 
   const db = createAdminClient();
   const { data: plan } = (await typedFrom(db, "trainee_plans")
-    .select("profile_id, sessions_total")
+    .select("profile_id, sessions_total, branch_id")
     .eq("id", parsed.data.planId)
-    .maybeSingle()) as { data: { profile_id: string; sessions_total: number | null } | null };
+    .maybeSingle()) as {
+    data: { profile_id: string; sessions_total: number | null; branch_id: string } | null;
+  };
   if (!plan) return { error: "המסלול לא נמצא" };
+  const denied = await verifyAdminOrBranchManager([plan.branch_id]);
+  if (denied) return { error: denied };
   if (plan.sessions_total === null) return { error: "למסלול לפי זמן אין מונה אימונים" };
 
   const { error } = await typedFrom(db, "trainee_plans")
@@ -180,12 +187,20 @@ export async function addSessionsAction(input: {
 }
 
 export async function cancelPlanAction(input: { planId: string }): Promise<ActionResult> {
-  const { error: authError } = await verifyAdmin();
+  const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   const parsed = cancelPlanSchema.safeParse(input);
   if (!parsed.success) return { error: "מזהה לא תקין" };
 
   const db = createAdminClient();
+  const { data: plan } = (await typedFrom(db, "trainee_plans")
+    .select("branch_id")
+    .eq("id", parsed.data.planId)
+    .maybeSingle()) as { data: { branch_id: string } | null };
+  if (!plan) return { error: "המסלול לא נמצא" };
+  const denied = await verifyAdminOrBranchManager([plan.branch_id]);
+  if (denied) return { error: denied };
+
   const { data, error } = await typedFrom(db, "trainee_plans")
     .update({ status: "cancelled" })
     .eq("id", parsed.data.planId)

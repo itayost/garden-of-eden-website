@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifyAdmin } from "@/lib/actions/shared";
+import { verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
@@ -27,18 +28,20 @@ export type ReconcileResult =
  * hands the order back to pending so the parent can pay again. Admin only.
  */
 export async function reconcileChargingOrderAction(orderId: string): Promise<ReconcileResult> {
-  const { error: authError, user, adminProfile } = await verifyAdmin();
+  const { error: authError, user, profile } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   if (!isValidUUID(orderId)) return { error: "מזהה הזמנה לא תקין" };
 
   const db = createAdminClient();
   const { data: order } = (await typedFrom(db, "orders")
-    .select("id, status, amount_ils, updated_at, fulfillment_error")
+    .select("id, status, amount_ils, updated_at, fulfillment_error, branch_id")
     .eq("id", orderId)
     .maybeSingle()) as {
-    data: Pick<Order, "id" | "status" | "amount_ils" | "updated_at" | "fulfillment_error"> | null;
+    data: Pick<Order, "id" | "status" | "amount_ils" | "updated_at" | "fulfillment_error" | "branch_id"> | null;
   };
   if (!order) return { error: "ההזמנה לא נמצאה" };
+  const denied = await verifyAdminOrBranchManager([order.branch_id]);
+  if (denied) return { error: denied };
   if (order.status !== "charging") return { error: "ההזמנה אינה בחיוב" };
 
   const chargingSince = new Date(order.updated_at);
@@ -79,7 +82,7 @@ export async function reconcileChargingOrderAction(orderId: string): Promise<Rec
       installments: found.installments,
       raw: found.raw,
     },
-    { id: user!.id, name: adminProfile?.full_name ?? null },
+    { id: user!.id, name: profile?.full_name ?? null },
   );
   revalidatePath("/admin/orders");
   revalidatePath("/admin/plans");

@@ -33,8 +33,8 @@ export default async function AdminSubmissionsPage({ searchParams }: AdminSubmis
   const { tab, branch } = await searchParams;
   const supabase = await createClient();
 
-  // Trainers see forms from their branches only. Admins (and an unassigned
-  // trainer, who fails open) get a branch filter that narrows the same way.
+  // Trainers see forms from their branches only (none without a branch).
+  // Admins get a branch filter that narrows the same way.
   const scopeResult = await getBranchScopeAction();
   // A failed scope read must not widen a trainer's view to the whole academy.
   if ("error" in scopeResult) redirect("/dashboard");

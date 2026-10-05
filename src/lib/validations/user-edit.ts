@@ -50,7 +50,21 @@ export const userEditSchema = z.object({
   is_active: z.boolean(),
 
   branch_ids: branchIdListSchema,
-}).superRefine(requireBranchForNonAdmin);
+
+  /** Branches a trainer manages (a Branch manager); a subset of branch_ids. */
+  managed_branch_ids: branchIdListSchema,
+})
+  .superRefine(requireBranchForNonAdmin)
+  .superRefine((value, ctx) => {
+    if (value.managed_branch_ids.length === 0) return;
+    if (value.role !== "trainer") {
+      ctx.addIssue({ code: "custom", path: ["managed_branch_ids"], message: "רק מאמן יכול לנהל סניף" });
+      return;
+    }
+    if (value.managed_branch_ids.some((id) => !value.branch_ids.includes(id))) {
+      ctx.addIssue({ code: "custom", path: ["managed_branch_ids"], message: "אפשר לנהל רק סניף שהמשתמש שייך אליו" });
+    }
+  });
 
 export type UserEditFormData = z.infer<typeof userEditSchema>;
 
@@ -58,6 +72,7 @@ export type UserEditFormData = z.infer<typeof userEditSchema>;
 export function getUserEditDefaults(
   profile: Profile,
   branchIds: readonly string[] = [],
+  managedBranchIds: readonly string[] = [],
 ): UserEditFormData {
   return {
     full_name: profile.full_name || "",
@@ -67,6 +82,7 @@ export function getUserEditDefaults(
     role: profile.role ?? "trainee", // the column default; the column has no NOT NULL yet
     is_active: profile.is_active, // No fallback - DB enforces NOT NULL DEFAULT TRUE
     branch_ids: [...branchIds],
+    managed_branch_ids: [...managedBranchIds],
   };
 }
 

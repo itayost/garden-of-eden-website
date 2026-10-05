@@ -143,17 +143,43 @@ export async function isTraineeInScope(
   return isInBranchScope(scope, memberships.get(traineeId) ?? []);
 }
 
+/** The branches this user manages (a Branch manager). */
+export async function loadManagedBranchIds(db: SupabaseClient, profileId: string): Promise<string[]> {
+  const { data } = (await typedFrom(db, "profile_branches")
+    .select("branch_id")
+    .eq("profile_id", profileId)
+    .eq("manages", true)) as { data: { branch_id: string }[] | null };
+  return (data ?? []).map((row) => row.branch_id);
+}
+
 /**
  * Replaces a user's memberships wholesale. Delete then insert: the form always
- * submits the complete list and a membership row carries no state of its own.
- * stampAdmin marks the profile as hand-edited so the Arbox sync leaves it alone.
+ * submits the complete list. stampAdmin marks the profile as hand-edited so
+ * the Arbox sync leaves it alone. A membership's one piece of state, whether
+ * the user manages that branch, is set from managedBranchIds when given (only
+ * an Admin sets it) and otherwise kept as it was for every branch that stays.
  */
 export async function replaceProfileBranches(
   db: SupabaseClient,
   profileId: string,
   branchIds: readonly string[],
-  options: { stampAdmin: boolean },
+  options: { stampAdmin: boolean; managedBranchIds?: readonly string[] },
 ): Promise<{ error: string | null }> {
+  let managed: ReadonlySet<string>;
+  if (options.managedBranchIds) {
+    managed = new Set(options.managedBranchIds);
+  } else {
+    const { data: current, error: readError } = (await typedFrom(db, "profile_branches")
+      .select("branch_id")
+      .eq("profile_id", profileId)
+      .eq("manages", true)) as { data: { branch_id: string }[] | null; error: { message: string } | null };
+    if (readError) {
+      console.error("replaceProfileBranches read error:", readError);
+      return { error: "שגיאה בעדכון הסניפים" };
+    }
+    managed = new Set((current ?? []).map((row) => row.branch_id));
+  }
+
   const { error: deleteError } = await typedFrom(db, "profile_branches")
     .delete()
     .eq("profile_id", profileId);
@@ -165,7 +191,11 @@ export async function replaceProfileBranches(
 
   if (branchIds.length > 0) {
     const { error: insertError } = await typedFrom(db, "profile_branches").insert(
-      branchIds.map((branchId) => ({ profile_id: profileId, branch_id: branchId })),
+      branchIds.map((branchId) => ({
+        profile_id: profileId,
+        branch_id: branchId,
+        manages: managed.has(branchId),
+      })),
     );
     if (insertError) {
       console.error("replaceProfileBranches insert error:", insertError);

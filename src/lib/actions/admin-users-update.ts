@@ -10,6 +10,7 @@ import {
   loadBranchIdsByProfile,
   loadBranchOptions,
   replaceProfileBranches,
+  loadManagedBranchIds,
 } from "@/features/branches/lib/memberships";
 import { branchFieldChange } from "@/lib/branches/branch-change";
 import type { BranchScope } from "@/lib/branches/branch-scope";
@@ -50,7 +51,7 @@ export async function updateUserAction(
     };
   }
 
-  const { full_name, phone, birthdate, club, role, is_active, branch_ids } = validated.data;
+  const { full_name, phone, birthdate, club, role, is_active, branch_ids, managed_branch_ids } = validated.data;
   const adminClient = createAdminClient();
 
   try {
@@ -113,9 +114,25 @@ export async function updateUserAction(
       branchNamesFor(nextBranchIds, branchOptions),
     );
 
+    // Which branches a trainer manages is an Admin's call (ADR-0009). For
+    // anyone else the stored flags are kept as they are.
+    const callerIsAdmin = callerProfile!.role === "admin";
+    const nextManagedIds = callerIsAdmin
+      ? role === "trainer"
+        ? managed_branch_ids.filter((id) => nextBranchIds.includes(id))
+        : []
+      : undefined;
+    const managedChange = nextManagedIds
+      ? branchFieldChange(
+          branchNamesFor(await loadManagedBranchIds(adminClient, userId), branchOptions),
+          branchNamesFor(nextManagedIds, branchOptions),
+        )
+      : null;
+
     const changes = [
       ...getFieldChanges(targetProfile, validated.data),
       ...(branchChange ? [branchChange] : []),
+      ...(managedChange ? [{ ...managedChange, field: "managed_branches" }] : []),
     ];
     if (changes.length === 0) {
       return { success: true, message: "לא בוצעו שינויים" };
@@ -172,12 +189,12 @@ export async function updateUserAction(
 
     // 9b. Branch memberships. Trainers may set these on trainees (the
     // trainer-edits-trainee rule in step 5 already holds here).
-    if (branchChange) {
+    if (branchChange || managedChange) {
       const { error: branchError } = await replaceProfileBranches(
         adminClient,
         userId,
         nextBranchIds,
-        { stampAdmin: true },
+        { stampAdmin: true, managedBranchIds: nextManagedIds },
       );
       if (branchError) return { error: branchError };
     }

@@ -19,8 +19,18 @@ import { PlanActionsDialog } from "./PlanActionsDialog";
 import { StaffPaymentSheet } from "../staff/StaffPaymentSheet";
 import { AgreementBadge } from "../staff/AgreementBadge";
 import { formatPhoneToLocal } from "@/lib/validations/common";
+import { canManageBranches } from "@/lib/branches/branch-scope";
 
-export function PlansTable({ rows, isAdmin }: { rows: AdminPlanRow[]; isAdmin: boolean }) {
+export function PlansTable({
+  rows,
+  isAdmin,
+  managedBranchIds = [],
+}: {
+  rows: AdminPlanRow[];
+  isAdmin: boolean;
+  /** Branches the viewer manages: they get the plan actions for those rows. */
+  managedBranchIds?: readonly string[];
+}) {
   const [target, setTarget] = useState<AdminPlanRow | null>(null);
   const [payFor, setPayFor] = useState<string | null>(null);
 
@@ -108,7 +118,7 @@ export function PlansTable({ rows, isAdmin }: { rows: AdminPlanRow[]; isAdmin: b
                       <Banknote className="h-4 w-4 me-1" />
                       תשלום
                     </Button>
-                    {isAdmin && (
+                    {canManageBranches(isAdmin ? "admin" : "trainer", managedBranchIds, [row.plan.branch_id]) && (
                       <Button
                         variant="ghost"
                         size="icon"

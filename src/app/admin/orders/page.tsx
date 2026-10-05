@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { verifyAdmin } from "@/lib/actions/shared";
+import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import {
   listOrdersAction,
   listUnassignedWebhookEventsAction,
@@ -12,11 +12,18 @@ import { formatDateTime } from "@/lib/utils/date";
 export const metadata: Metadata = { title: "הזמנות | Garden of Eden" };
 
 export default async function AdminOrdersPage() {
-  const { error } = await verifyAdmin();
+  // Admins and Branch managers; a Branch manager sees their branches' orders.
+  const { error, profile } = await verifyAdminOrTrainer();
   if (error) redirect("/admin");
+  const isAdmin = profile!.role === "admin";
+  if (!isAdmin) {
+    const scope = await getBranchScopeAction();
+    if ("error" in scope || scope.data.managedBranchIds.length === 0) redirect("/admin");
+  }
+  // Unassigned Morning deliveries carry no branch: Admins only.
   const [orders, unassigned] = await Promise.all([
     listOrdersAction(),
-    listUnassignedWebhookEventsAction(),
+    isAdmin ? listUnassignedWebhookEventsAction() : Promise.resolve([]),
   ]);
 
   return (

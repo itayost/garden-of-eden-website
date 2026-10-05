@@ -14,6 +14,8 @@ export interface BranchScopeData {
   scope: BranchScope;
   /** The caller's own memberships, whatever their role. */
   memberBranchIds: string[];
+  /** The branches the caller manages (a Branch manager); empty for admins. */
+  managedBranchIds: string[];
 }
 
 type BranchScopeResult = { success: true; data: BranchScopeData } | { error: string };
@@ -31,14 +33,14 @@ export const getBranchScopeAction = cache(async (): Promise<BranchScopeResult> =
 
   // Admins skip the read: their scope is "all" whatever they belong to.
   if (profile!.role === "admin") {
-    return { success: true, data: { scope: ALL_BRANCHES_SCOPE, memberBranchIds: [] } };
+    return { success: true, data: { scope: ALL_BRANCHES_SCOPE, memberBranchIds: [], managedBranchIds: [] } };
   }
 
   const supabase = await createClient();
   const { data, error: readError } = (await typedFrom(supabase, "profile_branches")
-    .select("branch_id")
+    .select("branch_id, manages")
     .eq("profile_id", user!.id)) as {
-    data: { branch_id: string }[] | null;
+    data: { branch_id: string; manages: boolean }[] | null;
     error: { message: string } | null;
   };
 
@@ -48,7 +50,8 @@ export const getBranchScopeAction = cache(async (): Promise<BranchScopeResult> =
   }
 
   const memberBranchIds = (data ?? []).map((row) => row.branch_id);
+  const managedBranchIds = (data ?? []).filter((row) => row.manages).map((row) => row.branch_id);
   const scope = resolveBranchScope(profile!.role, memberBranchIds);
 
-  return { success: true, data: { scope, memberBranchIds } };
+  return { success: true, data: { scope, memberBranchIds, managedBranchIds } };
 });
