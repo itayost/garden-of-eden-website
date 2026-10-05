@@ -62,6 +62,7 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   const priced = staffOrderColumns(product, data, user!.id, { profileId: data.traineeId, loginPhone, child, parent });
   if (!priced.ok) return { error: priced.problem };
   const amount = priced.paid;
+  const planName = data.manualCard ? manualCardLabel(product.name_he, data.manualCard) : product.name_he;
 
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({
@@ -84,7 +85,7 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
     parent,
     child,
     health,
-    planName: data.manualCard ? manualCardLabel(product.name_he, data.manualCard) : product.name_he,
+    planName,
     priceIls: amount,
     startsOn: israelToday(),
     paymentLabel: PAYMENT_METHOD_LABELS_HE.card,
@@ -113,13 +114,19 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
       action: "payment_link_created",
       actor_id: user!.id,
       actor_name: staff?.full_name ?? "צוות",
-      metadata: { orderId: order.id, productId: product.id, amountIls: amount, ...(data.discount ? { listPriceIls: priced.listPrice } : {}) },
+      metadata: {
+        orderId: order.id,
+        productId: product.id,
+        amountIls: amount,
+        ...(data.discount ? { listPriceIls: priced.listPrice } : {}),
+        ...(data.manualCard ? { manualCard: data.manualCard } : {}),
+      },
     }),
     data.sendWhatsApp
       ? sendPaymentLink(parent.phone, {
           parentName: parent.name,
           childName: child.name,
-          planName: product.name_he,
+          planName,
           amount: `₪${amount.toLocaleString("he-IL")}`,
           url,
         })

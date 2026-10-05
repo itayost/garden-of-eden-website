@@ -9,6 +9,7 @@ import {
 import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue, type NewPlanTerms } from "@/lib/plans/plan-queue";
 import { appliedStart } from "@/lib/plans/start-date";
+import { orderManualTerms } from "@/lib/plans/manual-card";
 import { loadQueueRows, loadStoredPlans } from "@/features/plans/lib/queries";
 import { israelToday } from "@/lib/utils/tasks";
 import type { EnrollmentAgreement, Order, PlanProduct } from "@/types/plans";
@@ -72,11 +73,8 @@ export async function fulfillFromInput(
   { order, product, agreement, createdBy, source, terms, chosenStartsOn = null }: FulfillInput,
 ): Promise<FulfillResult> {
   // A manual Card was sold on the terms staff typed, kept on the order.
-  const termsOverride =
-    terms ??
-    (order.terms_sessions_total != null && order.terms_duration_days != null
-      ? { sessionsTotal: order.terms_sessions_total, durationDays: order.terms_duration_days }
-      : undefined);
+  const manual = orderManualTerms(order);
+  const termsOverride = terms ?? (manual ? { sessionsTotal: manual.sessions, durationDays: manual.days } : undefined);
   try {
     const profileId =
       order.profile_id ??

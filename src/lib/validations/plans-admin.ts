@@ -48,11 +48,6 @@ const discountSchema = z
   .nullable()
   .default(null);
 
-/**
- * A new trainee signed up at the field. Staff type only what the parent
- * cannot fill in later; birthdate, email, health, and consent come from the
- * parent on the signing page.
- */
 /** A manual Card's terms as staff typed them; the action checks them (manualCardProblem). */
 const manualCardSchema = z
   .object({
@@ -63,6 +58,11 @@ const manualCardSchema = z
   .nullable()
   .default(null);
 
+/**
+ * A new trainee signed up at the field. Staff type only what the parent
+ * cannot fill in later; birthdate, email, health, and consent come from the
+ * parent on the signing page.
+ */
 export const newTraineeSchema = z.object({
   productId: uuid,
   childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי").regex(singleLine, "שם בשורה אחת"),

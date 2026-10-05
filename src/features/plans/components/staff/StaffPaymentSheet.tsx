@@ -106,10 +106,10 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     if (method === "arbox") setMethod("cash");
   };
   // A start can be chosen when nothing is current or queued, and always for an
-  // Add-on, which sits outside the queue.
+  // Add-on, which sits outside the queue (a manual Card is a Card, never an Add-on).
   // A Payment link's Plan joins the queue when the parent pays: no start to choose.
   const canChooseStart =
-    method !== "card" && context !== null && (!context.startsAfterCurrent || selectedProduct?.kind === "addon");
+    method !== "card" && context !== null && (!context.startsAfterCurrent || (!manualDraft && selectedProduct?.kind === "addon"));
   const startsLater = canChooseStart && context !== null && startsOn > context.today;
 
   const prefillArbox = (nextProductId: string | null) => {

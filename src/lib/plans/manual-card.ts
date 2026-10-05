@@ -28,6 +28,25 @@ export function manualCardProblem(terms: ManualCardTerms): string | null {
 export const manualCardLabel = (productName: string, terms: Pick<ManualCardTerms, "sessions" | "days">) =>
   `${productName}: ${terms.sessions} אימונים, ${terms.days} ימים`;
 
+/** The terms a manual Card order was sold on, or null for a catalog sale. */
+export function orderManualTerms(order: {
+  terms_sessions_total: number | null;
+  terms_duration_days: number | null;
+}): Pick<ManualCardTerms, "sessions" | "days"> | null {
+  return order.terms_sessions_total != null && order.terms_duration_days != null
+    ? { sessions: order.terms_sessions_total, days: order.terms_duration_days }
+    : null;
+}
+
+/** An order's plan name: a manual Card with its typed terms, a catalog sale by its product. */
+export function orderPlanName(
+  productName: string,
+  order: { terms_sessions_total: number | null; terms_duration_days: number | null },
+): string {
+  const terms = orderManualTerms(order);
+  return terms ? manualCardLabel(productName, terms) : productName;
+}
+
 /** A staff form's manual Card fields, as typed. */
 export interface ManualCardDraft {
   sessions: string;

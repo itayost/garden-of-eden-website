@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { manualCardProblem, readManualCard } from "../manual-card";
+import { manualCardProblem, orderManualTerms, orderPlanName, readManualCard } from "../manual-card";
 
 describe("manualCardProblem", () => {
   it("accepts whole sessions, a price in shekels and agorot, and whole days", () => {
@@ -38,5 +38,27 @@ describe("readManualCard", () => {
 
   it("passes on the rule's refusal", () => {
     expect(readManualCard({ sessions: "8", price: "640", days: "0" }).problem).toBe("תוקף בימים בין 1 ל-730");
+  });
+});
+
+describe("orderManualTerms", () => {
+  it("reads a manual Card's terms off the order", () => {
+    expect(orderManualTerms({ terms_sessions_total: 8, terms_duration_days: 90 })).toEqual({ sessions: 8, days: 90 });
+  });
+
+  it("is null for a catalog sale", () => {
+    expect(orderManualTerms({ terms_sessions_total: null, terms_duration_days: null })).toBeNull();
+  });
+});
+
+describe("orderPlanName", () => {
+  it("names a manual Card with its typed terms", () => {
+    expect(orderPlanName("כרטיסייה ידנית", { terms_sessions_total: 8, terms_duration_days: 90 })).toBe(
+      "כרטיסייה ידנית: 8 אימונים, 90 ימים",
+    );
+  });
+
+  it("names a catalog sale by its product", () => {
+    expect(orderPlanName("כרטיסיית 10", { terms_sessions_total: null, terms_duration_days: null })).toBe("כרטיסיית 10");
   });
 });

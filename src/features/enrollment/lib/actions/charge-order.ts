@@ -12,6 +12,7 @@ import { cardPaymentSchema, type CardPaymentInput } from "@/lib/validations/card
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import { sameTraineeOrders } from "@/lib/plans/bound-renewal";
 import { capturedPriceHolds } from "@/lib/plans/discount";
+import { orderManualTerms, orderPlanName } from "@/lib/plans/manual-card";
 import type { Order, PlanProduct } from "@/types/plans";
 import { completeCardPayment } from "../complete-card-payment";
 
@@ -65,10 +66,10 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
   // The product and the agreement are read together; both must hold.
   const [{ data: product }, { count: signed }] = await Promise.all([
     typedFrom(db, "plan_products")
-      .select("id, name_he, price_ils, is_active, once_per_trainee")
+      .select("id, name_he, price_ils, is_active, once_per_trainee, staff_terms")
       .eq("id", order.product_id)
       .maybeSingle() as unknown as Promise<{
-      data: Pick<PlanProduct, "id" | "name_he" | "price_ils" | "is_active" | "once_per_trainee"> | null;
+      data: Pick<PlanProduct, "id" | "name_he" | "price_ils" | "is_active" | "once_per_trainee" | "staff_terms"> | null;
     }>,
     // A Payment link's agreement is signed by the parent before the card page;
     // the online form signs its own when the order is made.
@@ -77,12 +78,16 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
       .eq("order_id", order.id)
       .not("signed_at", "is", null) as unknown as Promise<{ count: number | null }>,
   ]);
+  // A manual Card sells its never-active placeholder on the terms the order
+  // carries; any other product must still be on sale.
+  const staffTerms = product?.staff_terms === true && orderManualTerms(order) !== null;
   const captured = {
     amountIls: Number(order.amount_ils),
     listPriceIls: order.list_price_ils == null ? null : Number(order.list_price_ils),
-    staffTerms: order.terms_sessions_total != null,
+    staffTerms,
   };
-  if (!product || !product.is_active || !capturedPriceHolds(Number(product.price_ils), captured)) {
+  const onSale = product !== null && (product.staff_terms ? staffTerms : product.is_active);
+  if (!product || !onSale || !capturedPriceHolds(Number(product.price_ils), captured)) {
     return { error: "המסלול או המחיר השתנו. התחילו הרשמה חדשה." };
   }
   if (!signed) return { error: "יש לחתום על ההסכם לפני התשלום." };
@@ -97,7 +102,7 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
       return { error: "חבילת ההיכרות כבר נרכשה למספר הזה. בחרו מסלול אחר." };
     }
   }
-  const description = `${product.name_he} - ${order.child_name}`;
+  const description = `${orderPlanName(product.name_he, order)} - ${order.child_name}`;
 
   // Per order, so declines cannot turn one order into a card-testing tool.
   // Counted here, past every refusal that sends nothing to Pelecard.

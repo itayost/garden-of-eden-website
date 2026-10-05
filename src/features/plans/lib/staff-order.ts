@@ -17,7 +17,7 @@ export interface StaffOrderParties {
  * amount paid (a Discount below list price, or a manual Card's typed price,
  * both checked here for every path), the Discount's list price, reason and
  * giver, a manual Card's terms, and the people. Who may give either is the
- * caller's check (discountRefusal).
+ * caller's check (pricingRefusal).
  */
 export function staffOrderColumns(
   product: Pick<PlanProduct, "id" | "branch_id" | "price_ils" | "staff_terms">,
@@ -28,7 +28,7 @@ export function staffOrderColumns(
   const { discount, manualCard } = sale;
   const listPrice = Number(product.price_ils);
   // A manual Card is sold only on its own placeholder product, and only on typed terms.
-  if (Boolean(manualCard) !== product.staff_terms) return { ok: false as const, problem: "מסלול לא תקין" };
+  if (Boolean(manualCard) !== (product.staff_terms === true)) return { ok: false as const, problem: "מסלול לא תקין" };
   if (manualCard && discount) return { ok: false as const, problem: "בכרטיסייה ידנית קובעים את המחיר עצמו, בלי הנחה" };
   const problem = manualCard
     ? manualCardProblem(manualCard)

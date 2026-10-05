@@ -166,6 +166,7 @@ export async function recordManualPayment(
       reference,
       amountIls: paid,
       ...(input.discount ? { listPriceIls: sale.listPrice, discountReason: input.discount.reason } : {}),
+      ...(input.manualCard ? { manualCard: input.manualCard } : {}),
     },
   });
 

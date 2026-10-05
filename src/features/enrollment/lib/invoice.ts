@@ -8,7 +8,7 @@ import type { ReceiptPayment } from "@/lib/morning/payment-mapping";
 import type { CardBrand } from "@/lib/payments/card";
 import { israelToday } from "@/lib/utils/tasks";
 import type { Order, PlanProduct } from "@/types/plans";
-import { manualCardLabel } from "@/lib/plans/manual-card";
+import { orderPlanName } from "@/lib/plans/manual-card";
 
 export type InvoiceOutcome =
   | { ok: true; url: string | null; alreadyIssued: boolean }
@@ -65,7 +65,7 @@ export async function issueOrderInvoice(
     .maybeSingle()) as { data: Pick<PlanProduct, "name_he"> | null };
 
   const doc = await createReceiptDocument({
-    description: `${receiptName(product?.name_he ?? "מסלול", order)} - ${order.child_name}`,
+    description: `${orderPlanName(product?.name_he ?? "מסלול", order)} - ${order.child_name}`,
     amountIls: Number(order.amount_ils),
     paidOn: order.paid_at ? order.paid_at.slice(0, 10) : israelToday(),
     client: { name: order.parent_name, phone: order.payer_phone, email: order.email },
@@ -95,12 +95,5 @@ export async function issueOrderInvoice(
     });
   }
   return { ok: true, url: doc.url, alreadyIssued: false };
-}
-
-/** A manual Card is named with the terms staff typed; a catalog sale by its product. */
-function receiptName(productName: string, order: Pick<Order, "terms_sessions_total" | "terms_duration_days">): string {
-  return order.terms_sessions_total != null && order.terms_duration_days != null
-    ? manualCardLabel(productName, { sessions: order.terms_sessions_total, days: order.terms_duration_days })
-    : productName;
 }
 
