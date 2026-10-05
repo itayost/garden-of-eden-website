@@ -93,6 +93,17 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   }
   const url = agreementLink(agreement.id);
 
+  // The newest link is the only one the parent can pay: older unpaid links
+  // for this child close, so two messages can never mean two charges.
+  // One being charged right now (charging) is left to finish.
+  const { error: supersedeError } = await typedFrom(db, "orders")
+    .update({ status: "failed", fulfillment_error: "replaced by a newer Payment link" })
+    .eq("profile_id", data.traineeId)
+    .not("payment_link_by", "is", null)
+    .in("status", ["pending", "expired"])
+    .neq("id", order.id);
+  if (supersedeError) console.error("[payment-link] closing older links failed:", supersedeError.message);
+
   // The log and the message do not wait on each other.
   const [, sent] = await Promise.all([
     db.from("activity_logs").insert({

@@ -39,6 +39,16 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
   if (!row) notFound();
   const { order, ...data } = row;
 
+  // A Payment link replaced by a newer one (or otherwise closed) is not signed here.
+  if (!data.signed_at && order?.payment_link_by && order.status === "failed") {
+    return (
+      <section className="space-y-2 rounded-2xl border bg-white p-4 text-sm">
+        <h1 className="text-xl font-bold">הקישור הזה הוחלף</h1>
+        <p className="text-black/60">נשלח אליכם קישור חדש לתשלום. השתמשו בקישור האחרון שקיבלתם בוואטסאפ.</p>
+      </section>
+    );
+  }
+
   if (!data.signed_at) {
     return <AgreementSignForm agreement={data} token={t} awaitingCard={order !== null && awaitsCard(order)} />;
   }
