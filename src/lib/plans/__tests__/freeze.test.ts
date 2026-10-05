@@ -54,6 +54,16 @@ describe("freezeProblem", () => {
     expect(freezeProblem(queue, "cur", { startsOn: "2026-10-01", endsOn: null })).toBe("בתאריכים האלה כבר התקיים אימון");
   });
 
+  it("refuses a Freeze that starts after the Plan's end, which would only add days", () => {
+    const queue = resolvePlanQueue([subscription("cur")], rows, TODAY); // to 19.10
+
+    expect(freezeProblem(queue, "cur", { startsOn: "2026-11-01", endsOn: "2026-11-10" })).toBe(
+      "ההקפאה מתחילה אחרי סיום המסלול",
+    );
+    expect(freezeProblem(queue, "cur", { startsOn: "2026-10-20", endsOn: null })).toBe("ההקפאה מתחילה אחרי סיום המסלול");
+    expect(freezeProblem(queue, "cur", { startsOn: "2026-10-19", endsOn: null })).toBeNull();
+  });
+
   it("refuses an overlap with a Freeze already on the Plan", () => {
     const frozen = subscription("cur", { freezes: [{ startsOn: "2026-10-10", endsOn: "2026-10-15" }] });
     const queue = resolvePlanQueue([frozen], rows, TODAY);

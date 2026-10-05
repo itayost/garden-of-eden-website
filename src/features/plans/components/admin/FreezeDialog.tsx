@@ -39,7 +39,7 @@ export function FreezeDialog({ planId, onClose }: { planId: string; onClose: () 
 
   const confirm = () =>
     startTransition(async () => {
-      const result = await freezePlanAction({ planId, startsOn, endsOn: end, medicalCertificate: true, reason });
+      const result = await freezePlanAction({ planId, startsOn, endsOn: end, medicalCertificate: certificate, reason });
       if ("error" in result) {
         toast.error(result.error);
         return;

@@ -709,6 +709,24 @@ describe("a Freeze", () => {
     expect(resolvePlanQueue([ended], [], "2026-10-20").plans[0].endsOn).toBe("2026-11-02");
   });
 
+  it("an open-ended Freeze on a Plan that was cancelled or ended early stops on its last day", () => {
+    const freezes = [{ startsOn: "2026-10-01", endsOn: null }];
+    const cancelled = subscription({ notBefore: "2026-09-20", status: "cancelled", endedOn: "2026-10-03", freezes });
+    const endedEarly = subscription({ notBefore: "2026-09-20", endedOn: "2026-10-04", freezes });
+    const queued = card(10, { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+    const rows = [session("2026-10-08")];
+
+    for (const ended of [cancelled, endedEarly]) {
+      const queue = resolvePlanQueue([ended, queued], rows, TODAY);
+
+      expect(queue.frozen).toBeNull();
+      expect(queue.current?.plan.id).toBe(queued.id);
+      expect(queue.current?.charged.map((r) => r.schedule_date)).toEqual(["2026-10-08"]);
+      expect(bookingVerdict([ended, queued], rows, { date: "2026-10-12", start_time: "17:00:00", branch_id: "ka" }, TODAY))
+        .toMatchObject({ ok: true, planId: queued.id });
+    }
+  });
+
   it("refuses a Booking inside a Freeze, or after the start of an open-ended one, as frozen", () => {
     const closed = card(10, { notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-06", endsOn: "2026-10-20" }] });
     const open = card(10, { notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-06", endsOn: null }] });

@@ -38,7 +38,11 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   const [endingEarly, setEndingEarly] = useState(false);
   const [freezing, setFreezing] = useState(false);
   const openFreeze = row.plan.freezes?.find((f) => f.endsOn === null) ?? null;
-  const [thawOn, setThawOn] = useState(() => israelToday());
+  // An open Freeze that has not started yet cannot end before it does.
+  const [thawOn, setThawOn] = useState(() => {
+    const today = israelToday();
+    return openFreeze && openFreeze.startsOn > today ? openFreeze.startsOn : today;
+  });
 
   const endFreeze = () => {
     if (!openFreeze?.id) return;

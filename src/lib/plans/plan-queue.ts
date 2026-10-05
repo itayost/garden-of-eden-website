@@ -57,6 +57,21 @@ function frozenDays(freeze: PlanFreeze, today: string): number {
   return last < freeze.startsOn ? 0 : daysBetween(freeze.startsOn, last) + 1;
 }
 
+/** The last day a Plan ended by an Early end (the day before) or a Cancellation (that day) runs, or null. */
+const cutOf = (plan: QueuePlan): string | null =>
+  plan.endedOn ? (plan.status === "active" ? addDays(plan.endedOn, -1) : plan.endedOn) : null;
+
+/**
+ * A Plan's Freezes as they hold: an open-ended one on a Plan that ended
+ * (Early end, Cancellation) stops on its last day, so it never holds the
+ * Plans behind it or pauses the reminders for good. Nothing can end it then.
+ */
+function freezesOf(plan: QueuePlan): readonly PlanFreeze[] {
+  const freezes = plan.freezes ?? [];
+  const cut = cutOf(plan);
+  return cut === null ? freezes : freezes.map((f) => (f.endsOn === null ? { ...f, endsOn: cut } : f));
+}
+
 export interface QueueRow extends RosterRowLite {
   id: string;
 }
@@ -131,15 +146,16 @@ function walkQueue<P extends QueuePlan>(
   let heldFrom: string | null = null;
 
   for (const plan of plans) {
-    for (const f of plan.freezes ?? []) {
+    const freezes = freezesOf(plan);
+    for (const f of freezes) {
       if (f.endsOn === null && (heldFrom === null || f.startsOn < heldFrom)) heldFrom = f.startsOn;
     }
     const startsOn: string =
       earliestNext !== null && earliestNext > plan.notBefore ? earliestNext : plan.notBefore;
-    const frozen = (plan.freezes ?? []).reduce((sum, f) => sum + frozenDays(f, today), 0);
+    const frozen = freezes.reduce((sum, f) => sum + frozenDays(f, today), 0);
     const ownEnd: string = addDays(plan.fixedEndsOn ?? addDays(startsOn, plan.durationDays - 1), frozen);
     const endedEarly = plan.status === "active" && Boolean(plan.endedOn);
-    const cut = plan.endedOn ? (endedEarly ? addDays(plan.endedOn, -1) : plan.endedOn) : null;
+    const cut = cutOf(plan);
     const expiresOn: string = cut !== null && cut < ownEnd ? cut : ownEnd;
     const charged: QueueRow[] = [];
     for (const row of pending) {
@@ -147,7 +163,7 @@ function walkQueue<P extends QueuePlan>(
       if (taken.has(row.id) || row.branch_id !== plan.branchId) continue;
       if (row.schedule_date < startsOn || row.schedule_date > expiresOn) continue;
       if (heldFrom !== null && row.schedule_date >= heldFrom) continue;
-      if (plan.freezes?.some((f) => inFreeze(f, row.schedule_date))) continue;
+      if (freezes.some((f) => inFreeze(f, row.schedule_date))) continue;
       charged.push(row);
       taken.add(row.id);
     }
@@ -230,7 +246,7 @@ export function resolvePlanQueue<P extends QueuePlan>(
   const shown =
     current ?? queued[0] ?? entries.at(-1) ?? (lastCancelled ? walkQueue([lastCancelled], [], today)[0] : null);
 
-  const frozen = live.flatMap((p) => p.freezes ?? []).find((f) => inFreeze(f, today)) ?? null;
+  const frozen = live.flatMap(freezesOf).find((f) => inFreeze(f, today)) ?? null;
 
   return { plans: entries, current, queued, ahead, cardsOnly, sessionsLeft, endsOn, status, shown, frozen };
 }
@@ -297,7 +313,7 @@ export function bookingVerdict<P extends QueuePlan>(
 
   const owner = after.plans.find((e) => e.charged.some((r) => r.id === CANDIDATE));
   if (!owner) {
-    if (sold(plans).some((p) => p.freezes?.some((f) => inFreeze(f, slot.date)))) {
+    if (sold(plans).some((p) => freezesOf(p).some((f) => inFreeze(f, slot.date)))) {
       return { ok: false, block: "plan_frozen" };
     }
     const covered = after.plans.some((e) => e.startsOn <= slot.date && slot.date <= e.expiresOn);
