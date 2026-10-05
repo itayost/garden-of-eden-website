@@ -16,7 +16,6 @@ import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
-import { toE164 } from "@/lib/plans/local-phone";
 import {
   newTraineeSchema,
   resendAgreementSchema,
