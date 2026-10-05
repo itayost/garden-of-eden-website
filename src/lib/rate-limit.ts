@@ -95,6 +95,20 @@ const bookingLimiter = redis
   : null;
 
 /**
+ * A trainee asking a parent to buy a Plan: 3 WhatsApp messages per day per
+ * trainee, so a child cannot flood the parent. Fails closed: the parent's
+ * phone is what it protects.
+ */
+const purchaseRequestLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(3, "24 h"),
+      prefix: "goe:purchase-request",
+      analytics: true,
+    })
+  : null;
+
+/**
  * Manual Arbox sync: one run per 5 minutes for the whole staff (one key).
  * A run reads ~500 Arbox clients; staff pressing it repeatedly must not
  * hammer Arbox. It fails open: the sync is idempotent.
@@ -147,6 +161,7 @@ const LIMITERS = {
   payment_order: paymentOrderLimiter,
   checkout: checkoutLimiter,
   booking: bookingLimiter,
+  purchase_request: purchaseRequestLimiter,
   arbox_sync: arboxSyncLimiter,
   general: generalLimiter,
 } as const;
@@ -156,7 +171,7 @@ export async function checkRateLimit(
   type: keyof typeof LIMITERS
 ): Promise<RateLimitResult> {
   const limiter = LIMITERS[type];
-  const isSensitiveOperation = type === "payment" || type === "payment_order";
+  const isSensitiveOperation = type === "payment" || type === "payment_order" || type === "purchase_request";
 
   // If Redis is unavailable:
   // - For sensitive operations (payments): FAIL CLOSED - block the request

@@ -148,3 +148,21 @@ export async function sendPaymentLink(phone: string, params: PaymentLinkParams):
     templateMessage(phone, templateName, [params.parentName, params.childName, params.planName, params.amount, params.url]),
   );
 }
+
+/**
+ * A trainee asked the parent to buy a Plan: Meta-approved template
+ * WHATSAPP_PURCHASE_REQUEST_TEMPLATE_NAME with body parameters {{1}} parent,
+ * {{2}} child, {{3}} link. Optional until Meta approves it; the app then
+ * opens the child's own WhatsApp with the same message instead.
+ */
+export async function sendPurchaseRequest(
+  phone: string,
+  params: { parentName: string; childName: string; url: string },
+): Promise<WhatsAppResult> {
+  const templateName = process.env.WHATSAPP_PURCHASE_REQUEST_TEMPLATE_NAME?.trim();
+  if (!templateName) {
+    return { success: false, error: "WHATSAPP_PURCHASE_REQUEST_TEMPLATE_NAME not configured" };
+  }
+  const { token, phoneNumberId } = getConfig();
+  return callWhatsAppAPI(phoneNumberId, token, templateMessage(phone, templateName, [params.parentName, params.childName, params.url]));
+}

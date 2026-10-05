@@ -1,22 +1,20 @@
-import Link from "next/link";
 import { CalendarClock, Ticket } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { shortDate } from "@/lib/utils/iso-date";
 import type { PlanQueueView } from "../lib/queries";
 import { PlanStatusBadge } from "./PlanStatusBadge";
+import { PurchaseRequestButton } from "./PurchaseRequestButton";
 
 interface MyPlanCardProps {
   planQueue: PlanQueueView;
-  renewUrl: string;
 }
 
 /**
  * The trainee's plan at a glance. An expired plan turns the card into the
- * banner; nothing is blocked, the renewal button is the only change.
+ * banner; nothing is blocked. Renewing sends the parent the purchase link.
  */
-export function MyPlanCard({ planQueue, renewUrl }: MyPlanCardProps) {
+export function MyPlanCard({ planQueue }: MyPlanCardProps) {
   const { queue, product, sessionsLeft, status, endsOn } = planQueue;
   const expired = status === "expired";
   const next = queue.current ? queue.queued[0] : undefined;
@@ -49,14 +47,13 @@ export function MyPlanCard({ planQueue, renewUrl }: MyPlanCardProps) {
             </p>
           )}
           {expired && (
-            <p className="text-sm text-destructive">המסלול הסתיים. אפשר לחדש אותו בלחיצה.</p>
+            <p className="text-sm text-destructive">המסלול הסתיים. ההורה יקבל קישור לחידוש בלחיצה.</p>
           )}
         </div>
-        {status !== "cancelled" && (
-          <Button asChild variant={expired || status === "ending_soon" ? "default" : "outline"}>
-            <Link href={renewUrl}>{expired ? "חידוש המסלול" : "חידוש מוקדם"}</Link>
-          </Button>
-        )}
+        <PurchaseRequestButton
+          label={expired || status === "cancelled" ? "בקשה מההורה לחדש" : "בקשה מההורה לחידוש מוקדם"}
+          primary={expired || status === "ending_soon" || status === "cancelled"}
+        />
       </CardContent>
     </Card>
   );

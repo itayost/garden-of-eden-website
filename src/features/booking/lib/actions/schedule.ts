@@ -18,7 +18,6 @@ import {
 } from "@/lib/schedule/booking-rules";
 import { bookingVerdict, queueBookingBlock, resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { loadStoredPlans, toPlanQueueView } from "@/features/plans/lib/queries";
-import { buildRenewalUrl } from "@/features/plans/lib/renewal-link";
 import { PLAN_STATUS_LABELS_HE, type PlanStatus } from "@/types/plans";
 import { materializeBookableSlots } from "../materialize";
 import { loadBookableBranchForUser, loadBookableSlots, loadTraineeRosterRows } from "../queries";
@@ -62,7 +61,8 @@ export interface TraineeScheduleView {
     weekCount: number;
     weeklyCap: number | null;
     endsOn: string;
-    renewUrl: string | null;
+    /** Ended or ending: the page offers to ask the parent to renew. */
+    canRenew: boolean;
   } | null;
   /** Why booking is blocked for the plan as a whole, if it is. */
   block: BookingBlock | null;
@@ -121,10 +121,7 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
         weekCount: weeklyBookingCount(rows, today, branchId),
         weeklyCap: runningKind && WEEKLY_CAP_KINDS.includes(runningKind) ? WEEKLY_CAP : null,
         endsOn: view.endsOn,
-        renewUrl:
-          view.status === "expired" || view.status === "ending_soon"
-            ? buildRenewalUrl(view.plan.id)
-            : null,
+        canRenew: view.status === "expired" || view.status === "ending_soon",
       }
     : null;
 
