@@ -48,7 +48,7 @@ export interface PlanFreeze {
 }
 
 /** The day falls in the Freeze; an open-ended one holds every day from its start. */
-const inFreeze = (freeze: PlanFreeze, date: string) =>
+export const inFreeze = (freeze: PlanFreeze, date: string) =>
   date >= freeze.startsOn && (freeze.endsOn === null || date <= freeze.endsOn);
 
 /** Days a Freeze has taken so far: an open-ended one counts up to today. */
@@ -71,6 +71,10 @@ function freezesOf(plan: QueuePlan): readonly PlanFreeze[] {
   const cut = cutOf(plan);
   return cut === null ? freezes : freezes.map((f) => (f.endsOn === null ? { ...f, endsOn: cut } : f));
 }
+
+/** The Freeze holding this day on any of these Plans, or null. */
+const frozenOn = (plans: readonly QueuePlan[], date: string): PlanFreeze | null =>
+  plans.flatMap(freezesOf).find((f) => inFreeze(f, date)) ?? null;
 
 export interface QueueRow extends RosterRowLite {
   id: string;
@@ -246,7 +250,7 @@ export function resolvePlanQueue<P extends QueuePlan>(
   const shown =
     current ?? queued[0] ?? entries.at(-1) ?? (lastCancelled ? walkQueue([lastCancelled], [], today)[0] : null);
 
-  const frozen = live.flatMap(freezesOf).find((f) => inFreeze(f, today)) ?? null;
+  const frozen = frozenOn(live, today);
 
   return { plans: entries, current, queued, ahead, cardsOnly, sessionsLeft, endsOn, status, shown, frozen };
 }
@@ -313,7 +317,7 @@ export function bookingVerdict<P extends QueuePlan>(
 
   const owner = after.plans.find((e) => e.charged.some((r) => r.id === CANDIDATE));
   if (!owner) {
-    if (sold(plans).some((p) => freezesOf(p).some((f) => inFreeze(f, slot.date)))) {
+    if (frozenOn(sold(plans).filter(isTraining), slot.date)) {
       return { ok: false, block: "plan_frozen" };
     }
     const covered = after.plans.some((e) => e.startsOn <= slot.date && slot.date <= e.expiresOn);

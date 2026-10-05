@@ -88,7 +88,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   // A new end date and an Adjustment only on a Plan still running.
   const live = row.plan.status === "active" && !row.plan.ended_on;
 
-  if (freezing) return <FreezeDialog planId={row.plan.id} onClose={onClose} />;
+  if (freezing) return <FreezeDialog planId={row.plan.id} planName={row.product.name_he} onClose={onClose} />;
   if (voiding) return <VoidPlanDialog planId={row.plan.id} onClose={onClose} />;
   if (adjusting) return <AdjustSessionsDialog planId={row.plan.id} onClose={onClose} />;
   if (cancelling) return <CancelPlanDialog planId={row.plan.id} onClose={onClose} />;
