@@ -76,6 +76,8 @@ export interface Order {
   reference: string | null;
   /** The staff member who took a manual payment. */
   received_by: string | null;
+  /** The staff member who sent this order as a Payment link; null otherwise. */
+  payment_link_by: string | null;
   /** The list price of a discounted sale; null when sold at list price (amount_ils is what was paid). */
   list_price_ils: number | null;
   discount_reason: string | null;

@@ -62,12 +62,21 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
 
   // An expired order may be paid, but only for a product that is still on
   // sale at the price the order captured (a staff Discount keeps its amount).
-  const { data: product } = (await typedFrom(db, "plan_products")
-    .select("id, name_he, price_ils, is_active, once_per_trainee")
-    .eq("id", order.product_id)
-    .maybeSingle()) as {
-    data: Pick<PlanProduct, "id" | "name_he" | "price_ils" | "is_active" | "once_per_trainee"> | null;
-  };
+  // The product and the agreement are read together; both must hold.
+  const [{ data: product }, { count: signed }] = await Promise.all([
+    typedFrom(db, "plan_products")
+      .select("id, name_he, price_ils, is_active, once_per_trainee")
+      .eq("id", order.product_id)
+      .maybeSingle() as unknown as Promise<{
+      data: Pick<PlanProduct, "id" | "name_he" | "price_ils" | "is_active" | "once_per_trainee"> | null;
+    }>,
+    // A Payment link's agreement is signed by the parent before the card page;
+    // the online form signs its own when the order is made.
+    typedFrom(db, "enrollment_agreements")
+      .select("id", { count: "exact", head: true })
+      .eq("order_id", order.id)
+      .not("signed_at", "is", null) as unknown as Promise<{ count: number | null }>,
+  ]);
   const captured = {
     amountIls: Number(order.amount_ils),
     listPriceIls: order.list_price_ils == null ? null : Number(order.list_price_ils),
@@ -75,12 +84,6 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
   if (!product || !product.is_active || !capturedPriceHolds(Number(product.price_ils), captured)) {
     return { error: "המסלול או המחיר השתנו. התחילו הרשמה חדשה." };
   }
-  // A Payment link's agreement is signed by the parent before the card page;
-  // the online form signs its own when the order is made.
-  const { count: signed } = await typedFrom(db, "enrollment_agreements")
-    .select("id", { count: "exact", head: true })
-    .eq("order_id", order.id)
-    .not("signed_at", "is", null);
   if (!signed) return { error: "יש לחתום על ההסכם לפני התשלום." };
   if (product.once_per_trainee) {
     const { count } = await typedFrom(db, "orders")

@@ -4,7 +4,6 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { discountProblem } from "@/lib/plans/discount";
 import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
 import { israelToday } from "@/lib/utils/tasks";
 import { sendPaymentLink } from "@/lib/whatsapp/plan-templates";
@@ -15,6 +14,7 @@ import { discountRefusal } from "../discount-permission";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { checkTraineeSale, saleParties } from "../trainee-sale";
 import { insertUnsignedAgreement } from "../unsigned-agreement";
+import { staffOrderColumns } from "../staff-order";
 
 export interface PaymentLinkResult {
   ok: true;
@@ -38,47 +38,36 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   const data = parsed.data;
   if (!onlinePaymentsOpen()) return { error: "תשלום באשראי באתר עוד לא פתוח. אפשר לרשום מזומן, העברה או ביט." };
 
-  const scopeError = await assertTraineeInScope(data.traineeId);
-  if (scopeError) return { error: scopeError };
-
   const db = createAdminClient();
-  // A link is not a sale yet, so a repeat is only a second link: no duplicate prompt.
-  const sale = await checkTraineeSale(db, {
-    traineeId: data.traineeId,
-    productId: data.productId,
-    isAdmin: staff?.role === "admin",
-    confirmDuplicate: true,
-  });
+  // Both must pass. A link is not a sale yet, so a repeat is only a second
+  // link: no duplicate prompt.
+  const [scopeError, sale] = await Promise.all([
+    assertTraineeInScope(data.traineeId),
+    checkTraineeSale(db, {
+      traineeId: data.traineeId,
+      productId: data.productId,
+      isAdmin: staff?.role === "admin",
+      confirmDuplicate: true,
+    }),
+  ]);
+  if (scopeError) return { error: scopeError };
   if (!("ok" in sale)) return "error" in sale ? sale : { error: "קלט לא תקין" };
   const { product, trainee } = sale;
 
-  const listPrice = Number(product.price_ils);
-  const discountError =
-    (await discountRefusal(product.branch_id, data.discount)) ??
-    (data.discount ? discountProblem(listPrice, data.discount.amountIls) : null);
+  const discountError = await discountRefusal(product.branch_id, data.discount);
   if (discountError) return { error: discountError };
-  const amount = data.discount?.amountIls ?? listPrice;
-
   const { loginPhone, child, parent, health } = saleParties(trainee);
+  const priced = staffOrderColumns(product, data.discount, user!.id, { profileId: data.traineeId, loginPhone, child, parent });
+  if (!priced.ok) return { error: priced.problem };
+  const amount = priced.paid;
+
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({
-      product_id: product.id,
-      branch_id: product.branch_id,
+      ...priced.columns,
       status: "pending",
       payment_provider: "isracard",
-      amount_ils: amount,
-      list_price_ils: data.discount ? listPrice : null,
-      discount_reason: data.discount?.reason ?? null,
-      discounted_by: data.discount ? user!.id : null,
-      // Who made the link: the Plan records them as its seller once paid.
-      received_by: user!.id,
-      parent_name: parent.name,
-      payer_phone: parent.phone,
-      login_phone: loginPhone,
-      child_name: child.name,
-      child_birthdate: child.birthdate,
-      email: null,
-      profile_id: data.traineeId,
+      // Marks the order as a Payment link and names its seller once paid.
+      payment_link_by: user!.id,
     })
     .select("id")
     .single()) as { data: { id: string } | null; error: { message: string } | null };
@@ -104,24 +93,28 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   }
   const url = agreementLink(agreement.id);
 
-  await db.from("activity_logs").insert({
-    user_id: data.traineeId,
-    action: "payment_link_created",
-    actor_id: user!.id,
-    actor_name: staff?.full_name ?? "צוות",
-    metadata: { orderId: order.id, productId: product.id, amountIls: amount, ...(data.discount ? { listPriceIls: listPrice } : {}) },
-  });
-
-  let whatsapp: PaymentLinkResult["whatsapp"] = { sentTo: null, error: null, skipped: true };
-  if (data.sendWhatsApp) {
-    const sent = await sendPaymentLink(parent.phone, {
-      parentName: parent.name,
-      childName: child.name,
-      planName: product.name_he,
-      amount: `₪${amount.toLocaleString("he-IL")}`,
-      url,
-    });
-    whatsapp = sent.success
+  // The log and the message do not wait on each other.
+  const [, sent] = await Promise.all([
+    db.from("activity_logs").insert({
+      user_id: data.traineeId,
+      action: "payment_link_created",
+      actor_id: user!.id,
+      actor_name: staff?.full_name ?? "צוות",
+      metadata: { orderId: order.id, productId: product.id, amountIls: amount, ...(data.discount ? { listPriceIls: priced.listPrice } : {}) },
+    }),
+    data.sendWhatsApp
+      ? sendPaymentLink(parent.phone, {
+          parentName: parent.name,
+          childName: child.name,
+          planName: product.name_he,
+          amount: `₪${amount.toLocaleString("he-IL")}`,
+          url,
+        })
+      : null,
+  ]);
+  const whatsapp: PaymentLinkResult["whatsapp"] = !sent
+    ? { sentTo: null, error: null, skipped: true }
+    : sent.success
       ? { sentTo: parent.phone, error: null, skipped: false }
       : {
           sentTo: null,
@@ -129,7 +122,6 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
           error: sent.error?.includes("not configured") ? "תבנית הוואטסאפ לקישור עוד לא אושרה" : "השליחה נכשלה",
           skipped: false,
         };
-  }
 
   revalidateStaffSurfaces(data.traineeId);
   return { ok: true, orderId: order.id, url, whatsapp };

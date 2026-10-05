@@ -87,8 +87,6 @@ async function sellableProducts(
     }));
 }
 
-
-
 /** Active products in the branches the caller may sell in, for the new-trainee sheet. */
 export async function listSellableProductsAction(): Promise<SellableProduct[]> {
   const { error, profile } = await verifyAdminOrTrainer();

@@ -30,18 +30,14 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
   if (!isValidUUID(id) || !t || !verifyAgreementToken(id, t, secret)) notFound();
 
   const db = createAdminClient();
-  const { data } = (await typedFrom(db, "enrollment_agreements")
-    .select("*")
+  const { data: row } = (await typedFrom(db, "enrollment_agreements")
+    .select("*, order:orders(id, morning_document_url, status, payment_link_by)")
     .eq("id", id)
-    .maybeSingle()) as { data: EnrollmentAgreement | null };
-  if (!data) notFound();
-
-  const { data: order } = data.order_id
-    ? ((await typedFrom(db, "orders")
-        .select("id, morning_document_url, status, payment_provider")
-        .eq("id", data.order_id)
-        .maybeSingle()) as { data: Pick<Order, "id" | "morning_document_url" | "status" | "payment_provider"> | null })
-    : { data: null };
+    .maybeSingle()) as {
+    data: (EnrollmentAgreement & { order: Pick<Order, "id" | "morning_document_url" | "status" | "payment_link_by"> | null }) | null;
+  };
+  if (!row) notFound();
+  const { order, ...data } = row;
 
   if (!data.signed_at) {
     return <AgreementSignForm agreement={data} token={t} awaitingCard={order !== null && awaitsCard(order)} />;

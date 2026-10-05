@@ -40,13 +40,20 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
 
   const db = createAdminClient();
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("id, signed_at, profile_id, order_id")
+    .select("id, signed_at, profile_id, order_id, order:orders(status, payment_link_by)")
     .eq("id", data.agreementId)
     .maybeSingle()) as {
-    data: Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id" | "order_id"> | null;
+    data:
+      | (Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id" | "order_id"> & {
+          order: Pick<Order, "status" | "payment_link_by"> | null;
+        })
+      | null;
   };
   if (!agreement) return { error: "ההסכם לא נמצא" };
-  if (agreement.signed_at) return { ok: true, payUrl: await payUrlFor(db, agreement.order_id) };
+  // A Payment link goes on to the card page once signed.
+  const payUrl =
+    agreement.order_id && agreement.order && awaitsCard(agreement.order) ? payPath(agreement.order_id) : undefined;
+  if (agreement.signed_at) return { ok: true, payUrl };
 
   const { data: signed, error } = (await typedFrom(db, "enrollment_agreements")
     .update({
@@ -73,7 +80,8 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
     console.error(`[sign-agreement] update failed for ${data.agreementId}:`, error.message);
     return { error: "שגיאה בשמירת החתימה. נסו שוב." };
   }
-  if (!signed || signed.length === 0) return { ok: true, payUrl: await payUrlFor(db, agreement.order_id) };
+  // Signed meanwhile by another request: nothing to adopt here.
+  if (!signed || signed.length === 0) return { ok: true, payUrl };
 
   if (agreement.profile_id) {
     const { data: profile } = await db
@@ -106,30 +114,12 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
         .is("email", null);
     }
   }
-  return { ok: true, payUrl: await payUrlFor(db, agreement.order_id, { name: data.parentName, email: data.parentEmail }) };
-}
-
-/**
- * The card page when the agreement's order still waits for the card, else
- * undefined. The parent who signed is the payer: the charge and the receipt
- * carry their name, not the placeholder staff had.
- */
-async function payUrlFor(
-  db: ReturnType<typeof createAdminClient>,
-  orderId: string | null,
-  payer?: { name: string; email: string | null },
-): Promise<string | undefined> {
-  if (!orderId) return undefined;
-  const { data: order } = (await typedFrom(db, "orders")
-    .select("status, payment_provider")
-    .eq("id", orderId)
-    .maybeSingle()) as { data: Pick<Order, "status" | "payment_provider"> | null };
-  if (!order || !awaitsCard(order)) return undefined;
-  if (payer) {
+  if (payUrl) {
+    // The parent who signed is the payer: the charge and the receipt carry their name.
     await typedFrom(db, "orders")
-      .update({ parent_name: payer.name, ...(payer.email ? { email: payer.email } : {}) })
-      .eq("id", orderId)
+      .update({ parent_name: data.parentName, ...(data.parentEmail ? { email: data.parentEmail } : {}) })
+      .eq("id", agreement.order_id!)
       .in("status", ["pending", "expired"]);
   }
-  return payPath(orderId);
+  return { ok: true, payUrl };
 }

@@ -70,8 +70,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   const [startsOn, setStartsOn] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [duplicate, setDuplicate] = useState<number | null>(null);
-  const [result, setResult] = useState<ManualPaymentResult | null>(null);
-  const [linkResult, setLinkResult] = useState<LinkResult | null>(null);
+  // What the sheet shows when done: a recorded payment, or a Payment link.
+  const [done, setDone] = useState<{ kind: "paid"; result: ManualPaymentResult } | { kind: "link"; result: LinkResult } | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -157,7 +157,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         toast.error(outcome.error);
         return;
       }
-      setLinkResult(outcome);
+      setDone({ kind: "link", result: outcome });
     });
   };
 
@@ -191,7 +191,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         return;
       }
       setDuplicate(null);
-      setResult(outcome);
+      setDone({ kind: "paid", result: outcome });
     });
   };
 
@@ -199,8 +199,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   const finish = (paid: boolean) => {
     onOpenChange(false, paid);
     if (paid) router.refresh();
-    setResult(null);
-    setLinkResult(null);
+    setDone(null);
     setDuplicate(null);
     setMethod("cash");
     setArboxTerms(null);
@@ -210,17 +209,17 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     setLoadError(null);
   };
   // A Payment link sold nothing yet: the sheet closes as unpaid.
-  const close = () => finish(result !== null);
+  const close = () => finish(done?.kind === "paid");
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(true) : close())}>
       <SheetDialogContent>
         <DialogHeader className="px-4 pt-4 pb-3 text-start sm:px-6 sm:pt-6">
           <DialogTitle>
-            {result ? "נרשם" : linkResult ? "קישור לתשלום" : `רישום תשלום${context ? ` · ${context.traineeName}` : ""}`}
+            {done?.kind === "paid" ? "נרשם" : done ? "קישור לתשלום" : `רישום תשלום${context ? ` · ${context.traineeName}` : ""}`}
           </DialogTitle>
           <DialogDescription>
-            {result || linkResult
+            {done
               ? "מה ההורה קיבל"
               : context
                 ? method === "card"
@@ -239,10 +238,10 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
-          {result ? (
-            <PaymentResult result={result} isAdmin={isAdmin} onClose={close} />
-          ) : linkResult ? (
-            <PaymentLinkResult result={linkResult} onClose={close} />
+          {done?.kind === "paid" ? (
+            <PaymentResult result={done.result} isAdmin={isAdmin} onClose={close} />
+          ) : done ? (
+            <PaymentLinkResult result={done.result} onClose={close} />
           ) : loadError ? (
             <p className="text-sm text-destructive">{loadError}</p>
           ) : !context ? (

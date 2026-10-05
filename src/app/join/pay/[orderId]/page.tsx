@@ -30,10 +30,14 @@ export default async function PayPage({ params }: PageProps) {
 
   const db = createAdminClient();
   const { data: order } = (await typedFrom(db, "orders")
-    .select("id, status, amount_ils, child_name, parent_name, product_id")
+    .select("id, status, amount_ils, child_name, parent_name, product_id, agreements:enrollment_agreements(signed_at)")
     .eq("id", orderId)
     .maybeSingle()) as {
-    data: Pick<Order, "id" | "status" | "amount_ils" | "child_name" | "parent_name" | "product_id"> | null;
+    data:
+      | (Pick<Order, "id" | "status" | "amount_ils" | "child_name" | "parent_name" | "product_id"> & {
+          agreements: { signed_at: string | null }[] | null;
+        })
+      | null;
   };
   if (!order) notFound();
   if (order.status === "paid" || order.status === "charging") redirect(`/join/success?order=${order.id}`);
@@ -41,10 +45,7 @@ export default async function PayPage({ params }: PageProps) {
 
   // A Payment link is signed before the card; the charge refuses an unsigned one too.
   // The signing link is never derived here: the order id must not unlock the agreement.
-  const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("signed_at")
-    .eq("order_id", order.id)
-    .maybeSingle()) as { data: { signed_at: string | null } | null };
+  const agreement = order.agreements?.[0];
   if (agreement && !agreement.signed_at) {
     return (
       <section className="space-y-2 rounded-2xl border bg-white p-4 text-sm">

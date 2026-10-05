@@ -10,7 +10,8 @@ import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { issueInvoiceAction } from "../../lib/actions/admin-orders";
 import { resendAgreementLinkAction } from "../../lib/actions/staff-payment";
 
-function Line({ ok, children }: { ok: boolean | null; children: React.ReactNode }) {
+/** One outcome line: done, failed, or neutral (null). */
+export function Line({ ok, children }: { ok: boolean | null; children: React.ReactNode }) {
   const Icon = ok === null ? FileText : ok ? CheckCircle2 : XCircle;
   const color = ok === null ? "text-muted-foreground" : ok ? "text-success" : "text-destructive";
   return (
@@ -21,7 +22,7 @@ function Line({ ok, children }: { ok: boolean | null; children: React.ReactNode 
   );
 }
 
-async function copy(text: string, done: string): Promise<void> {
+export async function copy(text: string, done: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(done);

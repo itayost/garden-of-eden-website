@@ -21,8 +21,10 @@ interface FulfillInput {
   order: Order;
   product: PlanProduct;
   agreement: EnrollmentAgreement | null;
-  /** Null for online orders; the admin for manual grants. */
+  /** Null for online orders; the staff member for staff sales and Payment links. */
   createdBy: string | null;
+  /** How it was paid; by default a staff sale is manual. A Payment link is paid online. */
+  source?: "online" | "manual";
   /** Terms that differ from the product's: what Arbox sold. */
   terms?: Partial<Pick<NewPlanTerms, "notBefore" | "fixedEndsOn" | "sessionsTotal" | "durationDays">>;
   /** A staff-chosen start; it applies only when nothing is current or queued (appliedStart). */
@@ -67,7 +69,7 @@ async function createAccount(
  */
 export async function fulfillFromInput(
   db: SupabaseClient,
-  { order, product, agreement, createdBy, terms: termsOverride, chosenStartsOn = null }: FulfillInput,
+  { order, product, agreement, createdBy, source, terms: termsOverride, chosenStartsOn = null }: FulfillInput,
 ): Promise<FulfillResult> {
   try {
     const profileId =
@@ -169,7 +171,7 @@ export async function fulfillFromInput(
           not_before: terms.notBefore,
           duration_days: terms.durationDays,
           fixed_ends_on: terms.fixedEndsOn,
-          source: createdBy ? "manual" : "online",
+          source: source ?? (createdBy ? "manual" : "online"),
           created_by: createdBy,
         })
         .select("id")
@@ -179,13 +181,14 @@ export async function fulfillFromInput(
       startsOn = placed.startsOn;
     }
 
-    // The agreement states the Plan's start, which the queue decides at the sale.
-    const agreementFix = {
-      ...(agreement && !agreement.profile_id ? { profile_id: profileId } : {}),
-      ...(agreement && startsOn && agreement.plan_start_on !== startsOn ? { plan_start_on: startsOn } : {}),
-    };
-    if (agreement && Object.keys(agreementFix).length > 0) {
-      await typedFrom(db, "enrollment_agreements").update(agreementFix).eq("id", agreement.id);
+    // The agreement names the Trainee and states the Plan's start, which the queue decides at the sale.
+    if (agreement) {
+      const patch: { profile_id?: string; plan_start_on?: string } = {};
+      if (!agreement.profile_id) patch.profile_id = profileId;
+      if (startsOn && agreement.plan_start_on !== startsOn) patch.plan_start_on = startsOn;
+      if (patch.profile_id || patch.plan_start_on) {
+        await typedFrom(db, "enrollment_agreements").update(patch).eq("id", agreement.id);
+      }
     }
 
     const { error: orderError } = await typedFrom(db, "orders")
@@ -233,7 +236,8 @@ export async function fulfillOrder(db: SupabaseClient, orderId: string): Promise
     order: { ...order, amount_ils: Number(order.amount_ils) },
     product: { ...product, price_ils: Number(product.price_ils) },
     agreement,
-    // A Payment link was made by staff (received_by); an online sale by nobody.
-    createdBy: order.received_by,
+    // Paid by card online; a Payment link names the staff member who sent it.
+    createdBy: order.payment_link_by,
+    source: "online",
   });
 }
