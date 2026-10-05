@@ -7,7 +7,8 @@ import {
   replaceProfileBranches,
 } from "@/features/branches/lib/memberships";
 import { phoneVariants } from "@/lib/plans/phone-variants";
-import { placeNewPlan, type NewPlanTerms } from "@/lib/plans/plan-queue";
+import { placeNewPlan, resolvePlanQueue, type NewPlanTerms } from "@/lib/plans/plan-queue";
+import { appliedStart } from "@/lib/plans/start-date";
 import { loadQueueRows, loadStoredPlans } from "@/features/plans/lib/queries";
 import { israelToday } from "@/lib/utils/tasks";
 import type { EnrollmentAgreement, Order, PlanProduct } from "@/types/plans";
@@ -22,8 +23,10 @@ interface FulfillInput {
   agreement: EnrollmentAgreement | null;
   /** Null for online orders; the admin for manual grants. */
   createdBy: string | null;
-  /** Terms that differ from the product's: a chosen start, or what Arbox sold. */
+  /** Terms that differ from the product's: what Arbox sold. */
   terms?: Partial<Pick<NewPlanTerms, "notBefore" | "fixedEndsOn" | "sessionsTotal" | "durationDays">>;
+  /** A staff-chosen start; it applies only when nothing is current or queued (appliedStart). */
+  chosenStartsOn?: string | null;
 }
 
 /** The profile whose auth phone is this login phone, in any stored spelling. */
@@ -64,7 +67,7 @@ async function createAccount(
  */
 export async function fulfillFromInput(
   db: SupabaseClient,
-  { order, product, agreement, createdBy, terms: termsOverride }: FulfillInput,
+  { order, product, agreement, createdBy, terms: termsOverride, chosenStartsOn = null }: FulfillInput,
 ): Promise<FulfillResult> {
   try {
     const profileId =
@@ -135,20 +138,23 @@ export async function fulfillFromInput(
       // renewal link named (ADR-0008). The stored dates are the queue's
       // forecast; the sale-time terms are what the queue reads.
       const today = israelToday();
+      const [plans, rows] = await Promise.all([
+        loadStoredPlans(db, [profileId]),
+        loadQueueRows(db, [profileId]),
+      ]);
+      const own = plans.get(profileId) ?? [];
+      const ownRows = rows.get(profileId) ?? [];
+      const queueHasPlans = resolvePlanQueue(own, ownRows, today).ahead.length > 0;
       const terms: NewPlanTerms = {
         kind: product.kind,
         branchId: order.branch_id,
         sessionsTotal:
           termsOverride?.sessionsTotal !== undefined ? termsOverride.sessionsTotal : product.sessions_total,
         durationDays: termsOverride?.durationDays ?? product.duration_days,
-        notBefore: termsOverride?.notBefore ?? today,
+        notBefore: termsOverride?.notBefore ?? appliedStart(chosenStartsOn, today, queueHasPlans, product.kind),
         fixedEndsOn: termsOverride?.fixedEndsOn ?? null,
       };
-      const [plans, rows] = await Promise.all([
-        loadStoredPlans(db, [profileId]),
-        loadQueueRows(db, [profileId]),
-      ]);
-      const placed = placeNewPlan(plans.get(profileId) ?? [], rows.get(profileId) ?? [], terms, today);
+      const placed = placeNewPlan(own, ownRows, terms, today);
       const { data: plan, error: planError } = (await typedFrom(db, "trainee_plans")
         .insert({
           profile_id: profileId,

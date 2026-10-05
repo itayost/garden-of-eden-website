@@ -13,6 +13,7 @@ import {
 import { shortDate } from "@/lib/utils/iso-date";
 import type { AdminPlanRow } from "../lib/actions/admin-plans";
 import { PlanActionsDialog } from "./admin/PlanActionsDialog";
+import { PlanHistoryList } from "./PlanHistoryList";
 import { PlanStatusBadge } from "./PlanStatusBadge";
 import { StaffPaymentSheet } from "./staff/StaffPaymentSheet";
 import { AgreementBadge } from "./staff/AgreementBadge";
@@ -58,14 +59,7 @@ export function UserPlanCard({ row, isAdmin, canManage = isAdmin, traineeId }: U
                 {shortDate(row.shown.startsOn)} עד {shortDate(row.shown.endsOn)}
               </span>
             </div>
-            {row.queue.queued.length > 0 && row.queue.current && (
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">ממתין בתור</span>
-                <span>
-                  {row.queue.queued[0].plan.product?.name_he ?? "מסלול"} מ-{shortDate(row.queue.queued[0].startsOn)}
-                </span>
-              </div>
-            )}
+
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">הסכם</span>
               <AgreementBadge agreementId={row.agreementId} signed={row.agreementSigned} />
@@ -80,6 +74,12 @@ export function UserPlanCard({ row, isAdmin, canManage = isAdmin, traineeId }: U
               <a href={row.orderDocumentUrl} target="_blank" rel="noreferrer" className="block text-sm underline">
                 חשבונית ב-Morning
               </a>
+            )}
+            {row.history && row.history.length > 1 && (
+              <div className="space-y-2 pt-2">
+                <span className="text-muted-foreground">כל המסלולים</span>
+                <PlanHistoryList rows={row.history} />
+              </div>
             )}
           </>
         )}

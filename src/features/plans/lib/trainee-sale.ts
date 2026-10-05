@@ -19,6 +19,23 @@ export interface SaleTrainee {
   emergency_contact_phone: string | null;
 }
 
+/** The intro pack is sold once per trainee: the refusal, or null. */
+export async function introPackRefusal(
+  db: SupabaseClient,
+  profileId: string,
+  product: Pick<PlanProduct, "id" | "once_per_trainee">,
+): Promise<string | null> {
+  if (!product.once_per_trainee) return null;
+  const { count } = await typedFrom(db, "orders")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", profileId)
+    .eq("status", "paid")
+    .eq("product_id", product.id);
+  return isIntroPackEligible(product, count ?? 0)
+    ? null
+    : "חבילת ההיכרות היא לשחקן חדש בלבד ונרכשה כבר. בחרו מסלול אחר.";
+}
+
 export type TraineeSaleCheck =
   | { ok: true; product: PlanProduct; trainee: SaleTrainee }
   | { error: string }
@@ -58,16 +75,8 @@ export async function checkTraineeSale(
   if (!trainee || trainee.role !== "trainee") return { error: "אפשר לרשום תשלום רק למתאמן" };
   if (!trainee.phone) return { error: "למתאמן אין טלפון להתחברות. הוסיפו טלפון בפרופיל קודם." };
 
-  if (product.once_per_trainee) {
-    const { count } = await typedFrom(db, "orders")
-      .select("id", { count: "exact", head: true })
-      .eq("profile_id", input.traineeId)
-      .eq("status", "paid")
-      .eq("product_id", product.id);
-    if (!isIntroPackEligible(product, count ?? 0)) {
-      return { error: "חבילת ההיכרות היא לשחקן חדש בלבד ונרכשה כבר. בחרו מסלול אחר." };
-    }
-  }
+  const introRefusal = await introPackRefusal(db, input.traineeId, product);
+  if (introRefusal) return { error: introRefusal };
 
   if (!input.confirmDuplicate) {
     const duplicate = await findRecentDuplicate(db, input.traineeId, product.id);

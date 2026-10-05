@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SheetDialogContent } from "@/components/ui/sheet-dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,6 +53,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   // Only while Arbox is chosen; re-filled from the product whenever it changes.
   const [arboxTerms, setArboxTerms] = useState<ArboxTermsDraft | null>(null);
   const [reference, setReference] = useState("");
+  // Only offered when nothing is current or queued; otherwise the queue decides.
+  const [startsOn, setStartsOn] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [duplicate, setDuplicate] = useState<number | null>(null);
   const [result, setResult] = useState<ManualPaymentResult | null>(null);
@@ -67,6 +70,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         return;
       }
       setContext(ctx);
+      setStartsOn(ctx.today);
       setProductId(ctx.currentProductId && ctx.products.some((p) => p.id === ctx.currentProductId) ? ctx.currentProductId : (ctx.products[0]?.id ?? null));
     });
     return () => {
@@ -75,6 +79,10 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   }, [open, traineeId]);
 
   const selectedProduct = context?.products.find((p) => p.id === productId) ?? null;
+  // A start can be chosen when nothing is current or queued, and always for an
+  // Add-on, which sits outside the queue.
+  const canChooseStart = context !== null && (!context.startsAfterCurrent || selectedProduct?.kind === "addon");
+  const startsLater = canChooseStart && context !== null && startsOn > context.today;
 
   const prefillArbox = (nextProductId: string | null) => {
     const product = context?.products.find((p) => p.id === nextProductId);
@@ -137,6 +145,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         productId,
         paymentMethod: method,
         reference,
+        startsOn: canChooseStart ? startsOn : null,
         sendWhatsApp,
         confirmDuplicate,
       });
@@ -178,6 +187,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
               : context
                 ? method === "arbox"
                   ? "התאריכים, האימונים והסכום כמו שנמכרו ב-Arbox."
+                  : startsLater
+                  ? `המסלול החדש יתחיל ב-${shortDate(startsOn)}.`
                   : context.startsWhenCardRunsOut
                   ? `המסלול החדש יתחיל כשהכרטיסייה הנוכחית תיגמר, לכל המאוחר ב-${shortDate(context.startsOn)}.`
                   : context.startsAfterCurrent
@@ -227,6 +238,22 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                 </>
               ) : (
                 <>
+                  {canChooseStart && (
+                    <div className="space-y-1">
+                      <Label htmlFor="sp-start">תאריך תחילה</Label>
+                      <Input
+                        id="sp-start"
+                        type="date"
+                        className="h-12 rounded-xl text-base"
+                        value={startsOn}
+                        min={context.today}
+                        max={context.latestStartOn}
+                        onChange={(e) => setStartsOn(e.target.value)}
+                        disabled={pending}
+                      />
+                      <p className="text-xs text-muted-foreground">היום, או עד 30 יום קדימה אם התשלום מקדים את האימון הראשון.</p>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between rounded-xl border p-3">
                     <Label htmlFor="sp-wa" className="leading-snug">
                       שלח אישור וקישור לחתימה בוואטסאפ

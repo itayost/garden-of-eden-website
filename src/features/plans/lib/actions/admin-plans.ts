@@ -17,7 +17,14 @@ import {
 import type { EnrollmentAgreement, Order, PlanStatus } from "@/types/plans";
 import { resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { daysBetween } from "@/lib/utils/iso-date";
-import { loadPlanQueues, loadQueueRows, loadStoredPlans, type PlanQueueView } from "../queries";
+import { planHistory, type PlanHistoryRow } from "@/lib/plans/plan-history";
+import {
+  loadPlanQueues,
+  loadQueueRows,
+  loadStoredPlans,
+  type PlanQueueView,
+  type StoredPlan,
+} from "../queries";
 
 type ActionResult = { success: true } | { error: string };
 
@@ -31,6 +38,8 @@ export type AdminPlanRow = PlanQueueView & {
   agreementSigned: boolean;
   /** Who took a manual payment. */
   receivedByName: string | null;
+  /** Every Plan the Trainee holds; only on the single-trainee views. */
+  history?: PlanHistoryRow<StoredPlan>[];
 };
 
 function revalidatePlanSurfaces(profileId?: string): void {
@@ -71,8 +80,11 @@ export async function getPlanForProfileAction(profileId: string): Promise<AdminP
   const { error } = await verifyAdminOrTrainer();
   if (error || !isValidUUID(profileId)) return null;
   if (await assertTraineeInScope(profileId)) return null;
-  const rows = await loadAdminRows(createAdminClient(), [profileId]);
-  return rows[0] ?? null;
+  const db = createAdminClient();
+  const [rows, plans] = await Promise.all([loadAdminRows(db, [profileId]), loadStoredPlans(db, [profileId])]);
+  const row = rows[0];
+  if (!row) return null;
+  return { ...row, history: planHistory(plans.get(profileId) ?? [], row.queue) };
 }
 
 async function loadAdminRows(

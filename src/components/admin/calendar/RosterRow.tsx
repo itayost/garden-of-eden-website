@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarCheck, Check, ChevronDown, Dumbbell, HeartPulse, Loader2, Pencil, Plus, X } from "lucide-react";
+import { CalendarCheck, Check, ChevronDown, CreditCard, Dumbbell, HeartPulse, Loader2, Pencil, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -126,6 +126,18 @@ export function RosterRow({
             aria-label={`המסלול של ${entry.trainee_name}: ${chip.label}`}
           >
             <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", chip.className)}>{chip.label}</span>
+          </button>
+        )}
+        {/* Nothing needs attention, or no Plan yet: the plan and a payment are still a tap away. */}
+        {!chip && linked && (
+          <button
+            type="button"
+            onClick={onOpenPlan}
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+            title={badge?.sessionsLeft != null ? `${badge.sessionsLeft} אימונים נותרו` : undefined}
+            aria-label={`המסלול ורישום תשלום של ${entry.trainee_name}`}
+          >
+            <CreditCard className="h-4 w-4" />
           </button>
         )}
         {badge?.hasMedicalNotes && linked && (

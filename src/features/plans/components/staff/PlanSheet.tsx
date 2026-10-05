@@ -8,6 +8,7 @@ import { SheetDialogContent } from "@/components/ui/sheet-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/utils/iso-date";
 import { getPlanForProfileAction, type AdminPlanRow } from "../../lib/actions/admin-plans";
+import { PlanHistoryList } from "../PlanHistoryList";
 import { PlanStatusBadge } from "../PlanStatusBadge";
 import { AgreementBadge } from "./AgreementBadge";
 import { StaffPaymentSheet } from "./StaffPaymentSheet";
@@ -76,14 +77,7 @@ export function PlanSheet({ traineeId, traineeName, isAdmin, open, onOpenChange 
                 <dd>
                   {shortDate(row.shown.startsOn)} עד {shortDate(row.shown.endsOn)}
                 </dd>
-                {row.queue.current && row.queue.queued.length > 0 && (
-                  <>
-                    <dt className="text-muted-foreground">ממתין בתור</dt>
-                    <dd>
-                      {row.queue.queued[0].plan.product?.name_he ?? "מסלול"} מ-{shortDate(row.queue.queued[0].startsOn)}
-                    </dd>
-                  </>
-                )}
+
                 {row.agreementId && (
                   <>
                     <dt className="text-muted-foreground">הסכם</dt>
@@ -104,6 +98,7 @@ export function PlanSheet({ traineeId, traineeName, isAdmin, open, onOpenChange 
                 )}
               </dl>
             ) : null}
+            {row?.history && row.history.length > 1 && <PlanHistoryList rows={row.history} />}
             <Button className="h-12 w-full rounded-full text-base" onClick={() => setPayOpen(true)} disabled={row === undefined}>
               <Banknote className="h-4 w-4 me-2" />
               רישום תשלום
