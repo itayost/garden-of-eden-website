@@ -8,7 +8,7 @@ import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import { agreementLink, notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import { insertUnsignedAgreement } from "./unsigned-agreement";
 import type { Discount } from "@/lib/plans/discount";
-import { manualCardLabel, type ManualCardTerms } from "@/lib/plans/manual-card";
+import { orderPlanName, type ManualCardTerms } from "@/lib/plans/manual-card";
 import { staffOrderColumns } from "./staff-order";
 import {
   PAYMENT_METHOD_LABELS_HE,
@@ -127,7 +127,7 @@ export async function recordManualPayment(
     parent: input.parent,
     child: { name: input.trainee.childName, birthdate: input.trainee.childBirthdate },
     health: input.health,
-    planName: input.manualCard ? manualCardLabel(product.name_he, input.manualCard) : product.name_he,
+    planName: orderPlanName(product.name_he, sale.columns),
     priceIls: paid,
     startsOn: input.startsOn ?? israelToday(),
     paymentLabel: PAYMENT_METHOD_LABELS_HE[input.paymentMethod],

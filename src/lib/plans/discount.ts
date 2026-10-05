@@ -46,14 +46,11 @@ export function readDiscount(draft: DiscountDraft, listPrice: number): { discoun
 /**
  * An order may still be charged at the price it captured: its list price (the
  * amount itself, unless discounted) must still be the product's. A Discount
- * given by staff keeps its amount; a changed catalog price starts over. A
- * manual Card's price was typed by staff and always holds.
+ * given by staff keeps its amount; a changed catalog price starts over.
  */
 export function capturedPriceHolds(
   productPrice: number,
-  order: { amountIls: number; listPriceIls: number | null; staffTerms?: boolean },
+  order: { amountIls: number; listPriceIls: number | null },
 ): boolean {
-  // A manual Card carries the price staff typed; its product has none of its own.
-  if (order.staffTerms) return true;
   return (order.listPriceIls ?? order.amountIls) === productPrice;
 }

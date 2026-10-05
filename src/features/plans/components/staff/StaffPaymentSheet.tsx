@@ -26,6 +26,7 @@ import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { ArboxTermsFields } from "./ArboxTermsFields";
 import { DiscountFields } from "./DiscountFields";
 import { ManualCardFields } from "./ManualCardFields";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { readManualCard, type ManualCardDraft } from "@/lib/plans/manual-card";
 import { useDiscount } from "./useDiscount";
 import { DuplicatePrompt } from "./DuplicatePrompt";
@@ -97,12 +98,15 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   const selectedProduct = context?.products.find((p) => p.id === productId) ?? null;
   // A manual Card (Admin or the branch's manager): typed terms instead of a catalog product.
   const [manualDraft, setManualDraft] = useState<ManualCardDraft | null>(null);
-  const manual = manualDraft && context?.manualCard ? readManualCard(manualDraft) : null;
-  const saleProductId = manualDraft && context?.manualCard ? context.manualCard.productId : productId;
-  const startManual = () => {
-    const prefill = context?.manualCard?.prefill;
-    if (!prefill) return;
-    setManualDraft({ sessions: String(prefill.sessions), price: String(prefill.priceIls || ""), days: String(prefill.days) });
+  // A draft exists only while the context offers a manual Card (startManual), and resets on close.
+  const manual = manualDraft ? readManualCard(manualDraft) : null;
+  const saleProductId = manualDraft ? (context?.manualCard?.productId ?? null) : productId;
+  const chooseKind = (kind: string) => {
+    if (kind !== "manual" || !context?.manualCard) {
+      setManualDraft(null);
+      return;
+    }
+    setManualDraft(context.manualCard.draft);
     if (method === "arbox") setMethod("cash");
   };
   // A start can be chosen when nothing is current or queued, and always for an
@@ -277,14 +281,16 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
           ) : (
             <>
               {context.manualCard && (
-                <div className="flex gap-2" role="radiogroup" aria-label="סוג מסלול">
-                  <Button type="button" variant={manualDraft ? "outline" : "default"} className="flex-1 rounded-full" onClick={() => setManualDraft(null)} disabled={pending} aria-pressed={!manualDraft}>
-                    מהמחירון
-                  </Button>
-                  <Button type="button" variant={manualDraft ? "default" : "outline"} className="flex-1 rounded-full" onClick={startManual} disabled={pending} aria-pressed={Boolean(manualDraft)}>
-                    כרטיסייה ידנית
-                  </Button>
-                </div>
+                <Tabs value={manualDraft ? "manual" : "catalog"} onValueChange={chooseKind}>
+                  <TabsList className="w-full" aria-label="סוג מסלול">
+                    <TabsTrigger value="catalog" className="flex-1" disabled={pending}>
+                      מהמחירון
+                    </TabsTrigger>
+                    <TabsTrigger value="manual" className="flex-1" disabled={pending}>
+                      כרטיסייה ידנית
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               )}
               {manualDraft ? (
                 <ManualCardFields value={manualDraft} onChange={setManualDraft} problem={manual?.problem ?? null} disabled={pending} />

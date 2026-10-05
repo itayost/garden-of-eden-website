@@ -15,7 +15,7 @@ import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { checkTraineeSale, saleParties } from "../trainee-sale";
 import { insertUnsignedAgreement } from "../unsigned-agreement";
 import { staffOrderColumns } from "../staff-order";
-import { manualCardLabel } from "@/lib/plans/manual-card";
+import { orderPlanName } from "@/lib/plans/manual-card";
 
 export interface PaymentLinkResult {
   ok: true;
@@ -56,13 +56,13 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   if (!("ok" in sale)) return "error" in sale ? sale : { error: "קלט לא תקין" };
   const { product, trainee } = sale;
 
-  const discountError = await pricingRefusal(product.branch_id, data);
+  const discountError = await pricingRefusal(product.branch_id, data.discount !== null || data.manualCard !== null);
   if (discountError) return { error: discountError };
   const { loginPhone, child, parent, health } = saleParties(trainee);
   const priced = staffOrderColumns(product, data, user!.id, { profileId: data.traineeId, loginPhone, child, parent });
   if (!priced.ok) return { error: priced.problem };
   const amount = priced.paid;
-  const planName = data.manualCard ? manualCardLabel(product.name_he, data.manualCard) : product.name_he;
+  const planName = orderPlanName(product.name_he, priced.columns);
 
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({

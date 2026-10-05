@@ -59,9 +59,3 @@ describe("capturedPriceHolds", () => {
     expect(capturedPriceHolds(500, { amountIls: 400, listPriceIls: 450 })).toBe(false);
   });
 });
-
-describe("capturedPriceHolds for a manual Card", () => {
-  it("holds whatever the placeholder product costs: staff set the price", () => {
-    expect(capturedPriceHolds(1, { amountIls: 640, listPriceIls: null, staffTerms: true })).toBe(true);
-  });
-});

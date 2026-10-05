@@ -20,15 +20,13 @@ export interface StaffOrderParties {
  * caller's check (pricingRefusal).
  */
 export function staffOrderColumns(
-  product: Pick<PlanProduct, "id" | "branch_id" | "price_ils" | "staff_terms">,
+  product: Pick<PlanProduct, "id" | "branch_id" | "price_ils">,
   sale: { discount: Discount | null; manualCard: ManualCardTerms | null },
   actorId: string,
   parties: StaffOrderParties,
 ) {
   const { discount, manualCard } = sale;
   const listPrice = Number(product.price_ils);
-  // A manual Card is sold only on its own placeholder product, and only on typed terms.
-  if (Boolean(manualCard) !== (product.staff_terms === true)) return { ok: false as const, problem: "מסלול לא תקין" };
   if (manualCard && discount) return { ok: false as const, problem: "בכרטיסייה ידנית קובעים את המחיר עצמו, בלי הנחה" };
   const problem = manualCard
     ? manualCardProblem(manualCard)

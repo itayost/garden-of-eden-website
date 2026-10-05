@@ -1,4 +1,4 @@
-import { MAX_CARD_BALANCE } from "./adjustment";
+import { MAX_CARD_BALANCE, MAX_CARD_DAYS } from "./adjustment";
 import { amountProblem } from "./discount";
 
 /**
@@ -10,9 +10,6 @@ export interface ManualCardTerms {
   priceIls: number;
   days: number;
 }
-
-/** The longest validity staff may type: two years. */
-export const MAX_CARD_DAYS = 730;
 
 /** Why these terms cannot be sold, or null. */
 export function manualCardProblem(terms: ManualCardTerms): string | null {
@@ -62,4 +59,18 @@ export function readManualCard(draft: ManualCardDraft): { terms: ManualCardTerms
   const terms = { sessions: Number(draft.sessions), priceIls: Number(draft.price), days: Number(draft.days) };
   const problem = manualCardProblem(terms);
   return problem ? { terms: null, problem } : { terms, problem: null };
+}
+
+/**
+ * Where a manual Card's form starts: the branch's catalog Card, or ten
+ * sessions for ninety days with the price left for staff to type.
+ */
+export function manualCardDraftFrom(
+  base: { sessions_total: number | null; price_ils: number; duration_days: number } | undefined,
+): ManualCardDraft {
+  return {
+    sessions: String(base?.sessions_total ?? 10),
+    price: base ? String(base.price_ils) : "",
+    days: String(base?.duration_days ?? 90),
+  };
 }

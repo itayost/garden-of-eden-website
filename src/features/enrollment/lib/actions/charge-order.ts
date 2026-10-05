@@ -78,16 +78,18 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
       .eq("order_id", order.id)
       .not("signed_at", "is", null) as unknown as Promise<{ count: number | null }>,
   ]);
-  // A manual Card sells its never-active placeholder on the terms the order
-  // carries; any other product must still be on sale.
-  const staffTerms = product?.staff_terms === true && orderManualTerms(order) !== null;
+  // A manual Card sells its never-active placeholder at the price and terms
+  // the order carries; any other product must still be on sale at its price.
   const captured = {
     amountIls: Number(order.amount_ils),
     listPriceIls: order.list_price_ils == null ? null : Number(order.list_price_ils),
-    staffTerms,
   };
-  const onSale = product !== null && (product.staff_terms ? staffTerms : product.is_active);
-  if (!product || !onSale || !capturedPriceHolds(Number(product.price_ils), captured)) {
+  const sellable =
+    product !== null &&
+    (product.staff_terms
+      ? orderManualTerms(order) !== null
+      : product.is_active && capturedPriceHolds(Number(product.price_ils), captured));
+  if (!product || !sellable) {
     return { error: "המסלול או המחיר השתנו. התחילו הרשמה חדשה." };
   }
   if (!signed) return { error: "יש לחתום על ההסכם לפני התשלום." };

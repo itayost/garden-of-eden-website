@@ -25,7 +25,7 @@ import {
 } from "@/lib/validations/plans-admin";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
-import type { ManualCardTerms } from "@/lib/plans/manual-card";
+import { manualCardDraftFrom, type ManualCardDraft } from "@/lib/plans/manual-card";
 import { pricingRefusal } from "../discount-permission";
 import { findRecentDuplicate, recordManualPayment, type ManualPaymentResult } from "../manual-payment";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
@@ -66,25 +66,30 @@ export interface StaffPaymentContext {
    * manager): its placeholder product, and terms to start from (the branch's
    * first catalog Card).
    */
-  manualCard: { productId: string; prefill: ManualCardTerms } | null;
+  manualCard: { productId: string; draft: ManualCardDraft } | null;
   parentPhone: string | null;
 }
 
-/** Active products the caller may sell: their writable branches, optionally narrowed to the trainee's. */
+/**
+ * What the caller may sell, in their writable branches, optionally narrowed
+ * to the trainee's: the active catalog, and the manual Card placeholders of
+ * branches they manage. One read for both.
+ */
 async function sellableProducts(
   db: ReturnType<typeof createAdminClient>,
   traineeBranchIds: readonly string[] | null,
   role: string,
-): Promise<SellableProduct[]> {
+): Promise<{ catalog: SellableProduct[]; manualCards: SellableProduct[] }> {
   const [scopeResult, { data }] = await Promise.all([
     getBranchScopeAction(),
-    typedFrom(db, "plan_products").select("*").eq("is_active", true).order("order_index") as unknown as Promise<{
-      data: PlanProduct[] | null;
-    }>,
+    typedFrom(db, "plan_products")
+      .select("*")
+      .or("is_active.eq.true,staff_terms.eq.true")
+      .order("order_index") as unknown as Promise<{ data: PlanProduct[] | null }>,
   ]);
-  if ("error" in scopeResult) return [];
+  if ("error" in scopeResult) return { catalog: [], manualCards: [] };
   const { scope, managedBranchIds } = scopeResult.data;
-  return (data ?? [])
+  const visible = (data ?? [])
     .filter((p) => isInBranchScope(scope, [p.branch_id]))
     .filter((p) => traineeBranchIds === null || traineeBranchIds.includes(p.branch_id))
     .map((p) => ({
@@ -92,13 +97,17 @@ async function sellableProducts(
       price_ils: Number(p.price_ils),
       managed: canManageBranches(role, managedBranchIds, [p.branch_id]),
     }));
+  return {
+    catalog: visible.filter((p) => !p.staff_terms),
+    manualCards: visible.filter((p) => p.staff_terms && p.managed),
+  };
 }
 
 /** Active products in the branches the caller may sell in, for the new-trainee sheet. */
 export async function listSellableProductsAction(): Promise<SellableProduct[]> {
   const { error, profile } = await verifyAdminOrTrainer();
   if (error) return [];
-  return sellableProducts(createAdminClient(), null, profile!.role);
+  return (await sellableProducts(createAdminClient(), null, profile!.role)).catalog;
 }
 
 /** Everything the payment sheet needs to open for one trainee. Staff only, branch scoped. */
@@ -119,19 +128,13 @@ export async function getStaffPaymentContextAction(
   if (!profile) return { error: "המתאמן לא נמצא" };
 
   const today = israelToday();
-  const [products, plansByProfile, rowsByProfile, { data: manualProducts }] = await Promise.all([
+  const [{ catalog: products, manualCards }, plansByProfile, rowsByProfile] = await Promise.all([
     sellableProducts(db, memberships.get(traineeId) ?? [], staff!.role),
     loadStoredPlans(db, [traineeId]),
     loadQueueRows(db, [traineeId]),
-    typedFrom(db, "plan_products")
-      .select("id, branch_id")
-      .eq("staff_terms", true)
-      .in("branch_id", memberships.get(traineeId) ?? []) as unknown as Promise<{
-      data: Pick<PlanProduct, "id" | "branch_id">[] | null;
-    }>,
   ]);
-  // The first branch of the trainee the caller manages that sells manual Cards.
-  const manualProduct = (manualProducts ?? []).find((m) => products.some((p) => p.branch_id === m.branch_id && p.managed));
+  // The first of the trainee's branches the caller manages that sells manual Cards.
+  const manualProduct = manualCards[0];
   const baseCard = manualProduct
     ? products.find((p) => p.branch_id === manualProduct.branch_id && p.kind === "session_card")
     : undefined;
@@ -158,16 +161,7 @@ export async function getStaffPaymentContextAction(
     startsWhenCardRunsOut: ahead.some((e) => e.sessionsLeft !== null && e.endsOn === e.expiresOn),
     morningConfigured: isMorningConfigured(),
     cardLinksOpen: onlinePaymentsOpen(),
-    manualCard: manualProduct
-      ? {
-          productId: manualProduct.id,
-          prefill: {
-            sessions: baseCard?.sessions_total ?? 10,
-            priceIls: baseCard?.price_ils ?? 0,
-            days: baseCard?.duration_days ?? 90,
-          },
-        }
-      : null,
+    manualCard: manualProduct ? { productId: manualProduct.id, draft: manualCardDraftFrom(baseCard) } : null,
     parentPhone: profile.guardian_phone ?? profile.phone ?? null,
   };
 }
@@ -203,7 +197,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     needsQueue ? await hasPlansAhead(db, data.traineeId, today) : false,
   );
   if (startProblem) return { error: startProblem };
-  const discountError = await pricingRefusal(product.branch_id, data);
+  const discountError = await pricingRefusal(product.branch_id, data.discount !== null || data.manualCard !== null);
   if (discountError) return { error: discountError };
 
   const parties = saleParties(trainee);
@@ -265,7 +259,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
   const startProblem = startDateProblem(data.startsOn, israelToday(), false);
   if (startProblem) return { error: startProblem };
   // A new trainee is sold from the catalog; a manual Card is for an existing one.
-  const discountError = await pricingRefusal(product.branch_id, { discount: data.discount, manualCard: null });
+  const discountError = await pricingRefusal(product.branch_id, data.discount !== null);
   if (discountError) return { error: discountError };
   if (owner) {
     const scopeError = await assertTraineeInScope(owner.id);

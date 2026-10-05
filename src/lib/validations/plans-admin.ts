@@ -5,7 +5,7 @@ import {
   isValidPhoneIL,
   isValidDateString,
 } from "@/lib/validations/common";
-import { MAX_CARD_BALANCE } from "@/lib/plans/adjustment";
+import { MAX_CARD_BALANCE, MAX_CARD_DAYS } from "@/lib/plans/adjustment";
 
 const uuid = z.string().regex(UUID_REGEX, "מזהה לא תקין");
 const isoDate = z.string().refine(isValidDateString, "תאריך לא תקין");
@@ -162,7 +162,7 @@ export const productSchema = z.object({
   blurb_he: optionalText(200),
   price_ils: z.number().positive("מחיר חייב להיות חיובי").max(100000, "מחיר גבוה מדי"),
   sessions_total: z.number().int().positive("מספר אימונים לא תקין").nullable(),
-  duration_days: z.number().int().positive("נדרש משך בימים").max(730, "משך ארוך מדי"),
+  duration_days: z.number().int().positive("נדרש משך בימים").max(MAX_CARD_DAYS, "משך ארוך מדי"),
   once_per_trainee: z.boolean(),
   gift_he: optionalText(200),
   is_active: z.boolean(),
