@@ -128,7 +128,8 @@ async function loadPlans(db: Db, profileIds: readonly string[]): Promise<StoredS
   const plans: ImportPlanRow[] = stored.map((r) => ({
     ...toQueuePlan({
       ...r,
-      status: r.status === "cancelled" ? ("cancelled" as const) : ("active" as const),
+      // A voided Plan was never sold; it must not come back as active here.
+      status: r.status === "cancelled" || r.status === "voided" ? r.status : ("active" as const),
       product: { kind: (r.product?.kind ?? "addon") as PlanKind },
     }),
     profileId: r.profile_id,

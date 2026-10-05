@@ -20,12 +20,14 @@ import {
   extendPlanAction,
   type AdminPlanRow,
 } from "../../lib/actions/admin-plans";
+import { VoidPlanDialog } from "./VoidPlanDialog";
 
 export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose: () => void }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [endsOn, setEndsOn] = useState(row.shown.expiresOn);
   const [sessions, setSessions] = useState(1);
+  const [voiding, setVoiding] = useState(false);
 
   const run = (fn: () => Promise<{ success: true } | { error: string }>, done: string) => {
     startTransition(async () => {
@@ -39,6 +41,8 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
       onClose();
     });
   };
+
+  if (voiding) return <VoidPlanDialog planId={row.plan.id} onClose={onClose} />;
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
@@ -98,6 +102,12 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
                 </Button>
               </div>
             </div>
+          )}
+
+          {row.plan.status !== "voided" && (
+            <Button variant="outline" className="w-full" disabled={pending} onClick={() => setVoiding(true)}>
+              ביטול רישום (נרשם בטעות)
+            </Button>
           )}
 
           {row.plan.status === "active" && (

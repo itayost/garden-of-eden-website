@@ -18,6 +18,7 @@ import { formatDateTime } from "@/lib/utils/date";
 import { formatPhoneToLocal } from "@/lib/validations/common";
 import { issueInvoiceAction, retryFulfillmentAction, type AdminOrderRow } from "../../lib/actions/admin-orders";
 import { reconcileChargingOrderAction } from "../../lib/actions/admin-orders-reconcile";
+import { CreditNoteField } from "./CreditNoteField";
 import { PAYMENT_METHOD_LABELS_HE, type OrderStatus } from "@/types/plans";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -26,6 +27,8 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   paid: "שולם",
   failed: "נכשל",
   expired: "פג",
+  voided: "רישום בוטל",
+  refunded: "הוחזר",
 };
 
 export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
@@ -171,6 +174,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                   {order.agreementId && (
                     <span className="text-xs text-muted-foreground">הסכם חתום</span>
                   )}
+                  {order.refundAwaitingCreditNote && <CreditNoteField refundId={order.refundAwaitingCreditNote} />}
                 </div>
               </TableCell>
             </TableRow>

@@ -2317,6 +2317,73 @@ export type Database = {
           },
         ]
       }
+      plan_refunds: {
+        Row: {
+          amount_ils: number
+          created_at: string
+          created_by: string
+          credit_note_number: string | null
+          credit_note_recorded_at: string | null
+          id: string
+          kind: string
+          method: string
+          order_id: string | null
+          plan_id: string
+          reason: string
+          reference: string | null
+        }
+        Insert: {
+          amount_ils: number
+          created_at?: string
+          created_by: string
+          credit_note_number?: string | null
+          credit_note_recorded_at?: string | null
+          id?: string
+          kind: string
+          method: string
+          order_id?: string | null
+          plan_id: string
+          reason: string
+          reference?: string | null
+        }
+        Update: {
+          amount_ils?: number
+          created_at?: string
+          created_by?: string
+          credit_note_number?: string | null
+          credit_note_recorded_at?: string | null
+          id?: string
+          kind?: string
+          method?: string
+          order_id?: string | null
+          plan_id?: string
+          reason?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_refunds_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_refunds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_refunds_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "trainee_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_assessments: {
         Row: {
           assessed_by: string | null
@@ -3530,6 +3597,38 @@ export type Database = {
             foreignKeyName: "trainee_next_games_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainee_notices: {
+        Row: {
+          body_he: string
+          created_at: string
+          dismissed_at: string | null
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          body_he: string
+          created_at?: string
+          dismissed_at?: string | null
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          body_he?: string
+          created_at?: string
+          dismissed_at?: string | null
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainee_notices_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
