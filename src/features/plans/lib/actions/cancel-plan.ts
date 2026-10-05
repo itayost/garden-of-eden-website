@@ -15,7 +15,7 @@ import {
   type RefundMethod,
 } from "@/lib/validations/plans-admin";
 import { applyShrinkCancellations } from "../apply-shrink";
-import { loadPlanContext, toBooking, type AffectedBooking, type PlanContext } from "../plan-context";
+import { loadPlanContext, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
 import type { StoredPlan } from "../queries";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { claimAndRecordUndo } from "../undo-plan";
@@ -37,8 +37,8 @@ export interface CancellationPreview {
   cancelled: AffectedBooking[];
 }
 
-const asCancelled = (plans: readonly StoredPlan[], planId: string, today: string): StoredPlan[] =>
-  plans.map((p) => (p.id === planId ? { ...p, status: "cancelled" as const, endedOn: today } : p));
+const asCancelled = (plans: readonly StoredPlan[], planId: string, today: string) =>
+  withPlanChange(plans, planId, { status: "cancelled", endedOn: today });
 
 /** The branch's Single-session price, or the 10-Card rate when none is set. */
 async function loadSingleSessionPrice(db: SupabaseClient<Database>, branchId: string) {
@@ -70,6 +70,7 @@ interface Assessment {
 async function assess(db: SupabaseClient<Database>, ctx: PlanContext, today: string, defect: boolean): Promise<Assessment> {
   const amountPaid = ctx.order ? Number(ctx.order.amount_ils) : 0;
   if (ctx.plan.status !== "active") return { refusal: "המסלול כבר בוטל", proposal: null, amountPaid, fromCardRate: false };
+  if (ctx.plan.ended_on) return { refusal: "המסלול כבר הסתיים", proposal: null, amountPaid, fromCardRate: false };
 
   // Paid in Arbox: its dates and sessions live there, and so does the refund.
   if (ctx.order?.payment_method === "arbox") {

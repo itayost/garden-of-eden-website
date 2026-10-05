@@ -47,7 +47,7 @@ export function VoidPlanDialog({ planId, onClose: close }: { planId: string; onC
       setPreview(result);
       setMethod(result.suggestedMethod);
       setAmount(result.amountPaid ?? 0);
-    });
+    }).catch(() => !cancelled && setLoadError("הטעינה נכשלה. סגרו ופתחו שוב."));
     return () => {
       cancelled = true;
     };

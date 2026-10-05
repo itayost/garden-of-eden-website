@@ -9,7 +9,7 @@ import { creditNoteSchema, voidPlanSchema, type RefundMethod, type VoidPlanInput
 import { shrinkImpact, voidRefusal } from "@/lib/plans/shrink";
 import { applyShrinkCancellations } from "../apply-shrink";
 import type { StoredPlan } from "../queries";
-import { loadPlanContext, toBooking, type AffectedBooking } from "../plan-context";
+import { loadPlanContext, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { claimAndRecordUndo } from "../undo-plan";
 
@@ -31,8 +31,7 @@ export interface VoidPreview {
   cancelled: AffectedBooking[];
 }
 
-const asVoided = (plans: readonly StoredPlan[], planId: string): StoredPlan[] =>
-  plans.map((p) => (p.id === planId ? { ...p, status: "voided" as const } : p));
+const asVoided = (plans: readonly StoredPlan[], planId: string) => withPlanChange(plans, planId, { status: "voided" });
 
 /** What a Void would do, for the confirmation. Admins and Branch managers of the Plan's branch. */
 export async function previewVoidAction(planId: string): Promise<VoidPreview | { error: string }> {

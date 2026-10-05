@@ -3,7 +3,15 @@ import type { PlanQueue, QueuePlan } from "./plan-queue";
 /** What history needs beyond the terms: the dates last stored for the Plan. */
 type HistoryPlan = QueuePlan & { starts_on: string; ends_on: string };
 
-export type PlanHistoryState = "current" | "queued" | "ended" | "never_runs" | "cancelled" | "voided" | "addon";
+export type PlanHistoryState =
+  | "current"
+  | "queued"
+  | "ended"
+  | "ended_early"
+  | "never_runs"
+  | "cancelled"
+  | "voided"
+  | "addon";
 
 export interface PlanHistoryRow<P extends HistoryPlan = HistoryPlan> {
   plan: P;
@@ -46,8 +54,9 @@ export function planHistory<P extends HistoryPlan>(plans: readonly P[], queue: P
     }));
   const notCancelled = behind.filter((e) => e.plan.status !== "cancelled");
   // Queued past its own end: shown with the window it was sold for.
+  // A Plan ended early on the day it started has no days, but it did end early.
   const neverRuns = notCancelled
-    .filter((e) => e.startsOn > e.endsOn)
+    .filter((e) => e.startsOn > e.endsOn && !e.plan.endedOn)
     .map((e) => ({
       plan: e.plan,
       state: "never_runs" as PlanHistoryState,
@@ -56,10 +65,10 @@ export function planHistory<P extends HistoryPlan>(plans: readonly P[], queue: P
       sessionsLeft: null,
     }));
   const ended = notCancelled
-    .filter((e) => e.startsOn <= e.endsOn)
+    .filter((e) => e.startsOn <= e.endsOn || Boolean(e.plan.endedOn))
     .map((e) => ({
       plan: e.plan,
-      state: "ended" as PlanHistoryState,
+      state: (e.plan.endedOn ? "ended_early" : "ended") as PlanHistoryState,
       startsOn: e.startsOn,
       endsOn: e.endsOn,
       sessionsLeft: null,

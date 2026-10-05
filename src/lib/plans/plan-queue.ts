@@ -27,9 +27,12 @@ export interface QueuePlan {
   /** Sale order is queue order. */
   createdAt: string;
   /**
-   * The day a Cancellation (or Early end) ended the Plan. It stays in the
-   * queue up to that day, keeping the sessions it used. A cancelled Plan
-   * without one is an older, hidden cancellation and stays out of the queue.
+   * The day a Cancellation or an Early end ended the Plan, keeping the
+   * sessions it used. A Cancellation runs the Plan through that day and the
+   * next one starts the day after. An Early end (the Plan stays active)
+   * hands over that morning: the next Plan pays from that day on, so the
+   * ended one's last day is the day before. A cancelled Plan without one is
+   * an older, hidden cancellation and stays out of the queue.
    */
   endedOn?: string | null;
 }
@@ -107,7 +110,9 @@ function walkQueue<P extends QueuePlan>(
     const startsOn: string =
       earliestNext !== null && earliestNext > plan.notBefore ? earliestNext : plan.notBefore;
     const ownEnd: string = plan.fixedEndsOn ?? addDays(startsOn, plan.durationDays - 1);
-    const expiresOn: string = plan.endedOn && plan.endedOn < ownEnd ? plan.endedOn : ownEnd;
+    const endedEarly = plan.status === "active" && Boolean(plan.endedOn);
+    const cut = plan.endedOn ? (endedEarly ? addDays(plan.endedOn, -1) : plan.endedOn) : null;
+    const expiresOn: string = cut !== null && cut < ownEnd ? cut : ownEnd;
     const charged: QueueRow[] = [];
     for (const row of pending) {
       if (plan.sessionsTotal !== null && charged.length >= plan.sessionsTotal) break;
@@ -130,9 +135,10 @@ function walkQueue<P extends QueuePlan>(
       booked: charged.length - used,
       sessionsLeft: plan.sessionsTotal === null ? null : plan.sessionsTotal - charged.length,
     });
+    // A Card that ran out hands over that same day; an Early end, on the day it was made.
     // The queue only moves forward: a Plan that never ran (an Arbox Plan
     // queued past its own end) holds the next one to its own start.
-    const next = spent ? endsOn : addDays(endsOn, 1);
+    const next = spent ? endsOn : endedEarly && expiresOn === cut ? plan.endedOn! : addDays(endsOn, 1);
     earliestNext = next > startsOn ? next : startsOn;
   }
   return result;

@@ -28,6 +28,15 @@ export interface AffectedBooking {
   time: string;
 }
 
+/** The Trainee's Plans with one of them as an undo act would leave it. */
+export function withPlanChange(
+  plans: readonly StoredPlan[],
+  planId: string,
+  change: Partial<Pick<StoredPlan, "status" | "endedOn">>,
+): StoredPlan[] {
+  return plans.map((p) => (p.id === planId ? { ...p, ...change } : p));
+}
+
 export const toBooking = (row: Pick<QueueRow, "schedule_date" | "start_time">): AffectedBooking => ({
   date: row.schedule_date,
   time: row.start_time.slice(0, 5),

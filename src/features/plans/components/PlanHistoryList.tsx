@@ -7,6 +7,7 @@ const STATE: Record<PlanHistoryState, { label: string; className: string }> = {
   current: { label: "פעיל", className: "bg-success text-success-foreground" },
   queued: { label: "ממתין", className: "bg-sky-100 text-sky-900" },
   ended: { label: "הסתיים", className: "bg-muted text-muted-foreground" },
+  ended_early: { label: "הסתיים מוקדם", className: "bg-muted text-muted-foreground" },
   never_runs: { label: "לא יופעל", className: "bg-destructive/10 text-destructive" },
   cancelled: { label: "בוטל", className: "bg-muted text-muted-foreground line-through" },
   voided: { label: "רישום בוטל", className: "bg-muted text-muted-foreground line-through" },

@@ -126,3 +126,15 @@ describe("planHistory and a queued Plan cancelled before it started", () => {
     });
   });
 });
+
+describe("planHistory and an Early end", () => {
+  it("labels a Plan ended early, with the day it ended", () => {
+    const early = plan("early", { endedOn: TODAY });
+    const next = plan("next", { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    expect(historyOf([early, next]).find((r) => r.plan.id === "early")).toMatchObject({
+      state: "ended_early",
+      endsOn: "2026-10-04",
+    });
+  });
+});
