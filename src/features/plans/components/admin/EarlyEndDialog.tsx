@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { earlyEndPlanAction, previewEarlyEndAction, type EarlyEndPreview } from "../../lib/actions/early-end";
 import { AffectedBookings } from "./RefundParts";
+import { usePlanPreview } from "../../hooks/usePlanPreview";
 
 /**
  * Early end: the Current plan ends today so the Plan queued behind it starts
@@ -18,24 +19,10 @@ import { AffectedBookings } from "./RefundParts";
  */
 export function EarlyEndDialog({ planId, onClose }: { planId: string; onClose: () => void }) {
   const router = useRouter();
-  const [preview, setPreview] = useState<EarlyEndPreview | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    let cancelled = false;
-    previewEarlyEndAction(planId)
-      .then((result) => {
-        if (cancelled) return;
-        if ("error" in result) setLoadError(result.error);
-        else setPreview(result);
-      })
-      .catch(() => !cancelled && setLoadError("הטעינה נכשלה. סגרו ופתחו שוב."));
-    return () => {
-      cancelled = true;
-    };
-  }, [planId]);
+  const { preview, loadError } = usePlanPreview<EarlyEndPreview>(planId, () => previewEarlyEndAction(planId));
 
   const confirm = () =>
     startTransition(async () => {

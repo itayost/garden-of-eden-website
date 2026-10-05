@@ -13,20 +13,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  addSessionsAction,
   extendPlanAction,
   type AdminPlanRow,
 } from "../../lib/actions/admin-plans";
 import { CancelPlanDialog } from "./CancelPlanDialog";
 import { EarlyEndDialog } from "./EarlyEndDialog";
+import { AdjustSessionsDialog } from "./AdjustSessionsDialog";
 import { VoidPlanDialog } from "./VoidPlanDialog";
 
 export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose: () => void }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [endsOn, setEndsOn] = useState(row.shown.expiresOn);
-  const [sessions, setSessions] = useState(1);
+  const [extendReason, setExtendReason] = useState("");
+  const [adjusting, setAdjusting] = useState(false);
   const [voiding, setVoiding] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [endingEarly, setEndingEarly] = useState(false);
@@ -48,6 +50,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   const live = row.plan.status === "active" && !row.plan.ended_on;
 
   if (voiding) return <VoidPlanDialog planId={row.plan.id} onClose={onClose} />;
+  if (adjusting) return <AdjustSessionsDialog planId={row.plan.id} onClose={onClose} />;
   if (cancelling) return <CancelPlanDialog planId={row.plan.id} onClose={onClose} />;
   if (endingEarly) return <EarlyEndDialog planId={row.plan.id} onClose={onClose} />;
 
@@ -58,7 +61,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
           <DialogTitle>
             {row.traineeName}: {row.product.name_he}
           </DialogTitle>
-          <DialogDescription>הארכה, הוספת אימונים או ביטול המסלול</DialogDescription>
+          <DialogDescription>שינוי תוקף, תיקון יתרה או ביטול המסלול</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
@@ -75,42 +78,32 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
                 />
                 <Button
                   onClick={() =>
-                    run(() => extendPlanAction({ planId: row.plan.id, endsOn }), "התוקף עודכן")
+                    run(() => extendPlanAction({ planId: row.plan.id, endsOn, reason: extendReason }), "התוקף עודכן")
                   }
-                  disabled={pending}
+                  disabled={pending || extendReason.trim().length < 2}
                 >
                   שמירה
                 </Button>
               </div>
+              <Label htmlFor="extend-reason" className="sr-only">
+                סיבה לשינוי התוקף
+              </Label>
+              <Textarea
+                id="extend-reason"
+                rows={2}
+                placeholder="סיבה לשינוי התוקף"
+                value={extendReason}
+                onChange={(e) => setExtendReason(e.target.value)}
+                maxLength={300}
+                disabled={pending}
+              />
             </div>
           )}
 
           {live && row.plan.sessions_total !== null && (
-            <div className="space-y-2">
-              <Label htmlFor="sessions">הוספת אימונים</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="sessions"
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={sessions}
-                  onChange={(e) => setSessions(Number(e.target.value))}
-                  disabled={pending}
-                />
-                <Button
-                  onClick={() =>
-                    run(
-                      () => addSessionsAction({ planId: row.plan.id, sessions }),
-                      "האימונים נוספו",
-                    )
-                  }
-                  disabled={pending}
-                >
-                  הוספה
-                </Button>
-              </div>
-            </div>
+            <Button variant="outline" className="w-full" disabled={pending} onClick={() => setAdjusting(true)}>
+              תיקון יתרה
+            </Button>
           )}
 
           {row.plan.status !== "voided" && !row.plan.ended_on && (

@@ -1,29 +1,28 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
-import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { israelToday } from "@/lib/utils/tasks";
 import {
-  addSessionsSchema,
   extendPlanSchema,
 } from "@/lib/validations/plans-admin";
 import type { EnrollmentAgreement, Order, PlanStatus } from "@/types/plans";
 import { resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { daysBetween } from "@/lib/utils/iso-date";
+import { applyShrinkAfter } from "../apply-shrink";
 import { planHistory, type PlanHistoryRow } from "@/lib/plans/plan-history";
 import {
   loadPlanQueues,
-  loadQueueRows,
   loadStoredPlans,
   type PlanQueueView,
   type StoredPlan,
 } from "../queries";
+import { loadPlanContext, withPlanChange } from "../plan-context";
+import { revalidateStaffSurfaces } from "../revalidate-staff";
 
 type ActionResult = { success: true } | { error: string };
 
@@ -40,12 +39,6 @@ export type AdminPlanRow = PlanQueueView & {
   /** Every Plan the Trainee holds; only on the single-trainee views. */
   history?: PlanHistoryRow<StoredPlan>[];
 };
-
-function revalidatePlanSurfaces(profileId?: string): void {
-  revalidatePath("/admin/plans");
-  revalidatePath("/admin/users");
-  if (profileId) revalidatePath(`/admin/users/${profileId}`);
-}
 
 /** The current plan of every trainee in one branch (or all the caller may see), newest ending first. */
 export async function listPlansAction(filter: {
@@ -130,93 +123,68 @@ async function loadAdminRows(
     });
 }
 
+/** The Plan's own dates in its queue (an Add-on keeps its own), after the scope check. */
+async function loadExtendTarget(db: ReturnType<typeof createAdminClient>, planId: string, today: string) {
+  const ctx = await loadPlanContext(db, planId, { withOrder: false });
+  if ("error" in ctx) return { ok: false as const, error: ctx.error };
+  const stored = ctx.plan;
+  if (stored.status !== "active" || stored.ended_on) {
+    return { ok: false as const, error: "המסלול הסתיים או בוטל ואין מה להאריך" };
+  }
+  const entry = resolvePlanQueue(ctx.plans, ctx.rows, today).plans.find((e) => e.plan.id === stored.id);
+  return { ok: true as const, ctx, startsOn: entry?.startsOn ?? stored.notBefore, endsBefore: entry?.expiresOn ?? stored.ends_on };
+}
+
+/**
+ * A new end date for a Plan, on the same audit trail as Adjustments. The
+ * queue dates the Plan, so the end becomes a new duration, or a new fixed end
+ * for an Arbox purchase; adjust_plan_end_date writes it and its audit row
+ * together. An earlier end that leaves Bookings unpaid follows the shrink rule.
+ */
 export async function extendPlanAction(input: {
   planId: string;
   endsOn: string;
+  reason: string;
 }): Promise<ActionResult> {
-  const { error: authError } = await verifyAdminOrTrainer();
+  const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   const parsed = extendPlanSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
+  const { planId, endsOn, reason } = parsed.data;
 
   const db = createAdminClient();
-  const { data: existing } = (await typedFrom(db, "trainee_plans")
-    .select("profile_id, branch_id")
-    .eq("id", parsed.data.planId)
-    .maybeSingle()) as { data: { profile_id: string; branch_id: string } | null };
-  if (!existing) return { error: "המסלול לא נמצא" };
-  const denied = await verifyAdminOrBranchManager([existing.branch_id]);
-  if (denied) return { error: denied };
+  const today = israelToday();
+  const target = await loadExtendTarget(db, planId, today);
+  if (!target.ok) return { error: target.error };
+  const { ctx, startsOn, endsBefore } = target;
+  if (endsOn < startsOn) return { error: "תאריך הסיום קודם לתאריך ההתחלה" };
 
-  // The queue dates the Plan; a new end becomes a new duration, or a new
-  // fixed end for an Arbox purchase.
-  const [plans, rows] = await Promise.all([
-    loadStoredPlans(db, [existing.profile_id]),
-    loadQueueRows(db, [existing.profile_id]),
-  ]);
-  const own = plans.get(existing.profile_id) ?? [];
-  const stored = own.find((p) => p.id === parsed.data.planId);
-  if (!stored || stored.status !== "active" || stored.ended_on) return { error: "המסלול הסתיים או בוטל ואין מה להאריך" };
-  // An Add-on sits outside the queue and starts on its own date.
-  const startsOn =
-    resolvePlanQueue(own, rows.get(existing.profile_id) ?? [], israelToday()).plans.find(
-      (e) => e.plan.id === stored.id,
-    )?.startsOn ?? stored.notBefore;
-  if (parsed.data.endsOn < startsOn) {
-    return { error: "תאריך הסיום קודם לתאריך ההתחלה" };
+  const fixed = ctx.plan.fixedEndsOn !== null;
+  const durationDays = fixed ? null : daysBetween(startsOn, endsOn) + 1;
+  const { error } = await db.rpc("adjust_plan_end_date", {
+    p_plan_id: planId,
+    p_expected_ends_on: ctx.plan.ends_on,
+    p_duration_days: durationDays,
+    p_fixed_ends_on: fixed ? endsOn : null,
+    p_ends_on: endsOn,
+    p_ends_before: endsBefore,
+    p_reason: reason,
+    p_actor: user!.id,
+  });
+  if (error) {
+    if (error.message.includes("plan_changed") || error.message.includes("plan_not_live")) {
+      return { error: "המסלול השתנה בינתיים. רעננו ונסו שוב." };
+    }
+    console.error("[extend] rpc failed:", error.message);
+    return { error: "שגיאה בעדכון המסלול" };
   }
-  const terms =
-    stored.fixedEndsOn !== null
-      ? { fixed_ends_on: parsed.data.endsOn }
-      : { duration_days: daysBetween(startsOn, parsed.data.endsOn) + 1 };
 
-  // A new end date deserves its own reminders.
-  const { data, error } = await typedFrom(db, "trainee_plans")
-    .update({
-      ...terms,
-      not_before: stored.notBefore,
-      ends_on: parsed.data.endsOn,
-      reminded_3_days_at: null,
-      reminded_last_session_at: null,
-      reminded_expired_at: null,
-    })
-    .eq("id", parsed.data.planId)
-    .select("profile_id");
-  if (error || !data?.length) return { error: "שגיאה בעדכון המסלול" };
-  revalidatePlanSurfaces(data[0].profile_id);
-  return { success: true };
-}
-
-export async function addSessionsAction(input: {
-  planId: string;
-  sessions: number;
-}): Promise<ActionResult> {
-  const { error: authError } = await verifyAdminOrTrainer();
-  if (authError) return { error: authError };
-  const parsed = addSessionsSchema.safeParse(input);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
-
-  const db = createAdminClient();
-  const { data: plan } = (await typedFrom(db, "trainee_plans")
-    .select("profile_id, sessions_total, branch_id, status, ended_on")
-    .eq("id", parsed.data.planId)
-    .maybeSingle()) as {
-    data: { profile_id: string; sessions_total: number | null; branch_id: string; status: string; ended_on: string | null } | null;
-  };
-  if (!plan) return { error: "המסלול לא נמצא" };
-  if (plan.status !== "active" || plan.ended_on) return { error: "המסלול הסתיים או בוטל ואין מה לעדכן בו" };
-  const denied = await verifyAdminOrBranchManager([plan.branch_id]);
-  if (denied) return { error: denied };
-  if (plan.sessions_total === null) return { error: "למסלול לפי זמן אין מונה אימונים" };
-
-  const { error } = await typedFrom(db, "trainee_plans")
-    .update({
-      sessions_total: plan.sessions_total + parsed.data.sessions,
-      reminded_last_session_at: null,
-      reminded_expired_at: null,
-    })
-    .eq("id", parsed.data.planId);
-  if (error) return { error: "שגיאה בעדכון המסלול" };
-  revalidatePlanSurfaces(plan.profile_id);
+  // A later end never displaces a Booking.
+  if (endsBefore && endsOn >= endsBefore) {
+    revalidateStaffSurfaces(ctx.plan.profile_id);
+    return { success: true };
+  }
+  const after = withPlanChange(ctx.plans, planId, fixed ? { fixedEndsOn: endsOn } : { durationDays: durationDays! });
+  await applyShrinkAfter(db, ctx, after, today);
   return { success: true };
 }

@@ -4,6 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 import type { QueueRow } from "@/lib/plans/plan-queue";
+import { shrinkImpact } from "@/lib/plans/shrink";
+import type { PlanContext } from "./plan-context";
+import type { StoredPlan } from "./queries";
+import { revalidateStaffSurfaces } from "./revalidate-staff";
 
 /** The notice a Trainee reads for one Booking the shrink rule cancelled. */
 export function cancelledBookingNotice(row: Pick<QueueRow, "schedule_date" | "start_time">): string {
@@ -53,4 +57,25 @@ export async function applyShrinkCancellations(
     if (noticeError) console.error("[shrink] notices failed:", noticeError.message);
   }
   return cancelledIds.size;
+}
+
+/**
+ * After a change that may shrink the queue: the shrink rule for the Bookings
+ * that no longer fit, then the staff screens refreshed. incomplete says some
+ * cancellations did not land, so staff look at the roster.
+ */
+export async function applyShrinkAfter(
+  db: SupabaseClient<Database>,
+  ctx: Pick<PlanContext, "plans" | "rows" | "plan">,
+  after: readonly StoredPlan[],
+  today: string,
+): Promise<{ cancelledCount: number; movedCount: number; incomplete: boolean }> {
+  const impact = shrinkImpact(ctx.plans, after, ctx.rows, today);
+  const cancelledCount = await applyShrinkCancellations(db, ctx.plan.profile_id, impact.cancelled);
+  const incomplete = cancelledCount < impact.cancelled.length;
+  if (incomplete) {
+    console.error(`[shrink] plan ${ctx.plan.id}: cancelled ${cancelledCount} of ${impact.cancelled.length} bookings`);
+  }
+  revalidateStaffSurfaces(ctx.plan.profile_id);
+  return { cancelledCount, movedCount: impact.moved.length, incomplete };
 }

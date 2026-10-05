@@ -21,10 +21,13 @@ const STATE: Record<PlanHistoryState, { label: string; className: string }> = {
 export function PlanHistoryList({
   rows,
   onVoid,
+  onAdjust,
 }: {
   rows: readonly PlanHistoryRow<StoredPlan>[];
   /** Admins and Branch managers: undo a Plan recorded by mistake. */
   onVoid?: (planId: string) => void;
+  /** Admins and Branch managers: set a Card's balance (current or queued Cards). */
+  onAdjust?: (planId: string) => void;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -41,6 +44,15 @@ export function PlanHistoryList({
             <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
               {shortDate(row.startsOn)} עד {shortDate(row.endsOn)}
             </span>
+            {onAdjust && row.sessionsLeft !== null && (row.state === "current" || row.state === "queued") && (
+              <button
+                type="button"
+                onClick={() => onAdjust(row.plan.id)}
+                className="shrink-0 rounded-full px-2 py-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              >
+                תיקון יתרה
+              </button>
+            )}
             {onVoid && row.state !== "voided" && (
               <button
                 type="button"
