@@ -9,6 +9,7 @@ import { PaymentsClosedNotice } from "@/features/enrollment/components/PaymentsC
 import { FullLoadGuard } from "@/features/enrollment/components/FullLoadGuard";
 import { canPayOnline } from "@/lib/payments/online-payments";
 import type { Order, PlanProduct } from "@/types/plans";
+import { agreementLink } from "@/features/enrollment/lib/notify";
 
 export const metadata: Metadata = {
   title: "תשלום מאובטח | Garden of Eden",
@@ -38,6 +39,13 @@ export default async function PayPage({ params }: PageProps) {
   if (!order) notFound();
   if (order.status === "paid" || order.status === "charging") redirect(`/join/success?order=${order.id}`);
   if (order.status === "failed") redirect(`/join/failed?order=${order.id}`);
+
+  // A Payment link is signed before the card; the charge refuses an unsigned one too.
+  const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
+    .select("id, signed_at")
+    .eq("order_id", order.id)
+    .maybeSingle()) as { data: { id: string; signed_at: string | null } | null };
+  if (agreement && !agreement.signed_at) redirect(agreementLink(agreement.id));
 
   const { data: product } = (await typedFrom(db, "plan_products")
     .select("name_he, sessions_total, duration_days")

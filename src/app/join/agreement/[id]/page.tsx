@@ -36,16 +36,16 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
     .maybeSingle()) as { data: EnrollmentAgreement | null };
   if (!data) notFound();
 
-  if (!data.signed_at) {
-    return <AgreementSignForm agreement={data} token={t} />;
-  }
-
   const { data: order } = data.order_id
     ? ((await typedFrom(db, "orders")
         .select("id, morning_document_url, status, payment_provider")
         .eq("id", data.order_id)
         .maybeSingle()) as { data: Pick<Order, "id" | "morning_document_url" | "status" | "payment_provider"> | null })
     : { data: null };
+
+  if (!data.signed_at) {
+    return <AgreementSignForm agreement={data} token={t} awaitingCard={order !== null && awaitsCard(order)} />;
+  }
 
   return (
     <div className="space-y-6">

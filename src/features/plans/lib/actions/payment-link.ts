@@ -5,7 +5,6 @@ import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { discountProblem } from "@/lib/plans/discount";
-import { toE164 } from "@/lib/plans/local-phone";
 import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
 import { israelToday } from "@/lib/utils/tasks";
 import { sendPaymentLink } from "@/lib/whatsapp/plan-templates";
@@ -14,7 +13,7 @@ import { agreementLink } from "@/features/enrollment/lib/notify";
 import { PAYMENT_METHOD_LABELS_HE } from "@/types/plans";
 import { discountRefusal } from "../discount-permission";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { checkTraineeSale } from "../trainee-sale";
+import { checkTraineeSale, saleParties } from "../trainee-sale";
 import { insertUnsignedAgreement } from "../unsigned-agreement";
 
 export interface PaymentLinkResult {
@@ -60,12 +59,7 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   if (discountError) return { error: discountError };
   const amount = data.discount?.amountIls ?? listPrice;
 
-  const loginPhone = toE164(trainee.phone);
-  const parent = {
-    name: trainee.guardian_name ?? "הורה",
-    phone: trainee.guardian_phone ? toE164(trainee.guardian_phone) : loginPhone,
-    email: null,
-  };
+  const { loginPhone, child, parent, health } = saleParties(trainee);
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({
       product_id: product.id,
@@ -76,11 +70,13 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
       list_price_ils: data.discount ? listPrice : null,
       discount_reason: data.discount?.reason ?? null,
       discounted_by: data.discount ? user!.id : null,
+      // Who made the link: the Plan records them as its seller once paid.
+      received_by: user!.id,
       parent_name: parent.name,
       payer_phone: parent.phone,
       login_phone: loginPhone,
-      child_name: trainee.full_name ?? "מתאמן",
-      child_birthdate: trainee.birthdate ?? null,
+      child_name: child.name,
+      child_birthdate: child.birthdate,
       email: null,
       profile_id: data.traineeId,
     })
@@ -95,12 +91,8 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
     orderId: order.id,
     profileId: data.traineeId,
     parent,
-    child: { name: trainee.full_name ?? "מתאמן", birthdate: trainee.birthdate ?? null },
-    health: {
-      medicalNotes: trainee.medical_notes ?? null,
-      emergencyContactName: trainee.emergency_contact_name ?? null,
-      emergencyContactPhone: trainee.emergency_contact_phone ?? null,
-    },
+    child,
+    health,
     planName: product.name_he,
     priceIls: amount,
     startsOn: israelToday(),
@@ -124,14 +116,19 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   if (data.sendWhatsApp) {
     const sent = await sendPaymentLink(parent.phone, {
       parentName: parent.name,
-      childName: trainee.full_name ?? "",
+      childName: child.name,
       planName: product.name_he,
       amount: `₪${amount.toLocaleString("he-IL")}`,
       url,
     });
     whatsapp = sent.success
       ? { sentTo: parent.phone, error: null, skipped: false }
-      : { sentTo: null, error: sent.error ?? "שליחה נכשלה", skipped: false };
+      : {
+          sentTo: null,
+          // An unset template means Meta has not approved it yet: say so in Hebrew.
+          error: sent.error?.includes("not configured") ? "תבנית הוואטסאפ לקישור עוד לא אושרה" : "השליחה נכשלה",
+          skipped: false,
+        };
   }
 
   revalidateStaffSurfaces(data.traineeId);

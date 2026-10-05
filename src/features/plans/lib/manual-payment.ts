@@ -158,12 +158,6 @@ export async function recordManualPayment(
     .eq("id", fulfilled.planId)
     .select("starts_on, ends_on")
     .single()) as { data: Pick<TraineePlan, "starts_on" | "ends_on"> | null };
-  // The agreement states the plan's start, which the queue may have moved.
-  if (plan && plan.starts_on !== agreement.plan_start_on) {
-    await typedFrom(db, "enrollment_agreements")
-      .update({ plan_start_on: plan.starts_on })
-      .eq("id", agreement.id);
-  }
 
   await db.from("activity_logs").insert({
     user_id: fulfilled.profileId,

@@ -106,15 +106,30 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
         .is("email", null);
     }
   }
-  return { ok: true, payUrl: await payUrlFor(db, agreement.order_id) };
+  return { ok: true, payUrl: await payUrlFor(db, agreement.order_id, { name: data.parentName, email: data.parentEmail }) };
 }
 
-/** The card page when the agreement's order still waits for the card, else undefined. */
-async function payUrlFor(db: ReturnType<typeof createAdminClient>, orderId: string | null): Promise<string | undefined> {
+/**
+ * The card page when the agreement's order still waits for the card, else
+ * undefined. The parent who signed is the payer: the charge and the receipt
+ * carry their name, not the placeholder staff had.
+ */
+async function payUrlFor(
+  db: ReturnType<typeof createAdminClient>,
+  orderId: string | null,
+  payer?: { name: string; email: string | null },
+): Promise<string | undefined> {
   if (!orderId) return undefined;
   const { data: order } = (await typedFrom(db, "orders")
     .select("status, payment_provider")
     .eq("id", orderId)
     .maybeSingle()) as { data: Pick<Order, "status" | "payment_provider"> | null };
-  return order && awaitsCard(order) ? payPath(orderId) : undefined;
+  if (!order || !awaitsCard(order)) return undefined;
+  if (payer) {
+    await typedFrom(db, "orders")
+      .update({ parent_name: payer.name, ...(payer.email ? { email: payer.email } : {}) })
+      .eq("id", orderId)
+      .in("status", ["pending", "expired"]);
+  }
+  return payPath(orderId);
 }

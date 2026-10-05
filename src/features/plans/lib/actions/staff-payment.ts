@@ -29,7 +29,7 @@ import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
 import { discountRefusal } from "../discount-permission";
 import { findRecentDuplicate, recordManualPayment, type ManualPaymentResult } from "../manual-payment";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { checkTraineeSale, introPackRefusal } from "../trainee-sale";
+import { checkTraineeSale, introPackRefusal, saleParties } from "../trainee-sale";
 import { startDateProblem, latestStartDate } from "@/lib/plans/start-date";
 import { hasPlansAhead, loadQueueRows, loadStoredPlans } from "../queries";
 
@@ -180,25 +180,17 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
   const discountError = await discountRefusal(product.branch_id, data.discount);
   if (discountError) return { error: discountError };
 
-  const loginPhone = toE164(trainee.phone);
+  const parties = saleParties(trainee);
   const result = await recordManualPayment(db, {
     product,
     trainee: {
       profileId: data.traineeId,
-      loginPhone,
-      childName: trainee.full_name ?? "מתאמן",
-      childBirthdate: trainee.birthdate ?? null,
+      loginPhone: parties.loginPhone,
+      childName: parties.child.name,
+      childBirthdate: parties.child.birthdate,
     },
-    parent: {
-      name: trainee.guardian_name ?? "הורה",
-      phone: trainee.guardian_phone ? toE164(trainee.guardian_phone) : loginPhone,
-      email: null,
-    },
-    health: {
-      medicalNotes: trainee.medical_notes ?? null,
-      emergencyContactName: trainee.emergency_contact_name ?? null,
-      emergencyContactPhone: trainee.emergency_contact_phone ?? null,
-    },
+    parent: parties.parent,
+    health: parties.health,
     paymentMethod: data.paymentMethod,
     reference: data.reference,
     startsOn: data.startsOn,

@@ -209,7 +209,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     setContext(null);
     setLoadError(null);
   };
-  const close = () => finish(result !== null || linkResult !== null);
+  // A Payment link sold nothing yet: the sheet closes as unpaid.
+  const close = () => finish(result !== null);
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(true) : close())}>

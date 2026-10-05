@@ -42,7 +42,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  * know, the declarations, and the signature. Phone-first like the online
  * form; the page turns into the printable copy once signed.
  */
-export function AgreementSignForm({ agreement, token }: { agreement: EnrollmentAgreement; token: string }) {
+export function AgreementSignForm({
+  agreement,
+  token,
+  awaitingCard,
+}: {
+  agreement: EnrollmentAgreement;
+  token: string;
+  /** A Payment link: the card is paid after signing, so nothing is paid yet. */
+  awaitingCard: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
@@ -91,7 +100,9 @@ export function AgreementSignForm({ agreement, token }: { agreement: EnrollmentA
         <p className="text-sm font-medium text-black/60">סניף קריית אתא</p>
         <h1 className="mt-1 text-2xl font-bold sm:text-3xl">חתימה על הסכם ההרשמה</h1>
         <p className="mt-2 text-sm text-black/60">
-          התשלום התקבל. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה.
+          {awaitingCard
+            ? "כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה. אחרי החתימה עוברים לתשלום באשראי."
+            : "התשלום התקבל. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה."}
         </p>
       </header>
 
@@ -105,8 +116,8 @@ export function AgreementSignForm({ agreement, token }: { agreement: EnrollmentA
           <dd className="font-medium">₪{Number(agreement.plan_price_ils).toLocaleString("he-IL")}</dd>
           <dt className="text-black/60">תחילה</dt>
           <dd className="font-medium">{ddmmyyyy(agreement.plan_start_on)}</dd>
-          <dt className="text-black/60">שולם ב</dt>
-          <dd className="font-medium">{agreement.payment_method}</dd>
+          <dt className="text-black/60">{awaitingCard ? "תשלום" : "שולם ב"}</dt>
+          <dd className="font-medium">{awaitingCard ? "כרטיס אשראי, אחרי החתימה" : agreement.payment_method}</dd>
         </dl>
       </section>
 

@@ -133,6 +133,7 @@ export async function fulfillFromInput(
       .maybeSingle()) as { data: { id: string } | null };
 
     let planId = existingPlan?.id ?? null;
+    let startsOn: string | null = null;
     if (!planId) {
       // A sale joins the end of the Trainee's Plan queue, whatever plan a
       // renewal link named (ADR-0008). The stored dates are the queue's
@@ -175,12 +176,16 @@ export async function fulfillFromInput(
         .single()) as { data: { id: string } | null; error: { message: string } | null };
       if (planError || !plan) throw new Error(`plan insert failed: ${planError?.message}`);
       planId = plan.id;
+      startsOn = placed.startsOn;
     }
 
-    if (agreement && !agreement.profile_id) {
-      await typedFrom(db, "enrollment_agreements")
-        .update({ profile_id: profileId })
-        .eq("id", agreement.id);
+    // The agreement states the Plan's start, which the queue decides at the sale.
+    const agreementFix = {
+      ...(agreement && !agreement.profile_id ? { profile_id: profileId } : {}),
+      ...(agreement && startsOn && agreement.plan_start_on !== startsOn ? { plan_start_on: startsOn } : {}),
+    };
+    if (agreement && Object.keys(agreementFix).length > 0) {
+      await typedFrom(db, "enrollment_agreements").update(agreementFix).eq("id", agreement.id);
     }
 
     const { error: orderError } = await typedFrom(db, "orders")
@@ -228,6 +233,7 @@ export async function fulfillOrder(db: SupabaseClient, orderId: string): Promise
     order: { ...order, amount_ils: Number(order.amount_ils) },
     product: { ...product, price_ils: Number(product.price_ils) },
     agreement,
-    createdBy: null,
+    // A Payment link was made by staff (received_by); an online sale by nobody.
+    createdBy: order.received_by,
   });
 }
