@@ -37,6 +37,7 @@ export default async function JoinPage({ searchParams }: PageProps) {
         initialProductId={renewal?.productId ?? params.product ?? null}
         renewalToken={renewal ? (params.renew ?? null) : null}
         prefill={renewal?.prefill}
+        locks={renewal?.locks}
       />
     </div>
   );

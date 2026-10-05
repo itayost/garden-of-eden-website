@@ -10,6 +10,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { canPayOnline, PAYMENTS_CLOSED_MESSAGE } from "@/lib/payments/online-payments";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import { verifyRenewalToken } from "@/lib/plans/renewal-token";
+import { bindRenewal, isActiveTrainee, sameTraineeOrders, usableAccount } from "@/lib/plans/bound-renewal";
 import { israelToday } from "@/lib/utils/tasks";
 import { enrollmentSchema, type EnrollmentInput } from "@/lib/validations/enrollment";
 import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
@@ -25,6 +26,79 @@ type StartResult = { error: string } | { payUrl: string };
 async function clientIp(): Promise<string> {
   const h = await headers();
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
+type Db = ReturnType<typeof createAdminClient>;
+
+interface Purchaser {
+  /** The renewed Trainee, or null for a fresh purchase matched by phone later. */
+  profileId: string | null;
+  renewalOfPlanId: string | null;
+  childName: string;
+  childBirthdate: string;
+  loginPhone: string;
+}
+
+/**
+ * A valid renewal token names a Plan, and the purchase belongs to that Plan's
+ * Trainee: the order carries the account from the start, so a parent who types
+ * another phone can never land the Plan on a new empty account. An invalid or
+ * expired token, or a Trainee no longer active, makes this a fresh purchase.
+ */
+async function resolvePurchaser(
+  db: Db,
+  data: { renewalToken?: string; childName: string; childBirthdate: string; loginPhone: string },
+): Promise<Purchaser | { error: string }> {
+  const fresh: Purchaser = {
+    profileId: null,
+    renewalOfPlanId: null,
+    childName: data.childName,
+    childBirthdate: data.childBirthdate,
+    loginPhone: data.loginPhone,
+  };
+  if (!data.renewalToken) return fresh;
+
+  const verified = verifyRenewalToken(data.renewalToken, planTokenSecret(), Math.floor(Date.now() / 1000));
+  if (!verified) return fresh;
+
+  // Two foreign keys reach profiles (profile_id, created_by): name the one.
+  const { data: renewed, error: lookupError } = await db
+    .from("trainee_plans")
+    .select("id, profile:profiles!trainee_plans_profile_id_fkey(id, full_name, birthdate, phone, role, deleted_at)")
+    .eq("id", verified.planId)
+    .maybeSingle();
+  if (lookupError) {
+    console.error("[checkout] renewal lookup failed:", lookupError.message);
+    return { error: "לא הצלחנו לאמת את קישור החידוש. נסו שוב בעוד רגע." };
+  }
+  const account = renewed?.profile;
+  if (!renewed || !account || !isActiveTrainee(account)) return fresh;
+
+  const usable = usableAccount({ fullName: account.full_name, birthdate: account.birthdate, phone: account.phone });
+  const bound = bindRenewal(usable, data);
+  if (!bound.ok) return { error: bound.error };
+
+  // An account with no phone stored takes the typed one on the order, but never
+  // another child's: the order would carry that child's login phone.
+  if (usable.phone === null) {
+    const { data: other } = await db
+      .from("profiles")
+      .select("id")
+      .in("phone", phoneVariants(bound.loginPhone))
+      .neq("id", account.id)
+      .eq("role", "trainee")
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (other) return { error: "מספר הטלפון הזה שייך לחניך אחר. הזינו את המספר של החניך שבקישור." };
+  }
+  return {
+    profileId: account.id,
+    renewalOfPlanId: renewed.id,
+    childName: bound.childName,
+    childBirthdate: bound.childBirthdate,
+    loginPhone: bound.loginPhone,
+  };
 }
 
 /**
@@ -60,55 +134,44 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
 
   const db = createAdminClient();
 
+  const purchaser = await resolvePurchaser(db, data);
+  if ("error" in purchaser) return purchaser;
+
+  const purchaserOrders = sameTraineeOrders(purchaser.loginPhone, purchaser.profileId);
+  const [{ data: owner }, { count: charging }, paidIntros] = await Promise.all([
+    db
+      .from("profiles")
+      .select("role")
+      .in("phone", phoneVariants(purchaser.loginPhone))
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle(),
+    typedFrom(db, "orders")
+      .select("id", { count: "exact", head: true })
+      .or(purchaserOrders)
+      .eq("status", "charging"),
+    product.once_per_trainee
+      ? typedFrom(db, "orders")
+          .select("id", { count: "exact", head: true })
+          .or(purchaserOrders)
+          .eq("status", "paid")
+          .eq("product_id", product.id)
+          .then(({ count }: { count: number | null }) => count ?? 0)
+      : Promise.resolve(0),
+  ]);
+
   // The login phone may already be a trainee (renewal, second plan) but never
   // a staff account: fulfillment would otherwise rewrite it.
-  const { data: owner } = await db
-    .from("profiles")
-    .select("role")
-    .in("phone", phoneVariants(data.loginPhone))
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
   if (owner && owner.role !== "trainee") {
     return { error: "מספר הטלפון להתחברות שייך לחשבון צוות. השתמשו במספר אחר." };
   }
-
   // A charge for this phone may have gone through without an answer. Until
   // an admin settles it, a second order would risk charging the parent twice.
-  const { count: charging } = await typedFrom(db, "orders")
-    .select("id", { count: "exact", head: true })
-    .eq("login_phone", data.loginPhone)
-    .eq("status", "charging");
   if ((charging ?? 0) > 0) {
     return { error: "יש תשלום קודם למספר הזה שעדיין בבדיקה. כתבו לנו בוואטסאפ 052-577-9446 ונסיים יחד." };
   }
-
-  // A renewal token names the plan being renewed. It only counts when the
-  // plan belongs to the phone on the form; otherwise, or when invalid, this
-  // is a fresh purchase.
-  let renewalOfPlanId: string | null = null;
-  if (data.renewalToken) {
-    const secret = planTokenSecret();
-    const verified = verifyRenewalToken(data.renewalToken, secret, Math.floor(Date.now() / 1000));
-    if (verified) {
-      const { data: renewed } = (await typedFrom(db, "trainee_plans")
-        .select("id, profile:profiles!inner(phone)")
-        .eq("id", verified.planId)
-        .maybeSingle()) as { data: { id: string; profile: { phone: string | null } | null } | null };
-      const phone = renewed?.profile?.phone;
-      if (phone && phoneVariants(data.loginPhone).includes(phone)) renewalOfPlanId = renewed.id;
-    }
-  }
-
-  if (product.once_per_trainee) {
-    const { count } = await typedFrom(db, "orders")
-      .select("id", { count: "exact", head: true })
-      .eq("login_phone", data.loginPhone)
-      .eq("status", "paid")
-      .eq("product_id", product.id);
-    if (!isIntroPackEligible(product, count ?? 0)) {
-      return { error: "חבילת ההיכרות היא לשחקן חדש בלבד. בחרו מסלול אחר." };
-    }
+  if (!isIntroPackEligible(product, paidIntros)) {
+    return { error: "חבילת ההיכרות היא לשחקן חדש בלבד. בחרו מסלול אחר." };
   }
 
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
@@ -118,11 +181,12 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
       amount_ils: product.price_ils,
       parent_name: data.parentName,
       payer_phone: data.payerPhone,
-      login_phone: data.loginPhone,
-      child_name: data.childName,
-      child_birthdate: data.childBirthdate,
+      login_phone: purchaser.loginPhone,
+      child_name: purchaser.childName,
+      child_birthdate: purchaser.childBirthdate,
       email: data.email,
-      renewal_of_plan_id: renewalOfPlanId,
+      profile_id: purchaser.profileId,
+      renewal_of_plan_id: purchaser.renewalOfPlanId,
     })
     .select("id")
     .single()) as { data: { id: string } | null; error: { message: string } | null };
@@ -139,8 +203,8 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
     parent_id_number: data.parentIdNumber.replace(/\s+/g, ""),
     parent_phone: data.payerPhone,
     parent_email: data.email,
-    child_name: data.childName,
-    child_birthdate: data.childBirthdate,
+    child_name: purchaser.childName,
+    child_birthdate: purchaser.childBirthdate,
     medical_notes: data.medicalNotes,
     plan_name: product.name_he,
     plan_price_ils: product.price_ils,

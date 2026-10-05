@@ -6,6 +6,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyRenewalToken } from "@/lib/plans/renewal-token";
 import type { EnrollmentInput } from "@/lib/validations/enrollment";
 import { toLocalPhone } from "@/lib/plans/local-phone";
+import { isActiveTrainee, renewalLocks, usableAccount, type RenewalLocks } from "@/lib/plans/bound-renewal";
 import type { EnrollmentAgreement, PlanProduct, TraineePlan } from "@/types/plans";
 
 export interface RenewalPrefill {
@@ -13,6 +14,8 @@ export interface RenewalPrefill {
   productId: string | null;
   planId: string;
   prefill: Partial<EnrollmentInput>;
+  /** Child fields that come from the account and show read-only. */
+  locks: RenewalLocks;
 }
 
 /**
@@ -35,37 +38,56 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
   };
   if (!plan) return null;
 
-  const { data: product } = (await typedFrom(db, "plan_products")
-    .select("id, is_active, once_per_trainee")
-    .eq("id", plan.product_id)
-    .maybeSingle()) as { data: Pick<PlanProduct, "id" | "is_active" | "once_per_trainee"> | null };
+  const [{ data: product }, { data: agreement }, { data: profile }] = (await Promise.all([
+    typedFrom(db, "plan_products")
+      .select("id, is_active, once_per_trainee")
+      .eq("id", plan.product_id)
+      .maybeSingle(),
+    typedFrom(db, "enrollment_agreements")
+      .select("*")
+      .eq("profile_id", plan.profile_id)
+      .not("signed_at", "is", null)
+      .order("signed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    db
+      .from("profiles")
+      .select("phone, full_name, birthdate, guardian_name, guardian_phone, role, deleted_at")
+      .eq("id", plan.profile_id)
+      .maybeSingle(),
+  ])) as [
+    { data: Pick<PlanProduct, "id" | "is_active" | "once_per_trainee"> | null },
+    { data: EnrollmentAgreement | null },
+    {
+      data: {
+        phone: string | null;
+        full_name: string | null;
+        birthdate: string | null;
+        guardian_name: string | null;
+        guardian_phone: string | null;
+        role: string;
+        deleted_at: string | null;
+      } | null;
+    },
+  ];
+  // Checkout binds only an active trainee; the form must not lock fields the
+  // server will not honour.
+  if (!profile || !isActiveTrainee(profile)) return null;
   const productId = product && product.is_active && !product.once_per_trainee ? product.id : null;
 
-  const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("*")
-    .eq("profile_id", plan.profile_id)
-    .not("signed_at", "is", null)
-    .order("signed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()) as { data: EnrollmentAgreement | null };
-
-  const { data: profile } = await db
-    .from("profiles")
-    .select("phone, full_name, birthdate, guardian_name, guardian_phone")
-    .eq("id", plan.profile_id)
-    .maybeSingle();
-
+  const usable = usableAccount({ fullName: profile.full_name, birthdate: profile.birthdate, phone: profile.phone });
   const prefill: Partial<EnrollmentInput> = {
-    parentName: agreement?.parent_name ?? profile?.guardian_name ?? "",
-    payerPhone: toLocalPhone(agreement?.parent_phone ?? profile?.guardian_phone),
-    loginPhone: toLocalPhone(profile?.phone),
+    parentName: agreement?.parent_name ?? profile.guardian_name ?? "",
+    payerPhone: toLocalPhone(agreement?.parent_phone ?? profile.guardian_phone),
+    loginPhone: toLocalPhone(usable.phone),
     email: agreement?.parent_email ?? "",
-    childName: agreement?.child_name ?? profile?.full_name ?? "",
-    childBirthdate: agreement?.child_birthdate ?? profile?.birthdate ?? "",
+    // The account wins over the last agreement: the purchase lands on it.
+    childName: usable.fullName ?? agreement?.child_name ?? "",
+    childBirthdate: usable.birthdate ?? agreement?.child_birthdate ?? "",
     medicalNotes: agreement?.medical_notes ?? "",
     emergencyContactName: agreement?.emergency_contact_name ?? "",
     emergencyContactPhone: toLocalPhone(agreement?.emergency_contact_phone),
   };
 
-  return { productId, planId: plan.id, prefill };
+  return { productId, planId: plan.id, prefill, locks: renewalLocks(usable) };
 }
