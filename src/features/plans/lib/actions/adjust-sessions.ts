@@ -8,8 +8,7 @@ import { planAdjustment } from "@/lib/plans/adjustment";
 import { resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { adjustSessionsSchema, type AdjustSessionsInput } from "@/lib/validations/plans-admin";
 import { applyShrinkAfter } from "../apply-shrink";
-import { loadPlanContext, withPlanChange, type PlanContext } from "../plan-context";
-import { revalidateStaffSurfaces } from "../revalidate-staff";
+import { countedRowIds, loadPlanContext, STALE_READ, withPlanChange, type PlanContext } from "../plan-context";
 
 const BALANCE_CHANGED = "היתרה השתנתה בינתיים. רעננו ונסו שוב.";
 
@@ -76,21 +75,19 @@ export async function adjustSessionsAction(
     p_expected_total: data.expectedTotal,
     p_new_total: plan.totalAfter,
     p_used: counts.used,
+    p_counted_row_ids: countedRowIds(ctx.rows),
     p_reason: data.reason,
     p_actor: user!.id,
   });
   if (error) {
     if (error.message.includes("balance_changed")) return { error: BALANCE_CHANGED };
+    if (error.message.includes("roster_changed")) return { error: STALE_READ };
     if (error.message.includes("plan_not_live")) return { error: "המסלול הסתיים או בוטל" };
     console.error("[adjust] rpc failed:", error.message);
     return { error: "תיקון היתרה נכשל. נסו שוב." };
   }
 
-  // A raise frees room and never displaces a Booking.
-  if (plan.totalAfter > data.expectedTotal) {
-    revalidateStaffSurfaces(ctx.plan.profile_id);
-    return { ok: true, cancelledCount: 0 };
-  }
+  // Even a raise can hold a queued Plan of another branch past a Booking; the rule decides.
   const after = withPlanChange(ctx.plans, data.planId, { sessionsTotal: plan.totalAfter });
   const { cancelledCount } = await applyShrinkAfter(db, ctx, after, today);
   return { ok: true, cancelledCount };

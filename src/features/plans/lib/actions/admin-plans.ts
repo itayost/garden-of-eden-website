@@ -21,10 +21,7 @@ import {
   type PlanQueueView,
   type StoredPlan,
 } from "../queries";
-import { loadPlanContext, withPlanChange } from "../plan-context";
-import { revalidateStaffSurfaces } from "../revalidate-staff";
-
-type ActionResult = { success: true } | { error: string };
+import { countedRowIds, loadPlanContext, STALE_READ, withPlanChange } from "../plan-context";
 
 export type AdminPlanRow = PlanQueueView & {
   traineeName: string;
@@ -123,6 +120,8 @@ async function loadAdminRows(
     });
 }
 
+const PLAN_CHANGED = "המסלול השתנה בינתיים. רעננו ונסו שוב.";
+
 /** The Plan's own dates in its queue (an Add-on keeps its own), after the scope check. */
 async function loadExtendTarget(db: ReturnType<typeof createAdminClient>, planId: string, today: string) {
   const ctx = await loadPlanContext(db, planId, { withOrder: false });
@@ -139,52 +138,54 @@ async function loadExtendTarget(db: ReturnType<typeof createAdminClient>, planId
  * A new end date for a Plan, on the same audit trail as Adjustments. The
  * queue dates the Plan, so the end becomes a new duration, or a new fixed end
  * for an Arbox purchase; adjust_plan_end_date writes it and its audit row
- * together. An earlier end that leaves Bookings unpaid follows the shrink rule.
+ * together, only if the end is still the one staff saw. Bookings the new end
+ * leaves unpaid follow the shrink rule.
  */
 export async function extendPlanAction(input: {
   planId: string;
   endsOn: string;
+  expectedEndsOn: string;
   reason: string;
-}): Promise<ActionResult> {
+}): Promise<{ success: true; cancelledCount: number } | { error: string }> {
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   const parsed = extendPlanSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
-  const { planId, endsOn, reason } = parsed.data;
+  const { planId, endsOn, expectedEndsOn, reason } = parsed.data;
 
   const db = createAdminClient();
   const today = israelToday();
   const target = await loadExtendTarget(db, planId, today);
   if (!target.ok) return { error: target.error };
   const { ctx, startsOn, endsBefore } = target;
+  if (ctx.plan.ends_on !== expectedEndsOn) return { error: PLAN_CHANGED };
   if (endsOn < startsOn) return { error: "תאריך הסיום קודם לתאריך ההתחלה" };
 
   const fixed = ctx.plan.fixedEndsOn !== null;
   const durationDays = fixed ? null : daysBetween(startsOn, endsOn) + 1;
   const { error } = await db.rpc("adjust_plan_end_date", {
     p_plan_id: planId,
-    p_expected_ends_on: ctx.plan.ends_on,
-    p_duration_days: durationDays,
-    p_fixed_ends_on: fixed ? endsOn : null,
+    p_expected_ends_on: expectedEndsOn,
+    // The generated types mark every argument required; the function takes null for the term not used.
+    p_duration_days: durationDays as number,
+    p_fixed_ends_on: (fixed ? endsOn : null) as string,
     p_ends_on: endsOn,
     p_ends_before: endsBefore,
+    p_counted_row_ids: countedRowIds(ctx.rows),
     p_reason: reason,
     p_actor: user!.id,
   });
   if (error) {
     if (error.message.includes("plan_changed") || error.message.includes("plan_not_live")) {
-      return { error: "המסלול השתנה בינתיים. רעננו ונסו שוב." };
+      return { error: PLAN_CHANGED };
     }
+    if (error.message.includes("roster_changed")) return { error: STALE_READ };
     console.error("[extend] rpc failed:", error.message);
     return { error: "שגיאה בעדכון המסלול" };
   }
 
-  // A later end never displaces a Booking.
-  if (endsBefore && endsOn >= endsBefore) {
-    revalidateStaffSurfaces(ctx.plan.profile_id);
-    return { success: true };
-  }
+  // Even a later end can move a queued Plan of another branch past a Booking; the rule decides.
   const after = withPlanChange(ctx.plans, planId, fixed ? { fixedEndsOn: endsOn } : { durationDays: durationDays! });
-  await applyShrinkAfter(db, ctx, after, today);
-  return { success: true };
+  const { cancelledCount } = await applyShrinkAfter(db, ctx, after, today);
+  return { success: true, cancelledCount };
 }

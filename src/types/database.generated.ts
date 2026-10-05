@@ -2296,6 +2296,63 @@ export type Database = {
           },
         ]
       }
+      plan_adjustments: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_after: string | null
+          ends_before: string | null
+          id: string
+          kind: string
+          plan_id: string
+          reason: string
+          sessions_after: number | null
+          sessions_before: number | null
+          sessions_used: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_after?: string | null
+          ends_before?: string | null
+          id?: string
+          kind: string
+          plan_id: string
+          reason: string
+          sessions_after?: number | null
+          sessions_before?: number | null
+          sessions_used?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_after?: string | null
+          ends_before?: string | null
+          id?: string
+          kind?: string
+          plan_id?: string
+          reason?: string
+          sessions_after?: number | null
+          sessions_before?: number | null
+          sessions_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_adjustments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_adjustments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "trainee_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_products: {
         Row: {
           blurb_he: string | null
@@ -4869,6 +4926,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_plan_end_date: {
+        Args: {
+          p_actor: string
+          p_duration_days: number
+          p_ends_before: string
+          p_ends_on: string
+          p_expected_ends_on: string
+          p_fixed_ends_on: string
+          p_plan_id: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      adjust_plan_sessions: {
+        Args: {
+          p_actor: string
+          p_expected_total: number
+          p_new_total: number
+          p_plan_id: string
+          p_reason: string
+          p_used: number
+        }
+        Returns: undefined
+      }
       apply_slot_workout: {
         Args: { p_slot_id: string }
         Returns: {

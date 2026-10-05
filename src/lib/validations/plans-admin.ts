@@ -98,10 +98,14 @@ export type ArboxPlanInput = z.input<typeof arboxPlanSchema>;
 export const issueInvoiceSchema = z.object({ orderId: uuid });
 export const resendAgreementSchema = z.object({ agreementId: uuid });
 
-/** A new end date goes on the audit trail with a reason. */
+/**
+ * A new end date goes on the audit trail with a reason; expectedEndsOn is the
+ * end the dialog read (the database refuses if it changed).
+ */
 export const extendPlanSchema = z.object({
   planId: uuid,
   endsOn: isoDate,
+  expectedEndsOn: isoDate,
   reason,
 });
 

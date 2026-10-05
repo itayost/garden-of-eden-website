@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import type { Database } from "@/types/database";
 import type { QueueRow } from "@/lib/plans/plan-queue";
+import { rowCounts } from "@/lib/schedule/booking-rules";
 import type { Order } from "@/types/plans";
 import { loadQueueRows, loadStoredPlans, type StoredPlan } from "./queries";
 
@@ -36,6 +37,12 @@ export function withPlanChange(
 ): StoredPlan[] {
   return plans.map((p) => (p.id === planId ? { ...p, ...change } : p));
 }
+
+/** The roster rows that use a session; the adjust functions refuse if the trainee's differ. */
+export const countedRowIds = (rows: readonly QueueRow[]): string[] => rows.filter(rowCounts).map((r) => r.id);
+
+/** The adjust functions' stale-read refusals, in Hebrew. */
+export const STALE_READ = "הנתונים השתנו בינתיים. רעננו ונסו שוב.";
 
 export const toBooking = (row: Pick<QueueRow, "schedule_date" | "start_time">): AffectedBooking => ({
   date: row.schedule_date,

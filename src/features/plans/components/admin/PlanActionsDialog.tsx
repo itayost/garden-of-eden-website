@@ -33,20 +33,29 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   const [cancelling, setCancelling] = useState(false);
   const [endingEarly, setEndingEarly] = useState(false);
 
-  const run = (fn: () => Promise<{ success: true } | { error: string }>, done: string) => {
+  const saveEndDate = () => {
     startTransition(async () => {
-      const result = await fn();
+      const result = await extendPlanAction({
+        planId: row.plan.id,
+        endsOn,
+        expectedEndsOn: row.plan.ends_on,
+        reason: extendReason,
+      });
       if ("error" in result) {
         toast.error(result.error);
         return;
       }
-      toast.success(done);
+      toast.success(
+        result.cancelledCount > 0
+          ? `התוקף עודכן. ${result.cancelledCount} אימונים בוטלו והמתאמן קיבל הודעה.`
+          : "התוקף עודכן",
+      );
       router.refresh();
       onClose();
     });
   };
 
-  // Extend and add sessions only on a Plan still running.
+  // A new end date and an Adjustment only on a Plan still running.
   const live = row.plan.status === "active" && !row.plan.ended_on;
 
   if (voiding) return <VoidPlanDialog planId={row.plan.id} onClose={onClose} />;
@@ -77,9 +86,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
                   disabled={pending}
                 />
                 <Button
-                  onClick={() =>
-                    run(() => extendPlanAction({ planId: row.plan.id, endsOn, reason: extendReason }), "התוקף עודכן")
-                  }
+                  onClick={saveEndDate}
                   disabled={pending || extendReason.trim().length < 2}
                 >
                   שמירה
