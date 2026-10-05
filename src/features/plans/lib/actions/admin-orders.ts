@@ -15,6 +15,8 @@ export type AdminOrderRow = Order & {
   productName: string;
   agreementId: string | null;
   receivedByName: string | null;
+  /** Who gave the Discount, for a sale below list price. */
+  discountedByName: string | null;
   /** A Void or Refund whose Morning credit note number is not recorded yet. */
   refundAwaitingCreditNote: string | null;
 };
@@ -48,7 +50,7 @@ export async function listOrdersAction(): Promise<AdminOrderRow[]> {
   const db = createAdminClient();
 
   let query = typedFrom(db, "orders")
-    .select("*, product:plan_products(name_he), agreement:enrollment_agreements(id), receiver:profiles!orders_received_by_fkey(full_name), refunds:plan_refunds(id, credit_note_number)")
+    .select("*, product:plan_products(name_he), agreement:enrollment_agreements(id), receiver:profiles!orders_received_by_fkey(full_name), discounter:profiles!orders_discounted_by_fkey(full_name), refunds:plan_refunds(id, credit_note_number)")
     .order("created_at", { ascending: false })
     .limit(ORDERS_LIMIT);
   if (managed) query = query.in("branch_id", managed);
@@ -58,14 +60,17 @@ export async function listOrdersAction(): Promise<AdminOrderRow[]> {
           product: { name_he: string } | null;
           agreement: { id: string }[] | null;
           receiver: { full_name: string | null } | null;
+          discounter: { full_name: string | null } | null;
           refunds: { id: string; credit_note_number: string | null }[] | null;
         })[]
       | null;
   };
 
-  return (data ?? []).map(({ product, agreement, receiver, refunds, ...order }) => ({
+  return (data ?? []).map(({ product, agreement, receiver, discounter, refunds, ...order }) => ({
     ...order,
     amount_ils: Number(order.amount_ils),
+    list_price_ils: order.list_price_ils === null ? null : Number(order.list_price_ils),
+    discountedByName: discounter?.full_name ?? null,
     productName: product?.name_he ?? "",
     agreementId: agreement?.[0]?.id ?? null,
     receivedByName: receiver?.full_name ?? null,

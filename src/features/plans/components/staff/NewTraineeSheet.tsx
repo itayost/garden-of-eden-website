@@ -11,11 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { ManualPaymentMethod, NewTraineeInput } from "@/lib/validations/plans-admin";
-import type { PlanProduct } from "@/types/plans";
+
 import { israelToday } from "@/lib/utils/tasks";
 import { latestStartDate } from "@/lib/plans/start-date";
-import { createTraineeWithPaymentAction } from "../../lib/actions/staff-payment";
+import { createTraineeWithPaymentAction, type SellableProduct } from "../../lib/actions/staff-payment";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
+import { DiscountFields, NO_DISCOUNT, readDiscount, type DiscountDraft } from "./DiscountFields";
 import { DuplicatePrompt } from "./DuplicatePrompt";
 import { PaymentMethodPicker } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
@@ -23,7 +24,7 @@ import { ProductPicker } from "./ProductPicker";
 
 
 interface NewTraineeSheetProps {
-  products: PlanProduct[];
+  products: SellableProduct[];
   morningConfigured: boolean;
   isAdmin: boolean;
 }
@@ -39,6 +40,7 @@ interface FormState {
   reference: string;
   startsOn: string;
   sendWhatsApp: boolean;
+  discount: DiscountDraft;
 }
 
 const emptyForm = (): FormState => ({
@@ -52,6 +54,7 @@ const emptyForm = (): FormState => ({
   reference: "",
   startsOn: israelToday(),
   sendWhatsApp: true,
+  discount: NO_DISCOUNT,
 });
 
 /**
@@ -69,6 +72,10 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const product = products.find((p) => p.id === form.productId) ?? null;
+  // Admins and the branch's manager may sell below list price.
+  const discount = product?.managed ? readDiscount(form.discount, product.price_ils) : null;
+
   const toInput = (confirmDuplicate: boolean): NewTraineeInput => ({
     productId: form.productId,
     childName: form.childName,
@@ -79,6 +86,7 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
     reference: form.reference,
     startsOn: form.startsOn,
     sendWhatsApp: form.sendWhatsApp,
+    discount: discount?.discount ?? null,
     confirmDuplicate,
   });
 
@@ -150,7 +158,17 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
                   <Input id="nt-parent" className="h-12 rounded-xl text-base" value={form.parentName} onChange={(e) => set("parentName", e.target.value)} disabled={pending} autoComplete="off" />
                 </div>
 
-                <ProductPicker products={products} selectedId={form.productId || null} onSelect={(id) => set("productId", id)} disabled={pending} />
+                <ProductPicker products={products} selectedId={form.productId || null} onSelect={(id) => setForm((prev) => ({ ...prev, productId: id, discount: NO_DISCOUNT }))} disabled={pending} />
+
+                {product?.managed && (
+                  <DiscountFields
+                    idPrefix="nt"
+                    listPrice={product.price_ils}
+                    value={form.discount}
+                    onChange={(d) => set("discount", d)}
+                    disabled={pending}
+                  />
+                )}
 
                 <PaymentMethodPicker
                   method={form.paymentMethod}
@@ -186,7 +204,7 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
                 {duplicate !== null ? (
                   <DuplicatePrompt minutesAgo={duplicate} onConfirm={() => submit(true)} onCancel={() => setDuplicate(null)} pending={pending} />
                 ) : (
-                  <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !form.productId || !form.childName || !form.loginPhone}>
+                  <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !form.productId || !form.childName || !form.loginPhone || Boolean(discount?.problem)}>
                     {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
                     רישום התשלום
                   </Button>

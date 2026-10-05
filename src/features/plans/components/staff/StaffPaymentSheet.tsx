@@ -22,6 +22,7 @@ import {
 import { recordArboxPlanAction } from "../../lib/actions/staff-arbox-plan";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { ArboxTermsFields } from "./ArboxTermsFields";
+import { DiscountFields, NO_DISCOUNT, readDiscount, type DiscountDraft } from "./DiscountFields";
 import { DuplicatePrompt } from "./DuplicatePrompt";
 import { PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
@@ -56,6 +57,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   // Only offered when nothing is current or queued; otherwise the queue decides.
   const [startsOn, setStartsOn] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
+  const [discountDraft, setDiscountDraft] = useState<DiscountDraft>(NO_DISCOUNT);
   const [duplicate, setDuplicate] = useState<number | null>(null);
   const [result, setResult] = useState<ManualPaymentResult | null>(null);
   const [pending, startTransition] = useTransition();
@@ -95,13 +97,14 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     else setArboxTerms(null);
   };
 
-  const canRepairWith = (id: string | null) => {
-    const branchId = context?.products.find((p) => p.id === id)?.branch_id;
-    return branchId !== undefined && (context?.arboxBranchIds.includes(branchId) ?? false);
-  };
+  // Admins and the branch's manager: an Arbox repair, or a Discount.
+  const canRepairWith = (id: string | null) => context?.products.find((p) => p.id === id)?.managed ?? false;
+  const canDiscount = method !== "arbox" && canRepairWith(productId);
+  const discount = canDiscount && selectedProduct ? readDiscount(discountDraft, selectedProduct.price_ils) : null;
 
   const chooseProduct = (next: string) => {
     setProductId(next);
+    setDiscountDraft(NO_DISCOUNT);
     if (method !== "arbox") return;
     if (canRepairWith(next)) prefillArbox(next);
     else chooseMethod("cash");
@@ -147,6 +150,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         reference,
         startsOn: canChooseStart ? startsOn : null,
         sendWhatsApp,
+        discount: discount?.discount ?? null,
         confirmDuplicate,
       });
       if ("error" in outcome) {
@@ -170,6 +174,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     setDuplicate(null);
     setMethod("cash");
     setArboxTerms(null);
+    setDiscountDraft(NO_DISCOUNT);
     setReference("");
     setContext(null);
     setLoadError(null);
@@ -238,6 +243,15 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                 </>
               ) : (
                 <>
+                  {canDiscount && selectedProduct && (
+                    <DiscountFields
+                      idPrefix="sp"
+                      listPrice={selectedProduct.price_ils}
+                      value={discountDraft}
+                      onChange={setDiscountDraft}
+                      disabled={pending}
+                    />
+                  )}
                   {canChooseStart && (
                     <div className="space-y-1">
                       <Label htmlFor="sp-start">תאריך תחילה</Label>
@@ -273,7 +287,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
               {duplicate !== null ? (
                 <DuplicatePrompt minutesAgo={duplicate} onConfirm={() => submit(true)} onCancel={() => setDuplicate(null)} pending={pending} />
               ) : (
-                <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !productId}>
+                <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !productId || Boolean(discount?.problem)}>
                   {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
                   {method === "arbox" ? "יצירת המסלול" : "רישום התשלום"}
                 </Button>

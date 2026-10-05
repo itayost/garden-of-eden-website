@@ -102,6 +102,12 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
               <TableCell>{order.productName}</TableCell>
               <TableCell>
                 ₪{order.amount_ils.toLocaleString("he-IL")}
+                {order.list_price_ils !== null && (
+                  <div className="text-xs text-muted-foreground">
+                    <s>₪{order.list_price_ils.toLocaleString("he-IL")}</s> הנחה: {order.discount_reason}
+                    {order.discountedByName ? ` · ע"י ${order.discountedByName}` : ""}
+                  </div>
+                )}
                 {order.payment_method && (
                   <div className="text-xs text-muted-foreground">
                     {PAYMENT_METHOD_LABELS_HE[order.payment_method]}

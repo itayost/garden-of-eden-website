@@ -4,6 +4,7 @@ import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared
 import {
   listOrdersAction,
   listUnassignedWebhookEventsAction,
+  type AdminOrderRow,
 } from "@/features/plans/lib/actions/admin-orders";
 import { OrdersTable } from "@/features/plans/components/admin/OrdersTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +54,37 @@ export default async function AdminOrdersPage() {
           </CardContent>
         </Card>
       )}
+      {isAdmin && <DiscountsCard rows={orders.filter((o) => o.list_price_ils !== null)} />}
       <OrdersTable rows={orders} />
     </div>
+  );
+}
+
+/** Sales below list price: list price, amount paid, why, and who gave it. */
+function DiscountsCard({ rows }: { rows: AdminOrderRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">הנחות ({rows.length})</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {rows.map((order) => (
+          <div key={order.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-b pb-2 last:border-0">
+            <span>
+              {order.child_name} · {order.productName}
+            </span>
+            <span className="tabular-nums">
+              <s className="text-muted-foreground">₪{order.list_price_ils!.toLocaleString("he-IL")}</s> ₪
+              {order.amount_ils.toLocaleString("he-IL")}
+            </span>
+            <span className="w-full text-xs text-muted-foreground">
+              {order.discount_reason}
+              {order.discountedByName ? ` · ${order.discountedByName}` : ""} · {formatDateTime(order.created_at)}
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
