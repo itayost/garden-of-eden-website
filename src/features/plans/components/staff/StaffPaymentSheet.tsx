@@ -22,6 +22,8 @@ import {
 import { recordArboxPlanAction } from "../../lib/actions/staff-arbox-plan";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { ArboxTermsFields } from "./ArboxTermsFields";
+import { DiscountFields } from "./DiscountFields";
+import { useDiscount } from "./useDiscount";
 import { DuplicatePrompt } from "./DuplicatePrompt";
 import { PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
@@ -95,15 +97,15 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     else setArboxTerms(null);
   };
 
-  const canRepairWith = (id: string | null) => {
-    const branchId = context?.products.find((p) => p.id === id)?.branch_id;
-    return branchId !== undefined && (context?.arboxBranchIds.includes(branchId) ?? false);
-  };
+  // Admins and the branch's manager: an Arbox repair, or a Discount.
+  const isManaged = (id: string | null) => context?.products.find((p) => p.id === id)?.managed ?? false;
+  const discount = useDiscount(selectedProduct, method !== "arbox");
 
   const chooseProduct = (next: string) => {
     setProductId(next);
+    discount.reset();
     if (method !== "arbox") return;
-    if (canRepairWith(next)) prefillArbox(next);
+    if (isManaged(next)) prefillArbox(next);
     else chooseMethod("cash");
   };
 
@@ -147,6 +149,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         reference,
         startsOn: canChooseStart ? startsOn : null,
         sendWhatsApp,
+        discount: discount.discount,
         confirmDuplicate,
       });
       if ("error" in outcome) {
@@ -170,6 +173,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     setDuplicate(null);
     setMethod("cash");
     setArboxTerms(null);
+    discount.reset();
     setReference("");
     setContext(null);
     setLoadError(null);
@@ -217,7 +221,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
             <>
               <ProductPicker products={context.products} selectedId={productId} onSelect={chooseProduct} disabled={pending} />
               <PaymentMethodPicker
-                methods={canRepairWith(productId) ? REPAIR_METHODS : SHEET_METHODS}
+                methods={isManaged(productId) ? REPAIR_METHODS : SHEET_METHODS}
                 method={method}
                 reference={reference}
                 onMethodChange={chooseMethod}
@@ -238,6 +242,16 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                 </>
               ) : (
                 <>
+                  {discount.offered && selectedProduct && (
+                    <DiscountFields
+                      idPrefix="sp"
+                      listPrice={selectedProduct.price_ils}
+                      value={discount.draft}
+                      onChange={discount.setDraft}
+                      problem={discount.problem}
+                      disabled={pending}
+                    />
+                  )}
                   {canChooseStart && (
                     <div className="space-y-1">
                       <Label htmlFor="sp-start">תאריך תחילה</Label>
@@ -273,7 +287,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
               {duplicate !== null ? (
                 <DuplicatePrompt minutesAgo={duplicate} onConfirm={() => submit(true)} onCancel={() => setDuplicate(null)} pending={pending} />
               ) : (
-                <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !productId}>
+                <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !productId || Boolean(discount.problem)}>
                   {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
                   {method === "arbox" ? "יצירת המסלול" : "רישום התשלום"}
                 </Button>

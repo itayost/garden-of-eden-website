@@ -15,6 +15,8 @@ export type AdminOrderRow = Order & {
   productName: string;
   agreementId: string | null;
   receivedByName: string | null;
+  /** Who gave the Discount, for a sale below list price. */
+  discountedByName: string | null;
   /** A Void or Refund whose Morning credit note number is not recorded yet. */
   refundAwaitingCreditNote: string | null;
 };
@@ -35,6 +37,33 @@ async function denyUnlessManagesOrder(db: Db, orderId: string): Promise<string |
   return verifyAdminOrBranchManager([order.branch_id]);
 }
 
+const ORDER_SELECT =
+  "*, product:plan_products(name_he), agreement:enrollment_agreements(id), receiver:profiles!orders_received_by_fkey(full_name), discounter:profiles!orders_discounted_by_fkey(full_name), refunds:plan_refunds(id, credit_note_number)";
+
+type OrderJoinRow = Order & {
+  product: { name_he: string } | null;
+  agreement: { id: string }[] | null;
+  receiver: { full_name: string | null } | null;
+  discounter: { full_name: string | null } | null;
+  refunds: { id: string; credit_note_number: string | null }[] | null;
+};
+
+function toAdminOrderRow({ product, agreement, receiver, discounter, refunds, ...order }: OrderJoinRow): AdminOrderRow {
+  return {
+    ...order,
+    amount_ils: Number(order.amount_ils),
+    list_price_ils: order.list_price_ils == null ? null : Number(order.list_price_ils),
+    discountedByName: discounter?.full_name ?? null,
+    productName: product?.name_he ?? "",
+    agreementId: agreement?.[0]?.id ?? null,
+    receivedByName: receiver?.full_name ?? null,
+    // Only a receipt in Morning has something to credit.
+    refundAwaitingCreditNote: order.morning_document_url
+      ? (refunds ?? []).find((r) => r.credit_note_number === null)?.id ?? null
+      : null,
+  };
+}
+
 /** Every order for an Admin; a Branch manager's branches for a Branch manager. */
 export async function listOrdersAction(): Promise<AdminOrderRow[]> {
   const { error, profile } = await verifyAdminOrTrainer();
@@ -48,31 +77,59 @@ export async function listOrdersAction(): Promise<AdminOrderRow[]> {
   const db = createAdminClient();
 
   let query = typedFrom(db, "orders")
-    .select("*, product:plan_products(name_he), agreement:enrollment_agreements(id), receiver:profiles!orders_received_by_fkey(full_name), refunds:plan_refunds(id, credit_note_number)")
+    .select(ORDER_SELECT)
     .order("created_at", { ascending: false })
     .limit(ORDERS_LIMIT);
   if (managed) query = query.in("branch_id", managed);
-  const { data } = (await query) as {
+  const { data, error: readError } = (await query) as {
+    data: OrderJoinRow[] | null;
+    error: { message: string } | null;
+  };
+  if (readError) console.error("[admin-orders] list failed:", readError.message);
+  return (data ?? []).map(toAdminOrderRow);
+}
+
+/** A sale below list price, for the Admins' list. */
+export interface DiscountRow {
+  id: string;
+  childName: string;
+  productName: string;
+  amountIls: number;
+  listPriceIls: number;
+  reason: string | null;
+  byName: string | null;
+  createdAt: string;
+}
+
+/** Every sale below list price, newest first: Admins only. */
+export async function listDiscountedOrdersAction(): Promise<DiscountRow[]> {
+  const { error } = await verifyAdmin();
+  if (error) return [];
+  const { data, error: readError } = (await typedFrom(createAdminClient(), "orders")
+    .select(
+      "id, child_name, amount_ils, list_price_ils, discount_reason, created_at, product:plan_products(name_he), discounter:profiles!orders_discounted_by_fkey(full_name)",
+    )
+    .not("list_price_ils", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(ORDERS_LIMIT)) as {
     data:
-      | (Order & {
+      | (Pick<Order, "id" | "child_name" | "amount_ils" | "list_price_ils" | "discount_reason" | "created_at"> & {
           product: { name_he: string } | null;
-          agreement: { id: string }[] | null;
-          receiver: { full_name: string | null } | null;
-          refunds: { id: string; credit_note_number: string | null }[] | null;
+          discounter: { full_name: string | null } | null;
         })[]
       | null;
+    error: { message: string } | null;
   };
-
-  return (data ?? []).map(({ product, agreement, receiver, refunds, ...order }) => ({
-    ...order,
-    amount_ils: Number(order.amount_ils),
-    productName: product?.name_he ?? "",
-    agreementId: agreement?.[0]?.id ?? null,
-    receivedByName: receiver?.full_name ?? null,
-    // Only a receipt in Morning has something to credit.
-    refundAwaitingCreditNote: order.morning_document_url
-      ? (refunds ?? []).find((r) => r.credit_note_number === null)?.id ?? null
-      : null,
+  if (readError) console.error("[admin-orders] discounts list failed:", readError.message);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    childName: row.child_name,
+    productName: row.product?.name_he ?? "",
+    amountIls: Number(row.amount_ils),
+    listPriceIls: Number(row.list_price_ils),
+    reason: row.discount_reason,
+    byName: row.discounter?.full_name ?? null,
+    createdAt: row.created_at,
   }));
 }
 

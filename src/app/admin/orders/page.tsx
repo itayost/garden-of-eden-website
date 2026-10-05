@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import {
+  listDiscountedOrdersAction,
   listOrdersAction,
   listUnassignedWebhookEventsAction,
+  type DiscountRow,
 } from "@/features/plans/lib/actions/admin-orders";
 import { OrdersTable } from "@/features/plans/components/admin/OrdersTable";
+import { DiscountNote } from "@/features/plans/components/admin/DiscountNote";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/utils/date";
 
@@ -21,9 +24,10 @@ export default async function AdminOrdersPage() {
     if ("error" in scope || scope.data.managedBranchIds.length === 0) redirect("/admin");
   }
   // Unassigned Morning deliveries carry no branch: Admins only.
-  const [orders, unassigned] = await Promise.all([
+  const [orders, unassigned, discounted] = await Promise.all([
     listOrdersAction(),
     isAdmin ? listUnassignedWebhookEventsAction() : Promise.resolve([]),
+    isAdmin ? listDiscountedOrdersAction() : Promise.resolve([]),
   ]);
 
   return (
@@ -53,7 +57,34 @@ export default async function AdminOrdersPage() {
           </CardContent>
         </Card>
       )}
+      <DiscountsCard rows={discounted} />
       <OrdersTable rows={orders} />
     </div>
+  );
+}
+
+/** Sales below list price: list price, amount paid, why, and who gave it. */
+function DiscountsCard({ rows }: { rows: DiscountRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">הנחות ({rows.length})</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {rows.map((order) => (
+          <div key={order.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-b pb-2 last:border-0">
+            <span>
+              {order.childName} · {order.productName}
+            </span>
+            <span className="tabular-nums">₪{order.amountIls.toLocaleString("he-IL")}</span>
+            <span className="w-full">
+              <DiscountNote listPrice={order.listPriceIls} reason={order.reason} by={order.byName} />
+              <span className="text-xs text-muted-foreground"> · {formatDateTime(order.createdAt)}</span>
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }

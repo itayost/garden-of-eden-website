@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
+import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import { canManageBranches, isInBranchScope } from "@/lib/branches/branch-scope";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -13,6 +14,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { isMorningConfigured } from "@/lib/morning/config";
 import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue } from "@/lib/plans/plan-queue";
+import type { Discount } from "@/lib/plans/discount";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import { toE164 } from "@/lib/plans/local-phone";
@@ -36,9 +38,15 @@ export type StaffPaymentOutcome =
   | { duplicate: { minutesAgo: number } }
   | { error: string };
 
+/**
+ * A product the caller may sell. managed: the caller is an Admin or the
+ * branch's manager, so may also give a Discount or record an Arbox repair.
+ */
+export type SellableProduct = PlanProduct & { managed: boolean };
+
 export interface StaffPaymentContext {
   traineeName: string;
-  products: PlanProduct[];
+  products: SellableProduct[];
   currentProductId: string | null;
   /** Where a Plan sold now lands in the queue: at the latest, when a Card ahead may run out sooner. */
   startsOn: string;
@@ -50,8 +58,6 @@ export interface StaffPaymentContext {
   latestStartOn: string;
   /** A Card ahead can run out before its date, which brings the start forward. */
   startsWhenCardRunsOut: boolean;
-  /** Branches where the caller (Admin, or their Branch manager) may record an Arbox sale by hand, as a repair. */
-  arboxBranchIds: string[];
   morningConfigured: boolean;
   parentPhone: string | null;
 }
@@ -60,25 +66,35 @@ export interface StaffPaymentContext {
 async function sellableProducts(
   db: ReturnType<typeof createAdminClient>,
   traineeBranchIds: readonly string[] | null,
-): Promise<PlanProduct[]> {
-  const scopeResult = await getBranchScopeAction();
+  role: string,
+): Promise<SellableProduct[]> {
+  const [scopeResult, { data }] = await Promise.all([
+    getBranchScopeAction(),
+    typedFrom(db, "plan_products").select("*").eq("is_active", true).order("order_index") as unknown as Promise<{
+      data: PlanProduct[] | null;
+    }>,
+  ]);
   if ("error" in scopeResult) return [];
-  const scope = scopeResult.data.scope;
-  const { data } = (await typedFrom(db, "plan_products")
-    .select("*")
-    .eq("is_active", true)
-    .order("order_index")) as { data: PlanProduct[] | null };
+  const { scope, managedBranchIds } = scopeResult.data;
   return (data ?? [])
     .filter((p) => isInBranchScope(scope, [p.branch_id]))
     .filter((p) => traineeBranchIds === null || traineeBranchIds.includes(p.branch_id))
-    .map((p) => ({ ...p, price_ils: Number(p.price_ils) }));
+    .map((p) => ({
+      ...p,
+      price_ils: Number(p.price_ils),
+      managed: canManageBranches(role, managedBranchIds, [p.branch_id]),
+    }));
 }
 
+/** A Discount is for an Admin or the branch's manager; the amount rule is recordManualPayment's. */
+const discountRefusal = (product: PlanProduct, discount: Discount | null): Promise<string | null> =>
+  discount ? verifyAdminOrBranchManager([product.branch_id]) : Promise.resolve(null);
+
 /** Active products in the branches the caller may sell in, for the new-trainee sheet. */
-export async function listSellableProductsAction(): Promise<PlanProduct[]> {
-  const { error } = await verifyAdminOrTrainer();
+export async function listSellableProductsAction(): Promise<SellableProduct[]> {
+  const { error, profile } = await verifyAdminOrTrainer();
   if (error) return [];
-  return sellableProducts(createAdminClient(), null);
+  return sellableProducts(createAdminClient(), null, profile!.role);
 }
 
 /** Everything the payment sheet needs to open for one trainee. Staff only, branch scoped. */
@@ -99,13 +115,11 @@ export async function getStaffPaymentContextAction(
   if (!profile) return { error: "המתאמן לא נמצא" };
 
   const today = israelToday();
-  const [products, plansByProfile, rowsByProfile, scopeResult] = await Promise.all([
-    sellableProducts(db, memberships.get(traineeId) ?? []),
+  const [products, plansByProfile, rowsByProfile] = await Promise.all([
+    sellableProducts(db, memberships.get(traineeId) ?? [], staff!.role),
     loadStoredPlans(db, [traineeId]),
     loadQueueRows(db, [traineeId]),
-    getBranchScopeAction(),
   ]);
-  const managed = "error" in scopeResult ? [] : scopeResult.data.managedBranchIds;
   const plans = plansByProfile.get(traineeId) ?? [];
   const rows = rowsByProfile.get(traineeId) ?? [];
   const queue = resolvePlanQueue(plans, rows, today);
@@ -127,9 +141,6 @@ export async function getStaffPaymentContextAction(
     today,
     latestStartOn: latestStartDate(today),
     startsWhenCardRunsOut: ahead.some((e) => e.sessionsLeft !== null && e.endsOn === e.expiresOn),
-    arboxBranchIds: (memberships.get(traineeId) ?? []).filter((b) =>
-      canManageBranches(staff!.role, managed, [b]),
-    ),
     morningConfigured: isMorningConfigured(),
     parentPhone: profile.guardian_phone ?? profile.phone ?? null,
   };
@@ -165,6 +176,8 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     needsQueue ? await hasPlansAhead(db, data.traineeId, today) : false,
   );
   if (startProblem) return { error: startProblem };
+  const discountError = await discountRefusal(product, data.discount);
+  if (discountError) return { error: discountError };
 
   const loginPhone = toE164(trainee.phone);
   const result = await recordManualPayment(db, {
@@ -189,6 +202,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     reference: data.reference,
     startsOn: data.startsOn,
     sendWhatsApp: data.sendWhatsApp,
+    discount: data.discount,
     actor: { id: user!.id, name: staff?.full_name ?? null },
   });
   if (!result.ok) return { error: result.error };
@@ -230,6 +244,8 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
   // current or queued, fulfillment lets the queue decide instead.
   const startProblem = startDateProblem(data.startsOn, israelToday(), false);
   if (startProblem) return { error: startProblem };
+  const discountError = await discountRefusal(product, data.discount);
+  if (discountError) return { error: discountError };
   if (owner) {
     const scopeError = await assertTraineeInScope(owner.id);
     if (scopeError) return { error: scopeError };
@@ -256,6 +272,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
     reference: data.reference,
     startsOn: data.startsOn,
     sendWhatsApp: data.sendWhatsApp,
+    discount: data.discount,
     actor: { id: user!.id, name: staff?.full_name ?? null },
   });
   if (!result.ok) return { error: result.error };

@@ -2056,11 +2056,14 @@ export type Database = {
           child_name: string
           created_at: string
           currency: string
+          discount_reason: string | null
+          discounted_by: string | null
           email: string | null
           fulfilled_at: string | null
           fulfillment_error: string | null
           id: string
           installments: number
+          list_price_ils: number | null
           login_phone: string
           morning_document_id: string | null
           morning_document_url: string | null
@@ -2092,11 +2095,14 @@ export type Database = {
           child_name: string
           created_at?: string
           currency?: string
+          discount_reason?: string | null
+          discounted_by?: string | null
           email?: string | null
           fulfilled_at?: string | null
           fulfillment_error?: string | null
           id?: string
           installments?: number
+          list_price_ils?: number | null
           login_phone: string
           morning_document_id?: string | null
           morning_document_url?: string | null
@@ -2128,11 +2134,14 @@ export type Database = {
           child_name?: string
           created_at?: string
           currency?: string
+          discount_reason?: string | null
+          discounted_by?: string | null
           email?: string | null
           fulfilled_at?: string | null
           fulfillment_error?: string | null
           id?: string
           installments?: number
+          list_price_ils?: number | null
           login_phone?: string
           morning_document_id?: string | null
           morning_document_url?: string | null
@@ -2160,6 +2169,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_discounted_by_fkey"
+            columns: ["discounted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

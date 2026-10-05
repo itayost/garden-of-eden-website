@@ -6,6 +6,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import { fulfillFromInput } from "@/features/enrollment/lib/fulfillment";
 import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import { agreementLink, notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
+import { discountProblem, type Discount } from "@/lib/plans/discount";
 import { TERMS_VERSION } from "../../../../content/terms-kiryat-ata";
 import {
   PAYMENT_METHOD_LABELS_HE,
@@ -35,6 +36,8 @@ export interface ManualPaymentInput {
   /** Null lets fulfillment chain after a running plan (existing trainee). */
   startsOn: string | null;
   sendWhatsApp: boolean;
+  /** A sale below list price, already allowed by the action; null at list price. */
+  discount: Discount | null;
   actor: { id: string; name: string | null };
 }
 
@@ -86,6 +89,12 @@ export async function recordManualPayment(
   const { product } = input;
   // Cash has no reference; a leftover from a switched method must not stick.
   const reference = input.paymentMethod === "cash" ? null : input.reference;
+  const listPrice = Number(product.price_ils);
+  // What was paid: the receipt, the agreement and any refund use it.
+  const paid = input.discount?.amountIls ?? listPrice;
+  // Every sale path passes here; who may give a Discount is the caller's check.
+  const problem = input.discount ? discountProblem(listPrice, input.discount.amountIls) : null;
+  if (problem) return { ok: false, error: problem };
 
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({
@@ -97,7 +106,10 @@ export async function recordManualPayment(
       payment_method: input.paymentMethod,
       reference,
       received_by: input.actor.id,
-      amount_ils: product.price_ils,
+      amount_ils: paid,
+      list_price_ils: input.discount ? listPrice : null,
+      discount_reason: input.discount?.reason ?? null,
+      discounted_by: input.discount ? input.actor.id : null,
       parent_name: input.parent.name,
       payer_phone: input.parent.phone,
       login_phone: input.trainee.loginPhone,
@@ -127,7 +139,7 @@ export async function recordManualPayment(
       child_birthdate: input.trainee.childBirthdate,
       medical_notes: input.health.medicalNotes,
       plan_name: product.name_he,
-      plan_price_ils: product.price_ils,
+      plan_price_ils: paid,
       plan_start_on: input.startsOn ?? israelToday(),
       payment_method: PAYMENT_METHOD_LABELS_HE[input.paymentMethod],
       emergency_contact_name: input.health.emergencyContactName ?? "",
@@ -180,7 +192,8 @@ export async function recordManualPayment(
       productId: product.id,
       paymentMethod: input.paymentMethod,
       reference,
-      amountIls: Number(product.price_ils),
+      amountIls: paid,
+      ...(input.discount ? { listPriceIls: listPrice, discountReason: input.discount.reason } : {}),
     },
   });
 

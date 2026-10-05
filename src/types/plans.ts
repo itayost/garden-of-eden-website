@@ -76,6 +76,10 @@ export interface Order {
   reference: string | null;
   /** The staff member who took a manual payment. */
   received_by: string | null;
+  /** The list price of a discounted sale; null when sold at list price (amount_ils is what was paid). */
+  list_price_ils: number | null;
+  discount_reason: string | null;
+  discounted_by: string | null;
   paid_at: string | null;
   fulfilled_at: string | null;
   fulfillment_error: string | null;

@@ -33,7 +33,20 @@ export type ManualPaymentMethod = z.infer<typeof manualPaymentMethodSchema>;
 const singleLine = /^[^\r\n\t]+$/;
 
 /** Why staff changed, undid or corrected something: every audit row carries one. */
-const reason = z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי");
+export const reasonSchema = z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי");
+const reason = reasonSchema;
+
+/**
+ * A sale below list price: the amount actually paid and why. The action
+ * checks the caller may give it and that it is below the list price.
+ */
+const discountSchema = z
+  .object({
+    amountIls: z.number().finite(),
+    reason,
+  })
+  .nullable()
+  .default(null);
 
 /**
  * A new trainee signed up at the field. Staff type only what the parent
@@ -51,6 +64,7 @@ export const newTraineeSchema = z.object({
   reference: optionalText(60),
   startsOn: isoDate,
   sendWhatsApp: z.boolean(),
+  discount: discountSchema,
   /** Set after the duplicate prompt; the action refuses a repeat without it. */
   confirmDuplicate: z.boolean().default(false),
 });
@@ -67,6 +81,7 @@ export const staffPaymentSchema = z.object({
   reference: optionalText(60),
   startsOn: isoDate.nullable().default(null),
   sendWhatsApp: z.boolean(),
+  discount: discountSchema,
   confirmDuplicate: z.boolean().default(false),
 });
 export type StaffPaymentInput = z.input<typeof staffPaymentSchema>;
