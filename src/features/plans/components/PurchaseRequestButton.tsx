@@ -8,7 +8,7 @@ import { requestPurchaseLinkAction } from "../lib/actions/purchase-request";
 
 /**
  * "Buy a plan" for a trainee: the parent gets the purchase link on WhatsApp
- * and pays on their own phone; the child never fills in the agreement.
+ * and pays on their own phone; the child never holds the link.
  */
 export function PurchaseRequestButton({ label, primary }: { label: string; primary?: boolean }) {
   const [sent, setSent] = useState(false);
@@ -21,8 +21,6 @@ export function PurchaseRequestButton({ label, primary }: { label: string; prima
         toast.error(result.error);
         return;
       }
-      // Until the template is approved, the child's own WhatsApp sends it.
-      if ("shareUrl" in result) window.open(result.shareUrl, "_blank", "noopener");
       setSent(true);
     });
 

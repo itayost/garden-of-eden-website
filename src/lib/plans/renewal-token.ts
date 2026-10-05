@@ -44,10 +44,10 @@ export function verifyRenewalToken(
   const expiresAt = Number(expiresRaw);
   if (!Number.isInteger(expiresAt) || expiresAt <= nowUnix) return null;
 
-  const expected = mac(subject, expiresAt, secret);
-  if (signature.length !== expected.length) return null;
-  if (!timingSafeEqual(Buffer.from(signature, "utf8"), Buffer.from(expected, "utf8"))) {
-    return null;
-  }
+  // Compare byte lengths: a multibyte signature of the right character count
+  // would make timingSafeEqual throw instead of refusing.
+  const given = Buffer.from(signature, "utf8");
+  const expected = Buffer.from(mac(subject, expiresAt, secret), "utf8");
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
   return trainee ? { profileId: id } : { planId: id };
 }

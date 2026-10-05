@@ -31,7 +31,7 @@ import { getOwnClipWithSignedUrl } from "@/features/clips/lib/actions/clips";
 import { loadOwnPlanQueue } from "@/features/plans/lib/queries";
 import { MyPlanCard } from "@/features/plans/components/MyPlanCard";
 import { BuyPlanCard } from "@/features/plans/components/BuyPlanCard";
-import { sellsOnline } from "@/features/plans/lib/sells-online";
+import { canAskParentToBuy } from "@/features/plans/lib/sells-online";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TraineeNotices } from "@/features/notices/components/TraineeNotices";
 import { getMyNoticesAction } from "@/features/notices/lib/notices";
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
     loadOwnPlanQueue(israelToday()),
     loadNextBooking(user.id),
     getMyNoticesAction(),
-    sellsOnline(createAdminClient(), user.id),
+    canAskParentToBuy(createAdminClient(), user.id),
   ]);
   const canBook = booking.canBook;
   const nextBooking = booking.next;
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
       <TraineeNotices notices={notices} />
       {hasAssessments && <RatingMigrationBanner />}
       {canBook && <NextTrainingCard next={nextBooking} />}
-      {ownPlan ? <MyPlanCard planQueue={ownPlan} /> : selling && <BuyPlanCard />}
+      {ownPlan ? <MyPlanCard planQueue={ownPlan} canRequest={selling} /> : selling && <BuyPlanCard />}
 
       {/* Player Card Section */}
       {calculatedRatings ? (

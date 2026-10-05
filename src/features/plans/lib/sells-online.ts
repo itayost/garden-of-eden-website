@@ -1,16 +1,19 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { typedFrom } from "@/lib/supabase/helpers";
+import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
+import { loadKiryatAtaCatalog } from "@/features/enrollment/lib/catalog";
 
-/** Whether one of the trainee's branches sells Plans online (an active catalog product). */
-export async function sellsOnline(db: SupabaseClient, profileId: string): Promise<boolean> {
-  const branchIds = (await loadBranchIdsByProfile(db, [profileId])).get(profileId) ?? [];
-  if (branchIds.length === 0) return false;
-  const { count } = (await typedFrom(db, "plan_products")
-    .select("id", { count: "exact", head: true })
-    .eq("is_active", true)
-    .in("branch_id", branchIds)) as { count: number | null };
-  return (count ?? 0) > 0;
+/**
+ * Whether a trainee may ask the parent to buy a Plan from the app: the
+ * WhatsApp template is approved (until then the request is hidden, so the
+ * child never holds the parent's link; owner, 2026-10-06), online payments
+ * are open, and one of the trainee's branches is in the catalog /join shows.
+ */
+export async function canAskParentToBuy(db: SupabaseClient, profileId: string): Promise<boolean> {
+  if (!process.env.WHATSAPP_PURCHASE_REQUEST_TEMPLATE_NAME?.trim() || !onlinePaymentsOpen()) return false;
+  const [memberships, catalog] = await Promise.all([loadBranchIdsByProfile(db, [profileId]), loadKiryatAtaCatalog()]);
+  const branchIds = memberships.get(profileId) ?? [];
+  return catalog.some((product) => branchIds.includes(product.branch_id));
 }

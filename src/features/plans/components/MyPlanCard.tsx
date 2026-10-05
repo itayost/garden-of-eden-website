@@ -8,13 +8,15 @@ import { PurchaseRequestButton } from "./PurchaseRequestButton";
 
 interface MyPlanCardProps {
   planQueue: PlanQueueView;
+  /** The trainee's branch sells on /join: the parent can be sent the link. */
+  canRequest: boolean;
 }
 
 /**
  * The trainee's plan at a glance. An expired plan turns the card into the
  * banner; nothing is blocked. Renewing sends the parent the purchase link.
  */
-export function MyPlanCard({ planQueue }: MyPlanCardProps) {
+export function MyPlanCard({ planQueue, canRequest }: MyPlanCardProps) {
   const { queue, product, sessionsLeft, status, endsOn } = planQueue;
   const expired = status === "expired";
   const next = queue.current ? queue.queued[0] : undefined;
@@ -47,13 +49,17 @@ export function MyPlanCard({ planQueue }: MyPlanCardProps) {
             </p>
           )}
           {expired && (
-            <p className="text-sm text-destructive">המסלול הסתיים. ההורה יקבל קישור לחידוש בלחיצה.</p>
+            <p className="text-sm text-destructive">
+              {canRequest ? "המסלול הסתיים. ההורה יקבל קישור לחידוש בלחיצה." : "המסלול הסתיים."}
+            </p>
           )}
         </div>
-        <PurchaseRequestButton
-          label={expired || status === "cancelled" ? "בקשה מההורה לחדש" : "בקשה מההורה לחידוש מוקדם"}
-          primary={expired || status === "ending_soon" || status === "cancelled"}
-        />
+        {canRequest && (
+          <PurchaseRequestButton
+            label={expired || status === "cancelled" ? "בקשה מההורה לחדש" : "בקשה מההורה לחידוש מוקדם"}
+            primary={expired || status === "ending_soon" || status === "cancelled"}
+          />
+        )}
       </CardContent>
     </Card>
   );

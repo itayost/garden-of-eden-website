@@ -43,4 +43,17 @@ describe("trainee purchase token", () => {
     const live = signTraineeToken(TRAINEE, 2_000_000_000, SECRET);
     expect(verifyRenewalToken(live.slice(0, -2) + "zz", SECRET, 0)).toBeNull();
   });
+
+  it("refuses a multibyte signature of the right length instead of throwing", () => {
+    const live = signTraineeToken(TRAINEE, 2_000_000_000, SECRET);
+    const forged = live.slice(0, -1) + "א";
+    expect(() => verifyRenewalToken(forged, SECRET, 0)).not.toThrow();
+    expect(verifyRenewalToken(forged, SECRET, 0)).toBeNull();
+  });
+
+  it("does not verify a trainee token with its prefix stripped as a plan token", () => {
+    const [subject, expires, signature] = signTraineeToken(TRAINEE, 2_000_000_000, SECRET).split(".");
+    const stripped = `${subject.slice(2)}.${expires}.${signature}`;
+    expect(verifyRenewalToken(stripped, SECRET, 0)).toBeNull();
+  });
 });

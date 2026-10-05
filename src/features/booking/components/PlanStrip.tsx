@@ -6,14 +6,16 @@ import { PurchaseRequestButton } from "@/features/plans/components/PurchaseReque
 import type { TraineeScheduleView } from "../lib/actions/schedule";
 
 /** The plan at the top of the schedule: what is left, and the way out when it blocks. */
-export function PlanStrip({ plan, block }: Pick<TraineeScheduleView, "plan" | "block">) {
+export function PlanStrip({ plan, block, canAskParent }: Pick<TraineeScheduleView, "plan" | "block" | "canAskParent">) {
   if (!plan) {
     return (
       <div className="rounded-2xl border border-dashed p-4 text-sm">
         <p className="font-medium">{BOOKING_BLOCK_LABELS_HE.no_plan}</p>
-        <div className="mt-3">
-          <PurchaseRequestButton label="בקשה מההורה לקנות מסלול" primary />
-        </div>
+        {canAskParent && (
+          <div className="mt-3">
+            <PurchaseRequestButton label="בקשה מההורה לקנות מסלול" primary />
+          </div>
+        )}
       </div>
     );
   }
@@ -41,7 +43,7 @@ export function PlanStrip({ plan, block }: Pick<TraineeScheduleView, "plan" | "b
       {block && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-destructive/5 p-3 text-destructive">
           <span>{BOOKING_BLOCK_LABELS_HE[block]}</span>
-          {plan.canRenew && <PurchaseRequestButton label="בקשה מההורה לחדש" primary />}
+          {plan.canRenew && canAskParent && <PurchaseRequestButton label="בקשה מההורה לחדש" primary />}
         </div>
       )}
     </div>

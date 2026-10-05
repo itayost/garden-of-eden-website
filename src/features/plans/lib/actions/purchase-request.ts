@@ -6,13 +6,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isActiveTrainee } from "@/lib/plans/bound-renewal";
 import { toE164 } from "@/lib/plans/local-phone";
-import { purchaseRequestShareUrl } from "@/lib/plans/purchase-request";
+import { isValidPhoneIL } from "@/lib/validations/common";
 import { sendPurchaseRequest } from "@/lib/whatsapp/plan-templates";
-import { buildTraineePurchaseUrl } from "../renewal-link";
-import { sellsOnline } from "../sells-online";
+import { buildRenewalUrl, buildTraineePurchaseUrl } from "../renewal-link";
+import { loadPlanQueues } from "../queries";
+import { israelToday } from "@/lib/utils/tasks";
+import { canAskParentToBuy } from "../sells-online";
 
-/** sentTo: the parent got the WhatsApp; shareUrl: open the child's own WhatsApp to the parent instead. */
-export type PurchaseRequestResult = { ok: true; sentTo: string } | { ok: true; shareUrl: string } | { error: string };
+export type PurchaseRequestResult = { ok: true; sentTo: string } | { error: string };
 
 /**
  * The trainee's "buy a plan": the parent gets a purchase link bound to this
@@ -27,12 +28,15 @@ export async function requestPurchaseLinkAction(): Promise<PurchaseRequestResult
   if (!user) return { error: "נדרשת התחברות" };
 
   const db = createAdminClient();
-  const [{ data: profile }, selling] = await Promise.all([
+  const [{ data: profile }, selling, queues] = await Promise.all([
     db.from("profiles").select("full_name, guardian_name, guardian_phone, role, deleted_at").eq("id", user.id).maybeSingle(),
-    sellsOnline(db, user.id),
+    canAskParentToBuy(db, user.id),
+    loadPlanQueues(db, [user.id], israelToday()),
   ]);
   if (!profile || !isActiveTrainee(profile) || !selling) return { error: "קניית מסלול באפליקציה זמינה למתאמני הסניף בלבד" };
-  if (!profile.guardian_phone) return { error: "לא שמור מספר של הורה. בקשו מהמאמן לעדכן אותו." };
+  if (!profile.guardian_phone || !isValidPhoneIL(profile.guardian_phone)) {
+    return { error: "לא שמור מספר תקין של הורה. בקשו מהמאמן לעדכן אותו." };
+  }
 
   const limit = await checkRateLimit(`purchase-request:${user.id}`, "purchase_request");
   waitUntil(limit.pending);
@@ -40,11 +44,14 @@ export async function requestPurchaseLinkAction(): Promise<PurchaseRequestResult
 
   const parentPhone = toE164(profile.guardian_phone);
   const childName = profile.full_name ?? "";
-  const url = buildTraineePurchaseUrl(user.id);
-  const sent = await sendPurchaseRequest(parentPhone, { parentName: profile.guardian_name ?? "הורה", childName, url });
+  // A renewal names the Plan (its product preselected, the order records it);
+  // a trainee with no Plan gets the link bound to them.
+  const own = queues.get(user.id);
+  const url = own ? buildRenewalUrl(own.plan.id) : buildTraineePurchaseUrl(user.id);
+  const sent = await sendPurchaseRequest(parentPhone, { parentName: profile.guardian_name ?? "הורה", childName, url }).catch(
+    (error: unknown) => ({ success: false as const, error: error instanceof Error ? error.message : String(error) }),
+  );
   if (sent.success) return { ok: true, sentTo: parentPhone };
-  // Until Meta approves the template, the child's own WhatsApp carries it.
-  if (sent.error?.includes("not configured")) return { ok: true, shareUrl: purchaseRequestShareUrl(parentPhone, childName, url) };
   console.error("[purchase-request] send failed:", sent.error);
   return { error: "השליחה להורה נכשלה. נסו שוב מאוחר יותר." };
 }
