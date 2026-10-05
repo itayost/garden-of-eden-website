@@ -9,7 +9,6 @@ import { PaymentsClosedNotice } from "@/features/enrollment/components/PaymentsC
 import { FullLoadGuard } from "@/features/enrollment/components/FullLoadGuard";
 import { canPayOnline } from "@/lib/payments/online-payments";
 import type { Order, PlanProduct } from "@/types/plans";
-import { agreementLink } from "@/features/enrollment/lib/notify";
 
 export const metadata: Metadata = {
   title: "תשלום מאובטח | Garden of Eden",
@@ -41,11 +40,21 @@ export default async function PayPage({ params }: PageProps) {
   if (order.status === "failed") redirect(`/join/failed?order=${order.id}`);
 
   // A Payment link is signed before the card; the charge refuses an unsigned one too.
+  // The signing link is never derived here: the order id must not unlock the agreement.
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("id, signed_at")
+    .select("signed_at")
     .eq("order_id", order.id)
-    .maybeSingle()) as { data: { id: string; signed_at: string | null } | null };
-  if (agreement && !agreement.signed_at) redirect(agreementLink(agreement.id));
+    .maybeSingle()) as { data: { signed_at: string | null } | null };
+  if (agreement && !agreement.signed_at) {
+    return (
+      <section className="space-y-2 rounded-2xl border bg-white p-4 text-sm">
+        <h1 className="text-xl font-bold">קודם חותמים על ההסכם</h1>
+        <p className="text-black/60">
+          פתחו את הקישור שקיבלתם בוואטסאפ, חתמו על ההסכם, ומשם תעברו לתשלום.
+        </p>
+      </section>
+    );
+  }
 
   const { data: product } = (await typedFrom(db, "plan_products")
     .select("name_he, sessions_total, duration_days")
