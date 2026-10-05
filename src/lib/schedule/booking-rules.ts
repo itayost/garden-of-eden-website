@@ -91,6 +91,7 @@ export type BookingBlock =
   | "no_plan"
   | "plan_cancelled"
   | "plan_not_running"
+  | "plan_frozen"
   | "no_sessions_left"
   | "weekly_cap"
   | "full"
@@ -105,6 +106,7 @@ export const BOOKING_BLOCK_LABELS_HE: Record<BookingBlock, string> = {
   no_plan: "כדי להירשם לאימונים צריך מסלול פעיל",
   plan_cancelled: "המסלול בוטל. דברו איתנו כדי לחדש",
   plan_not_running: "המסלול לא בתוקף בתאריך הזה",
+  plan_frozen: "המסלול מוקפא בתאריך הזה",
   no_sessions_left: "נוצלו כל האימונים בכרטיסייה",
   weekly_cap: `הגעת ל-${WEEKLY_CAP} אימונים השבוע`,
   full: "האימון מלא",
