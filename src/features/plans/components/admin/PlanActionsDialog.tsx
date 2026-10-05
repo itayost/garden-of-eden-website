@@ -18,7 +18,11 @@ import {
   extendPlanAction,
   type AdminPlanRow,
 } from "../../lib/actions/admin-plans";
+import { formatDate } from "@/lib/utils/date";
+import { israelToday } from "@/lib/utils/tasks";
+import { endFreezeAction } from "../../lib/actions/freeze";
 import { CancelPlanDialog } from "./CancelPlanDialog";
+import { FreezeDialog } from "./FreezeDialog";
 import { EarlyEndDialog } from "./EarlyEndDialog";
 import { AdjustSessionsDialog } from "./AdjustSessionsDialog";
 import { VoidPlanDialog } from "./VoidPlanDialog";
@@ -32,6 +36,32 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   const [voiding, setVoiding] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [endingEarly, setEndingEarly] = useState(false);
+  const [freezing, setFreezing] = useState(false);
+  const openFreeze = row.plan.freezes?.find((f) => f.endsOn === null) ?? null;
+  // An open Freeze that has not started yet cannot end before it does.
+  const [thawOn, setThawOn] = useState(() => {
+    const today = israelToday();
+    return openFreeze && openFreeze.startsOn > today ? openFreeze.startsOn : today;
+  });
+
+  const endFreeze = () => {
+    if (!openFreeze?.id) return;
+    const freezeId = openFreeze.id;
+    startTransition(async () => {
+      const result = await endFreezeAction({ freezeId, endsOn: thawOn });
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        result.cancelledCount > 0
+          ? `ההקפאה הסתיימה. ${result.cancelledCount} אימונים בוטלו והמתאמן קיבל הודעה.`
+          : "ההקפאה הסתיימה והמסלול נדחה בימי ההקפאה",
+      );
+      router.refresh();
+      onClose();
+    });
+  };
 
   const saveEndDate = () => {
     startTransition(async () => {
@@ -58,6 +88,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   // A new end date and an Adjustment only on a Plan still running.
   const live = row.plan.status === "active" && !row.plan.ended_on;
 
+  if (freezing) return <FreezeDialog planId={row.plan.id} planName={row.product.name_he} onClose={onClose} />;
   if (voiding) return <VoidPlanDialog planId={row.plan.id} onClose={onClose} />;
   if (adjusting) return <AdjustSessionsDialog planId={row.plan.id} onClose={onClose} />;
   if (cancelling) return <CancelPlanDialog planId={row.plan.id} onClose={onClose} />;
@@ -70,7 +101,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
           <DialogTitle>
             {row.traineeName}: {row.product.name_he}
           </DialogTitle>
-          <DialogDescription>שינוי תוקף, תיקון יתרה או ביטול המסלול</DialogDescription>
+          <DialogDescription>שינוי תוקף, תיקון יתרה, הקפאה או ביטול המסלול</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
@@ -105,6 +136,27 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
                 disabled={pending}
               />
             </div>
+          )}
+
+          {live && openFreeze && (
+            <div className="space-y-2 rounded-xl border p-3">
+              <p className="text-sm">
+                מוקפא מ-{formatDate(openFreeze.startsOn)}, בלי תאריך סיום
+              </p>
+              <Label htmlFor="thaw-on">ההקפאה מסתיימת ב-</Label>
+              <div className="flex gap-2">
+                <Input id="thaw-on" type="date" value={thawOn} onChange={(e) => setThawOn(e.target.value)} disabled={pending} />
+                <Button onClick={endFreeze} disabled={pending || !thawOn}>
+                  סיום ההקפאה
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {live && !openFreeze && (
+            <Button variant="outline" className="w-full" disabled={pending} onClick={() => setFreezing(true)}>
+              הקפאה רפואית
+            </Button>
           )}
 
           {live && row.plan.sessions_total !== null && (

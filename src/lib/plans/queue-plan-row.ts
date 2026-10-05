@@ -15,7 +15,21 @@ export type QueuePlanRow = Pick<
   | "fixed_ends_on"
   | "ended_on"
   | "created_at"
-> & { product: { kind: PlanKind } | null };
+> & {
+  product: { kind: PlanKind } | null;
+  /** The Plan's Freezes, embedded with PLAN_FREEZES_EMBED. */
+  plan_freezes?: PlanFreezeRow[] | null;
+};
+
+/** A plan_freezes row as the queue reads it. */
+export interface PlanFreezeRow {
+  id: string;
+  starts_on: string;
+  ends_on: string | null;
+}
+
+/** The embed every queue read adds to its trainee_plans select. */
+export const PLAN_FREEZES_EMBED = "plan_freezes(id, starts_on, ends_on)";
 
 /**
  * A stored Plan with its sale-time terms in the queue's shape. A Plan written
@@ -33,5 +47,6 @@ export function toQueuePlan<R extends QueuePlanRow>(row: R): R & QueuePlan {
     fixedEndsOn: row.fixed_ends_on,
     endedOn: row.ended_on,
     createdAt: row.created_at,
+    freezes: (row.plan_freezes ?? []).map((f) => ({ id: f.id, startsOn: f.starts_on, endsOn: f.ends_on })),
   };
 }

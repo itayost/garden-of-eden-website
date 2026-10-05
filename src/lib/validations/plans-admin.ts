@@ -192,3 +192,26 @@ export const earlyEndSchema = z.object({
   reason,
 });
 export type EarlyEndInput = z.input<typeof earlyEndSchema>;
+
+/**
+ * A Freeze: medical only, so staff confirm a certificate; open-ended when
+ * endsOn is null. The dates are checked against the queue in the action.
+ */
+export const freezePlanSchema = z.object({
+  planId: uuid,
+  startsOn: isoDate,
+  endsOn: isoDate.nullable(),
+  medicalCertificate: z.boolean().refine((v) => v, "הקפאה רק באישור רפואי"),
+  reason,
+});
+export type FreezePlanInput = z.input<typeof freezePlanSchema>;
+
+/** The dates a Freeze preview is worked out on; checked like the Freeze itself. */
+export const freezePreviewSchema = freezePlanSchema.pick({ planId: true, startsOn: true, endsOn: true });
+
+/** Ends an open-ended Freeze on a day; its length counts then. */
+export const endFreezeSchema = z.object({
+  freezeId: uuid,
+  endsOn: isoDate,
+});
+export type EndFreezeInput = z.input<typeof endFreezeSchema>;

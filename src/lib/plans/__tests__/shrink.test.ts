@@ -181,3 +181,15 @@ describe("shrinkImpact for an Adjustment down", () => {
     expect(impact.cancelled.map((r) => r.schedule_date)).toEqual(["2026-10-12", "2026-10-09"]);
   });
 });
+
+describe("shrinkImpact for a Freeze", () => {
+  it("cancels the Bookings inside a new Freeze and keeps the ones after it", () => {
+    const only = card("only", 10);
+    const frozen = { ...only, freezes: [{ startsOn: "2026-10-06", endsOn: "2026-10-15" }] };
+    const rows = [booking("2026-10-07"), booking("2026-10-12"), booking("2026-10-19")];
+
+    const impact = shrinkImpact([only], [frozen], rows, TODAY);
+
+    expect(impact.cancelled.map((r) => r.schedule_date)).toEqual(["2026-10-12", "2026-10-07"]);
+  });
+});
