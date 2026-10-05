@@ -13,7 +13,7 @@ import {
   type QueuePlan,
   type QueueRow,
 } from "@/lib/plans/plan-queue";
-import { PLAN_FREEZES_EMBED, toQueuePlan } from "@/lib/plans/queue-plan-row";
+import { PLAN_FREEZES_EMBED, toQueuePlan, type PlanFreezeRow } from "@/lib/plans/queue-plan-row";
 import type { PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
 
 type ProductBits = Pick<PlanProduct, "name_he" | "kind">;
@@ -60,7 +60,7 @@ export async function loadStoredPlans(
       | (TraineePlan & {
           product: ProductBits | null;
           order: { payment_method: string | null } | null;
-          plan_freezes: { id: string; starts_on: string; ends_on: string | null }[] | null;
+          plan_freezes: PlanFreezeRow[] | null;
         })[]
       | null;
     error: { message: string } | null;

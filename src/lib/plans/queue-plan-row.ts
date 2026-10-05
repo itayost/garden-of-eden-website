@@ -17,9 +17,16 @@ export type QueuePlanRow = Pick<
   | "created_at"
 > & {
   product: { kind: PlanKind } | null;
-  /** The Plan's Freezes, embedded as plan_freezes(id, starts_on, ends_on). */
-  plan_freezes?: { id: string; starts_on: string; ends_on: string | null }[] | null;
+  /** The Plan's Freezes, embedded with PLAN_FREEZES_EMBED. */
+  plan_freezes?: PlanFreezeRow[] | null;
 };
+
+/** A plan_freezes row as the queue reads it. */
+export interface PlanFreezeRow {
+  id: string;
+  starts_on: string;
+  ends_on: string | null;
+}
 
 /** The embed every queue read adds to its trainee_plans select. */
 export const PLAN_FREEZES_EMBED = "plan_freezes(id, starts_on, ends_on)";

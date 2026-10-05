@@ -21,7 +21,7 @@ import { AffectedBookings } from "./RefundParts";
  * Freeze: a medical stretch when the Plan does not run. Its end, and the
  * Plans queued behind it, move by the frozen days. Never for a vacation.
  */
-export function FreezeDialog({ planId, onClose }: { planId: string; onClose: () => void }) {
+export function FreezeDialog({ planId, planName, onClose }: { planId: string; planName: string; onClose: () => void }) {
   const router = useRouter();
   const [startsOn, setStartsOn] = useState(() => israelToday());
   const [openEnded, setOpenEnded] = useState(false);
@@ -30,11 +30,12 @@ export function FreezeDialog({ planId, onClose }: { planId: string; onClose: () 
   const [reason, setReason] = useState("");
   const [pending, startTransition] = useTransition();
 
-  // A closed Freeze is previewed once both dates are in.
+  // Previewed once the dates are in: a start, and an end unless open-ended.
   const end = openEnded ? null : endsOn || null;
-  const ready = Boolean(startsOn) && (openEnded || Boolean(endsOn));
-  const { preview, loadError } = usePlanPreview<FreezePreview>(`${planId}:${startsOn}:${end ?? "open"}:${ready}`, () =>
-    previewFreezeAction(planId, startsOn, ready ? end : null),
+  const ready = Boolean(startsOn) && (openEnded || end !== null);
+  const { preview, loadError } = usePlanPreview<FreezePreview>(
+    ready ? `${startsOn}:${end ?? "open"}` : null,
+    () => previewFreezeAction(planId, startsOn, end),
   );
 
   const confirm = () =>
@@ -61,7 +62,7 @@ export function FreezeDialog({ planId, onClose }: { planId: string; onClose: () 
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent dir="rtl">
         <DialogHeader>
-          <DialogTitle>הקפאה רפואית{preview ? `: ${preview.planName}` : ""}</DialogTitle>
+          <DialogTitle>הקפאה רפואית: {planName}</DialogTitle>
           <DialogDescription>
             רק באישור רפואי, לא לחופשה. בימי ההקפאה אין אימונים, והמסלול והמסלולים שאחריו נדחים באותו מספר ימים.
           </DialogDescription>
@@ -97,22 +98,20 @@ export function FreezeDialog({ planId, onClose }: { planId: string; onClose: () 
             </Label>
           </div>
 
-          {loadError ? (
+          {!ready ? null : loadError ? (
             <p className="text-sm text-destructive">{loadError}</p>
           ) : !preview ? (
             <Skeleton className="h-16 w-full" />
           ) : preview.refusal ? (
-            ready && <p className="text-sm text-destructive">{preview.refusal}</p>
+            <p className="text-sm text-destructive">{preview.refusal}</p>
           ) : (
-            ready && (
-              <>
+            <>
                 <p className="text-sm">
                   סיום המסלול: {formatDate(preview.endsOn)} ← <span className="font-bold">{formatDate(preview.endsOnAfter)}</span>
                   {openEnded && " (נכון להיום; ימשיך לזוז עד סיום ההקפאה)"}
                 </p>
                 <AffectedBookings moved={preview.moved} cancelled={preview.cancelled} />
               </>
-            )
           )}
 
           <div className="flex items-center gap-2">

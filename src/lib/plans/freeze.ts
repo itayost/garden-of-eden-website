@@ -1,4 +1,4 @@
-import type { PlanFreeze, PlanQueue, QueuePlan } from "./plan-queue";
+import { inFreeze, type PlanFreeze, type PlanQueue, type QueuePlan } from "./plan-queue";
 
 /** The two stretches share a day; an open-ended one runs on without an end. */
 const overlaps = (a: PlanFreeze, b: PlanFreeze) =>
@@ -22,7 +22,7 @@ export function freezeProblem<P extends QueuePlan>(
   if (freeze.endsOn !== null && freeze.endsOn < freeze.startsOn) return "תאריך הסיום קודם לתאריך ההתחלה";
   if ((entry.plan.freezes ?? []).some((f) => overlaps(f, freeze))) return "ההקפאה חופפת להקפאה קיימת";
   const used = entry.charged.slice(0, entry.used);
-  if (used.some((r) => overlaps(freeze, { startsOn: r.schedule_date, endsOn: r.schedule_date }))) {
+  if (used.some((r) => inFreeze(freeze, r.schedule_date))) {
     return "בתאריכים האלה כבר התקיים אימון";
   }
   return null;

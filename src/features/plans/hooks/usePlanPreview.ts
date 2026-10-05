@@ -11,9 +11,10 @@ type Loaded<T> = { key: string; preview: T | null; loadError: string | null };
  * changes. onLoad seeds the form from the result; an answer that arrives
  * after key moved on is dropped, and while the new one loads the dialog sees
  * nothing, never the answer for the old key (staff could confirm on it).
+ * A null key loads nothing, for a form not yet filled in.
  */
 export function usePlanPreview<T extends object>(
-  key: string,
+  key: string | null,
   load: () => Promise<T | { error: string }>,
   onLoad?: (value: T) => void,
 ): { preview: T | null; loadError: string | null } {
@@ -22,6 +23,7 @@ export function usePlanPreview<T extends object>(
   const seed = useEffectEvent((value: T) => onLoad?.(value));
 
   useEffect(() => {
+    if (key === null) return;
     let cancelled = false;
     fetchPreview()
       .then((result) => {
@@ -41,6 +43,6 @@ export function usePlanPreview<T extends object>(
     };
   }, [key]);
 
-  const current = loaded?.key === key ? loaded : null;
+  const current = key !== null && loaded?.key === key ? loaded : null;
   return { preview: current?.preview ?? null, loadError: current?.loadError ?? null };
 }
