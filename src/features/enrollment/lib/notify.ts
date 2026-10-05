@@ -7,6 +7,7 @@ import { signAgreementToken } from "@/lib/plans/agreement-token";
 import { sendWelcomeMessage } from "@/lib/whatsapp/welcome";
 import type { WhatsAppResult } from "@/lib/whatsapp/api";
 import { sendPlanConfirmed } from "@/lib/whatsapp/plan-templates";
+import { planConfirmedText, templateMissing, waShareUrl } from "@/lib/whatsapp/share";
 import { validityText } from "@/lib/plans/confirmation-copy";
 import { israelToday } from "@/lib/utils/tasks";
 import { loadPlanPlacement } from "@/features/plans/lib/queries";
@@ -27,9 +28,11 @@ export interface NotifyOutcome {
   /** Where the parent's link points: the signing page until signed, the copy after. */
   agreementUrl: string | null;
   sentTo: string | null;
+  /** The confirmation template is not set yet: staff send this chat from their own WhatsApp. */
+  shareUrl: string | null;
 }
 
-const NOTHING: NotifyOutcome = { welcome: null, confirmed: null, agreementUrl: null, sentTo: null };
+const NOTHING: NotifyOutcome = { welcome: null, confirmed: null, agreementUrl: null, sentTo: null, shareUrl: null };
 
 /** The parent's link for an agreement id; the same page signs and later displays. */
 export function agreementLink(agreementId: string): string {
@@ -81,15 +84,18 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
   const placement = await loadPlanPlacement(db, order.profile_id, order.id, israelToday());
   if (!placement) console.error(`[notify] order ${order.id}: no plan to date in the confirmation`);
 
-  const confirmed = await sendPlanConfirmed(order.payer_phone, {
+  const message = {
     parentName: order.parent_name,
     childName: order.child_name,
     planName: product?.name_he ?? "המסלול",
     validity: placement ? validityText(placement.start, placement.endsOn) : "",
     agreementUrl,
-  });
+  };
+  const confirmed = await sendPlanConfirmed(order.payer_phone, message);
   if (!confirmed.success) {
     console.error(`[notify] plan confirmed failed for order ${order.id}:`, confirmed.error);
   }
-  return { welcome, confirmed, agreementUrl: agreement ? agreementUrl : null, sentTo: order.payer_phone };
+  // Until Meta approves the template, the same words go out by hand.
+  const shareUrl = templateMissing(confirmed) ? waShareUrl(order.payer_phone, planConfirmedText(message)) : null;
+  return { welcome, confirmed, agreementUrl: agreement ? agreementUrl : null, sentTo: order.payer_phone, shareUrl };
 }

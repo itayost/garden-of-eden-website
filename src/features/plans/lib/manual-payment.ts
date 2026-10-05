@@ -49,7 +49,8 @@ export interface ManualPaymentResult {
   planId: string;
   endsOn: string;
   invoice: { url: string | null; error: string | null; skipped: boolean };
-  whatsapp: { sentTo: string | null; error: string | null; skipped: boolean };
+  /** shareUrl: the template waits for Meta, so staff open the chat from their own WhatsApp. */
+  whatsapp: { sentTo: string | null; error: string | null; skipped: boolean; shareUrl?: string | null };
   agreementUrl: string;
 }
 
@@ -215,8 +216,13 @@ export async function recordManualPayment(
     whatsapp: whatsapp
       ? {
           sentTo: whatsapp.confirmed?.success ? whatsapp.sentTo : null,
-          error: whatsapp.confirmed && !whatsapp.confirmed.success ? (whatsapp.confirmed.error ?? "שליחה נכשלה") : null,
+          error: whatsapp.shareUrl
+            ? "תבנית הוואטסאפ עוד לא אושרה ב-Meta. שלחו להורה מהוואטסאפ שלכם:"
+            : whatsapp.confirmed && !whatsapp.confirmed.success
+              ? "השליחה נכשלה"
+              : null,
           skipped: false,
+          shareUrl: whatsapp.shareUrl,
         }
       : { sentTo: null, error: null, skipped: true },
     agreementUrl: agreementLink(agreement.id),
