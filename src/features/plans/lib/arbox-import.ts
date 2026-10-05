@@ -115,7 +115,7 @@ async function loadPlans(db: Db, profileIds: readonly string[]): Promise<StoredS
   if (profileIds.length === 0) return { plans: [], rows: new Map() };
   const { data, error } = await db
     .from("trainee_plans")
-    .select("id, profile_id, branch_id, starts_on, ends_on, sessions_total, not_before, duration_days, fixed_ends_on, ended_on, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id)")
+    .select("id, profile_id, branch_id, starts_on, ends_on, sessions_total, not_before, duration_days, fixed_ends_on, ended_on, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id), plan_freezes(id, starts_on, ends_on)")
     .in("profile_id", [...profileIds]);
   if (error) throw new Error(`[arbox-import] plans: ${error.message}`);
   type Row = {
@@ -123,6 +123,7 @@ async function loadPlans(db: Db, profileIds: readonly string[]): Promise<StoredS
     not_before: string | null; duration_days: number | null; fixed_ends_on: string | null; ended_on: string | null;
     status: string; created_at: string;
     product: { kind: string } | null;
+    plan_freezes: { id: string; starts_on: string; ends_on: string | null }[] | null;
     order: { payment_method: string | null; provider_transaction_id: string | null } | null;
   };
   const stored = (data ?? []) as unknown as Row[];

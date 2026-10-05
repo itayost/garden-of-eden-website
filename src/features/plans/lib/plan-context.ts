@@ -32,7 +32,7 @@ export interface AffectedBooking {
 export function withPlanChange(
   plans: readonly StoredPlan[],
   planId: string,
-  change: Partial<Pick<StoredPlan, "status" | "endedOn" | "sessionsTotal" | "durationDays" | "fixedEndsOn">>,
+  change: Partial<Pick<StoredPlan, "status" | "endedOn" | "sessionsTotal" | "durationDays" | "fixedEndsOn" | "freezes">>,
 ): StoredPlan[] {
   return plans.map((p) => (p.id === planId ? { ...p, ...change } : p));
 }

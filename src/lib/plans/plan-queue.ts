@@ -41,6 +41,8 @@ export interface QueuePlan {
 
 /** Dates a Plan does not run. An open-ended one (endsOn null) runs until an Admin ends it. */
 export interface PlanFreeze {
+  /** The stored row, when the Freeze is one. */
+  id?: string;
   startsOn: string;
   endsOn: string | null;
 }

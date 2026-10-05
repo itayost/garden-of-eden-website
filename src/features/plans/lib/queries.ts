@@ -13,7 +13,7 @@ import {
   type QueuePlan,
   type QueueRow,
 } from "@/lib/plans/plan-queue";
-import { toQueuePlan } from "@/lib/plans/queue-plan-row";
+import { PLAN_FREEZES_EMBED, toQueuePlan } from "@/lib/plans/queue-plan-row";
 import type { PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
 
 type ProductBits = Pick<PlanProduct, "name_he" | "kind">;
@@ -52,10 +52,16 @@ export async function loadStoredPlans(
   const result = new Map<string, StoredPlan[]>();
   if (profileIds.length === 0) return result;
   const { data, error } = (await typedFrom(db, "trainee_plans")
-    .select("*, product:plan_products(name_he, kind), order:orders!trainee_plans_order_id_fkey(payment_method)")
+    .select(
+      `*, product:plan_products(name_he, kind), order:orders!trainee_plans_order_id_fkey(payment_method), ${PLAN_FREEZES_EMBED}`,
+    )
     .in("profile_id", [...profileIds])) as {
     data:
-      | (TraineePlan & { product: ProductBits | null; order: { payment_method: string | null } | null })[]
+      | (TraineePlan & {
+          product: ProductBits | null;
+          order: { payment_method: string | null } | null;
+          plan_freezes: { id: string; starts_on: string; ends_on: string | null }[] | null;
+        })[]
       | null;
     error: { message: string } | null;
   };
