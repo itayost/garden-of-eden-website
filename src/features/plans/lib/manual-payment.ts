@@ -8,6 +8,7 @@ import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import { agreementLink, notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import { insertUnsignedAgreement } from "./unsigned-agreement";
 import type { Discount } from "@/lib/plans/discount";
+import { manualCardLabel, type ManualCardTerms } from "@/lib/plans/manual-card";
 import { staffOrderColumns } from "./staff-order";
 import {
   PAYMENT_METHOD_LABELS_HE,
@@ -38,6 +39,8 @@ export interface ManualPaymentInput {
   sendWhatsApp: boolean;
   /** A sale below list price, already allowed by the action; null at list price. */
   discount: Discount | null;
+  /** A manual Card's typed terms, already allowed by the action; null for a catalog sale. */
+  manualCard: ManualCardTerms | null;
   actor: { id: string; name: string | null };
 }
 
@@ -91,7 +94,7 @@ export async function recordManualPayment(
   // Cash has no reference; a leftover from a switched method must not stick.
   const reference = input.paymentMethod === "cash" ? null : input.reference;
   // What was paid: the receipt, the agreement and any refund use it.
-  const sale = staffOrderColumns(product, input.discount, input.actor.id, {
+  const sale = staffOrderColumns(product, { discount: input.discount, manualCard: input.manualCard }, input.actor.id, {
     profileId: input.trainee.profileId,
     loginPhone: input.trainee.loginPhone,
     child: { name: input.trainee.childName, birthdate: input.trainee.childBirthdate },
@@ -124,7 +127,7 @@ export async function recordManualPayment(
     parent: input.parent,
     child: { name: input.trainee.childName, birthdate: input.trainee.childBirthdate },
     health: input.health,
-    planName: product.name_he,
+    planName: input.manualCard ? manualCardLabel(product.name_he, input.manualCard) : product.name_he,
     priceIls: paid,
     startsOn: input.startsOn ?? israelToday(),
     paymentLabel: PAYMENT_METHOD_LABELS_HE[input.paymentMethod],

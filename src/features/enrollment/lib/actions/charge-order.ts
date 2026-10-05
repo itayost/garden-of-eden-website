@@ -80,6 +80,7 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
   const captured = {
     amountIls: Number(order.amount_ils),
     listPriceIls: order.list_price_ils == null ? null : Number(order.list_price_ils),
+    staffTerms: order.terms_sessions_total != null,
   };
   if (!product || !product.is_active || !capturedPriceHolds(Number(product.price_ils), captured)) {
     return { error: "המסלול או המחיר השתנו. התחילו הרשמה חדשה." };

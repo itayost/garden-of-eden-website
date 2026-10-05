@@ -69,8 +69,14 @@ async function createAccount(
  */
 export async function fulfillFromInput(
   db: SupabaseClient,
-  { order, product, agreement, createdBy, source, terms: termsOverride, chosenStartsOn = null }: FulfillInput,
+  { order, product, agreement, createdBy, source, terms, chosenStartsOn = null }: FulfillInput,
 ): Promise<FulfillResult> {
+  // A manual Card was sold on the terms staff typed, kept on the order.
+  const termsOverride =
+    terms ??
+    (order.terms_sessions_total != null && order.terms_duration_days != null
+      ? { sessionsTotal: order.terms_sessions_total, durationDays: order.terms_duration_days }
+      : undefined);
   try {
     const profileId =
       order.profile_id ??

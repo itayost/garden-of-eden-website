@@ -10,11 +10,12 @@ import { sendPaymentLink } from "@/lib/whatsapp/plan-templates";
 import { paymentLinkSchema, type PaymentLinkInput } from "@/lib/validations/plans-admin";
 import { agreementLink } from "@/features/enrollment/lib/notify";
 import { PAYMENT_METHOD_LABELS_HE } from "@/types/plans";
-import { discountRefusal } from "../discount-permission";
+import { pricingRefusal } from "../discount-permission";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { checkTraineeSale, saleParties } from "../trainee-sale";
 import { insertUnsignedAgreement } from "../unsigned-agreement";
 import { staffOrderColumns } from "../staff-order";
+import { manualCardLabel } from "@/lib/plans/manual-card";
 
 export interface PaymentLinkResult {
   ok: true;
@@ -48,16 +49,17 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
       productId: data.productId,
       isAdmin: staff?.role === "admin",
       confirmDuplicate: true,
+      manualCard: data.manualCard !== null,
     }),
   ]);
   if (scopeError) return { error: scopeError };
   if (!("ok" in sale)) return "error" in sale ? sale : { error: "קלט לא תקין" };
   const { product, trainee } = sale;
 
-  const discountError = await discountRefusal(product.branch_id, data.discount);
+  const discountError = await pricingRefusal(product.branch_id, data);
   if (discountError) return { error: discountError };
   const { loginPhone, child, parent, health } = saleParties(trainee);
-  const priced = staffOrderColumns(product, data.discount, user!.id, { profileId: data.traineeId, loginPhone, child, parent });
+  const priced = staffOrderColumns(product, data, user!.id, { profileId: data.traineeId, loginPhone, child, parent });
   if (!priced.ok) return { error: priced.problem };
   const amount = priced.paid;
 
@@ -82,7 +84,7 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
     parent,
     child,
     health,
-    planName: product.name_he,
+    planName: data.manualCard ? manualCardLabel(product.name_he, data.manualCard) : product.name_he,
     priceIls: amount,
     startsOn: israelToday(),
     paymentLabel: PAYMENT_METHOD_LABELS_HE.card,

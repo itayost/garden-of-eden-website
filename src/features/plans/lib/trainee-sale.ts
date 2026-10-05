@@ -75,14 +75,21 @@ export type TraineeSaleCheck =
  */
 export async function checkTraineeSale(
   db: SupabaseClient,
-  input: { traineeId: string; productId: string; isAdmin: boolean; confirmDuplicate: boolean },
+  input: {
+    traineeId: string;
+    productId: string;
+    isAdmin: boolean;
+    confirmDuplicate: boolean;
+    /** A manual Card sells its branch's inactive placeholder product, and only that. */
+    manualCard?: boolean;
+  },
 ): Promise<TraineeSaleCheck> {
   const { data: product } = (await typedFrom(db, "plan_products")
     .select("*")
     .eq("id", input.productId)
-    .eq("is_active", true)
     .maybeSingle()) as { data: PlanProduct | null };
-  if (!product) return { error: "המסלול לא נמצא או אינו פעיל" };
+  const sellable = product && (input.manualCard ? product.staff_terms : product.is_active && !product.staff_terms);
+  if (!product || !sellable) return { error: "המסלול לא נמצא או אינו פעיל" };
   const branchError = await assertBranchWritable(product.branch_id);
   if (branchError.error) return { error: branchError.error };
   // The sheet only offers the trainee's branches; the server holds trainers

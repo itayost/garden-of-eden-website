@@ -12,9 +12,13 @@ export interface Discount {
 
 /** Why this amount cannot be the discounted price of a Plan listed at listPrice, or null. */
 export function discountProblem(listPrice: number, amountIls: number): string | null {
+  return amountProblem(amountIls) ?? (amountIls >= listPrice ? "הסכום לתשלום צריך להיות נמוך ממחיר המחירון" : null);
+}
+
+/** Why an amount staff typed cannot be charged: nothing to pay, or fractions of an agora. */
+export function amountProblem(amountIls: number): string | null {
   if (!(amountIls > 0)) return "הסכום לתשלום חייב להיות גדול מ-0";
   if (Math.abs(amountIls * 100 - Math.round(amountIls * 100)) > 1e-6) return "סכום בשקלים ובאגורות בלבד";
-  if (amountIls >= listPrice) return "הסכום לתשלום צריך להיות נמוך ממחיר המחירון";
   return null;
 }
 
@@ -42,11 +46,14 @@ export function readDiscount(draft: DiscountDraft, listPrice: number): { discoun
 /**
  * An order may still be charged at the price it captured: its list price (the
  * amount itself, unless discounted) must still be the product's. A Discount
- * given by staff keeps its amount; a changed catalog price starts over.
+ * given by staff keeps its amount; a changed catalog price starts over. A
+ * manual Card's price was typed by staff and always holds.
  */
 export function capturedPriceHolds(
   productPrice: number,
-  order: { amountIls: number; listPriceIls: number | null },
+  order: { amountIls: number; listPriceIls: number | null; staffTerms?: boolean },
 ): boolean {
+  // A manual Card carries the price staff typed; its product has none of its own.
+  if (order.staffTerms) return true;
   return (order.listPriceIls ?? order.amountIls) === productPrice;
 }

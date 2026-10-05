@@ -53,6 +53,16 @@ const discountSchema = z
  * cannot fill in later; birthdate, email, health, and consent come from the
  * parent on the signing page.
  */
+/** A manual Card's terms as staff typed them; the action checks them (manualCardProblem). */
+const manualCardSchema = z
+  .object({
+    sessions: z.number().int(),
+    priceIls: z.number().finite(),
+    days: z.number().int(),
+  })
+  .nullable()
+  .default(null);
+
 export const newTraineeSchema = z.object({
   productId: uuid,
   childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי").regex(singleLine, "שם בשורה אחת"),
@@ -82,6 +92,7 @@ export const staffPaymentSchema = z.object({
   startsOn: isoDate.nullable().default(null),
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
+  manualCard: manualCardSchema,
   confirmDuplicate: z.boolean().default(false),
 });
 export type StaffPaymentInput = z.input<typeof staffPaymentSchema>;
@@ -92,6 +103,7 @@ export const paymentLinkSchema = z.object({
   productId: uuid,
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
+  manualCard: manualCardSchema,
 });
 export type PaymentLinkInput = z.input<typeof paymentLinkSchema>;
 

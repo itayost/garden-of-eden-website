@@ -2,7 +2,14 @@ import "server-only";
 
 import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import type { Discount } from "@/lib/plans/discount";
+import type { ManualCardTerms } from "@/lib/plans/manual-card";
 
-/** A Discount is for an Admin or the branch's manager; null when allowed (or there is none). */
-export const discountRefusal = (branchId: string, discount: Discount | null): Promise<string | null> =>
-  discount ? verifyAdminOrBranchManager([branchId]) : Promise.resolve(null);
+/**
+ * Setting the price is for an Admin or the branch's manager: a Discount, or
+ * a manual Card's terms. Null when allowed, or when the sale has neither.
+ */
+export const pricingRefusal = (
+  branchId: string,
+  sale: { discount: Discount | null; manualCard: ManualCardTerms | null },
+): Promise<string | null> =>
+  sale.discount || sale.manualCard ? verifyAdminOrBranchManager([branchId]) : Promise.resolve(null);
