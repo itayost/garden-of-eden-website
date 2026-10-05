@@ -64,6 +64,10 @@ export function PaymentResult({
         toast.error(r.error);
         return;
       }
+      if ("shareUrl" in r) {
+        setWhatsapp({ sentTo: null, error: whatsapp.error, skipped: false, shareUrl: r.shareUrl });
+        return;
+      }
       setWhatsapp({ sentTo: r.sentTo, error: null, skipped: false });
     });
 
@@ -125,10 +129,20 @@ export function PaymentResult({
           <Line ok={false}>
             <div className="font-medium">הודעת הוואטסאפ לא נשלחה</div>
             <div className="text-muted-foreground">{whatsapp.error}</div>
-            <Button size="sm" variant="outline" onClick={resend} disabled={pending}>
-              <MessageCircle className="h-3 w-3 me-1" />
-              שלח שוב
-            </Button>
+            {whatsapp.shareUrl ? (
+              // A link the staff member taps: their own WhatsApp opens on the parent with the message written.
+              <Button size="sm" asChild>
+                <a href={whatsapp.shareUrl} target="_blank" rel="noreferrer">
+                  <MessageCircle className="h-3 w-3 me-1" />
+                  פתיחת וואטסאפ להורה
+                </a>
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={resend} disabled={pending}>
+                <MessageCircle className="h-3 w-3 me-1" />
+                שלח שוב
+              </Button>
+            )}
           </Line>
         )}
       </ul>

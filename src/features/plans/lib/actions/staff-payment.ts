@@ -284,7 +284,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
 /** Re-sends the confirmation with the signing link for an agreement the parent has not signed. */
 export async function resendAgreementLinkAction(
   agreementId: string,
-): Promise<{ success: true; sentTo: string } | { error: string }> {
+): Promise<{ success: true; sentTo: string } | { shareUrl: string } | { error: string }> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   const parsed = resendAgreementSchema.safeParse({ agreementId });
@@ -305,6 +305,8 @@ export async function resendAgreementLinkAction(
   if (limit.rateLimited) return { error: "הקישור נשלח לפני רגע. נסו שוב בעוד כמה דקות." };
 
   const outcome = await notifyOrderFulfilled(db, agreement.order_id);
-  if (!outcome.confirmed?.success) return { error: outcome.confirmed?.error ?? "השליחה נכשלה" };
+  // Until Meta approves the template, staff send it from their own WhatsApp.
+  if (outcome.shareUrl) return { shareUrl: outcome.shareUrl };
+  if (!outcome.confirmed?.success) return { error: "השליחה נכשלה" };
   return { success: true, sentTo: outcome.sentTo ?? "" };
 }
