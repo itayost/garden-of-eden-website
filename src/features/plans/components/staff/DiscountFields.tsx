@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { readDiscount, type DiscountDraft } from "@/lib/plans/discount";
+import type { DiscountDraft } from "@/lib/plans/discount";
 
 /**
  * A sale below list price, for Admins and the branch's manager only. The
@@ -15,15 +15,17 @@ export function DiscountFields({
   listPrice,
   value,
   onChange,
+  problem,
   disabled,
 }: {
   idPrefix: string;
   listPrice: number;
   value: DiscountDraft;
   onChange: (next: DiscountDraft) => void;
+  /** Why the draft cannot be sent yet (useDiscount). */
+  problem: string | null;
   disabled?: boolean;
 }) {
-  const { problem } = readDiscount(value, listPrice);
   return (
     <div className="space-y-3 rounded-xl border p-3">
       <div className="flex items-center justify-between">

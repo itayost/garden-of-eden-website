@@ -1,3 +1,5 @@
+import { reasonSchema } from "@/lib/validations/plans-admin";
+
 /**
  * A Discount: an Admin or Branch manager sells a Plan below its list price,
  * with a reason. The order keeps the list price and the amount paid; the
@@ -29,10 +31,10 @@ export const NO_DISCOUNT: DiscountDraft = { on: false, amount: "", reason: "" };
 export function readDiscount(draft: DiscountDraft, listPrice: number): { discount: Discount | null; problem: string | null } {
   if (!draft.on) return { discount: null, problem: null };
   const amountIls = Number(draft.amount);
-  const reason = draft.reason.trim();
+  const reason = reasonSchema.safeParse(draft.reason);
   const problem =
     draft.amount.trim() === ""
       ? "נדרש הסכום לתשלום"
-      : (discountProblem(listPrice, amountIls) ?? (reason.length < 2 ? "נדרשת סיבה להנחה" : null));
-  return { discount: problem ? null : { amountIls, reason }, problem };
+      : (discountProblem(listPrice, amountIls) ?? (reason.success ? null : (reason.error.issues[0]?.message ?? "נדרשת סיבה")));
+  return { discount: problem || !reason.success ? null : { amountIls, reason: reason.data }, problem };
 }

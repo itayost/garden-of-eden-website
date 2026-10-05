@@ -6,7 +6,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import { fulfillFromInput } from "@/features/enrollment/lib/fulfillment";
 import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import { agreementLink, notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
-import type { Discount } from "@/lib/plans/discount";
+import { discountProblem, type Discount } from "@/lib/plans/discount";
 import { TERMS_VERSION } from "../../../../content/terms-kiryat-ata";
 import {
   PAYMENT_METHOD_LABELS_HE,
@@ -92,6 +92,9 @@ export async function recordManualPayment(
   const listPrice = Number(product.price_ils);
   // What was paid: the receipt, the agreement and any refund use it.
   const paid = input.discount?.amountIls ?? listPrice;
+  // Every sale path passes here; who may give a Discount is the caller's check.
+  const problem = input.discount ? discountProblem(listPrice, input.discount.amountIls) : null;
+  if (problem) return { ok: false, error: problem };
 
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({
@@ -104,11 +107,9 @@ export async function recordManualPayment(
       reference,
       received_by: input.actor.id,
       amount_ils: paid,
-      // Only a discounted sale names these columns, so a sale at list price
-      // never depends on them (the columns default to NULL).
-      ...(input.discount
-        ? { list_price_ils: listPrice, discount_reason: input.discount.reason, discounted_by: input.actor.id }
-        : {}),
+      list_price_ils: input.discount ? listPrice : null,
+      discount_reason: input.discount?.reason ?? null,
+      discounted_by: input.discount ? input.actor.id : null,
       parent_name: input.parent.name,
       payer_phone: input.parent.phone,
       login_phone: input.trainee.loginPhone,

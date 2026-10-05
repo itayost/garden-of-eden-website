@@ -14,7 +14,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { isMorningConfigured } from "@/lib/morning/config";
 import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue } from "@/lib/plans/plan-queue";
-import { discountProblem, type Discount } from "@/lib/plans/discount";
+import type { Discount } from "@/lib/plans/discount";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import { toE164 } from "@/lib/plans/local-phone";
@@ -68,13 +68,14 @@ async function sellableProducts(
   traineeBranchIds: readonly string[] | null,
   role: string,
 ): Promise<SellableProduct[]> {
-  const scopeResult = await getBranchScopeAction();
+  const [scopeResult, { data }] = await Promise.all([
+    getBranchScopeAction(),
+    typedFrom(db, "plan_products").select("*").eq("is_active", true).order("order_index") as unknown as Promise<{
+      data: PlanProduct[] | null;
+    }>,
+  ]);
   if ("error" in scopeResult) return [];
   const { scope, managedBranchIds } = scopeResult.data;
-  const { data } = (await typedFrom(db, "plan_products")
-    .select("*")
-    .eq("is_active", true)
-    .order("order_index")) as { data: PlanProduct[] | null };
   return (data ?? [])
     .filter((p) => isInBranchScope(scope, [p.branch_id]))
     .filter((p) => traineeBranchIds === null || traineeBranchIds.includes(p.branch_id))
@@ -85,12 +86,9 @@ async function sellableProducts(
     }));
 }
 
-/** Why the caller may not sell this product at this discount, or null (also null without one). */
-async function discountRefusal(product: PlanProduct, discount: Discount | null): Promise<string | null> {
-  if (!discount) return null;
-  if (await verifyAdminOrBranchManager([product.branch_id])) return "הנחה ניתנת רק על ידי מנהל או מנהל הסניף";
-  return discountProblem(Number(product.price_ils), discount.amountIls);
-}
+/** A Discount is for an Admin or the branch's manager; the amount rule is recordManualPayment's. */
+const discountRefusal = (product: PlanProduct, discount: Discount | null): Promise<string | null> =>
+  discount ? verifyAdminOrBranchManager([product.branch_id]) : Promise.resolve(null);
 
 /** Active products in the branches the caller may sell in, for the new-trainee sheet. */
 export async function listSellableProductsAction(): Promise<SellableProduct[]> {

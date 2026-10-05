@@ -20,6 +20,7 @@ import { issueInvoiceAction, retryFulfillmentAction, type AdminOrderRow } from "
 import { reconcileChargingOrderAction } from "../../lib/actions/admin-orders-reconcile";
 import { CreditNoteField } from "./CreditNoteField";
 import { PAYMENT_METHOD_LABELS_HE, type OrderStatus } from "@/types/plans";
+import { DiscountNote } from "./DiscountNote";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "ממתין לתשלום",
@@ -103,9 +104,8 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
               <TableCell>
                 ₪{order.amount_ils.toLocaleString("he-IL")}
                 {order.list_price_ils !== null && (
-                  <div className="text-xs text-muted-foreground">
-                    <s>₪{order.list_price_ils.toLocaleString("he-IL")}</s> הנחה: {order.discount_reason}
-                    {order.discountedByName ? ` · ע"י ${order.discountedByName}` : ""}
+                  <div>
+                    <DiscountNote listPrice={order.list_price_ils} reason={order.discount_reason} by={order.discountedByName} />
                   </div>
                 )}
                 {order.payment_method && (

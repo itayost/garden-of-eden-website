@@ -22,8 +22,8 @@ import {
 import { recordArboxPlanAction } from "../../lib/actions/staff-arbox-plan";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { ArboxTermsFields } from "./ArboxTermsFields";
-import { NO_DISCOUNT, readDiscount, type DiscountDraft } from "@/lib/plans/discount";
 import { DiscountFields } from "./DiscountFields";
+import { useDiscount } from "./useDiscount";
 import { DuplicatePrompt } from "./DuplicatePrompt";
 import { PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
@@ -58,7 +58,6 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   // Only offered when nothing is current or queued; otherwise the queue decides.
   const [startsOn, setStartsOn] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
-  const [discountDraft, setDiscountDraft] = useState<DiscountDraft>(NO_DISCOUNT);
   const [duplicate, setDuplicate] = useState<number | null>(null);
   const [result, setResult] = useState<ManualPaymentResult | null>(null);
   const [pending, startTransition] = useTransition();
@@ -100,12 +99,11 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
 
   // Admins and the branch's manager: an Arbox repair, or a Discount.
   const isManaged = (id: string | null) => context?.products.find((p) => p.id === id)?.managed ?? false;
-  const canDiscount = method !== "arbox" && isManaged(productId);
-  const discount = canDiscount && selectedProduct ? readDiscount(discountDraft, selectedProduct.price_ils) : null;
+  const discount = useDiscount(selectedProduct, method !== "arbox");
 
   const chooseProduct = (next: string) => {
     setProductId(next);
-    setDiscountDraft(NO_DISCOUNT);
+    discount.reset();
     if (method !== "arbox") return;
     if (isManaged(next)) prefillArbox(next);
     else chooseMethod("cash");
@@ -151,7 +149,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         reference,
         startsOn: canChooseStart ? startsOn : null,
         sendWhatsApp,
-        discount: discount?.discount ?? null,
+        discount: discount.discount,
         confirmDuplicate,
       });
       if ("error" in outcome) {
@@ -175,7 +173,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     setDuplicate(null);
     setMethod("cash");
     setArboxTerms(null);
-    setDiscountDraft(NO_DISCOUNT);
+    discount.reset();
     setReference("");
     setContext(null);
     setLoadError(null);
@@ -244,12 +242,13 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                 </>
               ) : (
                 <>
-                  {canDiscount && selectedProduct && (
+                  {discount.offered && selectedProduct && (
                     <DiscountFields
                       idPrefix="sp"
                       listPrice={selectedProduct.price_ils}
-                      value={discountDraft}
-                      onChange={setDiscountDraft}
+                      value={discount.draft}
+                      onChange={discount.setDraft}
+                      problem={discount.problem}
                       disabled={pending}
                     />
                   )}
@@ -288,7 +287,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
               {duplicate !== null ? (
                 <DuplicatePrompt minutesAgo={duplicate} onConfirm={() => submit(true)} onCancel={() => setDuplicate(null)} pending={pending} />
               ) : (
-                <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !productId || Boolean(discount?.problem)}>
+                <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !productId || Boolean(discount.problem)}>
                   {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
                   {method === "arbox" ? "יצירת המסלול" : "רישום התשלום"}
                 </Button>

@@ -89,17 +89,48 @@ export async function listOrdersAction(): Promise<AdminOrderRow[]> {
   return (data ?? []).map(toAdminOrderRow);
 }
 
+/** A sale below list price, for the Admins' list. */
+export interface DiscountRow {
+  id: string;
+  childName: string;
+  productName: string;
+  amountIls: number;
+  listPriceIls: number;
+  reason: string | null;
+  byName: string | null;
+  createdAt: string;
+}
+
 /** Every sale below list price, newest first: Admins only. */
-export async function listDiscountedOrdersAction(): Promise<AdminOrderRow[]> {
+export async function listDiscountedOrdersAction(): Promise<DiscountRow[]> {
   const { error } = await verifyAdmin();
   if (error) return [];
   const { data, error: readError } = (await typedFrom(createAdminClient(), "orders")
-    .select(ORDER_SELECT)
+    .select(
+      "id, child_name, amount_ils, list_price_ils, discount_reason, created_at, product:plan_products(name_he), discounter:profiles!orders_discounted_by_fkey(full_name)",
+    )
     .not("list_price_ils", "is", null)
     .order("created_at", { ascending: false })
-    .limit(ORDERS_LIMIT)) as { data: OrderJoinRow[] | null; error: { message: string } | null };
+    .limit(ORDERS_LIMIT)) as {
+    data:
+      | (Pick<Order, "id" | "child_name" | "amount_ils" | "list_price_ils" | "discount_reason" | "created_at"> & {
+          product: { name_he: string } | null;
+          discounter: { full_name: string | null } | null;
+        })[]
+      | null;
+    error: { message: string } | null;
+  };
   if (readError) console.error("[admin-orders] discounts list failed:", readError.message);
-  return (data ?? []).map(toAdminOrderRow);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    childName: row.child_name,
+    productName: row.product?.name_he ?? "",
+    amountIls: Number(row.amount_ils),
+    listPriceIls: Number(row.list_price_ils),
+    reason: row.discount_reason,
+    byName: row.discounter?.full_name ?? null,
+    createdAt: row.created_at,
+  }));
 }
 
 /** Re-runs fulfillment for a paid order that failed; every step is idempotent. */

@@ -34,7 +34,7 @@ describe("readDiscount", () => {
     expect(readDiscount({ on: true, amount: "450", reason: "אח שני" }, 450).problem).toBe(
       "הסכום לתשלום צריך להיות נמוך ממחיר המחירון",
     );
-    expect(readDiscount({ on: true, amount: "400", reason: " א " }, 450).problem).toBe("נדרשת סיבה להנחה");
+    expect(readDiscount({ on: true, amount: "400", reason: " א " }, 450).problem).toBe("נדרשת סיבה");
   });
 
   it("sends the amount and the trimmed reason", () => {

@@ -5,9 +5,10 @@ import {
   listDiscountedOrdersAction,
   listOrdersAction,
   listUnassignedWebhookEventsAction,
-  type AdminOrderRow,
+  type DiscountRow,
 } from "@/features/plans/lib/actions/admin-orders";
 import { OrdersTable } from "@/features/plans/components/admin/OrdersTable";
+import { DiscountNote } from "@/features/plans/components/admin/DiscountNote";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/utils/date";
 
@@ -63,7 +64,7 @@ export default async function AdminOrdersPage() {
 }
 
 /** Sales below list price: list price, amount paid, why, and who gave it. */
-function DiscountsCard({ rows }: { rows: AdminOrderRow[] }) {
+function DiscountsCard({ rows }: { rows: DiscountRow[] }) {
   if (rows.length === 0) return null;
   return (
     <Card>
@@ -74,15 +75,12 @@ function DiscountsCard({ rows }: { rows: AdminOrderRow[] }) {
         {rows.map((order) => (
           <div key={order.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-b pb-2 last:border-0">
             <span>
-              {order.child_name} · {order.productName}
+              {order.childName} · {order.productName}
             </span>
-            <span className="tabular-nums">
-              <s className="text-muted-foreground">₪{order.list_price_ils!.toLocaleString("he-IL")}</s> ₪
-              {order.amount_ils.toLocaleString("he-IL")}
-            </span>
-            <span className="w-full text-xs text-muted-foreground">
-              {order.discount_reason}
-              {order.discountedByName ? ` · ${order.discountedByName}` : ""} · {formatDateTime(order.created_at)}
+            <span className="tabular-nums">₪{order.amountIls.toLocaleString("he-IL")}</span>
+            <span className="w-full">
+              <DiscountNote listPrice={order.listPriceIls} reason={order.reason} by={order.byName} />
+              <span className="text-xs text-muted-foreground"> · {formatDateTime(order.createdAt)}</span>
             </span>
           </div>
         ))}

@@ -33,7 +33,8 @@ export type ManualPaymentMethod = z.infer<typeof manualPaymentMethodSchema>;
 const singleLine = /^[^\r\n\t]+$/;
 
 /** Why staff changed, undid or corrected something: every audit row carries one. */
-const reason = z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי");
+export const reasonSchema = z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי");
+const reason = reasonSchema;
 
 /**
  * A sale below list price: the amount actually paid and why. The action
