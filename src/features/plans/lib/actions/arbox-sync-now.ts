@@ -40,7 +40,7 @@ export async function syncArboxNowAction(): Promise<SyncNowResult> {
       message: arboxSyncSummary({
         usersCreated: users.created,
         plansCreated: result.created,
-        plansMerged: result.merged,
+        plansPastTheirEnd: result.pastTheirEnd,
         purchasesFailed: result.failed,
       }),
     };

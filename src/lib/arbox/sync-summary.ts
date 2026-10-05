@@ -9,7 +9,8 @@
 export interface ArboxSyncCounts {
   readonly usersCreated: number;
   readonly plansCreated: number;
-  readonly plansMerged: number;
+  /** Created Plans forecast to start after their own Arbox end: staff must look. */
+  readonly plansPastTheirEnd: number;
   readonly purchasesFailed: number;
 }
 
@@ -20,7 +21,11 @@ export function arboxSyncSummary(c: ArboxSyncCounts): string {
   const parts = [
     counted(c.usersCreated, "מתאמן חדש אחד", "מתאמנים חדשים"),
     counted(c.plansCreated, "מסלול אחד נוסף", "מסלולים נוספו"),
-    counted(c.plansMerged, "מסלול אחד עודכן", "מסלולים עודכנו"),
+    counted(
+      c.plansPastTheirEnd,
+      "מסלול אחד ממתין בתור מעבר לתאריך הסיום שלו ב-Arbox",
+      "מסלולים ממתינים בתור מעבר לתאריך הסיום שלהם ב-Arbox",
+    ),
     counted(c.purchasesFailed, "רכישה אחת לא נקלטה", "רכישות לא נקלטו"),
   ].filter((p): p is string => p !== null);
   return `Arbox סונכרן: ${parts.length === 0 ? "אין שינויים" : parts.join(", ")}`;

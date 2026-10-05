@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { arboxSyncSummary, type ArboxSyncCounts } from "../sync-summary";
 
 function counts(overrides: Partial<ArboxSyncCounts> = {}): ArboxSyncCounts {
-  return { usersCreated: 0, plansCreated: 0, plansMerged: 0, purchasesFailed: 0, ...overrides };
+  return { usersCreated: 0, plansCreated: 0, plansPastTheirEnd: 0, purchasesFailed: 0, ...overrides };
 }
 
 describe("arboxSyncSummary", () => {
@@ -18,13 +18,15 @@ describe("arboxSyncSummary", () => {
   });
 
   test("uses the singular for one", () => {
-    expect(arboxSyncSummary(counts({ usersCreated: 1, plansCreated: 1, plansMerged: 1 }))).toBe(
-      "Arbox סונכרן: מתאמן חדש אחד, מסלול אחד נוסף, מסלול אחד עודכן",
+    expect(arboxSyncSummary(counts({ usersCreated: 1, plansCreated: 1 }))).toBe(
+      "Arbox סונכרן: מתאמן חדש אחד, מסלול אחד נוסף",
     );
   });
 
-  test("reports updated plans in plural", () => {
-    expect(arboxSyncSummary(counts({ plansMerged: 4 }))).toBe("Arbox סונכרן: 4 מסלולים עודכנו");
+  test("warns about a plan queued past its own Arbox end, which will never run", () => {
+    expect(arboxSyncSummary(counts({ plansCreated: 2, plansPastTheirEnd: 1 }))).toBe(
+      "Arbox סונכרן: 2 מסלולים נוספו, מסלול אחד ממתין בתור מעבר לתאריך הסיום שלו ב-Arbox",
+    );
   });
 
   test("reports purchases that did not go through", () => {

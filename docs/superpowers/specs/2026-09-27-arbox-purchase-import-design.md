@@ -2,6 +2,13 @@
 
 Date: 2026-09-27. Extends the Arbox-paid plans work (PR #63) and ADR-0007.
 
+> **Superseded in part (2026-10-05, issue #90, ADR-0008).** The import no
+> longer merges into or extends a live plan, and no longer moves queued
+> plans. Every purchase becomes a new Plan at the end of the Trainee's Plan
+> queue, with Arbox's sessions and Arbox's end date as a fixed end. The manual
+> "Arbox" method is a repair tool for Admins and Branch managers only. The
+> merge and extend rules below are kept as history.
+
 ## Problem
 
 קריית אתא sells cards and memberships in Arbox as well as in the app. A
