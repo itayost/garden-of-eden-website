@@ -555,3 +555,41 @@ describe("a voided Plan", () => {
     });
   });
 });
+
+describe("a Cancellation", () => {
+  it("ends the Plan today: its used sessions stay with it and the Queued plan starts tomorrow", () => {
+    const cancelled = card(10, { notBefore: "2026-09-20", status: "cancelled", endedOn: TODAY });
+    const queued = subscription({ notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+    const rows = [session("2026-09-28"), session("2026-10-02")];
+
+    const queue = resolvePlanQueue([cancelled, queued], rows, TODAY);
+
+    const ended = queue.plans.find((e) => e.plan.id === cancelled.id);
+    expect(ended?.endsOn).toBe(TODAY);
+    expect(ended?.used).toBe(2);
+    expect(queue.queued[0]?.plan.id ?? queue.current?.plan.id).toBe(queued.id);
+    expect(queue.plans.find((e) => e.plan.id === queued.id)?.startsOn).toBe("2026-10-06");
+  });
+
+  it("an older cancelled Plan with no end date stays out of the queue", () => {
+    const hidden = card(10, { notBefore: "2026-09-20", status: "cancelled" });
+
+    expect(resolvePlanQueue([hidden], [], TODAY).plans).toEqual([]);
+  });
+});
+
+describe("the queue's state after a Cancellation", () => {
+  it("is cancelled when the queue ends on a Cancellation, today and after", () => {
+    const cancelled = subscription({ notBefore: "2026-09-20", status: "cancelled", endedOn: TODAY });
+
+    expect(resolvePlanQueue([cancelled], [], TODAY).status).toBe("cancelled");
+    expect(resolvePlanQueue([cancelled], [], "2026-10-20").status).toBe("cancelled");
+  });
+
+  it("follows the next Plan when one is queued behind the cancelled one", () => {
+    const cancelled = subscription({ notBefore: "2026-09-20", status: "cancelled", endedOn: TODAY });
+    const next = subscription({ notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    expect(resolvePlanQueue([cancelled, next], [], TODAY).status).toBe("active");
+  });
+});

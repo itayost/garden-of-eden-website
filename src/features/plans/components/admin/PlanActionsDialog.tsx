@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,10 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   addSessionsAction,
-  cancelPlanAction,
   extendPlanAction,
   type AdminPlanRow,
 } from "../../lib/actions/admin-plans";
+import { CancelPlanDialog } from "./CancelPlanDialog";
 import { VoidPlanDialog } from "./VoidPlanDialog";
 
 export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose: () => void }) {
@@ -28,6 +27,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   const [endsOn, setEndsOn] = useState(row.shown.expiresOn);
   const [sessions, setSessions] = useState(1);
   const [voiding, setVoiding] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const run = (fn: () => Promise<{ success: true } | { error: string }>, done: string) => {
     startTransition(async () => {
@@ -43,6 +43,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   };
 
   if (voiding) return <VoidPlanDialog planId={row.plan.id} onClose={onClose} />;
+  if (cancelling) return <CancelPlanDialog planId={row.plan.id} onClose={onClose} />;
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
@@ -111,14 +112,8 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
           )}
 
           {row.plan.status === "active" && (
-            <Button
-              variant="destructive"
-              className="w-full"
-              disabled={pending}
-              onClick={() => run(() => cancelPlanAction({ planId: row.plan.id }), "המסלול בוטל")}
-            >
-              {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
-              ביטול המסלול
+            <Button variant="destructive" className="w-full" disabled={pending} onClick={() => setCancelling(true)}>
+              ביטול עסקה (לפי מדיניות הביטול)
             </Button>
           )}
         </div>

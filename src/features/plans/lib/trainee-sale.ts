@@ -29,7 +29,8 @@ export async function introPackRefusal(
   const { count } = await typedFrom(db, "orders")
     .select("id", { count: "exact", head: true })
     .eq("profile_id", profileId)
-    .eq("status", "paid")
+    // A Cancellation refunds part of it; the pack was still sold. Only a Void undoes the sale.
+    .in("status", ["paid", "refunded"])
     .eq("product_id", product.id);
   return isIntroPackEligible(product, count ?? 0)
     ? null

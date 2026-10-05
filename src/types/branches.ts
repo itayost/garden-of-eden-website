@@ -9,6 +9,8 @@ export interface Branch {
   is_active: boolean;
   order_index: number;
   manager_phone: string | null;
+  /** מחיר אימון בודד; null means the 10-Card per-session rate. */
+  single_session_price_ils: number | null;
   created_at: string;
   updated_at: string;
 }

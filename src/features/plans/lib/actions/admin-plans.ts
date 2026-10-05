@@ -11,7 +11,6 @@ import { isValidUUID } from "@/lib/validations/common";
 import { israelToday } from "@/lib/utils/tasks";
 import {
   addSessionsSchema,
-  cancelPlanSchema,
   extendPlanSchema,
 } from "@/lib/validations/plans-admin";
 import type { EnrollmentAgreement, Order, PlanStatus } from "@/types/plans";
@@ -219,31 +218,5 @@ export async function addSessionsAction(input: {
     .eq("id", parsed.data.planId);
   if (error) return { error: "שגיאה בעדכון המסלול" };
   revalidatePlanSurfaces(plan.profile_id);
-  return { success: true };
-}
-
-export async function cancelPlanAction(input: { planId: string }): Promise<ActionResult> {
-  const { error: authError } = await verifyAdminOrTrainer();
-  if (authError) return { error: authError };
-  const parsed = cancelPlanSchema.safeParse(input);
-  if (!parsed.success) return { error: "מזהה לא תקין" };
-
-  const db = createAdminClient();
-  const { data: plan } = (await typedFrom(db, "trainee_plans")
-    .select("branch_id")
-    .eq("id", parsed.data.planId)
-    .maybeSingle()) as { data: { branch_id: string } | null };
-  if (!plan) return { error: "המסלול לא נמצא" };
-  const denied = await verifyAdminOrBranchManager([plan.branch_id]);
-  if (denied) return { error: denied };
-
-  const { data, error } = await typedFrom(db, "trainee_plans")
-    .update({ status: "cancelled" })
-    .eq("id", parsed.data.planId)
-    // Only a live Plan is cancelled; a voided one stays voided.
-    .eq("status", "active")
-    .select("profile_id");
-  if (error || !data?.length) return { error: "המסלול לא נמצא" };
-  revalidatePlanSurfaces(data[0].profile_id);
   return { success: true };
 }

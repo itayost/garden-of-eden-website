@@ -24,7 +24,8 @@ export interface PlanHistoryRow<P extends HistoryPlan = HistoryPlan> {
 export function planHistory<P extends HistoryPlan>(plans: readonly P[], queue: PlanQueue<P>): PlanHistoryRow<P>[] {
   const ahead = queue.ahead.map((e) => ({
     plan: e.plan,
-    state: (e === queue.current ? "current" : "queued") as PlanHistoryState,
+    // A Plan cancelled today still runs until tonight; it reads as cancelled.
+    state: (e.plan.status === "cancelled" ? "cancelled" : e === queue.current ? "current" : "queued") as PlanHistoryState,
     startsOn: e.startsOn,
     endsOn: e.endsOn,
     sessionsLeft: e.sessionsLeft,
@@ -32,8 +33,20 @@ export function planHistory<P extends HistoryPlan>(plans: readonly P[], queue: P
   const aheadIds = new Set(ahead.map((r) => r.plan.id));
 
   const behind = queue.plans.filter((e) => !aheadIds.has(e.plan.id));
+  // A Cancellation ended these; one cancelled before it started shows the
+  // dates it was stored with, since the queue never ran it.
+  const cancelledInQueue = behind
+    .filter((e) => e.plan.status === "cancelled")
+    .map((e) => ({
+      plan: e.plan,
+      state: "cancelled" as PlanHistoryState,
+      startsOn: e.startsOn <= e.endsOn ? e.startsOn : e.plan.starts_on,
+      endsOn: e.startsOn <= e.endsOn ? e.endsOn : e.plan.ends_on,
+      sessionsLeft: null,
+    }));
+  const notCancelled = behind.filter((e) => e.plan.status !== "cancelled");
   // Queued past its own end: shown with the window it was sold for.
-  const neverRuns = behind
+  const neverRuns = notCancelled
     .filter((e) => e.startsOn > e.endsOn)
     .map((e) => ({
       plan: e.plan,
@@ -42,7 +55,7 @@ export function planHistory<P extends HistoryPlan>(plans: readonly P[], queue: P
       endsOn: e.endsOn,
       sessionsLeft: null,
     }));
-  const ended = behind
+  const ended = notCancelled
     .filter((e) => e.startsOn <= e.endsOn)
     .map((e) => ({
       plan: e.plan,
@@ -62,6 +75,6 @@ export function planHistory<P extends HistoryPlan>(plans: readonly P[], queue: P
       sessionsLeft: null,
     }));
 
-  const past = [...ended, ...outside].sort((a, b) => b.startsOn.localeCompare(a.startsOn));
+  const past = [...ended, ...cancelledInQueue, ...outside].sort((a, b) => b.startsOn.localeCompare(a.startsOn));
   return [...ahead, ...neverRuns, ...past];
 }

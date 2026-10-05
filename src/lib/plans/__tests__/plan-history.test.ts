@@ -89,3 +89,40 @@ describe("planHistory and voided Plans", () => {
     expect(rows.find((r) => r.plan.id === "mistake")?.state).toBe("voided");
   });
 });
+
+describe("planHistory and Cancellations", () => {
+  it("labels a Plan a Cancellation ended as cancelled, with the dates it ran", () => {
+    const cancelled = plan("cancelled", { status: "cancelled", endedOn: TODAY });
+    const next = plan("next", { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    const rows = historyOf([cancelled, next]);
+
+    expect(rows.find((r) => r.plan.id === "cancelled")).toMatchObject({
+      state: "cancelled",
+      startsOn: "2026-09-20",
+      endsOn: TODAY,
+    });
+  });
+});
+
+describe("planHistory and a queued Plan cancelled before it started", () => {
+  it("reads as cancelled with its stored dates, not as a Plan that never runs", () => {
+    const current = plan("current", { durationDays: 42 }); // to 31.10
+    const queued = plan("queued", {
+      status: "cancelled",
+      endedOn: TODAY,
+      notBefore: "2026-10-01",
+      starts_on: "2026-11-01",
+      ends_on: "2026-11-30",
+      createdAt: "2026-10-01T09:00:00Z",
+    });
+
+    const rows = historyOf([current, queued]);
+
+    expect(rows.find((r) => r.plan.id === "queued")).toMatchObject({
+      state: "cancelled",
+      startsOn: "2026-11-01",
+      endsOn: "2026-11-30",
+    });
+  });
+});
