@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
+import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import { canManageBranches, isInBranchScope } from "@/lib/branches/branch-scope";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -85,11 +86,9 @@ async function sellableProducts(
 }
 
 /** Why the caller may not sell this product at this discount, or null (also null without one). */
-async function discountRefusal(role: string, product: PlanProduct, discount: Discount | null): Promise<string | null> {
+async function discountRefusal(product: PlanProduct, discount: Discount | null): Promise<string | null> {
   if (!discount) return null;
-  const scopeResult = await getBranchScopeAction();
-  const managed = "error" in scopeResult ? [] : scopeResult.data.managedBranchIds;
-  if (!canManageBranches(role, managed, [product.branch_id])) return "הנחה ניתנת רק על ידי מנהל או מנהל הסניף";
+  if (await verifyAdminOrBranchManager([product.branch_id])) return "הנחה ניתנת רק על ידי מנהל או מנהל הסניף";
   return discountProblem(Number(product.price_ils), discount.amountIls);
 }
 
@@ -179,7 +178,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     needsQueue ? await hasPlansAhead(db, data.traineeId, today) : false,
   );
   if (startProblem) return { error: startProblem };
-  const discountError = await discountRefusal(staff!.role, product, data.discount);
+  const discountError = await discountRefusal(product, data.discount);
   if (discountError) return { error: discountError };
 
   const loginPhone = toE164(trainee.phone);
@@ -247,7 +246,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
   // current or queued, fulfillment lets the queue decide instead.
   const startProblem = startDateProblem(data.startsOn, israelToday(), false);
   if (startProblem) return { error: startProblem };
-  const discountError = await discountRefusal(staff!.role, product, data.discount);
+  const discountError = await discountRefusal(product, data.discount);
   if (discountError) return { error: discountError };
   if (owner) {
     const scopeError = await assertTraineeInScope(owner.id);

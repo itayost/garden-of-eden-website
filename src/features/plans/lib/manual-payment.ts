@@ -104,9 +104,11 @@ export async function recordManualPayment(
       reference,
       received_by: input.actor.id,
       amount_ils: paid,
-      list_price_ils: input.discount ? listPrice : null,
-      discount_reason: input.discount?.reason ?? null,
-      discounted_by: input.discount ? input.actor.id : null,
+      // Only a discounted sale names these columns, so a sale at list price
+      // never depends on them (the columns default to NULL).
+      ...(input.discount
+        ? { list_price_ils: listPrice, discount_reason: input.discount.reason, discounted_by: input.actor.id }
+        : {}),
       parent_name: input.parent.name,
       payer_phone: input.parent.phone,
       login_phone: input.trainee.loginPhone,

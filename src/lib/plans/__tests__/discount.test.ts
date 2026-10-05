@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { discountProblem } from "../discount";
+import { NO_DISCOUNT, discountProblem, readDiscount } from "../discount";
 
 describe("discountProblem", () => {
   it("accepts an amount below the list price, in shekels and agorot", () => {
@@ -16,5 +16,31 @@ describe("discountProblem", () => {
     expect(discountProblem(450, 0)).toBe("הסכום לתשלום חייב להיות גדול מ-0");
     expect(discountProblem(450, -10)).toBe("הסכום לתשלום חייב להיות גדול מ-0");
     expect(discountProblem(450, 99.999)).toBe("סכום בשקלים ובאגורות בלבד");
+  });
+});
+
+describe("readDiscount", () => {
+  it("sends nothing while the discount is off", () => {
+    expect(readDiscount({ on: false, amount: "100", reason: "" }, 450)).toEqual({ discount: null, problem: null });
+    expect(readDiscount(NO_DISCOUNT, 450)).toEqual({ discount: null, problem: null });
+  });
+
+  it("asks for the amount before anything else", () => {
+    expect(readDiscount({ on: true, amount: "", reason: "אח שני" }, 450).problem).toBe("נדרש הסכום לתשלום");
+    expect(readDiscount({ on: true, amount: "  ", reason: "אח שני" }, 450).problem).toBe("נדרש הסכום לתשלום");
+  });
+
+  it("applies the amount rule, then asks for a reason", () => {
+    expect(readDiscount({ on: true, amount: "450", reason: "אח שני" }, 450).problem).toBe(
+      "הסכום לתשלום צריך להיות נמוך ממחיר המחירון",
+    );
+    expect(readDiscount({ on: true, amount: "400", reason: " א " }, 450).problem).toBe("נדרשת סיבה להנחה");
+  });
+
+  it("sends the amount and the trimmed reason", () => {
+    expect(readDiscount({ on: true, amount: "399.5", reason: "  מלגה  " }, 450)).toEqual({
+      discount: { amountIls: 399.5, reason: "מלגה" },
+      problem: null,
+    });
   });
 });

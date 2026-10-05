@@ -15,3 +15,24 @@ export function discountProblem(listPrice: number, amountIls: number): string | 
   if (amountIls >= listPrice) return "הסכום לתשלום צריך להיות נמוך ממחיר המחירון";
   return null;
 }
+
+/** A staff form's discount: off, or the amount typed and the reason. */
+export interface DiscountDraft {
+  on: boolean;
+  amount: string;
+  reason: string;
+}
+
+export const NO_DISCOUNT: DiscountDraft = { on: false, amount: "", reason: "" };
+
+/** The Discount to send, null at list price; problem says why the draft cannot be sent. */
+export function readDiscount(draft: DiscountDraft, listPrice: number): { discount: Discount | null; problem: string | null } {
+  if (!draft.on) return { discount: null, problem: null };
+  const amountIls = Number(draft.amount);
+  const reason = draft.reason.trim();
+  const problem =
+    draft.amount.trim() === ""
+      ? "נדרש הסכום לתשלום"
+      : (discountProblem(listPrice, amountIls) ?? (reason.length < 2 ? "נדרשת סיבה להנחה" : null));
+  return { discount: problem ? null : { amountIls, reason }, problem };
+}

@@ -37,6 +37,33 @@ async function denyUnlessManagesOrder(db: Db, orderId: string): Promise<string |
   return verifyAdminOrBranchManager([order.branch_id]);
 }
 
+const ORDER_SELECT =
+  "*, product:plan_products(name_he), agreement:enrollment_agreements(id), receiver:profiles!orders_received_by_fkey(full_name), discounter:profiles!orders_discounted_by_fkey(full_name), refunds:plan_refunds(id, credit_note_number)";
+
+type OrderJoinRow = Order & {
+  product: { name_he: string } | null;
+  agreement: { id: string }[] | null;
+  receiver: { full_name: string | null } | null;
+  discounter: { full_name: string | null } | null;
+  refunds: { id: string; credit_note_number: string | null }[] | null;
+};
+
+function toAdminOrderRow({ product, agreement, receiver, discounter, refunds, ...order }: OrderJoinRow): AdminOrderRow {
+  return {
+    ...order,
+    amount_ils: Number(order.amount_ils),
+    list_price_ils: order.list_price_ils == null ? null : Number(order.list_price_ils),
+    discountedByName: discounter?.full_name ?? null,
+    productName: product?.name_he ?? "",
+    agreementId: agreement?.[0]?.id ?? null,
+    receivedByName: receiver?.full_name ?? null,
+    // Only a receipt in Morning has something to credit.
+    refundAwaitingCreditNote: order.morning_document_url
+      ? (refunds ?? []).find((r) => r.credit_note_number === null)?.id ?? null
+      : null,
+  };
+}
+
 /** Every order for an Admin; a Branch manager's branches for a Branch manager. */
 export async function listOrdersAction(): Promise<AdminOrderRow[]> {
   const { error, profile } = await verifyAdminOrTrainer();
@@ -50,35 +77,29 @@ export async function listOrdersAction(): Promise<AdminOrderRow[]> {
   const db = createAdminClient();
 
   let query = typedFrom(db, "orders")
-    .select("*, product:plan_products(name_he), agreement:enrollment_agreements(id), receiver:profiles!orders_received_by_fkey(full_name), discounter:profiles!orders_discounted_by_fkey(full_name), refunds:plan_refunds(id, credit_note_number)")
+    .select(ORDER_SELECT)
     .order("created_at", { ascending: false })
     .limit(ORDERS_LIMIT);
   if (managed) query = query.in("branch_id", managed);
-  const { data } = (await query) as {
-    data:
-      | (Order & {
-          product: { name_he: string } | null;
-          agreement: { id: string }[] | null;
-          receiver: { full_name: string | null } | null;
-          discounter: { full_name: string | null } | null;
-          refunds: { id: string; credit_note_number: string | null }[] | null;
-        })[]
-      | null;
+  const { data, error: readError } = (await query) as {
+    data: OrderJoinRow[] | null;
+    error: { message: string } | null;
   };
+  if (readError) console.error("[admin-orders] list failed:", readError.message);
+  return (data ?? []).map(toAdminOrderRow);
+}
 
-  return (data ?? []).map(({ product, agreement, receiver, discounter, refunds, ...order }) => ({
-    ...order,
-    amount_ils: Number(order.amount_ils),
-    list_price_ils: order.list_price_ils === null ? null : Number(order.list_price_ils),
-    discountedByName: discounter?.full_name ?? null,
-    productName: product?.name_he ?? "",
-    agreementId: agreement?.[0]?.id ?? null,
-    receivedByName: receiver?.full_name ?? null,
-    // Only a receipt in Morning has something to credit.
-    refundAwaitingCreditNote: order.morning_document_url
-      ? (refunds ?? []).find((r) => r.credit_note_number === null)?.id ?? null
-      : null,
-  }));
+/** Every sale below list price, newest first: Admins only. */
+export async function listDiscountedOrdersAction(): Promise<AdminOrderRow[]> {
+  const { error } = await verifyAdmin();
+  if (error) return [];
+  const { data, error: readError } = (await typedFrom(createAdminClient(), "orders")
+    .select(ORDER_SELECT)
+    .not("list_price_ils", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(ORDERS_LIMIT)) as { data: OrderJoinRow[] | null; error: { message: string } | null };
+  if (readError) console.error("[admin-orders] discounts list failed:", readError.message);
+  return (data ?? []).map(toAdminOrderRow);
 }
 
 /** Re-runs fulfillment for a paid order that failed; every step is idempotent. */

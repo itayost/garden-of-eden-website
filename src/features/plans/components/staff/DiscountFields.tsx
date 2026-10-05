@@ -4,25 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { discountProblem, type Discount } from "@/lib/plans/discount";
-
-/** The form's discount: off, or the amount typed and the reason. */
-export interface DiscountDraft {
-  on: boolean;
-  amount: string;
-  reason: string;
-}
-
-export const NO_DISCOUNT: DiscountDraft = { on: false, amount: "", reason: "" };
-
-/** The Discount to send, null at list price; problem says why the draft cannot be sent. */
-export function readDiscount(draft: DiscountDraft, listPrice: number): { discount: Discount | null; problem: string | null } {
-  if (!draft.on) return { discount: null, problem: null };
-  const amountIls = Number(draft.amount);
-  const problem =
-    draft.amount === "" ? "נדרש הסכום לתשלום" : (discountProblem(listPrice, amountIls) ?? (draft.reason.trim().length < 2 ? "נדרשת סיבה להנחה" : null));
-  return { discount: problem ? null : { amountIls, reason: draft.reason.trim() }, problem };
-}
+import { readDiscount, type DiscountDraft } from "@/lib/plans/discount";
 
 /**
  * A sale below list price, for Admins and the branch's manager only. The
@@ -81,7 +63,8 @@ export function DiscountFields({
               disabled={disabled}
             />
           </div>
-          {problem && <p className="text-xs text-destructive">{problem}</p>}
+          {/* Nothing to correct until an amount is typed. */}
+          {problem && value.amount !== "" && <p className="text-xs text-destructive">{problem}</p>}
           <p className="text-xs text-muted-foreground">הקבלה וההסכם יציגו את הסכום ששולם.</p>
         </>
       )}

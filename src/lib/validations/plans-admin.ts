@@ -36,11 +36,6 @@ const singleLine = /^[^\r\n\t]+$/;
 const reason = z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי");
 
 /**
- * A new trainee signed up at the field. Staff type only what the parent
- * cannot fill in later; birthdate, email, health, and consent come from the
- * parent on the signing page.
- */
-/**
  * A sale below list price: the amount actually paid and why. The action
  * checks the caller may give it and that it is below the list price.
  */
@@ -52,6 +47,11 @@ const discountSchema = z
   .nullable()
   .default(null);
 
+/**
+ * A new trainee signed up at the field. Staff type only what the parent
+ * cannot fill in later; birthdate, email, health, and consent come from the
+ * parent on the signing page.
+ */
 export const newTraineeSchema = z.object({
   productId: uuid,
   childName: z.string().trim().min(2, "נדרש שם החניך").max(100, "שם ארוך מדי").regex(singleLine, "שם בשורה אחת"),

@@ -11,12 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { ManualPaymentMethod, NewTraineeInput } from "@/lib/validations/plans-admin";
-
 import { israelToday } from "@/lib/utils/tasks";
 import { latestStartDate } from "@/lib/plans/start-date";
 import { createTraineeWithPaymentAction, type SellableProduct } from "../../lib/actions/staff-payment";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
-import { DiscountFields, NO_DISCOUNT, readDiscount, type DiscountDraft } from "./DiscountFields";
+import { NO_DISCOUNT, readDiscount, type DiscountDraft } from "@/lib/plans/discount";
+import { DiscountFields } from "./DiscountFields";
 import { DuplicatePrompt } from "./DuplicatePrompt";
 import { PaymentMethodPicker } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";

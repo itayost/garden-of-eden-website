@@ -22,7 +22,8 @@ import {
 import { recordArboxPlanAction } from "../../lib/actions/staff-arbox-plan";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { ArboxTermsFields } from "./ArboxTermsFields";
-import { DiscountFields, NO_DISCOUNT, readDiscount, type DiscountDraft } from "./DiscountFields";
+import { NO_DISCOUNT, readDiscount, type DiscountDraft } from "@/lib/plans/discount";
+import { DiscountFields } from "./DiscountFields";
 import { DuplicatePrompt } from "./DuplicatePrompt";
 import { PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
@@ -98,15 +99,15 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   };
 
   // Admins and the branch's manager: an Arbox repair, or a Discount.
-  const canRepairWith = (id: string | null) => context?.products.find((p) => p.id === id)?.managed ?? false;
-  const canDiscount = method !== "arbox" && canRepairWith(productId);
+  const isManaged = (id: string | null) => context?.products.find((p) => p.id === id)?.managed ?? false;
+  const canDiscount = method !== "arbox" && isManaged(productId);
   const discount = canDiscount && selectedProduct ? readDiscount(discountDraft, selectedProduct.price_ils) : null;
 
   const chooseProduct = (next: string) => {
     setProductId(next);
     setDiscountDraft(NO_DISCOUNT);
     if (method !== "arbox") return;
-    if (canRepairWith(next)) prefillArbox(next);
+    if (isManaged(next)) prefillArbox(next);
     else chooseMethod("cash");
   };
 
@@ -222,7 +223,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
             <>
               <ProductPicker products={context.products} selectedId={productId} onSelect={chooseProduct} disabled={pending} />
               <PaymentMethodPicker
-                methods={canRepairWith(productId) ? REPAIR_METHODS : SHEET_METHODS}
+                methods={isManaged(productId) ? REPAIR_METHODS : SHEET_METHODS}
                 method={method}
                 reference={reference}
                 onMethodChange={chooseMethod}

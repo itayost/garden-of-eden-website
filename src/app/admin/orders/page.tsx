@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import {
+  listDiscountedOrdersAction,
   listOrdersAction,
   listUnassignedWebhookEventsAction,
   type AdminOrderRow,
@@ -22,9 +23,10 @@ export default async function AdminOrdersPage() {
     if ("error" in scope || scope.data.managedBranchIds.length === 0) redirect("/admin");
   }
   // Unassigned Morning deliveries carry no branch: Admins only.
-  const [orders, unassigned] = await Promise.all([
+  const [orders, unassigned, discounted] = await Promise.all([
     listOrdersAction(),
     isAdmin ? listUnassignedWebhookEventsAction() : Promise.resolve([]),
+    isAdmin ? listDiscountedOrdersAction() : Promise.resolve([]),
   ]);
 
   return (
@@ -54,7 +56,7 @@ export default async function AdminOrdersPage() {
           </CardContent>
         </Card>
       )}
-      {isAdmin && <DiscountsCard rows={orders.filter((o) => o.list_price_ils !== null)} />}
+      <DiscountsCard rows={discounted} />
       <OrdersTable rows={orders} />
     </div>
   );
