@@ -86,6 +86,15 @@ export const staffPaymentSchema = z.object({
 });
 export type StaffPaymentInput = z.input<typeof staffPaymentSchema>;
 
+/** A Payment link: the parent signs and pays by card on their phone. */
+export const paymentLinkSchema = z.object({
+  traineeId: uuid,
+  productId: uuid,
+  sendWhatsApp: z.boolean(),
+  discount: discountSchema,
+});
+export type PaymentLinkInput = z.input<typeof paymentLinkSchema>;
+
 /**
  * A plan paid in Arbox. The product pre-fills the terms, but Arbox sold its
  * own, so staff enter the dates, sessions, and amount to match. No receipt

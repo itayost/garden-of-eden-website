@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NO_DISCOUNT, discountProblem, readDiscount } from "../discount";
+import { NO_DISCOUNT, capturedPriceHolds, discountProblem, readDiscount } from "../discount";
 
 describe("discountProblem", () => {
   it("accepts an amount below the list price, in shekels and agorot", () => {
@@ -42,5 +42,20 @@ describe("readDiscount", () => {
       discount: { amountIls: 399.5, reason: "מלגה" },
       problem: null,
     });
+  });
+});
+
+describe("capturedPriceHolds", () => {
+  it("holds for an order at the product's list price", () => {
+    expect(capturedPriceHolds(450, { amountIls: 450, listPriceIls: null })).toBe(true);
+  });
+
+  it("holds for a discounted order whose list price is still the product's", () => {
+    expect(capturedPriceHolds(450, { amountIls: 400, listPriceIls: 450 })).toBe(true);
+  });
+
+  it("fails when the product's price changed since the order was made", () => {
+    expect(capturedPriceHolds(500, { amountIls: 450, listPriceIls: null })).toBe(false);
+    expect(capturedPriceHolds(500, { amountIls: 400, listPriceIls: 450 })).toBe(false);
   });
 });

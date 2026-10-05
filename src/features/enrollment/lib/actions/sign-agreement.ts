@@ -9,9 +9,11 @@ import { verifyAgreementToken } from "@/lib/plans/agreement-token";
 import { planTokenSecret } from "@/lib/plans/token-secret";
 import { signAgreementSchema, type SignAgreementInput } from "@/lib/validations/agreement-sign";
 import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
-import type { EnrollmentAgreement } from "@/types/plans";
+import { awaitsCard, payPath } from "@/lib/plans/payment-link";
+import type { EnrollmentAgreement, Order } from "@/types/plans";
 
-type SignResult = { ok: true } | { error: string };
+/** payUrl: the order still waits for the card (a Payment link), so the parent goes on to pay. */
+type SignResult = { ok: true; payUrl?: string } | { error: string };
 
 async function clientIp(): Promise<string> {
   const h = await headers();
@@ -38,11 +40,13 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
 
   const db = createAdminClient();
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("id, signed_at, profile_id")
+    .select("id, signed_at, profile_id, order_id")
     .eq("id", data.agreementId)
-    .maybeSingle()) as { data: Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id"> | null };
+    .maybeSingle()) as {
+    data: Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id" | "order_id"> | null;
+  };
   if (!agreement) return { error: "ההסכם לא נמצא" };
-  if (agreement.signed_at) return { ok: true };
+  if (agreement.signed_at) return { ok: true, payUrl: await payUrlFor(db, agreement.order_id) };
 
   const { data: signed, error } = (await typedFrom(db, "enrollment_agreements")
     .update({
@@ -69,7 +73,7 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
     console.error(`[sign-agreement] update failed for ${data.agreementId}:`, error.message);
     return { error: "שגיאה בשמירת החתימה. נסו שוב." };
   }
-  if (!signed || signed.length === 0) return { ok: true };
+  if (!signed || signed.length === 0) return { ok: true, payUrl: await payUrlFor(db, agreement.order_id) };
 
   if (agreement.profile_id) {
     const { data: profile } = await db
@@ -102,5 +106,15 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
         .is("email", null);
     }
   }
-  return { ok: true };
+  return { ok: true, payUrl: await payUrlFor(db, agreement.order_id) };
+}
+
+/** The card page when the agreement's order still waits for the card, else undefined. */
+async function payUrlFor(db: ReturnType<typeof createAdminClient>, orderId: string | null): Promise<string | undefined> {
+  if (!orderId) return undefined;
+  const { data: order } = (await typedFrom(db, "orders")
+    .select("status, payment_provider")
+    .eq("id", orderId)
+    .maybeSingle()) as { data: Pick<Order, "status" | "payment_provider"> | null };
+  return order && awaitsCard(order) ? payPath(orderId) : undefined;
 }

@@ -1,13 +1,14 @@
 import { planTokenSecret } from "@/lib/plans/token-secret";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CheckCircle2, FileText } from "lucide-react";
+import { CheckCircle2, CreditCard, FileText } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAgreementToken } from "@/lib/plans/agreement-token";
 import { isValidUUID } from "@/lib/validations/common";
 import { AgreementPrintable } from "@/features/enrollment/components/AgreementPrintable";
 import { AgreementSignForm } from "@/features/enrollment/components/AgreementSignForm";
+import { awaitsCard, payPath } from "@/lib/plans/payment-link";
 import type { EnrollmentAgreement, Order } from "@/types/plans";
 
 export const metadata: Metadata = { title: "הסכם הרשמה", robots: { index: false, follow: false } };
@@ -41,9 +42,9 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
 
   const { data: order } = data.order_id
     ? ((await typedFrom(db, "orders")
-        .select("morning_document_url")
+        .select("id, morning_document_url, status, payment_provider")
         .eq("id", data.order_id)
-        .maybeSingle()) as { data: Pick<Order, "morning_document_url"> | null })
+        .maybeSingle()) as { data: Pick<Order, "id" | "morning_document_url" | "status" | "payment_provider"> | null })
     : { data: null };
 
   return (
@@ -53,6 +54,16 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
         <div>
           <p className="font-medium">ההסכם חתום ושמור</p>
           <p className="text-black/60">זה העותק שלכם. אפשר להדפיס או לשמור את הדף.</p>
+          {order && awaitsCard(order) && (
+            // A plain link: the card page needs a full load for its CSP.
+            <a
+              href={payPath(order.id)}
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 font-medium text-white"
+            >
+              <CreditCard className="h-4 w-4" />
+              להמשך לתשלום
+            </a>
+          )}
           {order?.morning_document_url && (
             <a
               href={order.morning_document_url}

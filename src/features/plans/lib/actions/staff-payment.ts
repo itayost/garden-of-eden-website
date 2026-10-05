@@ -6,15 +6,14 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
-import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import { canManageBranches, isInBranchScope } from "@/lib/branches/branch-scope";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isMorningConfigured } from "@/lib/morning/config";
+import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
 import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue } from "@/lib/plans/plan-queue";
-import type { Discount } from "@/lib/plans/discount";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import { toE164 } from "@/lib/plans/local-phone";
@@ -27,6 +26,7 @@ import {
 } from "@/lib/validations/plans-admin";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
+import { discountRefusal } from "../discount-permission";
 import { findRecentDuplicate, recordManualPayment, type ManualPaymentResult } from "../manual-payment";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { checkTraineeSale, introPackRefusal } from "../trainee-sale";
@@ -59,6 +59,8 @@ export interface StaffPaymentContext {
   /** A Card ahead can run out before its date, which brings the start forward. */
   startsWhenCardRunsOut: boolean;
   morningConfigured: boolean;
+  /** Online card payments are open, so staff may send a Payment link. */
+  cardLinksOpen: boolean;
   parentPhone: string | null;
 }
 
@@ -86,9 +88,7 @@ async function sellableProducts(
     }));
 }
 
-/** A Discount is for an Admin or the branch's manager; the amount rule is recordManualPayment's. */
-const discountRefusal = (product: PlanProduct, discount: Discount | null): Promise<string | null> =>
-  discount ? verifyAdminOrBranchManager([product.branch_id]) : Promise.resolve(null);
+
 
 /** Active products in the branches the caller may sell in, for the new-trainee sheet. */
 export async function listSellableProductsAction(): Promise<SellableProduct[]> {
@@ -142,6 +142,7 @@ export async function getStaffPaymentContextAction(
     latestStartOn: latestStartDate(today),
     startsWhenCardRunsOut: ahead.some((e) => e.sessionsLeft !== null && e.endsOn === e.expiresOn),
     morningConfigured: isMorningConfigured(),
+    cardLinksOpen: onlinePaymentsOpen(),
     parentPhone: profile.guardian_phone ?? profile.phone ?? null,
   };
 }
@@ -176,7 +177,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     needsQueue ? await hasPlansAhead(db, data.traineeId, today) : false,
   );
   if (startProblem) return { error: startProblem };
-  const discountError = await discountRefusal(product, data.discount);
+  const discountError = await discountRefusal(product.branch_id, data.discount);
   if (discountError) return { error: discountError };
 
   const loginPhone = toE164(trainee.phone);
@@ -244,7 +245,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
   // current or queued, fulfillment lets the queue decide instead.
   const startProblem = startDateProblem(data.startsOn, israelToday(), false);
   if (startProblem) return { error: startProblem };
-  const discountError = await discountRefusal(product, data.discount);
+  const discountError = await discountRefusal(product.branch_id, data.discount);
   if (discountError) return { error: discountError };
   if (owner) {
     const scopeError = await assertTraineeInScope(owner.id);

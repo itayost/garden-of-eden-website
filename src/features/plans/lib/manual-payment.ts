@@ -6,11 +6,10 @@ import { israelToday } from "@/lib/utils/tasks";
 import { fulfillFromInput } from "@/features/enrollment/lib/fulfillment";
 import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import { agreementLink, notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
+import { insertUnsignedAgreement } from "./unsigned-agreement";
 import { discountProblem, type Discount } from "@/lib/plans/discount";
-import { TERMS_VERSION } from "../../../../content/terms-kiryat-ata";
 import {
   PAYMENT_METHOD_LABELS_HE,
-  type EnrollmentAgreement,
   type Order,
   type PlanProduct,
   type TraineePlan,
@@ -127,35 +126,18 @@ export async function recordManualPayment(
   }
 
   // Unsigned: the parent completes and signs it from the WhatsApp link.
-  const { data: agreement, error: agreementError } = (await typedFrom(db, "enrollment_agreements")
-    .insert({
-      order_id: order.id,
-      profile_id: input.trainee.profileId,
-      agreement_version: TERMS_VERSION,
-      parent_name: input.parent.name,
-      parent_id_number: "",
-      parent_phone: input.parent.phone,
-      parent_email: input.parent.email,
-      child_name: input.trainee.childName,
-      child_birthdate: input.trainee.childBirthdate,
-      medical_notes: input.health.medicalNotes,
-      plan_name: product.name_he,
-      plan_price_ils: paid,
-      plan_start_on: input.startsOn ?? israelToday(),
-      payment_method: PAYMENT_METHOD_LABELS_HE[input.paymentMethod],
-      emergency_contact_name: input.health.emergencyContactName ?? "",
-      emergency_contact_phone: input.health.emergencyContactPhone ?? "",
-      declares_healthy: false,
-      accepts_terms: false,
-      authorizes_payment: false,
-      photo_consent: false,
-      signature_name: "",
-      signed_at: null,
-    })
-    .select("*")
-    .single()) as { data: EnrollmentAgreement | null; error: { message: string } | null };
-  if (agreementError || !agreement) {
-    console.error("[manual-payment] agreement insert failed:", agreementError?.message);
+  const agreement = await insertUnsignedAgreement(db, {
+    orderId: order.id,
+    profileId: input.trainee.profileId,
+    parent: input.parent,
+    child: { name: input.trainee.childName, birthdate: input.trainee.childBirthdate },
+    health: input.health,
+    planName: product.name_he,
+    priceIls: paid,
+    startsOn: input.startsOn ?? israelToday(),
+    paymentLabel: PAYMENT_METHOD_LABELS_HE[input.paymentMethod],
+  });
+  if (!agreement) {
     await typedFrom(db, "orders").update({ status: "failed" }).eq("id", order.id);
     return { ok: false, error: "שגיאה בשמירת ההסכם" };
   }

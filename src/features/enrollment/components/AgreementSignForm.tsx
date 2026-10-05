@@ -76,7 +76,9 @@ export function AgreementSignForm({ agreement, token }: { agreement: EnrollmentA
         return;
       }
       toast.success("תודה, ההסכם נחתם");
-      router.refresh();
+      // A Payment link goes on to the card page, with a full load for its CSP.
+      if (result.payUrl) window.location.assign(result.payUrl);
+      else router.refresh();
     } catch {
       toast.error("שגיאה בשליחה. נסו שוב.");
       setLoading(false);

@@ -20,6 +20,8 @@ import {
   type StaffPaymentContext,
 } from "../../lib/actions/staff-payment";
 import { recordArboxPlanAction } from "../../lib/actions/staff-arbox-plan";
+import { createPaymentLinkAction, type PaymentLinkResult as LinkResult } from "../../lib/actions/payment-link";
+import { PaymentLinkResult } from "./PaymentLinkResult";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { ArboxTermsFields } from "./ArboxTermsFields";
 import { DiscountFields } from "./DiscountFields";
@@ -30,8 +32,17 @@ import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
 
 const SHEET_METHODS: readonly PickerMethod[] = ["cash", "transfer", "bit"];
-/** Admins and Branch managers may also record an Arbox sale the import missed, as a repair. */
-const REPAIR_METHODS: readonly PickerMethod[] = [...SHEET_METHODS, "arbox"];
+
+/**
+ * What the sheet offers: the hand-taken methods, a Payment link once online
+ * card payments are open, and for Admins and Branch managers an Arbox sale
+ * the import missed, as a repair.
+ */
+const methodsFor = (cardLinksOpen: boolean, managed: boolean): PickerMethod[] => [
+  ...SHEET_METHODS,
+  ...(cardLinksOpen ? (["card"] as const) : []),
+  ...(managed ? (["arbox"] as const) : []),
+];
 
 interface StaffPaymentSheetProps {
   traineeId: string;
@@ -60,6 +71,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [duplicate, setDuplicate] = useState<number | null>(null);
   const [result, setResult] = useState<ManualPaymentResult | null>(null);
+  const [linkResult, setLinkResult] = useState<LinkResult | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -83,7 +95,9 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   const selectedProduct = context?.products.find((p) => p.id === productId) ?? null;
   // A start can be chosen when nothing is current or queued, and always for an
   // Add-on, which sits outside the queue.
-  const canChooseStart = context !== null && (!context.startsAfterCurrent || selectedProduct?.kind === "addon");
+  // A Payment link's Plan joins the queue when the parent pays: no start to choose.
+  const canChooseStart =
+    method !== "card" && context !== null && (!context.startsAfterCurrent || selectedProduct?.kind === "addon");
   const startsLater = canChooseStart && context !== null && startsOn > context.today;
 
   const prefillArbox = (nextProductId: string | null) => {
@@ -135,10 +149,26 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     });
   };
 
+  const submitLink = () => {
+    if (!productId) return;
+    startTransition(async () => {
+      const outcome = await createPaymentLinkAction({ traineeId, productId, sendWhatsApp, discount: discount.discount });
+      if ("error" in outcome) {
+        toast.error(outcome.error);
+        return;
+      }
+      setLinkResult(outcome);
+    });
+  };
+
   const submit = (confirmDuplicate = false) => {
     if (!productId) return;
     if (method === "arbox") {
       submitArbox(confirmDuplicate);
+      return;
+    }
+    if (method === "card") {
+      submitLink();
       return;
     }
     startTransition(async () => {
@@ -170,6 +200,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     onOpenChange(false, paid);
     if (paid) router.refresh();
     setResult(null);
+    setLinkResult(null);
     setDuplicate(null);
     setMethod("cash");
     setArboxTerms(null);
@@ -178,18 +209,22 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     setContext(null);
     setLoadError(null);
   };
-  const close = () => finish(result !== null);
+  const close = () => finish(result !== null || linkResult !== null);
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(true) : close())}>
       <SheetDialogContent>
         <DialogHeader className="px-4 pt-4 pb-3 text-start sm:px-6 sm:pt-6">
-          <DialogTitle>{result ? "נרשם" : `רישום תשלום${context ? ` · ${context.traineeName}` : ""}`}</DialogTitle>
+          <DialogTitle>
+            {result ? "נרשם" : linkResult ? "קישור לתשלום" : `רישום תשלום${context ? ` · ${context.traineeName}` : ""}`}
+          </DialogTitle>
           <DialogDescription>
-            {result
+            {result || linkResult
               ? "מה ההורה קיבל"
               : context
-                ? method === "arbox"
+                ? method === "card"
+                  ? "ההורה יקבל קישור לחתימה ולתשלום באשראי. המסלול יצטרף לתור אחרי התשלום."
+                  : method === "arbox"
                   ? "התאריכים, האימונים והסכום כמו שנמכרו ב-Arbox."
                   : startsLater
                   ? `המסלול החדש יתחיל ב-${shortDate(startsOn)}.`
@@ -205,6 +240,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
           {result ? (
             <PaymentResult result={result} isAdmin={isAdmin} onClose={close} />
+          ) : linkResult ? (
+            <PaymentLinkResult result={linkResult} onClose={close} />
           ) : loadError ? (
             <p className="text-sm text-destructive">{loadError}</p>
           ) : !context ? (
@@ -221,7 +258,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
             <>
               <ProductPicker products={context.products} selectedId={productId} onSelect={chooseProduct} disabled={pending} />
               <PaymentMethodPicker
-                methods={isManaged(productId) ? REPAIR_METHODS : SHEET_METHODS}
+                methods={methodsFor(context.cardLinksOpen, isManaged(productId))}
                 method={method}
                 reference={reference}
                 onMethodChange={chooseMethod}
@@ -270,7 +307,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                   )}
                   <div className="flex items-center justify-between rounded-xl border p-3">
                     <Label htmlFor="sp-wa" className="leading-snug">
-                      שלח אישור וקישור לחתימה בוואטסאפ
+                      {method === "card" ? "שלח להורה את הקישור לתשלום בוואטסאפ" : "שלח אישור וקישור לחתימה בוואטסאפ"}
                       {context.parentPhone && (
                         <span className="block text-xs font-normal text-muted-foreground" dir="ltr">
                           {toLocalPhone(context.parentPhone)}
@@ -279,9 +316,11 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                     </Label>
                     <Switch id="sp-wa" checked={sendWhatsApp} onCheckedChange={setSendWhatsApp} disabled={pending} />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {context.morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
-                  </p>
+                  {method !== "card" && (
+                    <p className="text-xs text-muted-foreground">
+                      {context.morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
+                    </p>
+                  )}
                 </>
               )}
               {duplicate !== null ? (
@@ -289,7 +328,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
               ) : (
                 <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !productId || Boolean(discount.problem)}>
                   {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
-                  {method === "arbox" ? "יצירת המסלול" : "רישום התשלום"}
+                  {method === "arbox" ? "יצירת המסלול" : method === "card" ? "יצירת קישור לתשלום" : "רישום התשלום"}
                 </Button>
               )}
             </>

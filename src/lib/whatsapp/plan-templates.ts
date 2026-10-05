@@ -120,3 +120,31 @@ export async function sendPlanReminder(
     ]),
   );
 }
+
+interface PaymentLinkParams {
+  parentName: string;
+  childName: string;
+  planName: string;
+  /** "₪450" */
+  amount: string;
+  url: string;
+}
+
+/**
+ * A Payment link from staff: Meta-approved template
+ * WHATSAPP_PAYMENT_LINK_TEMPLATE_NAME with body parameters {{1}} parent,
+ * {{2}} child, {{3}} plan, {{4}} amount, {{5}} link. Optional until Meta
+ * approves it; staff can always copy the link.
+ */
+export async function sendPaymentLink(phone: string, params: PaymentLinkParams): Promise<WhatsAppResult> {
+  const templateName = process.env.WHATSAPP_PAYMENT_LINK_TEMPLATE_NAME?.trim();
+  if (!templateName) {
+    return { success: false, error: "WHATSAPP_PAYMENT_LINK_TEMPLATE_NAME not configured" };
+  }
+  const { token, phoneNumberId } = getConfig();
+  return callWhatsAppAPI(
+    phoneNumberId,
+    token,
+    templateMessage(phone, templateName, [params.parentName, params.childName, params.planName, params.amount, params.url]),
+  );
+}

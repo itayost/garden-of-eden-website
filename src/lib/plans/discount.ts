@@ -38,3 +38,15 @@ export function readDiscount(draft: DiscountDraft, listPrice: number): { discoun
       : (discountProblem(listPrice, amountIls) ?? (reason.success ? null : (reason.error.issues[0]?.message ?? "נדרשת סיבה")));
   return { discount: problem || !reason.success ? null : { amountIls, reason: reason.data }, problem };
 }
+
+/**
+ * An order may still be charged at the price it captured: its list price (the
+ * amount itself, unless discounted) must still be the product's. A Discount
+ * given by staff keeps its amount; a changed catalog price starts over.
+ */
+export function capturedPriceHolds(
+  productPrice: number,
+  order: { amountIls: number; listPriceIls: number | null },
+): boolean {
+  return (order.listPriceIls ?? order.amountIls) === productPrice;
+}
