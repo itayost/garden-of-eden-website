@@ -45,10 +45,12 @@ export async function getAdjustmentContextAction(planId: string): Promise<Adjust
 }
 
 /**
- * An Adjustment: the Card is set to the balance staff typed. Used sessions
- * are recounted here; the change is applied by adjust_plan_sessions under the
- * per-trainee lock, only if the total is still the one staff saw, and lands on
- * the audit trail. Bookings beyond a lowered balance follow the shrink rule.
+ * An Adjustment: the Card is set to the Sessions left staff typed (what every
+ * screen shows); used sessions and Bookings keep theirs. Both are recounted
+ * here; adjust_plan_sessions applies the change under the per-trainee lock,
+ * refused if the roster or Plans changed since, and writes the audit trail.
+ * The Card's own Bookings always fit; a Plan of another branch queued behind
+ * it can still be pushed past its Bookings, and those follow the shrink rule.
  */
 export async function adjustSessionsAction(
   input: AdjustSessionsInput,
@@ -86,7 +88,6 @@ export async function adjustSessionsAction(
     return { error: "תיקון היתרה נכשל. נסו שוב." };
   }
 
-  // Even a raise can hold a queued Plan of another branch past a Booking; the rule decides.
   const after = withPlanChange(ctx.plans, data.planId, { sessionsTotal: plan.totalAfter });
   const { cancelledCount } = await applyShrinkAfter(db, ctx, after, today);
   return { ok: true, cancelledCount };

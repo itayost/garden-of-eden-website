@@ -2353,6 +2353,64 @@ export type Database = {
           },
         ]
       }
+      plan_freezes: {
+        Row: {
+          created_at: string
+          created_by: string
+          ended_at: string | null
+          ended_by: string | null
+          ends_on: string | null
+          id: string
+          plan_id: string
+          reason: string
+          starts_on: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ended_at?: string | null
+          ended_by?: string | null
+          ends_on?: string | null
+          id?: string
+          plan_id: string
+          reason: string
+          starts_on: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          ends_on?: string | null
+          id?: string
+          plan_id?: string
+          reason?: string
+          starts_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_freezes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_freezes_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_freezes_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "trainee_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_products: {
         Row: {
           blurb_he: string | null
@@ -4929,12 +4987,13 @@ export type Database = {
       adjust_plan_end_date: {
         Args: {
           p_actor: string
+          p_counted_row_ids: string[]
           p_duration_days: number
           p_ends_before: string
           p_ends_on: string
-          p_expected_ends_on: string
           p_fixed_ends_on: string
           p_plan_id: string
+          p_plan_stamps: string[]
           p_reason: string
         }
         Returns: undefined
@@ -4942,9 +5001,10 @@ export type Database = {
       adjust_plan_sessions: {
         Args: {
           p_actor: string
-          p_expected_total: number
+          p_counted_row_ids: string[]
           p_new_total: number
           p_plan_id: string
+          p_plan_stamps: string[]
           p_reason: string
           p_used: number
         }
@@ -4974,6 +5034,14 @@ export type Database = {
           mode: string
         }[]
       }
+      assert_trainee_unchanged: {
+        Args: {
+          p_counted_row_ids: string[]
+          p_plan_stamps: string[]
+          p_trainee_id: string
+        }
+        Returns: undefined
+      }
       book_slot: {
         Args: {
           p_plan_ends: string
@@ -4992,19 +5060,34 @@ export type Database = {
           seats_taken: number
         }[]
       }
-      book_slot_checked: {
-        Args: {
-          p_counted_row_ids: string[]
-          p_slot_id: string
-          p_trainee_id: string
-          p_trainee_name: string
-        }
-        Returns: {
-          max_trainees: number
-          roster_id: string
-          seats_taken: number
-        }[]
-      }
+      book_slot_checked:
+        | {
+            Args: {
+              p_counted_row_ids: string[]
+              p_slot_id: string
+              p_trainee_id: string
+              p_trainee_name: string
+            }
+            Returns: {
+              max_trainees: number
+              roster_id: string
+              seats_taken: number
+            }[]
+          }
+        | {
+            Args: {
+              p_counted_row_ids: string[]
+              p_plan_stamps: string[]
+              p_slot_id: string
+              p_trainee_id: string
+              p_trainee_name: string
+            }
+            Returns: {
+              max_trainees: number
+              roster_id: string
+              seats_taken: number
+            }[]
+          }
       clear_slot_workout: { Args: { p_slot_id: string }; Returns: number }
       compute_age_group: { Args: { p_birthdate: string }; Returns: string }
       count_weekdays_missed: {
@@ -5017,6 +5100,30 @@ export type Database = {
       }
       effective_age_group: {
         Args: { p_birthdate: string; p_override: string; p_until: string }
+        Returns: string
+      }
+      end_freeze: {
+        Args: {
+          p_actor: string
+          p_counted_row_ids: string[]
+          p_ends_on: string
+          p_freeze_id: string
+          p_plan_ends_on: string
+          p_plan_stamps: string[]
+        }
+        Returns: undefined
+      }
+      freeze_plan: {
+        Args: {
+          p_actor: string
+          p_counted_row_ids: string[]
+          p_ends_on: string
+          p_plan_ends_on: string
+          p_plan_id: string
+          p_plan_stamps: string[]
+          p_reason: string
+          p_starts_on: string
+        }
         Returns: string
       }
       get_user_role: {
@@ -5035,6 +5142,42 @@ export type Database = {
         Returns: boolean
       }
       is_weekday_israel: { Args: { check_timestamp: string }; Returns: boolean }
+      lock_live_plan: {
+        Args: {
+          p_counted_row_ids: string[]
+          p_plan_id: string
+          p_plan_stamps: string[]
+        }
+        Returns: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          duration_days: number | null
+          ended_on: string | null
+          ends_on: string
+          fixed_ends_on: string | null
+          id: string
+          not_before: string | null
+          note: string | null
+          order_id: string | null
+          product_id: string
+          profile_id: string
+          reminded_3_days_at: string | null
+          reminded_expired_at: string | null
+          reminded_last_session_at: string | null
+          sessions_total: number | null
+          source: string
+          starts_on: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trainee_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       recalculate_age_group_benchmarks: {
         Args: { p_age_group: string }
         Returns: undefined

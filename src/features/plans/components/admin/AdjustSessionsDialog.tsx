@@ -35,7 +35,7 @@ export function AdjustSessionsDialog({ planId, onClose }: { planId: string; onCl
   const { preview: ctx, loadError } = usePlanPreview<AdjustmentContext>(
     planId,
     () => getAdjustmentContextAction(planId),
-    (result) => setTarget(String(result.total - result.used)),
+    (result) => setTarget(String(result.total - result.used - result.booked)),
   );
 
   const preview = ctx && target !== "" ? planAdjustment({ total: ctx.total, used: ctx.used, booked: ctx.booked }, Number(target)) : null;
@@ -58,7 +58,9 @@ export function AdjustSessionsDialog({ planId, onClose }: { planId: string; onCl
       <DialogContent dir="rtl">
         <DialogHeader>
           <DialogTitle>תיקון יתרה{ctx ? `: ${ctx.planName}` : ""}</DialogTitle>
-          <DialogDescription>כותבים כמה אימונים צריכים להישאר בכרטיסייה. אימונים שנוצלו לא משתנים.</DialogDescription>
+          <DialogDescription>
+            כותבים כמה אימונים נשארו להירשם, כמו שמוצג בכל מסך. אימונים שנוצלו ואימונים שכבר נרשמו לא משתנים.
+          </DialogDescription>
         </DialogHeader>
 
         {loadError ? (
@@ -70,7 +72,7 @@ export function AdjustSessionsDialog({ planId, onClose }: { planId: string; onCl
         ) : (
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label htmlFor="adjust-target">יתרה חדשה</Label>
+              <Label htmlFor="adjust-target">אימונים שנשארו (אחרי התיקון)</Label>
               <Input
                 id="adjust-target"
                 type="number"
@@ -85,27 +87,18 @@ export function AdjustSessionsDialog({ planId, onClose }: { planId: string; onCl
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-xl border p-3 text-sm tabular-nums">
               <dt className="text-muted-foreground">נוצלו</dt>
               <dd>{ctx.used}</dd>
-              <dt className="text-muted-foreground">יתרה לפני ואחרי</dt>
+              <dt className="text-muted-foreground">נרשמו מראש</dt>
+              <dd>{ctx.booked}</dd>
+              <dt className="text-muted-foreground">נשארו לפני ואחרי</dt>
               <dd>
-                {ctx.total - ctx.used} → {preview?.ok ? preview.leftAfter : "?"}
+                {ctx.total - ctx.used - ctx.booked} ← {preview?.ok ? preview.leftAfter : "?"}
               </dd>
               <dt className="text-muted-foreground">סה״כ בכרטיסייה לפני ואחרי</dt>
               <dd>
-                {ctx.total} → {preview?.ok ? preview.totalAfter : "?"}
+                {ctx.total} ← {preview?.ok ? preview.totalAfter : "?"}
               </dd>
-              {ctx.booked > 0 && (
-                <>
-                  <dt className="text-muted-foreground">מתוכם רשום מראש</dt>
-                  <dd>{ctx.booked}</dd>
-                </>
-              )}
             </dl>
             {preview && !preview.ok && <p className="text-sm text-destructive">{preview.error}</p>}
-            {preview?.ok && preview.bookingsOver > 0 && (
-              <p className="text-sm text-destructive">
-                {preview.bookingsOver} מהאימונים הרשומים מראש (המאוחרים) לא ייכנסו ביתרה: הם יעברו למסלול הממתין אם יש בו מקום, ואחרת יבוטלו והמתאמן יקבל הודעה.
-              </p>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="adjust-reason">סיבה</Label>
