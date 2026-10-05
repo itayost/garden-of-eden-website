@@ -23,7 +23,7 @@ import {
  * workout has, and asking for that per card would be one query per slot.
  */
 export const SLOT_SELECT_WITH_TRAINEES =
-  "*, trainees:daily_schedule_slot_trainees(id, slot_id, trainee_id, trainee_name, order_index, source, booked_at, cancelled_at, late_cancel, reminded_at), trainers:daily_schedule_slot_trainers(id, trainer_id, trainer_name, order_index), workout_exercises:slot_workout_exercises(id)";
+  "*, trainees:daily_schedule_slot_trainees(id, slot_id, trainee_id, trainee_name, order_index, source, booked_at, cancelled_at, late_cancel, reminded_at, removed_at, removed_by_name, removed_reason), trainers:daily_schedule_slot_trainers(id, trainer_id, trainer_name, order_index), workout_exercises:slot_workout_exercises(id)";
 
 /**
  * One trainer on one slot or band.
@@ -56,6 +56,10 @@ export interface SlotTrainee {
   cancelled_at: string | null;
   late_cancel: boolean;
   reminded_at: string | null;
+  /** Removed from a Slot that already happened: kept on record, never charged. */
+  removed_at?: string | null;
+  removed_by_name?: string | null;
+  removed_reason?: string | null;
 }
 
 export interface ScheduleSlot {
@@ -80,6 +84,10 @@ export interface ScheduleSlot {
   workout_built_by_name: string | null;
   /** Null means this slot has no group workout. */
   workout_updated_at: string | null;
+  /** The academy called the Slot off after the fact; its Roster stays, nobody is charged. */
+  called_off_at?: string | null;
+  called_off_by_name?: string | null;
+  called_off_reason?: string | null;
   /** Ids only, for the count. Absent on selects that do not embed them. */
   workout_exercises?: { id: string }[];
   trainees: SlotTrainee[];

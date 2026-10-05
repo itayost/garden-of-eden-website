@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { SheetDialogContent } from "@/components/ui/sheet-dialog";
 import { RosterRow } from "@/components/admin/calendar/RosterRow";
 import { TraineeSearch } from "@/components/admin/schedule/TraineeSearch";
@@ -45,6 +46,10 @@ import { cn } from "@/lib/utils";
 import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { StaffPlanBadge } from "@/types/plans";
 import type { ScheduleSlot, SlotTrainee } from "@/types/schedule";
+import { rosterRemovalMode } from "@/lib/schedule/roster-entry";
+import { israelMinutesOfDay } from "@/lib/utils/israel-time";
+import { israelToday } from "@/lib/utils/tasks";
+import { PastSlotPanel } from "./PastSlotPanel";
 
 interface RosterSheetProps {
   /** The slot on screen, looked up from fresh page data; null closes the sheet. */
@@ -54,6 +59,8 @@ interface RosterSheetProps {
   planBadges: Record<string, StaffPlanBadge>;
   /** Admins may edit plans from the plan sheet. */
   isAdmin: boolean;
+  /** Admin, or Branch manager of the Slot's branch: may Call off a past Slot. */
+  canManageBranch: boolean;
   onEditDetails: (slot: ScheduleSlot) => void;
 }
 
@@ -63,7 +70,15 @@ interface RosterSheetProps {
  * calendar that changes a roster, and it still builds no sessions — it reads
  * them and links to the בניית אימונים screen, whose job that remains.
  */
-export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEditDetails }: RosterSheetProps) {
+export function RosterSheet({
+  slot,
+  onClose,
+  trainees,
+  planBadges,
+  isAdmin,
+  canManageBranch,
+  onEditDetails,
+}: RosterSheetProps) {
   const router = useRouter();
   const { branchId } = useCurrentBranch();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -81,6 +96,9 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
   const [sessions, setSessions] = useState<Record<string, RosterSession>>({});
   const [sessionsState, setSessionsState] = useState<"loading" | "ready" | "error">("loading");
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
+  // Removing from an hour that already happened is recorded, with a reason.
+  const [removalFor, setRemovalFor] = useState<SlotTrainee | null>(null);
+  const [removalReason, setRemovalReason] = useState("");
 
   const active = useMemo(() => slot?.trainees.filter((t) => t.cancelled_at === null) ?? [], [slot]);
   const lateCancels = slot?.trainees.filter((t) => t.cancelled_at !== null && t.late_cancel) ?? [];
@@ -150,15 +168,29 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
     }
   };
 
-  const remove = async (entry: SlotTrainee) => {
+  const started = slot ? rosterRemovalMode(slot, { date: israelToday(), minutes: israelMinutesOfDay(new Date()) }) === "record" : false;
+
+  const remove = async (entry: SlotTrainee, reason?: string) => {
+    if (started && reason === undefined) {
+      setRemovalFor(entry);
+      setRemovalReason("");
+      return;
+    }
     setBusyId(entry.id);
     try {
-      const result = await removeSlotTraineeAction({ rosterEntryId: entry.id });
+      const result = await removeSlotTraineeAction({ rosterEntryId: entry.id, reason });
+      // The server decides when an hour has happened; ask why and try again.
+      if ("error" in result && result.needsReason) {
+        setRemovalFor(entry);
+        setRemovalReason("");
+        return;
+      }
       if ("error" in result) {
         toast.error(result.error);
         return;
       }
       toast.success(`${entry.trainee_name} הוסר מהסלוט`);
+      setRemovalFor(null);
       router.refresh();
     } catch {
       toast.error("שגיאה בהסרת המתאמן");
@@ -351,9 +383,15 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
               </ul>
             )}
 
+            <PastSlotPanel slot={slot} started={started} canManage={canManageBranch} />
+
             {lateCancels.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">ביטולים מאוחרים (נחשבים כאימון שנוצל)</p>
+                <p className="text-xs text-muted-foreground">
+                  {slot.called_off_at
+                    ? "ביטולים מאוחרים (האימון בוטל ע״י האקדמיה, לא נחשבים)"
+                    : "ביטולים מאוחרים (נחשבים כאימון שנוצל)"}
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {lateCancels.map((entry) => (
                     <span key={entry.id} className="rounded-full border border-dashed px-2 py-0.5 text-xs text-muted-foreground line-through">
@@ -378,6 +416,39 @@ export function RosterSheet({ slot, onClose, trainees, planBadges, isAdmin, onEd
           </div>
         </SheetDialogContent>
       </Dialog>
+
+      <AlertDialog open={removalFor !== null} onOpenChange={(open) => !open && setRemovalFor(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>הסרה מאימון שכבר התקיים</AlertDialogTitle>
+            <AlertDialogDescription>
+              {removalFor?.trainee_name} יישאר ברשומות עם הסיבה, ולא ייחשב לו אימון שנוצל.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1">
+            <Label htmlFor="removal-reason">סיבה</Label>
+            <Textarea
+              id="removal-reason"
+              value={removalReason}
+              onChange={(e) => setRemovalReason(e.target.value)}
+              placeholder="למשל: נרשם בטעות, לא היה באימון הזה"
+              maxLength={300}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>חזרה</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={removalReason.trim().length < 2 || busyId !== null}
+              onClick={(e) => {
+                e.preventDefault();
+                if (removalFor) void remove(removalFor, removalReason);
+              }}
+            >
+              הסרה
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={confirming === "occurrence"}

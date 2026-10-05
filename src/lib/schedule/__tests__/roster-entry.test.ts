@@ -1,6 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 
-import { planRosterAdd, planRosterRemove } from "../roster-entry";
+import { callOffRefusal, mayCorrectPastSlot, pastSlotEditRefusal, planRosterAdd, planRosterRemove, rosterRemovalMode } from "../roster-entry";
 import type { SlotTrainee } from "@/types/schedule";
 
 const NOAM = "33333333-3333-4333-8333-333333333333";
@@ -88,6 +88,72 @@ describe("planRosterRemove", () => {
   test("refuses a cancelled entry so usage history stays", () => {
     expect(planRosterRemove(entry({ cancelled_at: "2026-09-15T10:00:00Z", late_cancel: true }))).toBe(
       "ביטול שכבר נרשם נשמר בהיסטוריה ואינו ניתן להסרה",
+    );
+  });
+});
+
+describe("rosterRemovalMode", () => {
+  const now = { date: "2026-10-05", minutes: 17 * 60 };
+
+  it("deletes an entry from a Slot that has not started, as before", () => {
+    expect(rosterRemovalMode({ schedule_date: "2026-10-06", start_time: "16:00:00" }, now)).toBe("delete");
+    expect(rosterRemovalMode({ schedule_date: "2026-10-05", start_time: "18:00:00" }, now)).toBe("delete");
+  });
+
+  it("records the removal from a Slot that already started", () => {
+    expect(rosterRemovalMode({ schedule_date: "2026-10-05", start_time: "16:30:00" }, now)).toBe("record");
+    expect(rosterRemovalMode({ schedule_date: "2026-10-01", start_time: "16:00:00" }, now)).toBe("record");
+  });
+});
+
+describe("mayCorrectPastSlot", () => {
+  it("lets a trainer correct only Slots they ran; Admins and Branch managers any in scope", () => {
+    const slot = { trainerIds: ["t1", "t2"] };
+
+    expect(mayCorrectPastSlot({ role: "trainer", userId: "t1", managesBranch: false }, slot)).toBe(true);
+    expect(mayCorrectPastSlot({ role: "trainer", userId: "t9", managesBranch: false }, slot)).toBe(false);
+    expect(mayCorrectPastSlot({ role: "trainer", userId: "t9", managesBranch: true }, slot)).toBe(true);
+    expect(mayCorrectPastSlot({ role: "admin", userId: "a1", managesBranch: false }, slot)).toBe(true);
+  });
+});
+
+describe("callOffRefusal", () => {
+  const now = { date: "2026-10-05", minutes: 17 * 60 };
+
+  it("only a Slot that already started can be called off", () => {
+    expect(callOffRefusal({ schedule_date: "2026-10-05", start_time: "18:00:00" }, now)).toBe(
+      "אפשר לסמן כבוטל רק אימון שמועד תחילתו עבר",
+    );
+    expect(callOffRefusal({ schedule_date: "2026-10-04", start_time: "18:00:00" }, now)).toBeNull();
+  });
+});
+
+describe("pastSlotEditRefusal", () => {
+  const now = { date: "2026-10-05", minutes: 17 * 60 };
+  const past = { schedule_date: "2026-10-04", start_time: "16:00:00", called_off_at: null };
+  const future = { schedule_date: "2026-10-07", start_time: "16:00:00", called_off_at: null };
+
+  it("lets a Slot that has not started be edited freely, roster included", () => {
+    expect(pastSlotEditRefusal(future, { scheduleDate: "2026-10-08", startTime: "17:00" }, true, now)).toBeNull();
+  });
+
+  it("corrects a past Slot's roster only from the roster sheet, where removals are recorded", () => {
+    expect(pastSlotEditRefusal(past, { scheduleDate: "2026-10-04", startTime: "16:00" }, true, now)).toBe(
+      "את רשימת המתאמנים של אימון שכבר התקיים מתקנים מחלון הרשימה",
+    );
+    expect(pastSlotEditRefusal(past, { scheduleDate: "2026-10-04", startTime: "16:30" }, false, now)).toBeNull();
+  });
+
+  it("never moves a Slot that already started into the future", () => {
+    expect(pastSlotEditRefusal(past, { scheduleDate: "2026-10-09", startTime: "16:00" }, false, now)).toBe(
+      "אי אפשר להזיז אימון שכבר התקיים למועד עתידי",
+    );
+  });
+
+  it("never moves a Called off Slot", () => {
+    const calledOff = { ...past, called_off_at: "2026-10-04T20:00:00Z" };
+    expect(pastSlotEditRefusal(calledOff, { scheduleDate: "2026-10-03", startTime: "16:00" }, false, now)).toBe(
+      "אי אפשר להזיז אימון שסומן כבוטל. בטלו קודם את הסימון.",
     );
   });
 });

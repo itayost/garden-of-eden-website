@@ -4,6 +4,7 @@ import {
   cancelState,
   isWithinBookingWindow,
   minutesUntilSlot,
+  rowCounts,
   weekBounds,
   weeklyBookingCount,
   type RosterRowLite,
@@ -59,5 +60,13 @@ describe("weeklyBookingCount", () => {
       row({ schedule_date: "2026-09-14", branch_id: "haifa" }),
     ];
     expect(weeklyBookingCount(rows, "2026-09-17", "ka")).toBe(2);
+  });
+});
+
+describe("rowCounts and Called off Slots", () => {
+  it("does not count a row on a Slot the academy called off", () => {
+    expect(rowCounts(row({ called_off: true }))).toBe(false);
+    expect(rowCounts(row({ called_off: true, cancelled_at: "2026-09-12T00:00:00Z", late_cancel: true }))).toBe(false);
+    expect(rowCounts(row({}))).toBe(true);
   });
 });

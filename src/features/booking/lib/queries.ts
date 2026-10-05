@@ -28,7 +28,7 @@ export interface TraineeRosterRow extends RosterRowLite {
 export async function loadTraineeRosterRows(db: SupabaseClient, userId: string): Promise<TraineeRosterRow[]> {
   const { data } = (await typedFrom(db, "daily_schedule_slot_trainees")
     .select(
-      "id, slot_id, source, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, location_he, trainers:daily_schedule_slot_trainers(trainer_name, order_index))",
+      "id, slot_id, source, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, called_off_at, location_he, trainers:daily_schedule_slot_trainers(trainer_name, order_index))",
     )
     .eq("trainee_id", userId)) as {
     data:
@@ -42,6 +42,7 @@ export async function loadTraineeRosterRows(db: SupabaseClient, userId: string):
             schedule_date: string;
             start_time: string;
             branch_id: string | null;
+            called_off_at: string | null;
             trainers: { trainer_name: string; order_index: number }[] | null;
             location_he: string | null;
           } | null;
@@ -59,6 +60,7 @@ export async function loadTraineeRosterRows(db: SupabaseClient, userId: string):
       schedule_date: r.slot!.schedule_date,
       start_time: r.slot!.start_time,
       branch_id: r.slot!.branch_id,
+      called_off: r.slot!.called_off_at !== null,
       trainers: r.slot!.trainers,
       location_he: r.slot!.location_he,
     }));

@@ -37,6 +37,8 @@ interface CalendarViewProps {
   date: string;
   today: string;
   isAdmin: boolean;
+  /** Admin, or Branch manager of the branch on screen: may Call off a past Slot. */
+  canManageBranch: boolean;
   trainers: TrainerOption[];
   trainees: TrainerOption[];
   planBadges: Record<string, StaffPlanBadge>;
@@ -72,6 +74,7 @@ export function CalendarView({
   date,
   today,
   isAdmin,
+  canManageBranch,
   trainers,
   trainees,
   planBadges,
@@ -277,6 +280,7 @@ export function CalendarView({
         trainees={trainees}
         planBadges={planBadges}
         isAdmin={isAdmin}
+        canManageBranch={canManageBranch}
         onEditDetails={(slot) => openSlotForm({ date: slot.schedule_date, slot, day: findDay(week, slot.schedule_date) })}
       />
 

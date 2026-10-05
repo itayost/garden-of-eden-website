@@ -19,6 +19,8 @@ export interface RosterRowLite {
   branch_id: string | null;
   cancelled_at: string | null;
   late_cancel: boolean;
+  /** The academy called the Slot off: its Roster stays, nobody on it uses a session. */
+  called_off?: boolean;
 }
 
 /** "Now" in Israel: the calendar date and minutes since midnight. */
@@ -63,7 +65,8 @@ export function cancelState(date: string, time: string, now: IsraelNow): CancelS
 }
 
 /** A row that occupies a seat or already cost a session. */
-export function rowCounts(row: Pick<RosterRowLite, "cancelled_at" | "late_cancel">): boolean {
+export function rowCounts(row: Pick<RosterRowLite, "cancelled_at" | "late_cancel" | "called_off">): boolean {
+  if (row.called_off) return false;
   return row.cancelled_at === null || row.late_cancel;
 }
 

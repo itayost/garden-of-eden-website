@@ -617,3 +617,19 @@ describe("an Early end", () => {
     expect(queue.plans[0].used).toBe(0);
   });
 });
+
+describe("Called off Slots and recorded Roster removals", () => {
+  it("a session on a Slot the academy called off is not charged to the Card", () => {
+    const only = card(10, { notBefore: "2026-09-20" });
+    const rows = [session("2026-09-28", { called_off: true }), session("2026-10-01")];
+
+    expect(resolvePlanQueue([only], rows, TODAY).sessionsLeft).toBe(9);
+  });
+
+  it("an entry removed from a past Slot (a recorded, not late, cancellation) is not charged", () => {
+    const only = card(10, { notBefore: "2026-09-20" });
+    const rows = [session("2026-09-28", { cancelled_at: "2026-10-04T10:00:00Z", late_cancel: false }), session("2026-10-01")];
+
+    expect(resolvePlanQueue([only], rows, TODAY).sessionsLeft).toBe(9);
+  });
+});

@@ -79,6 +79,7 @@ interface RosterRow {
     readonly schedule_date: string;
     readonly start_time: string;
     readonly branch_id: string | null;
+    readonly called_off_at: string | null;
   } | null;
 }
 
@@ -91,7 +92,7 @@ async function loadRosterRows(db: Db, profileIds: readonly string[], since: stri
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await db
       .from("daily_schedule_slot_trainees")
-      .select("id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id)")
+      .select("id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, called_off_at)")
       .in("trainee_id", [...profileIds])
       .gte("slot.schedule_date", since)
       .order("id")
@@ -152,6 +153,7 @@ async function loadPlans(db: Db, profileIds: readonly string[]): Promise<StoredS
       branch_id: x.slot.branch_id,
       cancelled_at: x.cancelled_at,
       late_cancel: x.late_cancel,
+      called_off: x.slot.called_off_at !== null,
     };
     rows.set(x.trainee_id, [...(rows.get(x.trainee_id) ?? []), row]);
   }
