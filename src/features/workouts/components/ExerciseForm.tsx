@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +72,7 @@ export function ExerciseForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<ExerciseInput>({
     resolver: zodResolver(exerciseSchema),
@@ -93,8 +93,9 @@ export function ExerciseForm({
     },
   });
 
-  const mainCategoryValue = watch("main_category");
-  const equipmentIdValue = watch("equipment_id");
+  // useWatch, not watch(): the React Compiler can memoize a subscription.
+  const mainCategoryValue = useWatch({ control, name: "main_category" });
+  const equipmentIdValue = useWatch({ control, name: "equipment_id" });
 
   useEffect(() => {
     let cancelled = false;

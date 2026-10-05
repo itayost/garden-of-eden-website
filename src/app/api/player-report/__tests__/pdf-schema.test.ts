@@ -93,7 +93,9 @@ describe("playerReportPdfBodySchema", () => {
   });
 
   it("requires created_at in profile", () => {
-    const { created_at: _omitted, ...profileWithout } = validBody.profile;
+    const profileWithout = Object.fromEntries(
+      Object.entries(validBody.profile).filter(([key]) => key !== "created_at"),
+    );
     expect(() => playerReportPdfBodySchema.parse({ ...validBody, profile: profileWithout })).toThrow();
   });
 });

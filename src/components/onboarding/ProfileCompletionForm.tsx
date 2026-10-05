@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { onboardingSchema, type OnboardingData } from "@/lib/validations/profile";
@@ -29,7 +30,6 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 interface ProfileCompletionFormProps {
-  userId: string;
   fullName: string;
   initialData?: {
     birthdate?: string | null;
@@ -38,10 +38,10 @@ interface ProfileCompletionFormProps {
 }
 
 export function ProfileCompletionForm({
-  userId,
   fullName,
   initialData,
 }: ProfileCompletionFormProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<OnboardingData>({
@@ -71,7 +71,10 @@ export function ProfileCompletionForm({
       }
 
       toast.success("!בואו נתחיל");
-      window.location.assign("/dashboard");
+      // The dashboard layout reads profile_completed on the server; replace so
+      // Back does not return here, refresh so no cached tree survives.
+      router.replace("/dashboard");
+      router.refresh();
     } catch {
       toast.error("שגיאה בשמירת הפרופיל. נסה שוב.");
       setLoading(false);
