@@ -533,3 +533,25 @@ describe("alreadyRenewedUntil", () => {
     expect(alreadyRenewedUntil(resolvePlanQueue([current, queued], [], TODAY))).toBe("2026-12-18");
   });
 });
+
+describe("a voided Plan", () => {
+  it("leaves the queue as if never sold: the Plan behind it moves forward", () => {
+    const mistake = subscription({ notBefore: "2026-09-20", status: "voided" });
+    const next = subscription({ notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    const queue = resolvePlanQueue([mistake, next], [], TODAY);
+
+    expect(queue.current?.plan.id).toBe(next.id);
+    expect(queue.current?.startsOn).toBe("2026-10-01");
+  });
+
+  it("counts as no Plan at all for booking and for the queue's state", () => {
+    const voided = subscription({ notBefore: "2026-09-20", status: "voided" });
+
+    expect(resolvePlanQueue([voided], [], TODAY).status).toBeNull();
+    expect(bookingVerdict([voided], [], { date: "2026-10-07", start_time: "17:00:00", branch_id: "ka" }, TODAY)).toEqual({
+      ok: false,
+      block: "no_plan",
+    });
+  });
+});

@@ -120,3 +120,27 @@ export const healthSchema = z.object({
   emergencyContactPhone: optionalPhone,
 });
 export type HealthInput = z.input<typeof healthSchema>;
+
+/** How the money went back. arbox: refunded in Arbox; none: nothing was paid. */
+export const refundMethodSchema = z.enum(["card", "cash", "transfer", "bit", "arbox", "none"]);
+export type RefundMethod = z.infer<typeof refundMethodSchema>;
+
+/** A Void: the reason is required, and how the money went back is recorded. */
+export const voidPlanSchema = z
+  .object({
+    planId: uuid,
+    reason: z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי"),
+    method: refundMethodSchema,
+    reference: optionalText(60),
+    amountIls: z.number().min(0, "סכום לא תקין").max(100_000, "סכום לא תקין"),
+  })
+  .refine((v) => v.method !== "none" || v.amountIls === 0, {
+    message: "כשלא שולם כסף, סכום ההחזר הוא 0",
+    path: ["amountIls"],
+  });
+export type VoidPlanInput = z.input<typeof voidPlanSchema>;
+
+export const creditNoteSchema = z.object({
+  refundId: uuid,
+  creditNoteNumber: z.string().trim().min(1, "נדרש מספר מסמך").max(40, "מספר ארוך מדי"),
+});

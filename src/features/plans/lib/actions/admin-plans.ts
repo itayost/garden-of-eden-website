@@ -157,7 +157,7 @@ export async function extendPlanAction(input: {
   ]);
   const own = plans.get(existing.profile_id) ?? [];
   const stored = own.find((p) => p.id === parsed.data.planId);
-  if (!stored || stored.status === "cancelled") return { error: "המסלול בוטל ואין מה להאריך" };
+  if (!stored || stored.status !== "active") return { error: "המסלול בוטל ואין מה להאריך" };
   // An Add-on sits outside the queue and starts on its own date.
   const startsOn =
     resolvePlanQueue(own, rows.get(existing.profile_id) ?? [], israelToday()).plans.find(
@@ -199,12 +199,13 @@ export async function addSessionsAction(input: {
 
   const db = createAdminClient();
   const { data: plan } = (await typedFrom(db, "trainee_plans")
-    .select("profile_id, sessions_total, branch_id")
+    .select("profile_id, sessions_total, branch_id, status")
     .eq("id", parsed.data.planId)
     .maybeSingle()) as {
-    data: { profile_id: string; sessions_total: number | null; branch_id: string } | null;
+    data: { profile_id: string; sessions_total: number | null; branch_id: string; status: string } | null;
   };
   if (!plan) return { error: "המסלול לא נמצא" };
+  if (plan.status !== "active") return { error: "המסלול בוטל ואין מה לעדכן בו" };
   const denied = await verifyAdminOrBranchManager([plan.branch_id]);
   if (denied) return { error: denied };
   if (plan.sessions_total === null) return { error: "למסלול לפי זמן אין מונה אימונים" };
@@ -239,6 +240,8 @@ export async function cancelPlanAction(input: { planId: string }): Promise<Actio
   const { data, error } = await typedFrom(db, "trainee_plans")
     .update({ status: "cancelled" })
     .eq("id", parsed.data.planId)
+    // Only a live Plan is cancelled; a voided one stays voided.
+    .eq("status", "active")
     .select("profile_id");
   if (error || !data?.length) return { error: "המסלול לא נמצא" };
   revalidatePlanSurfaces(data[0].profile_id);

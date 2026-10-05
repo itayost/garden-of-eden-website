@@ -72,10 +72,14 @@ export interface PlanQueue<P extends QueuePlan = QueuePlan> {
 /** How close to the end of the queue counts as "ending soon", inclusive. */
 export const ENDING_SOON_DAYS = 3;
 
-const byDateAndTime = (a: QueueRow, b: QueueRow) =>
+/** Roster rows in the order the queue charges them. */
+export const byDateAndTime = (a: QueueRow, b: QueueRow) =>
   `${a.schedule_date} ${a.start_time}`.localeCompare(`${b.schedule_date} ${b.start_time}`);
 
 const isTraining = (plan: QueuePlan) => plan.kind !== "addon";
+
+/** A voided Plan was never sold: nothing in the queue sees it. */
+const sold = <P extends QueuePlan>(plans: readonly P[]): P[] => plans.filter((p) => p.status !== "voided");
 
 /**
  * Charges each counted row, in date order, to the Plan it falls in. A Card
@@ -136,10 +140,11 @@ const usedUp = (entry: PlanInQueue) =>
  * waits behind the one ahead of it, in sale order. Add-ons stay outside.
  */
 export function resolvePlanQueue<P extends QueuePlan>(
-  plans: readonly P[],
+  allPlans: readonly P[],
   rows: readonly QueueRow[],
   today: string,
 ): PlanQueue<P> {
+  const plans = sold(allPlans);
   const live = plans
     .filter((p) => isTraining(p) && p.status !== "cancelled")
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
@@ -220,7 +225,7 @@ export function bookingVerdict<P extends QueuePlan>(
   slot: { date: string; start_time: string; branch_id: string },
   today: string,
 ): BookingVerdict {
-  const training = plans.filter(isTraining);
+  const training = sold(plans).filter(isTraining);
   if (training.length === 0) return { ok: false, block: "no_plan" };
   if (training.every((p) => p.status === "cancelled")) return { ok: false, block: "plan_cancelled" };
   if (!training.some((p) => p.status !== "cancelled" && p.branchId === slot.branch_id)) {
@@ -268,7 +273,7 @@ export function queueBookingBlock<P extends QueuePlan>(
   plans: readonly P[],
   queue: PlanQueue<P>,
 ): BookingBlock | null {
-  const training = plans.filter(isTraining);
+  const training = sold(plans).filter(isTraining);
   if (training.length === 0) return "no_plan";
   if (training.every((p) => p.status === "cancelled")) return "plan_cancelled";
   return queue.cardsOnly && queue.sessionsLeft === 0 ? "no_sessions_left" : null;

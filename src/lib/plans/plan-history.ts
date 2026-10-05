@@ -3,7 +3,7 @@ import type { PlanQueue, QueuePlan } from "./plan-queue";
 /** What history needs beyond the terms: the dates last stored for the Plan. */
 type HistoryPlan = QueuePlan & { starts_on: string; ends_on: string };
 
-export type PlanHistoryState = "current" | "queued" | "ended" | "never_runs" | "cancelled" | "addon";
+export type PlanHistoryState = "current" | "queued" | "ended" | "never_runs" | "cancelled" | "voided" | "addon";
 
 export interface PlanHistoryRow<P extends HistoryPlan = HistoryPlan> {
   plan: P;
@@ -56,7 +56,7 @@ export function planHistory<P extends HistoryPlan>(plans: readonly P[], queue: P
     .filter((p) => !queuedIds.has(p.id))
     .map((p) => ({
       plan: p,
-      state: (p.status === "cancelled" ? "cancelled" : "addon") as PlanHistoryState,
+      state: (p.status === "active" ? "addon" : p.status) as PlanHistoryState,
       startsOn: p.starts_on,
       endsOn: p.ends_on,
       sessionsLeft: null,

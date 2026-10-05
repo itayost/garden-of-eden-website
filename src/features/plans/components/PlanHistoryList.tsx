@@ -9,6 +9,7 @@ const STATE: Record<PlanHistoryState, { label: string; className: string }> = {
   ended: { label: "הסתיים", className: "bg-muted text-muted-foreground" },
   never_runs: { label: "לא יופעל", className: "bg-destructive/10 text-destructive" },
   cancelled: { label: "בוטל", className: "bg-muted text-muted-foreground line-through" },
+  voided: { label: "רישום בוטל", className: "bg-muted text-muted-foreground line-through" },
   addon: { label: "תוספת", className: "bg-muted text-foreground" },
 };
 
@@ -16,7 +17,14 @@ const STATE: Record<PlanHistoryState, { label: string; className: string }> = {
  * Every Plan a Trainee holds, for staff: what runs now, what waits and from
  * when, and what came before. Read-only; actions live on the card.
  */
-export function PlanHistoryList({ rows }: { rows: readonly PlanHistoryRow<StoredPlan>[] }) {
+export function PlanHistoryList({
+  rows,
+  onVoid,
+}: {
+  rows: readonly PlanHistoryRow<StoredPlan>[];
+  /** Admins and Branch managers: undo a Plan recorded by mistake. */
+  onVoid?: (planId: string) => void;
+}) {
   if (rows.length === 0) return null;
   return (
     <ul className="divide-y rounded-xl border text-sm">
@@ -32,6 +40,15 @@ export function PlanHistoryList({ rows }: { rows: readonly PlanHistoryRow<Stored
             <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
               {shortDate(row.startsOn)} עד {shortDate(row.endsOn)}
             </span>
+            {onVoid && row.state !== "voided" && (
+              <button
+                type="button"
+                onClick={() => onVoid(row.plan.id)}
+                className="shrink-0 rounded-full px-2 py-1 text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
+              >
+                ביטול רישום
+              </button>
+            )}
           </li>
         );
       })}

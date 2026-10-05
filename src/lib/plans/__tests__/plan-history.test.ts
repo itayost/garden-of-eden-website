@@ -78,3 +78,14 @@ describe("planHistory", () => {
     ]);
   });
 });
+
+describe("planHistory and voided Plans", () => {
+  it("keeps a voided Plan on record, marked as voided", () => {
+    const current = plan("current");
+    const mistake = plan("mistake", { status: "voided", createdAt: "2026-09-21T09:00:00Z" });
+
+    const rows = historyOf([current, mistake]);
+
+    expect(rows.find((r) => r.plan.id === "mistake")?.state).toBe("voided");
+  });
+});

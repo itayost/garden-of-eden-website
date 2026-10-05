@@ -31,6 +31,8 @@ import { getOwnClipWithSignedUrl } from "@/features/clips/lib/actions/clips";
 import { loadOwnPlanQueue } from "@/features/plans/lib/queries";
 import { buildRenewalUrl } from "@/features/plans/lib/renewal-link";
 import { MyPlanCard } from "@/features/plans/components/MyPlanCard";
+import { TraineeNotices } from "@/features/notices/components/TraineeNotices";
+import { getMyNoticesAction } from "@/features/notices/lib/notices";
 import { NextTrainingCard } from "@/features/booking/components/NextTrainingCard";
 import { loadNextBooking } from "@/features/booking/lib/next-booking";
 import type { UserAchievementRow } from "@/types/database";
@@ -77,9 +79,10 @@ export default async function DashboardPage() {
     getOwnClipWithSignedUrl(),
   ]);
 
-  const [ownPlan, booking] = await Promise.all([
+  const [ownPlan, booking, notices] = await Promise.all([
     loadOwnPlanQueue(israelToday()),
     loadNextBooking(user.id),
+    getMyNoticesAction(),
   ]);
   const canBook = booking.canBook;
   const nextBooking = booking.next;
@@ -151,6 +154,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      <TraineeNotices notices={notices} />
       {hasAssessments && <RatingMigrationBanner />}
       {canBook && <NextTrainingCard next={nextBooking} />}
       {ownPlan && (

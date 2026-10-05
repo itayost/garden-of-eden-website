@@ -39,7 +39,8 @@ export const PAYMENT_METHOD_LABELS_HE: Record<PaymentMethod, string> = {
   arbox: "Arbox",
 };
 
-export type OrderStatus = "pending" | "charging" | "paid" | "failed" | "expired";
+/** voided: the sale was undone (Void); refunded: money went back after a Cancellation. */
+export type OrderStatus = "pending" | "charging" | "paid" | "failed" | "expired" | "voided" | "refunded";
 
 export interface Order {
   id: string;
@@ -82,7 +83,8 @@ export interface Order {
   updated_at: string;
 }
 
-export type PlanRowStatus = "active" | "cancelled";
+/** voided: recorded by mistake and undone, as if never sold. */
+export type PlanRowStatus = "active" | "cancelled" | "voided";
 export type PlanSource = "online" | "manual";
 
 export interface TraineePlan {
