@@ -1056,6 +1056,10 @@ export type Database = {
           late_cancel: boolean
           order_index: number
           reminded_at: string | null
+          removed_at: string | null
+          removed_by: string | null
+          removed_by_name: string | null
+          removed_reason: string | null
           slot_id: string
           source: string
           trainee_id: string | null
@@ -1068,6 +1072,10 @@ export type Database = {
           late_cancel?: boolean
           order_index?: number
           reminded_at?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          removed_by_name?: string | null
+          removed_reason?: string | null
           slot_id: string
           source?: string
           trainee_id?: string | null
@@ -1080,12 +1088,23 @@ export type Database = {
           late_cancel?: boolean
           order_index?: number
           reminded_at?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          removed_by_name?: string | null
+          removed_reason?: string | null
           slot_id?: string
           source?: string
           trainee_id?: string | null
           trainee_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "daily_schedule_slot_trainees_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daily_schedule_slot_trainees_slot_id_fkey"
             columns: ["slot_id"]
@@ -1148,6 +1167,10 @@ export type Database = {
         Row: {
           band_id: string | null
           branch_id: string | null
+          called_off_at: string | null
+          called_off_by: string | null
+          called_off_by_name: string | null
+          called_off_reason: string | null
           created_at: string
           created_by: string
           focus_he: string | null
@@ -1165,6 +1188,10 @@ export type Database = {
         Insert: {
           band_id?: string | null
           branch_id?: string | null
+          called_off_at?: string | null
+          called_off_by?: string | null
+          called_off_by_name?: string | null
+          called_off_reason?: string | null
           created_at?: string
           created_by: string
           focus_he?: string | null
@@ -1182,6 +1209,10 @@ export type Database = {
         Update: {
           band_id?: string | null
           branch_id?: string | null
+          called_off_at?: string | null
+          called_off_by?: string | null
+          called_off_by_name?: string | null
+          called_off_reason?: string | null
           created_at?: string
           created_by?: string
           focus_he?: string | null
@@ -1209,6 +1240,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_schedule_slots_called_off_by_fkey"
+            columns: ["called_off_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

@@ -97,7 +97,17 @@ export const slotIdSchema = z.object({ slotId: uuidSchema });
 /** One name added to an existing slot from the calendar's roster sheet. */
 export const rosterAddSchema = rosterEntrySchema.extend({ slotId: uuidSchema });
 
-export const rosterRemoveSchema = z.object({ rosterEntryId: uuidSchema });
+/** A reason is needed only to remove a name from a Slot that already happened. */
+export const rosterRemoveSchema = z.object({
+  rosterEntryId: uuidSchema,
+  reason: z.string().trim().max(300, "הסיבה ארוכה מדי").optional(),
+});
+
+/** Marking a past Slot Called off: why the academy did not hold it. */
+export const callOffSlotSchema = z.object({
+  slotId: uuidSchema,
+  reason: z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי"),
+});
 
 export const duplicateDaySchema = z
   .object({

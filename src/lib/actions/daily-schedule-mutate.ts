@@ -18,6 +18,9 @@ import {
   type SlotUpdateInput,
 } from "@/lib/validations/schedule";
 import { SLOT_SELECT_WITH_TRAINEES, type ScheduleSlot } from "@/types/schedule";
+import { pastSlotEditRefusal } from "@/lib/schedule/roster-entry";
+import { israelMinutesOfDay } from "@/lib/utils/israel-time";
+import { israelToday } from "@/lib/utils/tasks";
 
 type SlotResult =
   | { success: true; data: ScheduleSlot }
@@ -274,13 +277,28 @@ export async function updateSlotAction(input: SlotUpdateInput): Promise<SlotResu
   const supabase = await createClient();
 
   const { data: existing } = (await typedFrom(supabase, "daily_schedule_slots")
-    .select("id, branch_id, max_trainees")
+    .select("id, branch_id, max_trainees, schedule_date, start_time, called_off_at")
     .eq("id", slotId)
     .maybeSingle()) as {
-    data: { id: string; branch_id: string | null; max_trainees: number | null } | null;
+    data: {
+      id: string;
+      branch_id: string | null;
+      max_trainees: number | null;
+      schedule_date: string;
+      start_time: string;
+      called_off_at: string | null;
+    } | null;
   };
 
   if (!existing) return { error: "הסלוט לא נמצא" };
+
+  const pastRefusal = pastSlotEditRefusal(
+    existing,
+    { scheduleDate, startTime },
+    trainees !== undefined,
+    { date: israelToday(), minutes: israelMinutesOfDay(new Date()) },
+  );
+  if (pastRefusal) return { error: pastRefusal };
 
   // The slot's current branch must be the caller's too, or a trainer could
   // pull another branch's slot into their own by rewriting branch_id.

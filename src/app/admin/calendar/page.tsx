@@ -99,6 +99,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         date={date}
         today={today}
         isAdmin={isAdmin}
+        canManageBranch={isAdmin || scopeResult.data.managedBranchIds.includes(branchId)}
         trainers={options.trainers}
         trainees={options.trainees}
         planBadges={planBadges}

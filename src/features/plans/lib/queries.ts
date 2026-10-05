@@ -72,7 +72,7 @@ interface RosterRow {
   trainee_id: string;
   cancelled_at: string | null;
   late_cancel: boolean;
-  slot: { schedule_date: string; start_time: string; branch_id: string | null } | null;
+  slot: { schedule_date: string; start_time: string; branch_id: string | null; called_off_at: string | null } | null;
 }
 
 const PAGE = 1000;
@@ -91,7 +91,7 @@ export async function loadQueueRows(
   for (let from = 0; ; from += PAGE) {
     const { data, error } = (await typedFrom(db, "daily_schedule_slot_trainees")
       .select(
-        "id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id)",
+        "id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, called_off_at)",
       )
       .in("trainee_id", [...profileIds])
       .order("id")
@@ -112,6 +112,7 @@ export async function loadQueueRows(
         branch_id: row.slot.branch_id,
         cancelled_at: row.cancelled_at,
         late_cancel: row.late_cancel,
+        called_off: row.slot.called_off_at !== null,
       };
       result.set(row.trainee_id, [...(result.get(row.trainee_id) ?? []), queueRow]);
     }
