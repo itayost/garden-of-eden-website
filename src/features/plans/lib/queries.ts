@@ -169,6 +169,12 @@ export async function loadOwnPlanQueue(today: string): Promise<PlanQueueView | n
   return map.get(user.id) ?? null;
 }
 
+/** Whether a Trainee has a Plan current or queued, so a new one waits behind it. */
+export async function hasPlansAhead(db: SupabaseClient, profileId: string, today: string): Promise<boolean> {
+  const [plans, rows] = await Promise.all([loadStoredPlans(db, [profileId]), loadQueueRows(db, [profileId])]);
+  return resolvePlanQueue(plans.get(profileId) ?? [], rows.get(profileId) ?? [], today).ahead.length > 0;
+}
+
 /**
  * Where the Plan an order bought sits in its Trainee's queue: when it starts,
  * in a parent's words, and its own last day. Null when there is no such Plan.

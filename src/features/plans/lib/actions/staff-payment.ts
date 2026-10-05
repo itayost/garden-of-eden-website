@@ -27,8 +27,9 @@ import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
 import { findRecentDuplicate, recordManualPayment, type ManualPaymentResult } from "../manual-payment";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { checkTraineeSale } from "../trainee-sale";
-import { loadQueueRows, loadStoredPlans } from "../queries";
+import { checkTraineeSale, introPackRefusal } from "../trainee-sale";
+import { startDateProblem, latestStartDate } from "@/lib/plans/start-date";
+import { hasPlansAhead, loadQueueRows, loadStoredPlans } from "../queries";
 
 export type StaffPaymentOutcome =
   | ManualPaymentResult
@@ -43,6 +44,10 @@ export interface StaffPaymentContext {
   startsOn: string;
   /** A paid Plan is current or queued, so the new one waits behind it. */
   startsAfterCurrent: boolean;
+  /** Israel today: the earliest start staff may choose. */
+  today: string;
+  /** The last start day staff may choose when nothing is current or queued. */
+  latestStartOn: string;
   /** A Card ahead can run out before its date, which brings the start forward. */
   startsWhenCardRunsOut: boolean;
   /** Branches where the caller (Admin, or their Branch manager) may record an Arbox sale by hand, as a repair. */
@@ -119,6 +124,8 @@ export async function getStaffPaymentContextAction(
     currentProductId: queue.shown?.plan.product_id ?? null,
     startsOn: placeNewPlan(plans, rows, probe, today).startsOn,
     startsAfterCurrent: ahead.length > 0,
+    today,
+    latestStartOn: latestStartDate(today),
     startsWhenCardRunsOut: ahead.some((e) => e.sessionsLeft !== null && e.endsOn === e.expiresOn),
     arboxBranchIds: (memberships.get(traineeId) ?? []).filter((b) =>
       canManageBranches(staff!.role, managed, [b]),
@@ -148,6 +155,16 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
   });
   if (!("ok" in sale)) return sale;
   const { product, trainee } = sale;
+  // Only a later start for a training Plan needs the queue; fulfillment
+  // enforces the rule again where the Plan is placed.
+  const today = israelToday();
+  const needsQueue = data.startsOn !== null && data.startsOn !== today && product.kind !== "addon";
+  const startProblem = startDateProblem(
+    data.startsOn,
+    today,
+    needsQueue ? await hasPlansAhead(db, data.traineeId, today) : false,
+  );
+  if (startProblem) return { error: startProblem };
 
   const loginPhone = toE164(trainee.phone);
   const result = await recordManualPayment(db, {
@@ -170,7 +187,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     },
     paymentMethod: data.paymentMethod,
     reference: data.reference,
-    startsOn: null,
+    startsOn: data.startsOn,
     sendWhatsApp: data.sendWhatsApp,
     actor: { id: user!.id, name: staff?.full_name ?? null },
   });
@@ -209,9 +226,16 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
     .limit(1)
     .maybeSingle();
   if (owner && owner.role !== "trainee") return { error: "מספר הטלפון שייך לחשבון צוות" };
+  // The date's bounds hold for everyone. For an existing trainee with a Plan
+  // current or queued, fulfillment lets the queue decide instead.
+  const startProblem = startDateProblem(data.startsOn, israelToday(), false);
+  if (startProblem) return { error: startProblem };
   if (owner) {
     const scopeError = await assertTraineeInScope(owner.id);
     if (scopeError) return { error: scopeError };
+    // An existing phone is a sale to that trainee: the intro pack is still once only.
+    const introRefusal = await introPackRefusal(db, owner.id, product);
+    if (introRefusal) return { error: introRefusal };
     if (!data.confirmDuplicate) {
       const duplicate = await findRecentDuplicate(db, owner.id, product.id);
       if (duplicate) return { duplicate };

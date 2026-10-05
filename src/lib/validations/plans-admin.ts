@@ -52,12 +52,16 @@ export const newTraineeSchema = z.object({
 });
 export type NewTraineeInput = z.input<typeof newTraineeSchema>;
 
-/** A payment for a trainee who already has an account. Chaining decides the start date. */
+/**
+ * A payment for a trainee who already has an account. The Plan queue decides
+ * the start; a chosen day (startDateProblem) only when nothing is current or queued.
+ */
 export const staffPaymentSchema = z.object({
   traineeId: uuid,
   productId: uuid,
   paymentMethod: manualPaymentMethodSchema,
   reference: optionalText(60),
+  startsOn: isoDate.nullable().default(null),
   sendWhatsApp: z.boolean(),
   confirmDuplicate: z.boolean().default(false),
 });

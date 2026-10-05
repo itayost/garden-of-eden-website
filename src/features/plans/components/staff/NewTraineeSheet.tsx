@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import type { ManualPaymentMethod, NewTraineeInput } from "@/lib/validations/plans-admin";
 import type { PlanProduct } from "@/types/plans";
 import { israelToday } from "@/lib/utils/tasks";
+import { latestStartDate } from "@/lib/plans/start-date";
 import { createTraineeWithPaymentAction } from "../../lib/actions/staff-payment";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { DuplicatePrompt } from "./DuplicatePrompt";
@@ -161,7 +162,17 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
 
                 <div className="space-y-1">
                   <Label htmlFor="nt-start">תאריך תחילה</Label>
-                  <Input id="nt-start" type="date" className="h-12 rounded-xl text-base" value={form.startsOn} onChange={(e) => set("startsOn", e.target.value)} disabled={pending} />
+                  <Input
+                    id="nt-start"
+                    type="date"
+                    className="h-12 rounded-xl text-base"
+                    value={form.startsOn}
+                    min={israelToday()}
+                    max={latestStartDate(israelToday())}
+                    onChange={(e) => set("startsOn", e.target.value)}
+                    disabled={pending}
+                  />
+                  <p className="text-xs text-muted-foreground">היום או עד 30 יום קדימה. למתאמן עם מסלול פעיל המסלול החדש מתחיל אחריו.</p>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl border p-3">

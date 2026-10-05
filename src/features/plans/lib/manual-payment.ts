@@ -152,8 +152,8 @@ export async function recordManualPayment(
     product: { ...product, price_ils: Number(product.price_ils) },
     agreement,
     createdBy: input.actor.id,
-    // A chosen start date (new trainee) is the earliest the Plan may start.
-    terms: input.startsOn ? { notBefore: input.startsOn } : undefined,
+    // A chosen start holds the Plan back only while nothing is current or queued.
+    chosenStartsOn: input.startsOn,
   });
   if (!fulfilled.ok) return { ok: false, error: `ההזמנה נשמרה אך היצירה נכשלה: ${fulfilled.error}` };
 

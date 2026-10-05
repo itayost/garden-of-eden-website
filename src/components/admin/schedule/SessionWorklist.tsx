@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CalendarDays, Check, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, Plus } from "lucide-react";
+import { AlertTriangle, CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, Dumbbell, HeartPulse, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -183,16 +183,23 @@ export function SessionWorklist({
                                 {status.label(row)}
                               </span>
                             </Link>
-                            {chip && (
-                              <button
-                                type="button"
-                                onClick={() => setPlanFor({ id: row.traineeId, name: row.traineeName })}
-                                className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold", chip.className)}
-                                aria-label={`המסלול של ${row.traineeName}: ${chip.label}`}
-                              >
-                                {chip.label}
-                              </button>
-                            )}
+                            {/* The plan and a payment for anyone on the list; a chip when it needs attention. */}
+                            <button
+                              type="button"
+                              onClick={() => setPlanFor({ id: row.traineeId, name: row.traineeName })}
+                              className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                              aria-label={
+                                chip ? `המסלול של ${row.traineeName}: ${chip.label}` : `המסלול ורישום תשלום של ${row.traineeName}`
+                              }
+                            >
+                              {chip ? (
+                                <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold", chip.className)}>
+                                  {chip.label}
+                                </span>
+                              ) : (
+                                <CreditCard className="h-3.5 w-3.5" />
+                              )}
+                            </button>
                             {badge?.hasMedicalNotes && (
                               <button
                                 type="button"
