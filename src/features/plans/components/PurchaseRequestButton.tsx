@@ -6,11 +6,18 @@ import { Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requestPurchaseLinkAction } from "../lib/actions/purchase-request";
 
+/** The request's wording, the same on every screen. */
+export const REQUEST_LABELS = {
+  buy: "בקשה מההורה לקנות מסלול",
+  renew: "בקשה מההורה לחדש",
+  renewEarly: "בקשה מההורה לחידוש מוקדם",
+} as const;
+
 /**
  * "Buy a plan" for a trainee: the parent gets the purchase link on WhatsApp
  * and pays on their own phone; the child never holds the link.
  */
-export function PurchaseRequestButton({ label, primary }: { label: string; primary?: boolean }) {
+export function PurchaseRequestButton({ label, primary = true }: { label: string; primary?: boolean }) {
   const [sent, setSent] = useState(false);
   const [pending, startTransition] = useTransition();
 

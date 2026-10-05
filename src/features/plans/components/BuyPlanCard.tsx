@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { PurchaseRequestButton } from "./PurchaseRequestButton";
+import { PurchaseRequestButton, REQUEST_LABELS } from "./PurchaseRequestButton";
 
 /** For a trainee of a selling branch with no Plan: ask the parent to buy one. */
 export function BuyPlanCard() {
@@ -10,7 +10,7 @@ export function BuyPlanCard() {
           <h3 className="text-lg font-bold">המסלול שלי</h3>
           <p className="text-sm text-muted-foreground">אין לך מסלול פעיל. ההורה יקבל קישור לבחור מסלול ולשלם.</p>
         </div>
-        <PurchaseRequestButton label="בקשה מההורה לקנות מסלול" primary />
+        <PurchaseRequestButton label={REQUEST_LABELS.buy} />
       </CardContent>
     </Card>
   );

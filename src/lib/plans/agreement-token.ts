@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac } from "crypto";
+import { safeEqualUtf8 } from "@/lib/security/safe-equal";
 
 /**
  * The parent's copy of the agreement is a public URL guarded by an HMAC of
@@ -9,7 +10,5 @@ export function signAgreementToken(agreementId: string, secret: string): string 
 }
 
 export function verifyAgreementToken(agreementId: string, token: string, secret: string): boolean {
-  const expected = signAgreementToken(agreementId, secret);
-  if (token.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(token, "utf8"), Buffer.from(expected, "utf8"));
+  return safeEqualUtf8(token, signAgreementToken(agreementId, secret));
 }

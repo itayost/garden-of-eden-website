@@ -11,9 +11,9 @@ import { sendPurchaseRequest } from "@/lib/whatsapp/plan-templates";
 import { buildRenewalUrl, buildTraineePurchaseUrl } from "../renewal-link";
 import { loadPlanQueues } from "../queries";
 import { israelToday } from "@/lib/utils/tasks";
-import { canAskParentToBuy } from "../sells-online";
+import { canAskParentToBuy } from "../can-ask-parent";
 
-export type PurchaseRequestResult = { ok: true; sentTo: string } | { error: string };
+export type PurchaseRequestResult = { ok: true } | { error: string };
 
 /**
  * The trainee's "buy a plan": the parent gets a purchase link bound to this
@@ -28,10 +28,9 @@ export async function requestPurchaseLinkAction(): Promise<PurchaseRequestResult
   if (!user) return { error: "נדרשת התחברות" };
 
   const db = createAdminClient();
-  const [{ data: profile }, selling, queues] = await Promise.all([
+  const [{ data: profile }, selling] = await Promise.all([
     db.from("profiles").select("full_name, guardian_name, guardian_phone, role, deleted_at").eq("id", user.id).maybeSingle(),
     canAskParentToBuy(db, user.id),
-    loadPlanQueues(db, [user.id], israelToday()),
   ]);
   if (!profile || !isActiveTrainee(profile) || !selling) return { error: "קניית מסלול באפליקציה זמינה למתאמני הסניף בלבד" };
   if (!profile.guardian_phone || !isValidPhoneIL(profile.guardian_phone)) {
@@ -46,12 +45,12 @@ export async function requestPurchaseLinkAction(): Promise<PurchaseRequestResult
   const childName = profile.full_name ?? "";
   // A renewal names the Plan (its product preselected, the order records it);
   // a trainee with no Plan gets the link bound to them.
-  const own = queues.get(user.id);
+  const own = (await loadPlanQueues(db, [user.id], israelToday())).get(user.id);
   const url = own ? buildRenewalUrl(own.plan.id) : buildTraineePurchaseUrl(user.id);
   const sent = await sendPurchaseRequest(parentPhone, { parentName: profile.guardian_name ?? "הורה", childName, url }).catch(
     (error: unknown) => ({ success: false as const, error: error instanceof Error ? error.message : String(error) }),
   );
-  if (sent.success) return { ok: true, sentTo: parentPhone };
+  if (sent.success) return { ok: true };
   console.error("[purchase-request] send failed:", sent.error);
   return { error: "השליחה להורה נכשלה. נסו שוב מאוחר יותר." };
 }

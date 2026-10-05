@@ -21,7 +21,7 @@ import { loadStoredPlans, toPlanQueueView } from "@/features/plans/lib/queries";
 import { PLAN_STATUS_LABELS_HE, type PlanStatus } from "@/types/plans";
 import { materializeBookableSlots } from "../materialize";
 import { loadBookableBranchForUser, loadBookableSlots, loadTraineeRosterRows } from "../queries";
-import { canAskParentToBuy } from "@/features/plans/lib/sells-online";
+import { canAskParentToBuy } from "@/features/plans/lib/can-ask-parent";
 
 const END_OF_DAY = "23:59:59";
 
@@ -62,7 +62,7 @@ export interface TraineeScheduleView {
     weekCount: number;
     weeklyCap: number | null;
     endsOn: string;
-    /** Ended or ending: the page offers to ask the parent to renew. */
+    /** Ended or ending, and the parent can be asked: the page offers to renew. */
     canRenew: boolean;
   } | null;
   /** Why booking is blocked for the plan as a whole, if it is. */
@@ -107,7 +107,7 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
     loadBookableSlots(db, branchId, today, to),
     loadTraineeRosterRows(db, user.id),
     loadStoredPlans(db, [user.id]),
-    canAskParentToBuy(db, user.id),
+    canAskParentToBuy(db, user.id, [branchId]),
   ]);
   const plans = storedPlans.get(user.id) ?? [];
   const queue = resolvePlanQueue(plans, rows, today);
@@ -125,7 +125,7 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
         weekCount: weeklyBookingCount(rows, today, branchId),
         weeklyCap: runningKind && WEEKLY_CAP_KINDS.includes(runningKind) ? WEEKLY_CAP : null,
         endsOn: view.endsOn,
-        canRenew: view.status === "expired" || view.status === "ending_soon",
+        canRenew: canAskParent && (view.status === "expired" || view.status === "ending_soon"),
       }
     : null;
 

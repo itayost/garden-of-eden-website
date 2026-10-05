@@ -31,7 +31,7 @@ import { getOwnClipWithSignedUrl } from "@/features/clips/lib/actions/clips";
 import { loadOwnPlanQueue } from "@/features/plans/lib/queries";
 import { MyPlanCard } from "@/features/plans/components/MyPlanCard";
 import { BuyPlanCard } from "@/features/plans/components/BuyPlanCard";
-import { canAskParentToBuy } from "@/features/plans/lib/sells-online";
+import { canAskParentToBuy } from "@/features/plans/lib/can-ask-parent";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TraineeNotices } from "@/features/notices/components/TraineeNotices";
 import { getMyNoticesAction } from "@/features/notices/lib/notices";
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
     getOwnClipWithSignedUrl(),
   ]);
 
-  const [ownPlan, booking, notices, selling] = await Promise.all([
+  const [ownPlan, booking, notices, canAskParent] = await Promise.all([
     loadOwnPlanQueue(israelToday()),
     loadNextBooking(user.id),
     getMyNoticesAction(),
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
       <TraineeNotices notices={notices} />
       {hasAssessments && <RatingMigrationBanner />}
       {canBook && <NextTrainingCard next={nextBooking} />}
-      {ownPlan ? <MyPlanCard planQueue={ownPlan} canRequest={selling} /> : selling && <BuyPlanCard />}
+      {ownPlan ? <MyPlanCard planQueue={ownPlan} canAskParent={canAskParent} /> : canAskParent && <BuyPlanCard />}
 
       {/* Player Card Section */}
       {calculatedRatings ? (

@@ -15,6 +15,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import { enrollmentSchema, type EnrollmentInput } from "@/lib/validations/enrollment";
 import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
 import { loadProductById } from "../catalog";
+import { resolveRenewalSubject } from "@/features/plans/lib/renewal-subject";
 
 /**
  * The card page's address on success. The client opens it with a full page
@@ -61,30 +62,17 @@ async function resolvePurchaser(
   const verified = verifyRenewalToken(data.renewalToken, planTokenSecret(), Math.floor(Date.now() / 1000));
   if (!verified) return fresh;
 
-  // A renewal link names a Plan, the in-app purchase link names the trainee.
-  const ACCOUNT = "id, full_name, birthdate, phone, role, deleted_at";
-  let renewalOfPlanId: string | null = null;
-  let account: { id: string; full_name: string | null; birthdate: string | null; phone: string | null; role: string; deleted_at: string | null } | null;
-  if ("planId" in verified) {
-    // Two foreign keys reach profiles (profile_id, created_by): name the one.
-    const { data: renewed, error: lookupError } = await db
-      .from("trainee_plans")
-      .select(`id, profile:profiles!trainee_plans_profile_id_fkey(${ACCOUNT})`)
-      .eq("id", verified.planId)
-      .maybeSingle();
-    if (lookupError) {
-      console.error("[checkout] renewal lookup failed:", lookupError.message);
-      return { error: "לא הצלחנו לאמת את קישור החידוש. נסו שוב בעוד רגע." };
-    }
-    renewalOfPlanId = renewed?.id ?? null;
-    account = (renewed?.profile as typeof account) ?? null;
-  } else {
-    const { data, error: lookupError } = await db.from("profiles").select(ACCOUNT).eq("id", verified.profileId).maybeSingle();
-    if (lookupError) {
-      console.error("[checkout] trainee link lookup failed:", lookupError.message);
-      return { error: "לא הצלחנו לאמת את הקישור. נסו שוב בעוד רגע." };
-    }
-    account = (data as typeof account) ?? null;
+  const subject = await resolveRenewalSubject(db, verified);
+  if (subject && "error" in subject) return { error: subject.error };
+  if (!subject) return fresh;
+  const { data: account, error: lookupError } = await db
+    .from("profiles")
+    .select("id, full_name, birthdate, phone, role, deleted_at")
+    .eq("id", subject.profileId)
+    .maybeSingle();
+  if (lookupError) {
+    console.error("[checkout] link account lookup failed:", lookupError.message);
+    return { error: "לא הצלחנו לאמת את הקישור. נסו שוב בעוד רגע." };
   }
   if (!account || !isActiveTrainee(account)) return fresh;
 
@@ -108,7 +96,7 @@ async function resolvePurchaser(
   }
   return {
     profileId: account.id,
-    renewalOfPlanId,
+    renewalOfPlanId: subject.planId,
     childName: bound.childName,
     childBirthdate: bound.childBirthdate,
     loginPhone: bound.loginPhone,

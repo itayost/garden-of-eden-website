@@ -4,22 +4,25 @@ import { cn } from "@/lib/utils";
 import { shortDate } from "@/lib/utils/iso-date";
 import type { PlanQueueView } from "../lib/queries";
 import { PlanStatusBadge } from "./PlanStatusBadge";
-import { PurchaseRequestButton } from "./PurchaseRequestButton";
+import { PurchaseRequestButton, REQUEST_LABELS } from "./PurchaseRequestButton";
 
 interface MyPlanCardProps {
   planQueue: PlanQueueView;
-  /** The trainee's branch sells on /join: the parent can be sent the link. */
-  canRequest: boolean;
+  /** The parent can be sent the purchase link (canAskParentToBuy). */
+  canAskParent: boolean;
 }
 
 /**
  * The trainee's plan at a glance. An expired plan turns the card into the
  * banner; nothing is blocked. Renewing sends the parent the purchase link.
  */
-export function MyPlanCard({ planQueue, canRequest }: MyPlanCardProps) {
+export function MyPlanCard({ planQueue, canAskParent }: MyPlanCardProps) {
   const { queue, product, sessionsLeft, status, endsOn } = planQueue;
   const expired = status === "expired";
   const next = queue.current ? queue.queued[0] : undefined;
+  // Ended, cancelled or about to end: renewing is the next step.
+  const over = expired || status === "cancelled";
+  const urgent = over || status === "ending_soon";
 
   return (
     <Card className={cn(expired && "border-destructive/50 bg-destructive/5")}>
@@ -50,15 +53,12 @@ export function MyPlanCard({ planQueue, canRequest }: MyPlanCardProps) {
           )}
           {expired && (
             <p className="text-sm text-destructive">
-              {canRequest ? "המסלול הסתיים. ההורה יקבל קישור לחידוש בלחיצה." : "המסלול הסתיים."}
+              {canAskParent ? "המסלול הסתיים. ההורה יקבל קישור לחידוש בלחיצה." : "המסלול הסתיים."}
             </p>
           )}
         </div>
-        {canRequest && (
-          <PurchaseRequestButton
-            label={expired || status === "cancelled" ? "בקשה מההורה לחדש" : "בקשה מההורה לחידוש מוקדם"}
-            primary={expired || status === "ending_soon" || status === "cancelled"}
-          />
+        {canAskParent && (
+          <PurchaseRequestButton label={over ? REQUEST_LABELS.renew : REQUEST_LABELS.renewEarly} primary={urgent} />
         )}
       </CardContent>
     </Card>

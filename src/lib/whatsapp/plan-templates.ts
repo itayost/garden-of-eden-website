@@ -152,8 +152,7 @@ export async function sendPaymentLink(phone: string, params: PaymentLinkParams):
 /**
  * A trainee asked the parent to buy a Plan: Meta-approved template
  * WHATSAPP_PURCHASE_REQUEST_TEMPLATE_NAME with body parameters {{1}} parent,
- * {{2}} child, {{3}} link. Optional until Meta approves it; the app then
- * opens the child's own WhatsApp with the same message instead.
+ * {{2}} child, {{3}} link.
  */
 export async function sendPurchaseRequest(
   phone: string,
