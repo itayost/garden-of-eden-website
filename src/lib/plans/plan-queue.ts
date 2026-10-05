@@ -26,6 +26,12 @@ export interface QueuePlan {
   fixedEndsOn: string | null;
   /** Sale order is queue order. */
   createdAt: string;
+  /**
+   * The day a Cancellation (or Early end) ended the Plan. It stays in the
+   * queue up to that day, keeping the sessions it used. A cancelled Plan
+   * without one is an older, hidden cancellation and stays out of the queue.
+   */
+  endedOn?: string | null;
 }
 
 export interface QueueRow extends RosterRowLite {
@@ -100,7 +106,8 @@ function walkQueue<P extends QueuePlan>(
   for (const plan of plans) {
     const startsOn: string =
       earliestNext !== null && earliestNext > plan.notBefore ? earliestNext : plan.notBefore;
-    const expiresOn: string = plan.fixedEndsOn ?? addDays(startsOn, plan.durationDays - 1);
+    const ownEnd: string = plan.fixedEndsOn ?? addDays(startsOn, plan.durationDays - 1);
+    const expiresOn: string = plan.endedOn && plan.endedOn < ownEnd ? plan.endedOn : ownEnd;
     const charged: QueueRow[] = [];
     for (const row of pending) {
       if (plan.sessionsTotal !== null && charged.length >= plan.sessionsTotal) break;
@@ -145,8 +152,10 @@ export function resolvePlanQueue<P extends QueuePlan>(
   today: string,
 ): PlanQueue<P> {
   const plans = sold(allPlans);
+  // A Plan ended by a Cancellation keeps its place up to its last day.
+  const inQueue = (p: P) => p.status === "active" || (p.status === "cancelled" && Boolean(p.endedOn));
   const live = plans
-    .filter((p) => isTraining(p) && p.status !== "cancelled")
+    .filter((p) => isTraining(p) && inQueue(p))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
   const entries = walkQueue(live, rows, today);
 
@@ -164,8 +173,12 @@ export function resolvePlanQueue<P extends QueuePlan>(
   const sessionsLeft = cards.length === 0 ? null : cards.reduce((sum, e) => sum + e.sessionsLeft!, 0);
   const endsOn = ahead.length > 0 ? ahead[ahead.length - 1].endsOn : (entries.at(-1)?.endsOn ?? null);
 
+  // A queue that ends on a Cancellation reads as cancelled: no renewal nudges.
+  const last = ahead.at(-1) ?? entries.at(-1);
   let status: PlanStatus | null;
-  if (ahead.length > 0) {
+  if (last?.plan.status === "cancelled") {
+    status = "cancelled";
+  } else if (ahead.length > 0) {
     const endingSoon =
       daysBetween(today, endsOn!) <= ENDING_SOON_DAYS || (cardsOnly && sessionsLeft! <= 1);
     status = endingSoon ? "ending_soon" : "active";

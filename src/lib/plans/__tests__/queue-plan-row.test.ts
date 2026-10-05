@@ -12,6 +12,7 @@ const row = {
   not_before: "2026-10-03",
   duration_days: 60,
   fixed_ends_on: null,
+  ended_on: null,
   created_at: "2026-10-03T09:00:00Z",
   product: { kind: "session_card" as const },
 };
@@ -33,6 +34,10 @@ describe("toQueuePlan", () => {
     const legacy = { ...row, not_before: null, duration_days: null };
 
     expect(toQueuePlan(legacy)).toMatchObject({ notBefore: "2026-10-20", durationDays: 30 });
+  });
+
+  it("carries the day a Cancellation ended the Plan", () => {
+    expect(toQueuePlan({ ...row, status: "cancelled" as const, ended_on: "2026-10-05" }).endedOn).toBe("2026-10-05");
   });
 
   it("keeps the database row's own fields for the caller", () => {

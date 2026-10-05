@@ -107,6 +107,8 @@ export interface TraineePlan {
   duration_days: number | null;
   /** Sale-time terms: the end date of an Arbox purchase, which never moves. */
   fixed_ends_on: string | null;
+  /** The day a Cancellation ended the Plan; it keeps its place in the queue up to it. */
+  ended_on: string | null;
   status: PlanRowStatus;
   source: PlanSource;
   note: string | null;

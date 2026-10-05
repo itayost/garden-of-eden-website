@@ -99,7 +99,6 @@ export const addSessionsSchema = z.object({
   planId: uuid,
   sessions: z.number().int().min(1, "לפחות אימון אחד").max(50, "יותר מדי אימונים"),
 });
-export const cancelPlanSchema = z.object({ planId: uuid });
 
 export const productSchema = z.object({
   name_he: z.string().trim().min(1, "נדרש שם").max(80, "שם ארוך מדי"),
@@ -144,3 +143,24 @@ export const creditNoteSchema = z.object({
   refundId: uuid,
   creditNoteNumber: z.string().trim().min(1, "נדרש מספר מסמך").max(40, "מספר ארוך מדי"),
 });
+
+/**
+ * A Cancellation: the Plan ends today and the refund follows the policy. An
+ * amount other than the proposal needs a reason; the server recomputes the
+ * proposal and compares.
+ */
+export const cancelPlanWithRefundSchema = z
+  .object({
+    planId: uuid,
+    reason: z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי"),
+    defect: z.boolean(),
+    method: refundMethodSchema,
+    reference: optionalText(60),
+    amountIls: z.number().min(0, "סכום לא תקין").max(100_000, "סכום לא תקין"),
+    overrideReason: optionalText(300),
+  })
+  .refine((v) => v.method !== "none" || v.amountIls === 0, {
+    message: "כשלא הוחזר כסף, הסכום הוא 0",
+    path: ["amountIls"],
+  });
+export type CancelPlanWithRefundInput = z.input<typeof cancelPlanWithRefundSchema>;

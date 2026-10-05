@@ -154,7 +154,8 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
       ? typedFrom(db, "orders")
           .select("id", { count: "exact", head: true })
           .or(purchaserOrders)
-          .eq("status", "paid")
+          // A refunded intro pack was still sold; only a Void undoes the sale.
+          .in("status", ["paid", "refunded"])
           .eq("product_id", product.id)
           .then(({ count }: { count: number | null }) => count ?? 0)
       : Promise.resolve(0),

@@ -40,6 +40,9 @@ function BranchDialog({ open, branch, onClose, onSaved }: BranchDialogProps) {
     formatPhoneToLocal(branch?.manager_phone),
   );
   const [isActive, setIsActive] = useState(branch?.is_active ?? true);
+  const [singlePrice, setSinglePrice] = useState(
+    branch?.single_session_price_ils != null ? String(branch.single_session_price_ils) : "",
+  );
 
   const isEdit = Boolean(branch);
 
@@ -49,6 +52,7 @@ function BranchDialog({ open, branch, onClose, onSaved }: BranchDialogProps) {
       arbox_location_name: arboxName.trim() || null,
       manager_phone: managerPhone.trim() || null,
       is_active: isActive,
+      single_session_price_ils: singlePrice.trim() === "" ? null : Number(singlePrice),
     };
 
     startTransition(async () => {
@@ -112,6 +116,22 @@ function BranchDialog({ open, branch, onClose, onSaved }: BranchDialogProps) {
               disabled={pending}
             />
             <p className="text-xs text-muted-foreground">מופיע בנוהל הבטיחות שהצוות רואה.</p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="branch-single-price">מחיר אימון בודד (₪, אופציונלי)</Label>
+            <Input
+              id="branch-single-price"
+              type="number"
+              inputMode="decimal"
+              min={1}
+              value={singlePrice}
+              onChange={(e) => setSinglePrice(e.target.value)}
+              placeholder="לפי תעריף כרטיסיית 10"
+              disabled={pending}
+            />
+            <p className="text-xs text-muted-foreground">
+              לפי מדיניות הביטול, אימון שנוצל בכרטיסייה שבוטלה מנוכה במחיר הזה. ריק: מחיר כרטיסיית 10 חלקי 10.
+            </p>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>

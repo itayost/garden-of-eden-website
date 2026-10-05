@@ -55,6 +55,7 @@ export function voidRefusal(
   const plan = plans.find((p) => p.id === planId);
   if (!plan) return "המסלול לא נמצא";
   if (plan.status === "voided") return "הרישום של המסלול כבר בוטל";
+  if (plan.status === "cancelled" && plan.endedOn) return "העסקה של המסלול כבר בוטלה";
   // A cancelled Plan sits outside the queue; count what it used as if it ran.
   const asRan = plans.map((p) => (p.id === planId && p.status === "cancelled" ? { ...p, status: "active" as const } : p));
   const used = resolvePlanQueue(asRan, rows, today).plans.find((e) => e.plan.id === planId)?.used ?? 0;

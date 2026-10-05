@@ -77,6 +77,7 @@ export async function createBranchAction(input: BranchInput): Promise<ActionResu
     name_he: validated.data.name_he,
     arbox_location_name: validated.data.arbox_location_name,
     manager_phone: validated.data.manager_phone,
+    single_session_price_ils: validated.data.single_session_price_ils,
     is_active: validated.data.is_active,
     order_index: (maxOrder?.order_index ?? -1) + 1,
   });
@@ -122,6 +123,7 @@ export async function updateBranchAction(
       name_he: validated.data.name_he,
       arbox_location_name: validated.data.arbox_location_name,
       manager_phone: validated.data.manager_phone,
+      single_session_price_ils: validated.data.single_session_price_ils,
       is_active: validated.data.is_active,
     })
     .eq("id", id);

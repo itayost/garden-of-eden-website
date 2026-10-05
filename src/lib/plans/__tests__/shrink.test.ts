@@ -105,3 +105,29 @@ describe("voidRefusal", () => {
     );
   });
 });
+
+describe("shrinkImpact for a Cancellation", () => {
+  it("moves the Bookings after today to the Queued plan; what was used stays", () => {
+    const current = card("current", 10);
+    const queued = card("queued", 10, { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+    const plans = [current, queued];
+    const rows = [booking("2026-10-01"), booking("2026-10-07"), booking("2026-10-09")];
+    const after = plans.map((p) => (p.id === "current" ? { ...p, status: "cancelled" as const, endedOn: TODAY } : p));
+
+    const impact = shrinkImpact(plans, after, rows, TODAY);
+
+    expect(impact.moved.map((m) => [m.row.schedule_date, m.toPlanId])).toEqual([
+      ["2026-10-07", "queued"],
+      ["2026-10-09", "queued"],
+    ]);
+    expect(impact.cancelled).toEqual([]);
+  });
+});
+
+describe("voidRefusal after a Cancellation", () => {
+  it("refuses a Plan a Cancellation already ended", () => {
+    const cancelled = card("cancelled", 10, { status: "cancelled", endedOn: TODAY, notBefore: "2026-10-01" });
+
+    expect(voidRefusal([cancelled], [], "cancelled", TODAY)).toBe("העסקה של המסלול כבר בוטלה");
+  });
+});

@@ -23,6 +23,13 @@ export const branchSchema = z.object({
     "מספר טלפון לא תקין",
   ).transform((v) => (v === null ? null : formatPhoneToInternational(v))),
   is_active: z.boolean().default(true),
+  /** מחיר אימון בודד: what a used session on a cancelled Card costs. Empty: the 10-Card rate. */
+  single_session_price_ils: z
+    .number()
+    .positive("המחיר חייב להיות גדול מאפס")
+    .max(10_000, "מחיר לא סביר")
+    .nullish()
+    .transform((v) => v ?? null),
 });
 
 export type BranchInput = z.input<typeof branchSchema>;

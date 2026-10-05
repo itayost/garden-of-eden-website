@@ -13,6 +13,7 @@ export type QueuePlanRow = Pick<
   | "not_before"
   | "duration_days"
   | "fixed_ends_on"
+  | "ended_on"
   | "created_at"
 > & { product: { kind: PlanKind } | null };
 
@@ -30,6 +31,7 @@ export function toQueuePlan<R extends QueuePlanRow>(row: R): R & QueuePlan {
     durationDays: row.duration_days ?? daysBetween(row.starts_on, row.ends_on) + 1,
     notBefore: row.not_before ?? row.starts_on,
     fixedEndsOn: row.fixed_ends_on,
+    endedOn: row.ended_on,
     createdAt: row.created_at,
   };
 }

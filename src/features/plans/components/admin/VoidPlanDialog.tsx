@@ -3,47 +3,16 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 import type { RefundMethod } from "@/lib/validations/plans-admin";
-import {
-  previewVoidAction,
-  recordCreditNoteAction,
-  voidPlanAction,
-  type AffectedBooking,
-  type VoidPreview,
-} from "../../lib/actions/void-plan";
-
-const METHOD_LABELS: Record<RefundMethod, string> = {
-  card: "זיכוי כרטיס ב-Pelecard",
-  cash: "מזומן",
-  transfer: "העברה בנקאית",
-  bit: "ביט",
-  arbox: "הוחזר ב-Arbox",
-  none: "לא שולם כסף",
-};
-
-function BookingList({ title, items, tone }: { title: string; items: AffectedBooking[]; tone: "moved" | "cancelled" }) {
-  if (items.length === 0) return null;
-  return (
-    <div className="space-y-1">
-      <p className="text-sm font-medium">{title}</p>
-      <ul className={tone === "cancelled" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
-        {items.map((b) => (
-          <li key={`${b.date} ${b.time}`}>
-            {ddmmyyyy(b.date)} בשעה {b.time}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+import { previewVoidAction, voidPlanAction, type VoidPreview } from "../../lib/actions/void-plan";
+import { AffectedBookings, CreditNoteStep, RefundMethodSelect } from "./RefundParts";
 
 /**
  * Void: undo a Plan recorded by mistake, as if never sold. Shows first what
@@ -59,7 +28,6 @@ export function VoidPlanDialog({ planId, onClose: close }: { planId: string; onC
   const [amount, setAmount] = useState(0);
   const [reference, setReference] = useState("");
   const [done, setDone] = useState<{ refundId: string; receiptUrl: string | null } | null>(null);
-  const [creditNote, setCreditNote] = useState("");
   const [pending, startTransition] = useTransition();
   // The page refreshes only on close: refreshing earlier unmounts the
   // dialog before the credit note number is entered.
@@ -98,18 +66,6 @@ export function VoidPlanDialog({ planId, onClose: close }: { planId: string; onC
       setDone({ refundId: result.refundId, receiptUrl: result.receiptUrl });
     });
 
-  const saveCreditNote = () =>
-    startTransition(async () => {
-      if (!done) return;
-      const result = await recordCreditNoteAction({ refundId: done.refundId, creditNoteNumber: creditNote });
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("מספר הזיכוי נשמר");
-      onClose();
-    });
-
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent dir="rtl">
@@ -123,43 +79,12 @@ export function VoidPlanDialog({ planId, onClose: close }: { planId: string; onC
         ) : !preview ? (
           <Skeleton className="h-32 w-full" />
         ) : done ? (
-          <div className="space-y-4 text-sm">
-            <p>הרישום בוטל ונשמר רישום ההחזר.</p>
-            {done.receiptUrl ? (
-              <>
-                <p>
-                  עכשיו מפיקים ב-Morning חשבונית זיכוי וקבלה שלילית לקבלה המקורית, ורושמים כאן את מספר חשבונית הזיכוי.
-                </p>
-                <a href={done.receiptUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline">
-                  <ExternalLink className="h-4 w-4" />
-                  הקבלה המקורית ב-Morning
-                </a>
-                <div className="flex gap-2">
-                  <Input
-                    value={creditNote}
-                    onChange={(e) => setCreditNote(e.target.value)}
-                    placeholder="מספר חשבונית הזיכוי"
-                    aria-label="מספר חשבונית הזיכוי"
-                    disabled={pending}
-                  />
-                  <Button onClick={saveCreditNote} disabled={pending || creditNote.trim() === ""}>
-                    שמירה
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <p className="text-muted-foreground">להזמנה אין קבלה ב-Morning, ולכן אין מה לזכות שם.</p>
-            )}
-            <Button variant="outline" className="w-full" onClick={onClose}>
-              סגירה
-            </Button>
-          </div>
+          <CreditNoteStep refundId={done.refundId} receiptUrl={done.receiptUrl} onDone={onClose} />
         ) : preview.refusal ? (
           <p className="text-sm text-destructive">{preview.refusal}</p>
         ) : (
           <div className="space-y-4">
-            <BookingList title="אימונים שיעברו למסלול הבא בתור" items={preview.moved} tone="moved" />
-            <BookingList title="אימונים שיבוטלו (המתאמן יקבל הודעה)" items={preview.cancelled} tone="cancelled" />
+            <AffectedBookings moved={preview.moved} cancelled={preview.cancelled} />
 
             <div className="space-y-1">
               <Label htmlFor="void-reason">סיבה</Label>
@@ -174,20 +99,8 @@ export function VoidPlanDialog({ planId, onClose: close }: { planId: string; onC
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="void-method">איך הכסף הוחזר</Label>
-              <select
-                id="void-method"
-                value={method}
-                onChange={(e) => setMethod(e.target.value as RefundMethod)}
-                disabled={pending}
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                {(Object.keys(METHOD_LABELS) as RefundMethod[]).map((m) => (
-                  <option key={m} value={m}>
-                    {METHOD_LABELS[m]}
-                  </option>
-                ))}
-              </select>
+              <Label htmlFor="refund-method">איך הכסף הוחזר</Label>
+              <RefundMethodSelect value={method} onChange={setMethod} disabled={pending} />
             </div>
 
             <div className="grid grid-cols-2 gap-2">

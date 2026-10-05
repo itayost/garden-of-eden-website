@@ -707,6 +707,7 @@ export type Database = {
           manager_phone: string | null
           name_he: string
           order_index: number
+          single_session_price_ils: number | null
           updated_at: string
         }
         Insert: {
@@ -717,6 +718,7 @@ export type Database = {
           manager_phone?: string | null
           name_he: string
           order_index?: number
+          single_session_price_ils?: number | null
           updated_at?: string
         }
         Update: {
@@ -727,6 +729,7 @@ export type Database = {
           manager_phone?: string | null
           name_he?: string
           order_index?: number
+          single_session_price_ils?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -2324,11 +2327,14 @@ export type Database = {
           created_by: string
           credit_note_number: string | null
           credit_note_recorded_at: string | null
+          defect: boolean
           id: string
           kind: string
           method: string
           order_id: string | null
+          override_reason: string | null
           plan_id: string
+          proposed_amount_ils: number | null
           reason: string
           reference: string | null
         }
@@ -2338,11 +2344,14 @@ export type Database = {
           created_by: string
           credit_note_number?: string | null
           credit_note_recorded_at?: string | null
+          defect?: boolean
           id?: string
           kind: string
           method: string
           order_id?: string | null
+          override_reason?: string | null
           plan_id: string
+          proposed_amount_ils?: number | null
           reason: string
           reference?: string | null
         }
@@ -2352,11 +2361,14 @@ export type Database = {
           created_by?: string
           credit_note_number?: string | null
           credit_note_recorded_at?: string | null
+          defect?: boolean
           id?: string
           kind?: string
           method?: string
           order_id?: string | null
+          override_reason?: string | null
           plan_id?: string
+          proposed_amount_ils?: number | null
           reason?: string
           reference?: string | null
         }
@@ -3640,6 +3652,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           duration_days: number | null
+          ended_on: string | null
           ends_on: string
           fixed_ends_on: string | null
           id: string
@@ -3662,6 +3675,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           duration_days?: number | null
+          ended_on?: string | null
           ends_on: string
           fixed_ends_on?: string | null
           id?: string
@@ -3684,6 +3698,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           duration_days?: number | null
+          ended_on?: string | null
           ends_on?: string
           fixed_ends_on?: string | null
           id?: string

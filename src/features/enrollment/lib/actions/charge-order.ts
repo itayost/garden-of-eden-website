@@ -74,7 +74,8 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
     const { count } = await typedFrom(db, "orders")
       .select("id", { count: "exact", head: true })
       .or(sameTraineeOrders(order.login_phone, order.profile_id))
-      .eq("status", "paid")
+      // A refunded intro pack was still sold; only a Void undoes the sale.
+      .in("status", ["paid", "refunded"])
       .eq("product_id", product.id);
     if (!isIntroPackEligible(product, count ?? 0)) {
       return { error: "חבילת ההיכרות כבר נרכשה למספר הזה. בחרו מסלול אחר." };
