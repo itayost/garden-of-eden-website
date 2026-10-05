@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   bookingClosed,
   cancelState,
+  countedRowIds,
   isWithinBookingWindow,
   minutesUntilSlot,
   rowCounts,
@@ -68,5 +69,17 @@ describe("rowCounts and Called off Slots", () => {
     expect(rowCounts(row({ called_off: true }))).toBe(false);
     expect(rowCounts(row({ called_off: true, cancelled_at: "2026-09-12T00:00:00Z", late_cancel: true }))).toBe(false);
     expect(rowCounts(row({}))).toBe(true);
+  });
+});
+
+describe("countedRowIds", () => {
+  it("names the rows that use a session: active and late-cancelled, never called off or cancelled in time", () => {
+    const rows = [
+      { ...row({}), id: "active" },
+      { ...row({ cancelled_at: "2026-09-12T00:00:00Z", late_cancel: true }), id: "late" },
+      { ...row({ cancelled_at: "2026-09-12T00:00:00Z" }), id: "in-time" },
+      { ...row({ called_off: true }), id: "called-off" },
+    ];
+    expect(countedRowIds(rows)).toEqual(["active", "late"]);
   });
 });

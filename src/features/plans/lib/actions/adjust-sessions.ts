@@ -8,9 +8,9 @@ import { planAdjustment } from "@/lib/plans/adjustment";
 import { resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { adjustSessionsSchema, type AdjustSessionsInput } from "@/lib/validations/plans-admin";
 import { applyShrinkAfter } from "../apply-shrink";
-import { countedRowIds, loadPlanContext, STALE_READ, withPlanChange, type PlanContext } from "../plan-context";
-
-const BALANCE_CHANGED = "היתרה השתנתה בינתיים. רעננו ונסו שוב.";
+import { countedRowIds } from "@/lib/schedule/booking-rules";
+import { planStamps } from "../queries";
+import { guardRefusal, loadPlanContext, STALE_READ, withPlanChange, type PlanContext } from "../plan-context";
 
 export interface AdjustmentContext {
   planName: string;
@@ -65,24 +65,23 @@ export async function adjustSessionsAction(
   const today = israelToday();
   const counts = countsOf(ctx, today);
   if (counts.refusal) return { error: counts.refusal };
-  if (ctx.plan.sessionsTotal !== data.expectedTotal) return { error: BALANCE_CHANGED };
+  if (ctx.plan.sessionsTotal !== data.expectedTotal) return { error: STALE_READ };
 
   const plan = planAdjustment({ total: data.expectedTotal, used: counts.used, booked: counts.booked }, data.target);
   if (!plan.ok) return { error: plan.error };
 
   const { error } = await db.rpc("adjust_plan_sessions", {
     p_plan_id: data.planId,
-    p_expected_total: data.expectedTotal,
     p_new_total: plan.totalAfter,
     p_used: counts.used,
     p_counted_row_ids: countedRowIds(ctx.rows),
+    p_plan_stamps: planStamps(ctx.plans),
     p_reason: data.reason,
     p_actor: user!.id,
   });
   if (error) {
-    if (error.message.includes("balance_changed")) return { error: BALANCE_CHANGED };
-    if (error.message.includes("roster_changed")) return { error: STALE_READ };
-    if (error.message.includes("plan_not_live")) return { error: "המסלול הסתיים או בוטל" };
+    const refusal = guardRefusal(error.message);
+    if (refusal) return { error: refusal };
     console.error("[adjust] rpc failed:", error.message);
     return { error: "תיקון היתרה נכשל. נסו שוב." };
   }
