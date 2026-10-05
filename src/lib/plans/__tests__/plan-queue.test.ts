@@ -593,3 +593,27 @@ describe("the queue's state after a Cancellation", () => {
     expect(resolvePlanQueue([cancelled, next], [], TODAY).status).toBe("active");
   });
 });
+
+describe("an Early end", () => {
+  it("ends the Current plan today and the Queued plan behind it is current today", () => {
+    const ended = subscription({ notBefore: "2026-09-20", endedOn: TODAY }); // was to 19.10
+    const next = card(10, { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    const queue = resolvePlanQueue([ended, next], [], TODAY);
+
+    // The ended Plan stops covering from today: its last day is yesterday.
+    expect(queue.plans[0].endsOn).toBe("2026-10-04");
+    expect(queue.current?.plan.id).toBe(next.id);
+    expect(queue.current?.startsOn).toBe(TODAY);
+  });
+
+  it("charges a session booked later the same day to the Plan that took over", () => {
+    const ended = card(10, { notBefore: "2026-09-20", endedOn: TODAY });
+    const next = card(10, { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    const queue = resolvePlanQueue([ended, next], [session(TODAY, { start_time: "19:00:00" })], TODAY);
+
+    expect(queue.plans[1].used).toBe(1);
+    expect(queue.plans[0].used).toBe(0);
+  });
+});

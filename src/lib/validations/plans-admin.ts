@@ -164,3 +164,10 @@ export const cancelPlanWithRefundSchema = z
     path: ["amountIls"],
   });
 export type CancelPlanWithRefundInput = z.input<typeof cancelPlanWithRefundSchema>;
+
+/** An Early end: the Current plan ends today so the next one starts. Reason required. */
+export const earlyEndSchema = z.object({
+  planId: uuid,
+  reason: z.string().trim().min(2, "נדרשת סיבה").max(300, "הסיבה ארוכה מדי"),
+});
+export type EarlyEndInput = z.input<typeof earlyEndSchema>;

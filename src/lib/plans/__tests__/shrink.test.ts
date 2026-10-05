@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { QueuePlan, QueueRow } from "../plan-queue";
-import { shrinkImpact, voidRefusal } from "../shrink";
+import { earlyEndRefusal, shrinkImpact, voidRefusal } from "../shrink";
 
 const TODAY = "2026-10-05";
 
@@ -129,5 +129,43 @@ describe("voidRefusal after a Cancellation", () => {
     const cancelled = card("cancelled", 10, { status: "cancelled", endedOn: TODAY, notBefore: "2026-10-01" });
 
     expect(voidRefusal([cancelled], [], "cancelled", TODAY)).toBe("העסקה של המסלול כבר בוטלה");
+  });
+});
+
+describe("earlyEndRefusal", () => {
+  it("allows the Current plan when a Plan waits behind it", () => {
+    const current = card("current", 10);
+    const queued = card("queued", 10, { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+
+    expect(earlyEndRefusal([current, queued], [], "current", TODAY)).toBeNull();
+  });
+
+  it("refuses with nothing queued, a Plan that is not current, or one already ended", () => {
+    const current = card("current", 10);
+    const queued = card("queued", 10, { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+    const ended = card("ended", 10, { endedOn: TODAY });
+
+    expect(earlyEndRefusal([current], [], "current", TODAY)).toBe("אין מסלול ממתין שיתחיל במקומו. לסיום המסלול צריך ביטול עסקה.");
+    expect(earlyEndRefusal([current, queued], [], "queued", TODAY)).toBe("אפשר לסיים מוקדם רק את המסלול הנוכחי");
+    expect(earlyEndRefusal([ended, queued], [], "ended", TODAY)).toBe("המסלול כבר הסתיים");
+  });
+});
+
+describe("voidRefusal after an Early end", () => {
+  it("refuses a Plan that was ended early", () => {
+    const early = card("early", 10, { endedOn: TODAY, notBefore: "2026-10-01" });
+
+    expect(voidRefusal([early], [], "early", TODAY)).toBe("המסלול כבר הסתיים");
+  });
+});
+
+describe("earlyEndRefusal when the next Plan cannot start today", () => {
+  it("refuses: the Trainee would be left with no Plan until it starts", () => {
+    const current = card("current", 10);
+    const later = card("later", 10, { notBefore: "2026-10-20", createdAt: "2026-10-01T09:00:00Z" });
+
+    expect(earlyEndRefusal([current, later], [], "current", TODAY)).toBe(
+      "המסלול הבא מתחיל רק ב-20/10/2026, ולכן אי אפשר לסיים את הנוכחי היום",
+    );
   });
 });

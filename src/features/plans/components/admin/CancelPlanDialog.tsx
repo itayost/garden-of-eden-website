@@ -55,7 +55,7 @@ export function CancelPlanDialog({ planId, onClose: close }: { planId: string; o
       setPreview(result);
       setMethod((m) => (m === "none" ? result.suggestedMethod : m));
       setAmount(result.proposal?.proposed ?? 0);
-    });
+    }).catch(() => !cancelled && setLoadError("הטעינה נכשלה. סגרו ופתחו שוב."));
     return () => {
       cancelled = true;
     };

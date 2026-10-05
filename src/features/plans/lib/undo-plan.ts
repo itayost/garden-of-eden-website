@@ -23,12 +23,17 @@ export async function claimAndRecordUndo(
   },
 ): Promise<{ refundId: string } | { error: string }> {
   const planId = ctx.plan.id;
-  const { data: claimed, error: claimError } = await db
+  // Matched on both fields it was read with: an Early end in between leaves
+  // the status alone but sets ended_on, and must stop this claim.
+  const base = db
     .from("trainee_plans")
     .update({ ...undo.plan, ...(undo.plan.status === "voided" ? { ended_on: null } : {}) })
     .eq("id", planId)
-    .eq("status", ctx.plan.status)
-    .select("id");
+    .eq("status", ctx.plan.status);
+  const { data: claimed, error: claimError } = await (ctx.plan.ended_on
+    ? base.eq("ended_on", ctx.plan.ended_on)
+    : base.is("ended_on", null)
+  ).select("id");
   if (claimError) {
     console.error("[undo] plan update failed:", claimError.message);
     return { error: "הפעולה נכשלה. נסו שוב." };

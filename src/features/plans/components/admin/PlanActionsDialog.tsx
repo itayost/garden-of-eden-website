@@ -19,6 +19,7 @@ import {
   type AdminPlanRow,
 } from "../../lib/actions/admin-plans";
 import { CancelPlanDialog } from "./CancelPlanDialog";
+import { EarlyEndDialog } from "./EarlyEndDialog";
 import { VoidPlanDialog } from "./VoidPlanDialog";
 
 export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose: () => void }) {
@@ -28,6 +29,7 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
   const [sessions, setSessions] = useState(1);
   const [voiding, setVoiding] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [endingEarly, setEndingEarly] = useState(false);
 
   const run = (fn: () => Promise<{ success: true } | { error: string }>, done: string) => {
     startTransition(async () => {
@@ -42,8 +44,12 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
     });
   };
 
+  // Extend and add sessions only on a Plan still running.
+  const live = row.plan.status === "active" && !row.plan.ended_on;
+
   if (voiding) return <VoidPlanDialog planId={row.plan.id} onClose={onClose} />;
   if (cancelling) return <CancelPlanDialog planId={row.plan.id} onClose={onClose} />;
+  if (endingEarly) return <EarlyEndDialog planId={row.plan.id} onClose={onClose} />;
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
@@ -56,28 +62,30 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
         </DialogHeader>
 
         <div className="space-y-6 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="ends-on">תוקף עד</Label>
-            <div className="flex gap-2">
-              <Input
-                id="ends-on"
-                type="date"
-                value={endsOn}
-                onChange={(e) => setEndsOn(e.target.value)}
-                disabled={pending}
-              />
-              <Button
-                onClick={() =>
-                  run(() => extendPlanAction({ planId: row.plan.id, endsOn }), "התוקף עודכן")
-                }
-                disabled={pending}
-              >
-                שמירה
-              </Button>
+          {live && (
+            <div className="space-y-2">
+              <Label htmlFor="ends-on">תוקף עד</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="ends-on"
+                  type="date"
+                  value={endsOn}
+                  onChange={(e) => setEndsOn(e.target.value)}
+                  disabled={pending}
+                />
+                <Button
+                  onClick={() =>
+                    run(() => extendPlanAction({ planId: row.plan.id, endsOn }), "התוקף עודכן")
+                  }
+                  disabled={pending}
+                >
+                  שמירה
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {row.plan.sessions_total !== null && (
+          {live && row.plan.sessions_total !== null && (
             <div className="space-y-2">
               <Label htmlFor="sessions">הוספת אימונים</Label>
               <div className="flex gap-2">
@@ -105,13 +113,20 @@ export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose
             </div>
           )}
 
-          {row.plan.status !== "voided" && (
+          {row.plan.status !== "voided" && !row.plan.ended_on && (
             <Button variant="outline" className="w-full" disabled={pending} onClick={() => setVoiding(true)}>
               ביטול רישום (נרשם בטעות)
             </Button>
           )}
 
-          {row.plan.status === "active" && (
+          {/* The dialog asks the server whether it can end today, and says why not. */}
+          {row.plan.status === "active" && !row.plan.ended_on && (
+            <Button variant="outline" className="w-full" disabled={pending} onClick={() => setEndingEarly(true)}>
+              סיום מוקדם (המסלול הבא יתחיל היום)
+            </Button>
+          )}
+
+          {row.plan.status === "active" && !row.plan.ended_on && (
             <Button variant="destructive" className="w-full" disabled={pending} onClick={() => setCancelling(true)}>
               ביטול עסקה (לפי מדיניות הביטול)
             </Button>
