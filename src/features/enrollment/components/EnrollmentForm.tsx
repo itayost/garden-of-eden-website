@@ -22,6 +22,7 @@ import { enrollmentSchema, type EnrollmentInput } from "@/lib/validations/enroll
 import type { PlanProduct } from "@/types/plans";
 import type { RenewalLocks } from "@/lib/plans/bound-renewal";
 import { AgreementDeclarations } from "./AgreementDeclarations";
+import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 
 interface EnrollmentFormProps {
   product: PlanProduct;
@@ -54,10 +55,6 @@ function loginPhoneNote(locks: RenewalLocks | undefined): string {
   if (locks?.loginPhone) return "מהחשבון הקיים של החניך. לשינוי דברו איתנו בוואטסאפ.";
   if (locks) return "לחשבון הקיים עוד אין מספר להתחברות. נחבר את המספר הזה לאחר בדיקה ונעדכן בוואטסאפ.";
   return "קוד ההתחברות נשלח למספר הזה בוואטסאפ";
-}
-
-function ddmmyyyy(iso: string): string {
-  return iso.split("-").reverse().join("/");
 }
 
 export function EnrollmentForm({ product, prefill, locks, renewalToken, onSubmit }: EnrollmentFormProps) {

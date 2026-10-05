@@ -7,13 +7,12 @@ import { signAgreementToken } from "@/lib/plans/agreement-token";
 import { sendWelcomeMessage } from "@/lib/whatsapp/welcome";
 import type { WhatsAppResult } from "@/lib/whatsapp/api";
 import { sendPlanConfirmed } from "@/lib/whatsapp/plan-templates";
-import type { Order, TraineePlan } from "@/types/plans";
+import { validityText } from "@/lib/plans/confirmation-copy";
+import { israelToday } from "@/lib/utils/tasks";
+import { loadPlanPlacement } from "@/features/plans/lib/queries";
+import type { Order } from "@/types/plans";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.edengarden.co.il";
-
-function ddmmyyyy(iso: string): string {
-  return iso.split("-").reverse().join("/");
-}
 
 /**
  * Two messages after fulfillment: the app welcome to the child's login phone
@@ -44,12 +43,8 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
     .maybeSingle()) as { data: Order | null };
   if (!order || !order.profile_id) return NOTHING;
 
-  const [{ data: plan }, { data: agreement }, { data: profile }, { data: product }] =
+  const [{ data: agreement }, { data: profile }, { data: product }] =
     await Promise.all([
-      typedFrom(db, "trainee_plans")
-        .select("ends_on")
-        .eq("order_id", order.id)
-        .maybeSingle() as Promise<{ data: Pick<TraineePlan, "ends_on"> | null }>,
       typedFrom(db, "enrollment_agreements")
         .select("id")
         .eq("order_id", order.id)
@@ -82,12 +77,15 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
   }
 
   const agreementUrl = agreement ? agreementLink(agreement.id) : `${SITE_URL}/join`;
+  // The end date, and the start when the Plan waits behind another.
+  const placement = await loadPlanPlacement(db, order.profile_id, order.id, israelToday());
+  if (!placement) console.error(`[notify] order ${order.id}: no plan to date in the confirmation`);
 
   const confirmed = await sendPlanConfirmed(order.payer_phone, {
     parentName: order.parent_name,
     childName: order.child_name,
     planName: product?.name_he ?? "המסלול",
-    endsOn: plan ? ddmmyyyy(plan.ends_on) : "",
+    validity: placement ? validityText(placement.start, placement.endsOn) : "",
     agreementUrl,
   });
   if (!confirmed.success) {

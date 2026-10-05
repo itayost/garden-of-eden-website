@@ -7,6 +7,9 @@ import { verifyRenewalToken } from "@/lib/plans/renewal-token";
 import type { EnrollmentInput } from "@/lib/validations/enrollment";
 import { toLocalPhone } from "@/lib/plans/local-phone";
 import { isActiveTrainee, renewalLocks, usableAccount, type RenewalLocks } from "@/lib/plans/bound-renewal";
+import { alreadyRenewedUntil } from "@/lib/plans/plan-queue";
+import { israelToday } from "@/lib/utils/tasks";
+import { loadPlanQueues } from "../queries";
 import type { EnrollmentAgreement, PlanProduct, TraineePlan } from "@/types/plans";
 
 export interface RenewalPrefill {
@@ -16,6 +19,8 @@ export interface RenewalPrefill {
   prefill: Partial<EnrollmentInput>;
   /** Child fields that come from the account and show read-only. */
   locks: RenewalLocks;
+  /** The last day already paid for when a Plan is waiting in the queue: warn, never block. */
+  renewedUntil: string | null;
 }
 
 /**
@@ -38,7 +43,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
   };
   if (!plan) return null;
 
-  const [{ data: product }, { data: agreement }, { data: profile }] = (await Promise.all([
+  const [{ data: product }, { data: agreement }, { data: profile }, queues] = (await Promise.all([
     typedFrom(db, "plan_products")
       .select("id, is_active, once_per_trainee")
       .eq("id", plan.product_id)
@@ -55,6 +60,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
       .select("phone, full_name, birthdate, guardian_name, guardian_phone, role, deleted_at")
       .eq("id", plan.profile_id)
       .maybeSingle(),
+    loadPlanQueues(db, [plan.profile_id], israelToday()),
   ])) as [
     { data: Pick<PlanProduct, "id" | "is_active" | "once_per_trainee"> | null },
     { data: EnrollmentAgreement | null },
@@ -69,6 +75,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
         deleted_at: string | null;
       } | null;
     },
+    Awaited<ReturnType<typeof loadPlanQueues>>,
   ];
   // Checkout binds only an active trainee; the form must not lock fields the
   // server will not honour.
@@ -89,5 +96,8 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
     emergencyContactPhone: toLocalPhone(agreement?.emergency_contact_phone),
   };
 
-  return { productId, planId: plan.id, prefill, locks: renewalLocks(usable) };
+  const queue = queues.get(plan.profile_id)?.queue;
+  const renewedUntil = queue ? alreadyRenewedUntil(queue) : null;
+
+  return { productId, planId: plan.id, prefill, locks: renewalLocks(usable), renewedUntil };
 }

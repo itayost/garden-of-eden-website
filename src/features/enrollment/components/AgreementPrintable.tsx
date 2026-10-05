@@ -1,5 +1,6 @@
 import type { EnrollmentAgreement } from "@/types/plans";
 import { formatPhoneToLocal } from "@/lib/validations/common";
+import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
@@ -18,8 +19,6 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
     </section>
   );
 }
-
-const ddmmyyyy = (iso: string) => iso.split("-").reverse().join("/");
 
 /** The link travels over WhatsApp; the full number stays in the database. */
 const maskIdNumber = (id: string) =>
