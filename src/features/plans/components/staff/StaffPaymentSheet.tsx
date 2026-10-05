@@ -26,8 +26,9 @@ import { PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
 
-/** The existing-trainee sheet also records a plan paid in Arbox. */
-const SHEET_METHODS: readonly PickerMethod[] = ["cash", "transfer", "bit", "arbox"];
+const SHEET_METHODS: readonly PickerMethod[] = ["cash", "transfer", "bit"];
+/** Admins and Branch managers may also record an Arbox sale the import missed, as a repair. */
+const REPAIR_METHODS: readonly PickerMethod[] = [...SHEET_METHODS, "arbox"];
 
 interface StaffPaymentSheetProps {
   traineeId: string;
@@ -86,9 +87,16 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     else setArboxTerms(null);
   };
 
+  const canRepairWith = (id: string | null) => {
+    const branchId = context?.products.find((p) => p.id === id)?.branch_id;
+    return branchId !== undefined && (context?.arboxBranchIds.includes(branchId) ?? false);
+  };
+
   const chooseProduct = (next: string) => {
     setProductId(next);
-    if (method === "arbox") prefillArbox(next);
+    if (method !== "arbox") return;
+    if (canRepairWith(next)) prefillArbox(next);
+    else chooseMethod("cash");
   };
 
   const submitArbox = (confirmDuplicate: boolean) => {
@@ -198,7 +206,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
             <>
               <ProductPicker products={context.products} selectedId={productId} onSelect={chooseProduct} disabled={pending} />
               <PaymentMethodPicker
-                methods={SHEET_METHODS}
+                methods={canRepairWith(productId) ? REPAIR_METHODS : SHEET_METHODS}
                 method={method}
                 reference={reference}
                 onMethodChange={chooseMethod}

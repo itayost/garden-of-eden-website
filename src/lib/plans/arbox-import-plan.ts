@@ -3,15 +3,16 @@
  * inputs always give the same actions, so the dry run shows exactly what the
  * cron will write.
  *
- * Our system counts usage; Arbox only tells us a purchase happened. A
- * purchase merges into a live plan of the same kind that is itself paid in
- * Arbox, or starts after whatever is live, because two overlapping plans of
- * one kind double-count sessions (only one of them was counted) and a
- * merge into a plan paid another way would keep renewal reminders going.
+ * Our system counts usage; Arbox only tells us a purchase happened. Every
+ * purchase becomes its own Plan at the end of the Trainee's Plan queue
+ * (ADR-0008): nothing is merged or extended. It carries Arbox's sessions and
+ * keeps the end date Arbox gave it, so a Plan that waits in line has less
+ * time. The queue resolver dates it; the start here is only a forecast.
  */
 import type { ArboxPurchase } from "@/lib/arbox/purchase-rows";
-import { addDays, daysBetween, shortDate } from "@/lib/utils/iso-date";
+import { daysBetween, shortDate } from "@/lib/utils/iso-date";
 import type { PlanKind } from "@/types/plans";
+import { placeNewPlan, type NewPlanTerms, type QueuePlan, type QueueRow } from "./plan-queue";
 
 const IMPORTABLE_STATUSES: ReadonlySet<string> = new Set(["active", "activeMemberWithFutureCancel"]);
 const LONG_MEMBERSHIP_DAYS = 45;
@@ -34,20 +35,13 @@ export interface ImportTrainee {
   readonly guardianName: string | null;
 }
 
-export interface ImportPlanRow {
-  readonly id: string;
+/** A stored Plan in the queue's shape, with what the skip rules need. */
+export interface ImportPlanRow extends QueuePlan {
   readonly profileId: string;
-  readonly productKind: PlanKind;
-  readonly startsOn: string;
-  readonly endsOn: string;
-  readonly sessionsTotal: number | null;
-  readonly status: "active" | "cancelled";
   /** Israel date the row was created. */
   readonly createdOn: string;
   readonly orderPaymentMethod: string | null;
   readonly orderProviderTransactionId: string | null;
-  /** Roster sessions counted against the plan so far (countSessionsUsedFromRows). */
-  readonly sessionsUsed: number;
 }
 
 export interface ImportProducts {
@@ -62,6 +56,7 @@ export type ImportSkipReason =
   | "inactive_status"
   | "no_end_date"
   | "ended"
+  | "ends_before_start"
   | "no_sessions_left"
   | "already_imported"
   | "covered_by_hand"
@@ -79,46 +74,30 @@ export interface ImportOrderDraft {
   readonly phone: string;
 }
 
-export interface PlanShift {
-  readonly planId: string;
-  readonly expectStartsOn: string;
-  readonly startsOn: string;
-  readonly endsOn: string;
-}
-
 export interface CreatePlanAction {
   readonly type: "create";
   readonly purchase: ArboxPurchase;
   readonly profileId: string;
-  readonly chained: boolean;
+  /** A Plan ahead of it holds it past the day it could start. */
+  readonly queued: boolean;
+  /** Forecast to start after its own Arbox end: it would never run. */
+  readonly neverRuns: boolean;
   readonly order: ImportOrderDraft;
   readonly plan: {
     readonly id: string;
     readonly productId: string;
+    /** Sale-time term: the later of today and Arbox's start. */
+    readonly notBefore: string;
+    /** The queue's forecast start; the queue decides when it runs. */
     readonly startsOn: string;
-    readonly endsOn: string;
+    /** Sale-time term: Arbox's end date, which never moves. */
+    readonly fixedEndsOn: string;
     readonly sessionsTotal: number | null;
     readonly note: string;
   };
 }
 
-export interface MergePlanAction {
-  readonly type: "merge";
-  readonly purchase: ArboxPurchase;
-  readonly profileId: string;
-  readonly order: ImportOrderDraft;
-  readonly target: { readonly planId: string; readonly expectSessionsTotal: number | null; readonly expectEndsOn: string };
-  readonly set: {
-    readonly sessionsTotal: number | null;
-    readonly endsOn: string;
-    readonly clearThreeDays: boolean;
-    readonly clearLastSession: boolean;
-    readonly clearExpired: boolean;
-  };
-  readonly shifts: readonly PlanShift[];
-}
-
-export type ImportAction = CreatePlanAction | MergePlanAction;
+export type ImportAction = CreatePlanAction;
 
 export interface ImportSkip {
   readonly purchase: ArboxPurchase;
@@ -128,34 +107,23 @@ export interface ImportSkip {
 
 export interface PlanArboxImportsInput {
   readonly today: string;
+  /** The branch the import sells in. */
+  readonly branchId: string;
   readonly purchases: readonly ArboxPurchase[];
   readonly trainees: readonly ImportTrainee[];
   readonly plans: readonly ImportPlanRow[];
+  /** Each Trainee's roster rows, which the queue charges to Plans. */
+  readonly rows: ReadonlyMap<string, readonly QueueRow[]>;
   readonly importedKeys: ReadonlySet<string>;
   readonly products: ImportProducts;
 }
 
 const laterOf = (a: string, b: string): string => (a > b ? a : b);
 
-const isLive = (p: ImportPlanRow, today: string): boolean =>
-  p.status === "active" && p.endsOn >= today && p.productKind !== "addon";
-
 const isArboxPaid = (p: ImportPlanRow): boolean => p.orderPaymentMethod === "arbox";
-
-/**
- * A card with no sessions left is not running, even inside its dates, so a new
- * purchase starts now rather than after it (fulfillment does the same).
- */
-const isUsedUpCard = (p: ImportPlanRow): boolean =>
-  p.productKind === "session_card" && p.sessionsTotal !== null && p.sessionsUsed >= p.sessionsTotal;
 
 const isHandEnteredArbox = (p: ImportPlanRow): boolean =>
   isArboxPaid(p) && p.orderProviderTransactionId === null;
-
-const isSameKind = (purchase: ArboxPurchase, p: ImportPlanRow): boolean =>
-  purchase.kind === "card"
-    ? p.productKind === "session_card"
-    : p.productKind === "subscription" || p.productKind === "term";
 
 function skipReason(
   p: ArboxPurchase,
@@ -167,6 +135,7 @@ function skipReason(
   if (!IMPORTABLE_STATUSES.has(p.status)) return "inactive_status";
   if (p.endDate === null) return "no_end_date";
   if (p.endDate < input.today) return "ended";
+  if (p.startDate > p.endDate) return "ends_before_start";
   if (p.kind === "card" && (p.sessionsLeft === null || p.sessionsLeft <= 0)) return "no_sessions_left";
   if (input.importedKeys.has(purchaseKey(p))) return "already_imported";
   if (plans.some((pl) => isHandEnteredArbox(pl) && pl.createdOn >= p.purchaseDate)) return "covered_by_hand";
@@ -203,98 +172,54 @@ interface Planned {
   readonly plans: readonly ImportPlanRow[];
 }
 
-function planMerge(
-  p: ArboxPurchase,
-  target: ImportPlanRow,
-  live: readonly ImportPlanRow[],
-  plans: readonly ImportPlanRow[],
-  order: ImportOrderDraft,
-  today: string,
-): Planned {
-  const endsOn = laterOf(target.endsOn, p.endDate as string);
-  const grew = endsOn > target.endsOn;
-  const isCard = p.kind === "card";
-  const sessionsTotal = isCard ? (target.sessionsTotal ?? 0) + (p.sessionsLeft as number) : target.sessionsTotal;
-  const shifts: PlanShift[] = grew
-    ? live
-        .filter((pl) => pl.id !== target.id && pl.startsOn > today && pl.startsOn <= endsOn)
-        .map((pl) => {
-          const by = daysBetween(pl.startsOn, endsOn) + 1;
-          return { planId: pl.id, expectStartsOn: pl.startsOn, startsOn: addDays(pl.startsOn, by), endsOn: addDays(pl.endsOn, by) };
-        })
-    : [];
-  const shiftById = new Map(shifts.map((s) => [s.planId, s]));
-
-  const action: MergePlanAction = {
-    type: "merge",
-    purchase: p,
-    profileId: target.profileId,
-    order,
-    target: { planId: target.id, expectSessionsTotal: target.sessionsTotal, expectEndsOn: target.endsOn },
-    set: { sessionsTotal, endsOn, clearThreeDays: grew, clearLastSession: isCard || grew, clearExpired: isCard || grew },
-    shifts,
+function planOne(p: ArboxPurchase, trainee: ImportTrainee, plans: readonly ImportPlanRow[], input: PlanArboxImportsInput): Planned {
+  const { today } = input;
+  const product = productFor(p, input.products);
+  const order = orderDraft(p, trainee, product.id);
+  const notBefore = laterOf(today, p.startDate);
+  const fixedEndsOn = p.endDate as string;
+  const terms: NewPlanTerms = {
+    kind: product.kind,
+    branchId: input.branchId,
+    sessionsTotal: p.kind === "card" ? p.sessionsLeft : null,
+    durationDays: daysBetween(notBefore, fixedEndsOn) + 1,
+    notBefore,
+    fixedEndsOn,
   };
-  const next = plans.map((pl) => {
-    if (pl.id === target.id) return { ...pl, endsOn, sessionsTotal };
-    const shift = shiftById.get(pl.id);
-    return shift ? { ...pl, startsOn: shift.startsOn, endsOn: shift.endsOn } : pl;
-  });
-  return { action, plans: next };
-}
-
-function planCreate(
-  p: ArboxPurchase,
-  trainee: ImportTrainee,
-  live: readonly ImportPlanRow[],
-  plans: readonly ImportPlanRow[],
-  product: { id: string; kind: PlanKind },
-  order: ImportOrderDraft,
-  today: string,
-): Planned {
-  const windowStart = laterOf(today, p.startDate);
-  const span = daysBetween(windowStart, p.endDate as string);
-  const latestEnd = live
-    .filter((pl) => !isUsedUpCard(pl))
-    .reduce<string | null>((acc, pl) => (acc === null || pl.endsOn > acc ? pl.endsOn : acc), null);
-  const startsOn = latestEnd === null ? windowStart : laterOf(addDays(latestEnd, 1), windowStart);
-  const endsOn = addDays(startsOn, span);
-  const sessionsTotal = p.kind === "card" ? p.sessionsLeft : null;
+  const { startsOn } = placeNewPlan(plans, input.rows.get(trainee.profileId) ?? [], terms, today);
   const id = newPlanId(order.key);
 
   const action: CreatePlanAction = {
     type: "create",
     purchase: p,
     profileId: trainee.profileId,
-    chained: latestEnd !== null,
+    queued: startsOn > notBefore,
+    neverRuns: startsOn > fixedEndsOn,
     order,
-    plan: { id, productId: product.id, startsOn, endsOn, sessionsTotal, note: `Arbox import ${p.itemName} ${p.purchaseDate} (${p.membershipUserId})` },
+    plan: {
+      id,
+      productId: product.id,
+      notBefore,
+      startsOn,
+      fixedEndsOn,
+      sessionsTotal: terms.sessionsTotal,
+      note: `Arbox import ${p.itemName} ${p.purchaseDate} (${p.membershipUserId})`,
+    },
   };
+  // Later purchases in the same run queue behind this one: it sorts after
+  // every stored Plan, in the order the run creates them, and before the
+  // Plan placeNewPlan is placing.
   const created: ImportPlanRow = {
+    ...terms,
     id,
-    profileId: trainee.profileId,
-    productKind: product.kind,
-    startsOn,
-    endsOn,
-    sessionsTotal,
     status: "active",
+    createdAt: `\ufffe${String(plans.length).padStart(4, "0")}`,
+    profileId: trainee.profileId,
     createdOn: today,
     orderPaymentMethod: "arbox",
     orderProviderTransactionId: order.key,
-    sessionsUsed: 0,
   };
   return { action, plans: [...plans, created] };
-}
-
-function planOne(p: ArboxPurchase, trainee: ImportTrainee, plans: readonly ImportPlanRow[], input: PlanArboxImportsInput): Planned {
-  const live = plans.filter((pl) => isLive(pl, input.today));
-  const target = live
-    .filter((pl) => isArboxPaid(pl) && isSameKind(p, pl))
-    .reduce<ImportPlanRow | null>((acc, pl) => (acc === null || pl.endsOn > acc.endsOn ? pl : acc), null);
-  const product = productFor(p, input.products);
-  const order = orderDraft(p, trainee, product.id);
-  return target
-    ? planMerge(p, target, live, plans, order, input.today)
-    : planCreate(p, trainee, live, plans, product, order, input.today);
 }
 
 const byPurchaseOrder = (a: ArboxPurchase, b: ArboxPurchase): number =>

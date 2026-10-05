@@ -24,9 +24,9 @@ async function main(): Promise<void> {
   console.log(`${actions.length} to apply:`);
   for (const a of actions) {
     const p = a.purchase;
-    const what = a.type === "create"
-      ? `${a.chained ? "chain" : "new"} ${a.plan.startsOn} -> ${a.plan.endsOn}, sessions ${a.plan.sessionsTotal ?? "-"}`
-      : `merge into ${a.target.planId}: ends ${a.target.expectEndsOn} -> ${a.set.endsOn}, sessions ${a.target.expectSessionsTotal ?? "-"} -> ${a.set.sessionsTotal ?? "-"}${a.shifts.length ? `, moves ${a.shifts.length} queued` : ""}`;
+    const { plan } = a;
+    const neverRuns = a.neverRuns ? " (queued past Arbox's end: never runs)" : "";
+    const what = `${a.queued ? "queue" : "new"} ${plan.startsOn} -> ${plan.fixedEndsOn} (fixed), sessions ${plan.sessionsTotal ?? "-"}${neverRuns}`;
     console.log(`  ${name(a.profileId)} | ${p.itemName} ${p.purchaseDate} (${p.membershipUserId}) | ${what} | ${a.order.amountIls} ILS`);
   }
 
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   }
 
   if (!DRY_RUN) {
-    console.log(`\napplied: created ${result.created}, merged ${result.merged}, already imported ${result.alreadyImported}, failed ${result.failed}, leftovers repaired ${result.healed}`);
+    console.log(`\napplied: created ${result.created} (${result.pastTheirEnd} past their end), already imported ${result.alreadyImported}, failed ${result.failed}, leftovers repaired ${result.healed}`);
   }
 }
 

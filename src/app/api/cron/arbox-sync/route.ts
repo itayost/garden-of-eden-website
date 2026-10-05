@@ -59,6 +59,9 @@ export async function GET(request: NextRequest) {
         const { result } = await runArboxPurchaseImport({ dryRun: false });
         purchasesResult = result;
         result.touchedProfileIds.forEach(revalidateStaffSurfaces);
+        if (result.pastTheirEnd > 0) {
+          console.warn(`[Arbox Sync] ${result.pastTheirEnd} imported plan(s) queued past their Arbox end; check the trainees' plans`);
+        }
       } catch (error) {
         purchasesError = error instanceof Error ? error.message : String(error);
         console.error("[Arbox Sync] Purchase import failed:", purchasesError);

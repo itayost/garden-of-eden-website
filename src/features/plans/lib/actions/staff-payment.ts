@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
-import { isInBranchScope } from "@/lib/branches/branch-scope";
+import { canManageBranches, isInBranchScope } from "@/lib/branches/branch-scope";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
@@ -45,6 +45,8 @@ export interface StaffPaymentContext {
   startsAfterCurrent: boolean;
   /** A Card ahead can run out before its date, which brings the start forward. */
   startsWhenCardRunsOut: boolean;
+  /** Branches where the caller (Admin, or their Branch manager) may record an Arbox sale by hand, as a repair. */
+  arboxBranchIds: string[];
   morningConfigured: boolean;
   parentPhone: string | null;
 }
@@ -78,7 +80,7 @@ export async function listSellableProductsAction(): Promise<PlanProduct[]> {
 export async function getStaffPaymentContextAction(
   traineeId: string,
 ): Promise<StaffPaymentContext | { error: string }> {
-  const { error: authError } = await verifyAdminOrTrainer();
+  const { error: authError, profile: staff } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   if (!isValidUUID(traineeId)) return { error: "מזהה לא תקין" };
   const scopeError = await assertTraineeInScope(traineeId);
@@ -92,11 +94,13 @@ export async function getStaffPaymentContextAction(
   if (!profile) return { error: "המתאמן לא נמצא" };
 
   const today = israelToday();
-  const [products, plansByProfile, rowsByProfile] = await Promise.all([
+  const [products, plansByProfile, rowsByProfile, scopeResult] = await Promise.all([
     sellableProducts(db, memberships.get(traineeId) ?? []),
     loadStoredPlans(db, [traineeId]),
     loadQueueRows(db, [traineeId]),
+    getBranchScopeAction(),
   ]);
+  const managed = "error" in scopeResult ? [] : scopeResult.data.managedBranchIds;
   const plans = plansByProfile.get(traineeId) ?? [];
   const rows = rowsByProfile.get(traineeId) ?? [];
   const queue = resolvePlanQueue(plans, rows, today);
@@ -116,6 +120,9 @@ export async function getStaffPaymentContextAction(
     startsOn: placeNewPlan(plans, rows, probe, today).startsOn,
     startsAfterCurrent: ahead.length > 0,
     startsWhenCardRunsOut: ahead.some((e) => e.sessionsLeft !== null && e.endsOn === e.expiresOn),
+    arboxBranchIds: (memberships.get(traineeId) ?? []).filter((b) =>
+      canManageBranches(staff!.role, managed, [b]),
+    ),
     morningConfigured: isMorningConfigured(),
     parentPhone: profile.guardian_phone ?? profile.phone ?? null,
   };

@@ -6,12 +6,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type {
-  CreatePlanAction,
-  ImportAction,
-  ImportOrderDraft,
-  MergePlanAction,
-} from "@/lib/plans/arbox-import-plan";
+import type { ImportAction, ImportOrderDraft } from "@/lib/plans/arbox-import-plan";
 import type { Database } from "@/types/database";
 import { daysBetween } from "@/lib/utils/iso-date";
 
@@ -65,8 +60,7 @@ async function markFulfilled(db: Db, orderId: string): Promise<void> {
  * Import orders the last run left unstamped: the order landed but the run
  * died or failed before (or while) writing the plan. One with a plan is
  * finished and gets its stamp; one without is deleted so the purchase is
- * retried. If such an order was a merge that did land, the retry fails the
- * merge guard every night rather than adding the sessions twice.
+ * retried.
  */
 export async function healLeftoverOrders(db: Db): Promise<number> {
   const { data, error } = await db
@@ -101,24 +95,26 @@ async function logGrant(db: Db, a: ImportAction, orderId: string, planId: string
   if (error) console.error(`[arbox-import] activity log failed:`, error.message);
 }
 
-async function applyCreate(db: Db, branchId: string, a: CreatePlanAction, orderId: string): Promise<string | null> {
+/** A new Plan at the end of the Trainee's Plan queue, on Arbox's terms (ADR-0008). */
+async function applyCreate(db: Db, branchId: string, a: ImportAction, orderId: string): Promise<string | null> {
+  const { plan } = a;
   const { data, error } = await db
     .from("trainee_plans")
     .insert({
       profile_id: a.profileId,
-      product_id: a.plan.productId,
+      product_id: plan.productId,
       branch_id: branchId,
       order_id: orderId,
-      starts_on: a.plan.startsOn,
-      ends_on: a.plan.endsOn,
-      sessions_total: a.plan.sessionsTotal,
-      // An Arbox purchase keeps the end date Arbox gave it (ADR-0008).
-      not_before: a.plan.startsOn,
-      duration_days: daysBetween(a.plan.startsOn, a.plan.endsOn) + 1,
-      fixed_ends_on: a.plan.endsOn,
+      // The forecast window; a Plan queued past Arbox's end still needs one.
+      starts_on: plan.startsOn,
+      ends_on: plan.fixedEndsOn < plan.startsOn ? plan.startsOn : plan.fixedEndsOn,
+      sessions_total: plan.sessionsTotal,
+      not_before: plan.notBefore,
+      duration_days: daysBetween(plan.notBefore, plan.fixedEndsOn) + 1,
+      fixed_ends_on: plan.fixedEndsOn,
       status: "active",
       source: "manual",
-      note: a.plan.note,
+      note: plan.note,
       created_by: null,
     })
     .select("id")
@@ -130,73 +126,19 @@ async function applyCreate(db: Db, branchId: string, a: CreatePlanAction, orderI
   return data.id;
 }
 
-async function applyMerge(db: Db, a: MergePlanAction, targetId: string, resolve: (id: string) => string | null): Promise<string | null> {
-  const clears = {
-    ...(a.set.clearThreeDays ? { reminded_3_days_at: null } : {}),
-    ...(a.set.clearLastSession ? { reminded_last_session_at: null } : {}),
-    ...(a.set.clearExpired ? { reminded_expired_at: null } : {}),
-  };
-  const base = db
-    .from("trainee_plans")
-    .update({ sessions_total: a.set.sessionsTotal, ends_on: a.set.endsOn, fixed_ends_on: a.set.endsOn, ...clears })
-    .eq("id", targetId)
-    .eq("ends_on", a.target.expectEndsOn);
-  // Guarded by the values the plan was read with: a staff edit in between
-  // makes this match nothing, and the purchase retries next night.
-  const guarded = a.target.expectSessionsTotal === null
-    ? base.is("sessions_total", null)
-    : base.eq("sessions_total", a.target.expectSessionsTotal);
-  const { data, error } = await guarded.select("id");
-  if (error || (data ?? []).length === 0) {
-    console.error(`[arbox-import] merge of ${a.order.key} into ${targetId} failed:`, error?.message ?? "plan changed");
-    return null;
-  }
-  for (const shift of a.shifts) {
-    const planId = resolve(shift.planId);
-    if (!planId) continue;
-    const { error: shiftError } = await db
-      .from("trainee_plans")
-      .update({ starts_on: shift.startsOn, ends_on: shift.endsOn })
-      .eq("id", planId)
-      .eq("starts_on", shift.expectStartsOn);
-    if (shiftError) console.error(`[arbox-import] moving queued plan ${planId} failed:`, shiftError.message);
-    // The queue reads a fixed end, not ends_on: move it too, or the shifted
-    // Plan would start after its own end and never run.
-    const { error: fixedError } = await db
-      .from("trainee_plans")
-      .update({ fixed_ends_on: shift.endsOn })
-      .eq("id", planId)
-      .not("fixed_ends_on", "is", null);
-    if (fixedError) console.error(`[arbox-import] moving the fixed end of ${planId} failed:`, fixedError.message);
-  }
-  return targetId;
-}
+export type Outcome = "created" | "alreadyImported" | "failed";
 
-export type Outcome = "created" | "merged" | "alreadyImported" | "failed";
-
-export async function applyOne(
-  db: Db,
-  branchId: string,
-  a: ImportAction,
-  resolve: (id: string) => string | null,
-  remember: (placeholder: string, realId: string) => void,
-): Promise<Outcome> {
-  const targetId = a.type === "merge" ? resolve(a.target.planId) : null;
-  if (a.type === "merge" && !targetId) return "failed";
-
+export async function applyOne(db: Db, branchId: string, a: ImportAction): Promise<Outcome> {
   const order = await insertOrder(db, branchId, a.order);
   if (order === "duplicate") return "alreadyImported";
   if (order === "failed") return "failed";
 
-  const planId = a.type === "create"
-    ? await applyCreate(db, branchId, a, order.id)
-    : await applyMerge(db, a, targetId as string, resolve);
+  const planId = await applyCreate(db, branchId, a, order.id);
   if (!planId) {
     await deleteOrder(db, order.id);
     return "failed";
   }
-  if (a.type === "create") remember(a.plan.id, planId);
   await markFulfilled(db, order.id);
   await logGrant(db, a, order.id, planId);
-  return a.type === "create" ? "created" : "merged";
+  return "created";
 }

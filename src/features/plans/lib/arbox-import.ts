@@ -8,7 +8,6 @@
 import { fetchArboxPurchases } from "@/lib/arbox/purchases";
 import type { UnmatchedCard } from "@/lib/arbox/purchase-rows";
 import {
-  newPlanId,
   planArboxImports,
   type ImportAction,
   type ImportPlanRow,
@@ -18,7 +17,7 @@ import {
   type ImportTrainee,
   purchaseKey,
 } from "@/lib/plans/arbox-import-plan";
-import { resolvePlanQueue, type QueueRow } from "@/lib/plans/plan-queue";
+import type { QueueRow } from "@/lib/plans/plan-queue";
 import { toQueuePlan } from "@/lib/plans/queue-plan-row";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { applyOne, healLeftoverOrders, type Db, type Outcome } from "./arbox-import-apply";
@@ -34,6 +33,7 @@ interface OurSide {
   readonly branchId: string;
   readonly trainees: ImportTrainee[];
   readonly plans: ImportPlanRow[];
+  readonly rows: Map<string, QueueRow[]>;
   readonly importedKeys: Set<string>;
   readonly products: ImportProducts;
 }
@@ -104,8 +104,14 @@ async function loadRosterRows(db: Db, profileIds: readonly string[], since: stri
   return pages.flat();
 }
 
-async function loadPlans(db: Db, profileIds: readonly string[], today: string): Promise<ImportPlanRow[]> {
-  if (profileIds.length === 0) return [];
+interface StoredSide {
+  readonly plans: ImportPlanRow[];
+  readonly rows: Map<string, QueueRow[]>;
+}
+
+/** Every Plan of these Trainees in the queue's shape, and the roster rows the queue charges. */
+async function loadPlans(db: Db, profileIds: readonly string[]): Promise<StoredSide> {
+  if (profileIds.length === 0) return { plans: [], rows: new Map() };
   const { data, error } = await db
     .from("trainee_plans")
     .select("id, profile_id, branch_id, starts_on, ends_on, sessions_total, not_before, duration_days, fixed_ends_on, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id)")
@@ -118,50 +124,37 @@ async function loadPlans(db: Db, profileIds: readonly string[], today: string): 
     product: { kind: string } | null;
     order: { payment_method: string | null; provider_transaction_id: string | null } | null;
   };
-  const plans = (data ?? []) as unknown as Row[];
-  // Usage comes from each Trainee's Plan queue, which is walked from the
-  // first Plan, so the rosters are read from the earliest start on.
-  const since = plans.reduce<string | null>((acc, r) => {
-    const earliest = r.not_before !== null && r.not_before < r.starts_on ? r.not_before : r.starts_on;
-    return acc === null || earliest < acc ? earliest : acc;
-  }, null);
-  const roster = since === null ? [] : await loadRosterRows(db, profileIds, since);
-  const usedByPlan = new Map<string, number>();
-  for (const profileId of new Set(plans.map((r) => r.profile_id))) {
-    const rows: QueueRow[] = roster
-      .filter((x) => x.trainee_id === profileId && x.slot)
-      .map((x) => ({
-        id: x.id,
-        schedule_date: x.slot!.schedule_date,
-        start_time: x.slot!.start_time,
-        branch_id: x.slot!.branch_id,
-        cancelled_at: x.cancelled_at,
-        late_cancel: x.late_cancel,
-      }));
-    const own = plans
-      .filter((r) => r.profile_id === profileId)
-      .map((r) =>
-        toQueuePlan({
-          ...r,
-          status: r.status === "cancelled" ? ("cancelled" as const) : ("active" as const),
-          product: { kind: (r.product?.kind ?? "addon") as PlanKind },
-        }),
-      );
-    for (const entry of resolvePlanQueue(own, rows, today).plans) usedByPlan.set(entry.plan.id, entry.used);
-  }
-  return plans.map((r) => ({
-    id: r.id,
+  const stored = (data ?? []) as unknown as Row[];
+  const plans: ImportPlanRow[] = stored.map((r) => ({
+    ...toQueuePlan({
+      ...r,
+      status: r.status === "cancelled" ? ("cancelled" as const) : ("active" as const),
+      product: { kind: (r.product?.kind ?? "addon") as PlanKind },
+    }),
     profileId: r.profile_id,
-    productKind: (r.product?.kind ?? "addon") as PlanKind,
-    startsOn: r.starts_on,
-    endsOn: r.ends_on,
-    sessionsTotal: r.sessions_total,
-    status: r.status === "cancelled" ? "cancelled" : "active",
     createdOn: israelToday(new Date(r.created_at)),
     orderPaymentMethod: r.order?.payment_method ?? null,
     orderProviderTransactionId: r.order?.provider_transaction_id ?? null,
-    sessionsUsed: usedByPlan.get(r.id) ?? 0,
   }));
+
+  // The queue is walked from each Trainee's first Plan, so the rosters are
+  // read from the earliest day any Plan may start.
+  const since = plans.reduce<string | null>((acc, p) => (acc === null || p.notBefore < acc ? p.notBefore : acc), null);
+  const roster = since === null ? [] : await loadRosterRows(db, profileIds, since);
+  const rows = new Map<string, QueueRow[]>();
+  for (const x of roster) {
+    if (!x.slot) continue;
+    const row: QueueRow = {
+      id: x.id,
+      schedule_date: x.slot.schedule_date,
+      start_time: x.slot.start_time,
+      branch_id: x.slot.branch_id,
+      cancelled_at: x.cancelled_at,
+      late_cancel: x.late_cancel,
+    };
+    rows.set(x.trainee_id, [...(rows.get(x.trainee_id) ?? []), row]);
+  }
+  return { plans, rows };
 }
 
 const KEY_CHUNK = 200;
@@ -204,15 +197,15 @@ async function loadProducts(db: Db, branchId: string): Promise<ImportProducts> {
   };
 }
 
-async function loadOurSide(db: Db, today: string, keys: readonly string[]): Promise<OurSide> {
+async function loadOurSide(db: Db, keys: readonly string[]): Promise<OurSide> {
   const branchId = await loadBranchId(db);
   const trainees = await loadTrainees(db, branchId);
-  const [plans, importedKeys, products] = await Promise.all([
-    loadPlans(db, trainees.map((t) => t.profileId), today),
+  const [{ plans, rows }, importedKeys, products] = await Promise.all([
+    loadPlans(db, trainees.map((t) => t.profileId)),
     loadImportedKeys(db, keys),
     loadProducts(db, branchId),
   ]);
-  return { branchId, trainees, plans, importedKeys, products };
+  return { branchId, trainees, plans, rows, importedKeys, products };
 }
 
 export interface ImportRunResult {
@@ -220,7 +213,8 @@ export interface ImportRunResult {
   readonly purchases: number;
   readonly unmatchedCards: number;
   readonly created: number;
-  readonly merged: number;
+  /** Created Plans forecast to start after their own Arbox end, so they would never run. */
+  readonly pastTheirEnd: number;
   readonly alreadyImported: number;
   readonly failed: number;
   /** Leftover import orders repaired or removed before planning. */
@@ -248,27 +242,25 @@ export async function runArboxPurchaseImport(opts: { dryRun: boolean; now?: Date
   const today = israelToday(now);
   const { purchases, unmatchedCards } = await fetchArboxPurchases(now);
   const healed = opts.dryRun ? 0 : await healLeftoverOrders(db);
-  const ours = await loadOurSide(db, today, purchases.map(purchaseKey));
+  const ours = await loadOurSide(db, purchases.map(purchaseKey));
   const { actions, skips } = planArboxImports({
     today,
+    branchId: ours.branchId,
     purchases,
     trainees: ours.trainees,
     plans: ours.plans,
+    rows: ours.rows,
     importedKeys: ours.importedKeys,
     products: ours.products,
   });
   const traineeNames = new Map(ours.trainees.map((t) => [t.profileId, t.name]));
 
-  const realIds = new Map<string, string>();
-  const resolve = (id: string): string | null => (id.startsWith(newPlanId("")) ? realIds.get(id) ?? null : id);
   const outcomes: Outcome[] = [];
   if (!opts.dryRun) {
-    for (const a of actions) {
-      outcomes.push(await applyOne(db, ours.branchId, a, resolve, (p, r) => realIds.set(p, r)));
-    }
+    for (const a of actions) outcomes.push(await applyOne(db, ours.branchId, a));
   }
   const count = (o: Outcome) => outcomes.filter((x) => x === o).length;
-  const touched = actions.filter((_, i) => outcomes[i] === "created" || outcomes[i] === "merged").map((a) => a.profileId);
+  const touched = actions.filter((_, i) => outcomes[i] === "created").map((a) => a.profileId);
 
   return {
     result: {
@@ -276,7 +268,7 @@ export async function runArboxPurchaseImport(opts: { dryRun: boolean; now?: Date
       purchases: purchases.length,
       unmatchedCards: unmatchedCards.length,
       created: count("created"),
-      merged: count("merged"),
+      pastTheirEnd: actions.filter((a, i) => outcomes[i] === "created" && a.neverRuns).length,
       alreadyImported: count("alreadyImported"),
       failed: count("failed"),
       healed,
