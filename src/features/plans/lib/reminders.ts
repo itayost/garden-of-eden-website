@@ -2,12 +2,12 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { dueReminderMilestone } from "@/lib/plans/plan-status";
+import { dueReminder } from "@/lib/plans/plan-queue";
 import { REMINDED_COLUMN, reminderReason } from "@/lib/plans/reminder-copy";
 import { sendPlanReminder } from "@/lib/whatsapp/plan-templates";
 import type { EnrollmentAgreement, TraineePlan } from "@/types/plans";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
-import { loadPlansWithUsage } from "./queries";
+import { loadPlanQueues } from "./queries";
 import { buildRenewalUrl } from "./renewal-link";
 
 export interface ReminderRunResult {
@@ -125,9 +125,10 @@ async function loadArboxRenewers(
 }
 
 /**
- * One reminder per plan per milestone, to the guardian phone. Every active
- * plan is evaluated: the ones with nothing due are skipped by
- * dueReminderMilestone, which also refuses to repeat a sent milestone.
+ * One reminder per milestone at the end of each Plan queue, to the guardian
+ * phone. Every Trainee with an active plan is evaluated: dueReminder skips a
+ * queue with nothing due, refuses to repeat a sent milestone, and stays
+ * silent while a paid Plan is queued.
  */
 export async function runPlanReminders(today: string): Promise<ReminderRunResult> {
   const db = createAdminClient();
@@ -151,7 +152,7 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   }
 
   const profileIds = Array.from(new Set((activePlans ?? []).map((p) => p.profile_id)));
-  const plans = await loadPlansWithUsage(db, profileIds, today);
+  const queues = await loadPlanQueues(db, profileIds, today);
 
   if (profileIds.length === 0) return result;
   const { data: profiles } = await db
@@ -165,10 +166,11 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
     return result;
   }
 
-  for (const [profileId, { plan, product, sessionsUsed }] of plans) {
+  for (const [profileId, { queue }] of queues) {
     if (arboxRenewers.has(profileId)) continue;
-    const milestone = dueReminderMilestone(plan, sessionsUsed, today);
-    if (!milestone) continue;
+    const due = dueReminder(queue);
+    if (!due) continue;
+    const { milestone, plan } = due;
 
     const profile = profileById.get(profileId);
     if (!profile?.guardian_phone) continue;
@@ -176,7 +178,7 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
     const sent = await sendPlanReminder(profile.guardian_phone, {
       parentName: profile.guardian_name ?? "הורה יקר",
       childName: profile.full_name ?? "החניך",
-      planName: product.name_he,
+      planName: plan.product?.name_he ?? "מסלול",
       reason: reminderReason(milestone),
       renewUrl: buildRenewalUrl(plan.id),
     });

@@ -1,5 +1,5 @@
 import { addDays, daysBetween } from "@/lib/utils/iso-date";
-import type { PlanKind, TraineePlan } from "@/types/plans";
+import type { PlanKind } from "@/types/plans";
 
 /** How far ahead a trainee may book, inclusive of today. */
 export const BOOKING_WINDOW_DAYS = 14;
@@ -79,37 +79,10 @@ export function weeklyBookingCount(
   ).length;
 }
 
-/** Future seats the trainee holds inside the plan window: promised sessions. */
-export function countReservedFromRows(
-  rows: readonly RosterRowLite[],
-  plan: Pick<TraineePlan, "starts_on" | "ends_on" | "branch_id">,
-  today: string,
-): number {
-  return rows.filter(
-    (r) =>
-      r.branch_id === plan.branch_id &&
-      r.cancelled_at === null &&
-      r.schedule_date > today &&
-      r.schedule_date >= plan.starts_on &&
-      r.schedule_date <= plan.ends_on,
-  ).length;
-}
-
-/** Sessions still bookable on a card: total minus used minus future seats held. Null for time plans. */
-export function countSessionsLeft(
-  plan: Pick<TraineePlan, "sessions_total">,
-  used: number,
-  reserved: number,
-): number | null {
-  if (plan.sessions_total === null) return null;
-  return Math.max(plan.sessions_total - used - reserved, 0);
-}
-
 export type BookingBlock =
   | "no_plan"
   | "plan_cancelled"
   | "plan_not_running"
-  | "addon"
   | "no_sessions_left"
   | "weekly_cap"
   | "full"
@@ -124,7 +97,6 @@ export const BOOKING_BLOCK_LABELS_HE: Record<BookingBlock, string> = {
   no_plan: "כדי להירשם לאימונים צריך מסלול פעיל",
   plan_cancelled: "המסלול בוטל. דברו איתנו כדי לחדש",
   plan_not_running: "המסלול לא בתוקף בתאריך הזה",
-  addon: "מפגש ליווי לא נרשם דרך לוח האימונים",
   no_sessions_left: "נוצלו כל האימונים בכרטיסייה",
   weekly_cap: `הגעת ל-${WEEKLY_CAP} אימונים השבוע`,
   full: "האימון מלא",
@@ -135,33 +107,3 @@ export const BOOKING_BLOCK_LABELS_HE: Record<BookingBlock, string> = {
   not_found: "האימון לא נמצא",
   staff_only: "האימון הזה נרשם דרך הצוות בלבד",
 };
-
-export interface EligibilityInput {
-  plan: Pick<TraineePlan, "status" | "starts_on" | "ends_on" | "sessions_total"> | null;
-  productKind: PlanKind | null;
-  /** Sessions used so far, per countSessionsUsedFromRows. */
-  used: number;
-  /** Future seats held, per countReservedFromRows. */
-  reserved: number;
-  /** Trainings already in the slot's week, per weeklyBookingCount. */
-  weekCount: number;
-  slotDate: string;
-}
-
-/** The plan side of "may this trainee take this slot". Capacity and timing are checked elsewhere. */
-export function bookingEligibility(input: EligibilityInput): { ok: true } | { ok: false; block: BookingBlock } {
-  const { plan, productKind } = input;
-  if (!plan || !productKind) return { ok: false, block: "no_plan" };
-  if (plan.status === "cancelled") return { ok: false, block: "plan_cancelled" };
-  if (productKind === "addon") return { ok: false, block: "addon" };
-  if (input.slotDate < plan.starts_on || input.slotDate > plan.ends_on) {
-    return { ok: false, block: "plan_not_running" };
-  }
-  if (plan.sessions_total !== null && plan.sessions_total - input.used - input.reserved < 1) {
-    return { ok: false, block: "no_sessions_left" };
-  }
-  if (WEEKLY_CAP_KINDS.includes(productKind) && input.weekCount >= WEEKLY_CAP) {
-    return { ok: false, block: "weekly_cap" };
-  }
-  return { ok: true };
-}

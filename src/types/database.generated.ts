@@ -3540,8 +3540,11 @@ export type Database = {
           branch_id: string
           created_at: string
           created_by: string | null
+          duration_days: number | null
           ends_on: string
+          fixed_ends_on: string | null
           id: string
+          not_before: string | null
           note: string | null
           order_id: string | null
           product_id: string
@@ -3559,8 +3562,11 @@ export type Database = {
           branch_id: string
           created_at?: string
           created_by?: string | null
+          duration_days?: number | null
           ends_on: string
+          fixed_ends_on?: string | null
           id?: string
+          not_before?: string | null
           note?: string | null
           order_id?: string | null
           product_id: string
@@ -3578,8 +3584,11 @@ export type Database = {
           branch_id?: string
           created_at?: string
           created_by?: string | null
+          duration_days?: number | null
           ends_on?: string
+          fixed_ends_on?: string | null
           id?: string
+          not_before?: string | null
           note?: string | null
           order_id?: string | null
           product_id?: string
@@ -4743,6 +4752,19 @@ export type Database = {
           p_trainee_id: string
           p_trainee_name: string
           p_weekly_cap: number
+        }
+        Returns: {
+          max_trainees: number
+          roster_id: string
+          seats_taken: number
+        }[]
+      }
+      book_slot_checked: {
+        Args: {
+          p_counted_row_ids: string[]
+          p_slot_id: string
+          p_trainee_id: string
+          p_trainee_name: string
         }
         Returns: {
           max_trainees: number

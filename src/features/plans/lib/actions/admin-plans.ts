@@ -15,11 +15,13 @@ import {
   extendPlanSchema,
 } from "@/lib/validations/plans-admin";
 import type { EnrollmentAgreement, Order, PlanStatus } from "@/types/plans";
-import { loadPlansWithUsage, type PlanWithUsage } from "../queries";
+import { resolvePlanQueue } from "@/lib/plans/plan-queue";
+import { daysBetween } from "@/lib/utils/iso-date";
+import { loadPlanQueues, loadQueueRows, loadStoredPlans, type PlanQueueView } from "../queries";
 
 type ActionResult = { success: true } | { error: string };
 
-export type AdminPlanRow = PlanWithUsage & {
+export type AdminPlanRow = PlanQueueView & {
   traineeName: string;
   guardianName: string | null;
   guardianPhone: string | null;
@@ -61,7 +63,7 @@ export async function listPlansAction(filter: {
   const all = await loadAdminRows(db, profileIds);
   return all
     .filter((row) => !filter.status || row.status === filter.status)
-    .sort((a, b) => (a.plan.ends_on < b.plan.ends_on ? 1 : -1));
+    .sort((a, b) => (a.endsOn < b.endsOn ? 1 : -1));
 }
 
 /** One trainee's current plan for the user page; null when they have none. */
@@ -79,7 +81,7 @@ async function loadAdminRows(
 ): Promise<AdminPlanRow[]> {
   if (profileIds.length === 0) return [];
   const [plans, { data: profiles }] = await Promise.all([
-    loadPlansWithUsage(db, profileIds, israelToday()),
+    loadPlanQueues(db, profileIds, israelToday()),
     db.from("profiles").select("id, full_name, guardian_name, guardian_phone").in("id", profileIds),
   ]);
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
@@ -101,11 +103,11 @@ async function loadAdminRows(
   const byOrder = new Map((orders ?? []).map((o) => [o.id, o]));
 
   return [...plans.entries()]
-    .map(([profileId, withUsage]) => {
+    .map(([profileId, view]) => {
       const profile = profileById.get(profileId);
-      const bits = withUsage.plan.order_id ? byOrder.get(withUsage.plan.order_id) : undefined;
+      const bits = view.plan.order_id ? byOrder.get(view.plan.order_id) : undefined;
       return {
-        ...withUsage,
+        ...view,
         traineeName: profile?.full_name ?? "ללא שם",
         guardianName: profile?.guardian_name ?? null,
         guardianPhone: profile?.guardian_phone ?? null,
@@ -128,19 +130,40 @@ export async function extendPlanAction(input: {
 
   const db = createAdminClient();
   const { data: existing } = (await typedFrom(db, "trainee_plans")
-    .select("starts_on, branch_id")
+    .select("profile_id, branch_id")
     .eq("id", parsed.data.planId)
-    .maybeSingle()) as { data: { starts_on: string; branch_id: string } | null };
+    .maybeSingle()) as { data: { profile_id: string; branch_id: string } | null };
   if (!existing) return { error: "המסלול לא נמצא" };
   const denied = await verifyAdminOrBranchManager([existing.branch_id]);
   if (denied) return { error: denied };
-  if (parsed.data.endsOn < existing.starts_on) {
+
+  // The queue dates the Plan; a new end becomes a new duration, or a new
+  // fixed end for an Arbox purchase.
+  const [plans, rows] = await Promise.all([
+    loadStoredPlans(db, [existing.profile_id]),
+    loadQueueRows(db, [existing.profile_id]),
+  ]);
+  const own = plans.get(existing.profile_id) ?? [];
+  const stored = own.find((p) => p.id === parsed.data.planId);
+  if (!stored || stored.status === "cancelled") return { error: "המסלול בוטל ואין מה להאריך" };
+  // An Add-on sits outside the queue and starts on its own date.
+  const startsOn =
+    resolvePlanQueue(own, rows.get(existing.profile_id) ?? [], israelToday()).plans.find(
+      (e) => e.plan.id === stored.id,
+    )?.startsOn ?? stored.notBefore;
+  if (parsed.data.endsOn < startsOn) {
     return { error: "תאריך הסיום קודם לתאריך ההתחלה" };
   }
+  const terms =
+    stored.fixedEndsOn !== null
+      ? { fixed_ends_on: parsed.data.endsOn }
+      : { duration_days: daysBetween(startsOn, parsed.data.endsOn) + 1 };
 
   // A new end date deserves its own reminders.
   const { data, error } = await typedFrom(db, "trainee_plans")
     .update({
+      ...terms,
+      not_before: stored.notBefore,
       ends_on: parsed.data.endsOn,
       reminded_3_days_at: null,
       reminded_last_session_at: null,

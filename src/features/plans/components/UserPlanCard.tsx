@@ -46,20 +46,26 @@ export function UserPlanCard({ row, isAdmin, canManage = isAdmin, traineeId }: U
               <span className="text-muted-foreground">סטטוס</span>
               <PlanStatusBadge status={row.status} />
             </div>
-            {row.plan.sessions_total !== null && (
+            {row.sessionsLeft !== null && (
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">אימונים</span>
-                <span>
-                  {row.sessionsUsed} / {row.plan.sessions_total}
-                </span>
+                <span className="text-muted-foreground">נותרו אימונים</span>
+                <span>{row.sessionsLeft}</span>
               </div>
             )}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">תוקף</span>
               <span>
-                {shortDate(row.plan.starts_on)} עד {shortDate(row.plan.ends_on)}
+                {shortDate(row.shown.startsOn)} עד {shortDate(row.shown.endsOn)}
               </span>
             </div>
+            {row.queue.queued.length > 0 && row.queue.current && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">ממתין בתור</span>
+                <span>
+                  {row.queue.queued[0].plan.product?.name_he ?? "מסלול"} מ-{shortDate(row.queue.queued[0].startsOn)}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">הסכם</span>
               <AgreementBadge agreementId={row.agreementId} signed={row.agreementSigned} />

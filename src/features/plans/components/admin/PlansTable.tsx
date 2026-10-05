@@ -47,7 +47,7 @@ export function PlansTable({
               <TableHead className="text-right">חניך</TableHead>
               <TableHead className="text-right">מסלול</TableHead>
               <TableHead className="text-right">סטטוס</TableHead>
-              <TableHead className="text-right">אימונים</TableHead>
+              <TableHead className="text-right">נותרו אימונים</TableHead>
               <TableHead className="text-right">תוקף</TableHead>
               <TableHead className="text-right">מקור</TableHead>
               <TableHead className="w-[140px]"></TableHead>
@@ -82,12 +82,10 @@ export function PlansTable({
                   <PlanStatusBadge status={row.status} />
                 </TableCell>
                 <TableCell>
-                  {row.plan.sessions_total === null
-                    ? "לפי זמן"
-                    : `${row.sessionsUsed} / ${row.plan.sessions_total}`}
+                  {row.sessionsLeft === null ? "לפי זמן" : row.sessionsLeft}
                 </TableCell>
                 <TableCell>
-                  {shortDate(row.plan.starts_on)} עד {shortDate(row.plan.ends_on)}
+                  {shortDate(row.shown.startsOn)} עד {shortDate(row.shown.endsOn)}
                 </TableCell>
                 <TableCell>
                   {row.plan.source === "manual"

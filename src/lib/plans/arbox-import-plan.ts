@@ -6,7 +6,7 @@
  * Our system counts usage; Arbox only tells us a purchase happened. A
  * purchase merges into a live plan of the same kind that is itself paid in
  * Arbox, or starts after whatever is live, because two overlapping plans of
- * one kind double-count sessions (pickRelevantPlan evaluates only one) and a
+ * one kind double-count sessions (only one of them was counted) and a
  * merge into a plan paid another way would keep renewal reminders going.
  */
 import type { ArboxPurchase } from "@/lib/arbox/purchase-rows";

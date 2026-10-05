@@ -24,7 +24,7 @@ import {
 export function PlanActionsDialog({ row, onClose }: { row: AdminPlanRow; onClose: () => void }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [endsOn, setEndsOn] = useState(row.plan.ends_on);
+  const [endsOn, setEndsOn] = useState(row.shown.expiresOn);
   const [sessions, setSessions] = useState(1);
 
   const run = (fn: () => Promise<{ success: true } | { error: string }>, done: string) => {

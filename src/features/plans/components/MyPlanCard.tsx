@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { shortDate } from "@/lib/utils/iso-date";
-import type { PlanWithUsage } from "../lib/queries";
+import type { PlanQueueView } from "../lib/queries";
 import { PlanStatusBadge } from "./PlanStatusBadge";
 
 interface MyPlanCardProps {
-  planWithUsage: PlanWithUsage;
+  planQueue: PlanQueueView;
   renewUrl: string;
 }
 
@@ -16,11 +16,10 @@ interface MyPlanCardProps {
  * The trainee's plan at a glance. An expired plan turns the card into the
  * banner; nothing is blocked, the renewal button is the only change.
  */
-export function MyPlanCard({ planWithUsage, renewUrl }: MyPlanCardProps) {
-  const { plan, product, sessionsUsed, status } = planWithUsage;
+export function MyPlanCard({ planQueue, renewUrl }: MyPlanCardProps) {
+  const { queue, product, sessionsLeft, status, endsOn } = planQueue;
   const expired = status === "expired";
-  const sessionsLeft =
-    plan.sessions_total === null ? null : Math.max(plan.sessions_total - sessionsUsed, 0);
+  const next = queue.current ? queue.queued[0] : undefined;
 
   return (
     <Card className={cn(expired && "border-destructive/50 bg-destructive/5")}>
@@ -35,15 +34,20 @@ export function MyPlanCard({ planWithUsage, renewUrl }: MyPlanCardProps) {
             {sessionsLeft !== null && (
               <span className="flex items-center gap-1">
                 <Ticket className="h-4 w-4" />
-                {sessionsUsed} מתוך {plan.sessions_total} אימונים נוצלו
+                נותרו {sessionsLeft} אימונים
               </span>
             )}
             <span className="flex items-center gap-1">
               <CalendarClock className="h-4 w-4" />
               {expired ? "הסתיים ב-" : "בתוקף עד "}
-              {shortDate(plan.ends_on)}
+              {shortDate(endsOn)}
             </span>
           </div>
+          {next && (
+            <p className="text-sm text-muted-foreground">
+              {next.plan.product?.name_he ?? "המסלול הבא"} ממתין ויתחיל ב-{shortDate(next.startsOn)}
+            </p>
+          )}
           {expired && (
             <p className="text-sm text-destructive">המסלול הסתיים. אפשר לחדש אותו בלחיצה.</p>
           )}

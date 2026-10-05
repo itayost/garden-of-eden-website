@@ -7,9 +7,8 @@ import {
   replaceProfileBranches,
 } from "@/features/branches/lib/memberships";
 import { phoneVariants } from "@/lib/plans/phone-variants";
-import { renewalStartDate } from "@/lib/plans/plan-status";
-import { loadPlansWithUsage } from "@/features/plans/lib/queries";
-import { addDays } from "@/lib/utils/iso-date";
+import { placeNewPlan, type NewPlanTerms } from "@/lib/plans/plan-queue";
+import { loadQueueRows, loadStoredPlans } from "@/features/plans/lib/queries";
 import { israelToday } from "@/lib/utils/tasks";
 import type { EnrollmentAgreement, Order, PlanProduct } from "@/types/plans";
 
@@ -23,6 +22,8 @@ interface FulfillInput {
   agreement: EnrollmentAgreement | null;
   /** Null for online orders; the admin for manual grants. */
   createdBy: string | null;
+  /** Terms that differ from the product's: a chosen start, or what Arbox sold. */
+  terms?: Partial<Pick<NewPlanTerms, "notBefore" | "fixedEndsOn" | "sessionsTotal" | "durationDays">>;
 }
 
 /** The profile whose auth phone is this login phone, in any stored spelling. */
@@ -63,7 +64,7 @@ async function createAccount(
  */
 export async function fulfillFromInput(
   db: SupabaseClient,
-  { order, product, agreement, createdBy }: FulfillInput,
+  { order, product, agreement, createdBy, terms: termsOverride }: FulfillInput,
 ): Promise<FulfillResult> {
   try {
     const profileId =
@@ -130,28 +131,37 @@ export async function fulfillFromInput(
 
     let planId = existingPlan?.id ?? null;
     if (!planId) {
-      // A renewal starts after the plan that is still running, whatever plan
-      // the link named. A used-up card or a cancelled plan is not running,
-      // so the new one starts today rather than weeks out. Add-ons never
-      // chain: the mental session starts now.
+      // A sale joins the end of the Trainee's Plan queue, whatever plan a
+      // renewal link named (ADR-0008). The stored dates are the queue's
+      // forecast; the sale-time terms are what the queue reads.
       const today = israelToday();
-      let previousEndsOn: string | null = null;
-      if (product.kind !== "addon") {
-        const current = (await loadPlansWithUsage(db, [profileId], today)).get(profileId);
-        if (current && (current.status === "active" || current.status === "ending_soon")) {
-          previousEndsOn = current.plan.ends_on;
-        }
-      }
-      const startsOn = renewalStartDate(previousEndsOn, today);
+      const terms: NewPlanTerms = {
+        kind: product.kind,
+        branchId: order.branch_id,
+        sessionsTotal:
+          termsOverride?.sessionsTotal !== undefined ? termsOverride.sessionsTotal : product.sessions_total,
+        durationDays: termsOverride?.durationDays ?? product.duration_days,
+        notBefore: termsOverride?.notBefore ?? today,
+        fixedEndsOn: termsOverride?.fixedEndsOn ?? null,
+      };
+      const [plans, rows] = await Promise.all([
+        loadStoredPlans(db, [profileId]),
+        loadQueueRows(db, [profileId]),
+      ]);
+      const placed = placeNewPlan(plans.get(profileId) ?? [], rows.get(profileId) ?? [], terms, today);
       const { data: plan, error: planError } = (await typedFrom(db, "trainee_plans")
         .insert({
           profile_id: profileId,
           product_id: product.id,
           branch_id: order.branch_id,
           order_id: order.id,
-          starts_on: startsOn,
-          ends_on: addDays(startsOn, product.duration_days - 1),
-          sessions_total: product.sessions_total,
+          starts_on: placed.startsOn,
+          // An Arbox Plan queued past its own end never runs; the row still needs a window.
+          ends_on: placed.endsOn < placed.startsOn ? placed.startsOn : placed.endsOn,
+          sessions_total: terms.sessionsTotal,
+          not_before: terms.notBefore,
+          duration_days: terms.durationDays,
+          fixed_ends_on: terms.fixedEndsOn,
           source: createdBy ? "manual" : "online",
           created_by: createdBy,
         })

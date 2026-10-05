@@ -11,20 +11,19 @@ import {
   WEEKLY_CAP,
   WEEKLY_CAP_KINDS,
   bookingClosed,
-  bookingEligibility,
   cancelState,
-  countReservedFromRows,
-  countSessionsLeft,
   weeklyBookingCount,
   type BookingBlock,
   type CancelState,
 } from "@/lib/schedule/booking-rules";
-import { countSessionsUsedFromRows } from "@/lib/plans/plan-status";
-import { loadPlansWithUsage } from "@/features/plans/lib/queries";
+import { bookingVerdict, queueBookingBlock, resolvePlanQueue } from "@/lib/plans/plan-queue";
+import { loadStoredPlans, toPlanQueueView } from "@/features/plans/lib/queries";
 import { buildRenewalUrl } from "@/features/plans/lib/renewal-link";
 import { PLAN_STATUS_LABELS_HE, type PlanStatus } from "@/types/plans";
 import { materializeBookableSlots } from "../materialize";
 import { loadBookableBranchForUser, loadBookableSlots, loadTraineeRosterRows } from "../queries";
+
+const END_OF_DAY = "23:59:59";
 
 export interface BookableSlotView {
   id: string;
@@ -101,47 +100,38 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
 
   await materializeBookableSlots(db, branchId, today);
   const to = addDays(today, BOOKING_WINDOW_DAYS);
-  const [slots, rows, plans] = await Promise.all([
+  const [slots, rows, storedPlans] = await Promise.all([
     loadBookableSlots(db, branchId, today, to),
     loadTraineeRosterRows(db, user.id),
-    loadPlansWithUsage(db, [user.id], today),
+    loadStoredPlans(db, [user.id]),
   ]);
-  const current = plans.get(user.id) ?? null;
+  const plans = storedPlans.get(user.id) ?? [];
+  const queue = resolvePlanQueue(plans, rows, today);
+  const view = toPlanQueueView(queue);
   const mySlotIds = new Set(rows.filter((r) => r.cancelled_at === null).map((r) => r.slot_id));
 
-  const plan = current
+  // The cap shown is the one of the Plan running today.
+  const runningKind = queue.current?.plan.kind ?? null;
+  const plan = view
     ? {
-        name: current.product.name_he,
-        status: current.status,
-        statusLabel: PLAN_STATUS_LABELS_HE[current.status],
-        sessionsLeft: countSessionsLeft(current.plan, current.sessionsUsed, countReservedFromRows(rows, current.plan, today)),
+        name: view.product.name_he,
+        status: view.status,
+        statusLabel: PLAN_STATUS_LABELS_HE[view.status],
+        sessionsLeft: view.sessionsLeft,
         weekCount: weeklyBookingCount(rows, today, branchId),
-        weeklyCap: WEEKLY_CAP_KINDS.includes(current.product.kind) ? WEEKLY_CAP : null,
-        endsOn: current.plan.ends_on,
+        weeklyCap: runningKind && WEEKLY_CAP_KINDS.includes(runningKind) ? WEEKLY_CAP : null,
+        endsOn: view.endsOn,
         renewUrl:
-          current.status === "expired" || current.status === "ending_soon"
-            ? buildRenewalUrl(current.plan.id)
+          view.status === "expired" || view.status === "ending_soon"
+            ? buildRenewalUrl(view.plan.id)
             : null,
       }
     : null;
 
-  // Plan-wide reasons block the page; date-bound reasons (the plan not
-  // running yet, a week at cap) block only the days they apply to.
-  const used = current ? countSessionsUsedFromRows(rows, current.plan, today) : 0;
-  const reserved = current ? countReservedFromRows(rows, current.plan, today) : 0;
-  const PAGE_BLOCKS: BookingBlock[] = ["no_plan", "plan_cancelled", "addon", "no_sessions_left"];
-  const eligibilityFor = (date: string, weekCount: number) =>
-    bookingEligibility({
-      plan: current?.plan ?? null,
-      productKind: current?.product.kind ?? null,
-      used,
-      reserved,
-      weekCount,
-      slotDate: date,
-    });
-  const pageEligibility = eligibilityFor(current?.plan.starts_on ?? today, 0);
-  const pageBlock =
-    !pageEligibility.ok && PAGE_BLOCKS.includes(pageEligibility.block) ? pageEligibility.block : null;
+  // Plan-wide reasons block the page; date-bound reasons (no Plan running
+  // that day, a week at cap) block only the days they apply to. A day is
+  // judged for an hour at its end, which pushes no Booking of that day aside.
+  const pageBlock = queueBookingBlock(plans, queue);
 
   const bookings: MyBooking[] = rows
     .filter((r) => r.cancelled_at === null && r.schedule_date >= today)
@@ -173,13 +163,14 @@ export async function getMyScheduleAction(): Promise<TraineeScheduleView | { err
     byDate.set(slot.schedule_date, [...(byDate.get(slot.schedule_date) ?? []), view]);
   }
   const days = Array.from({ length: BOOKING_WINDOW_DAYS + 1 }, (_, i) => addDays(today, i)).map((date) => {
-    const weekCount = weeklyBookingCount(rows, date, branchId);
-    const e = eligibilityFor(date, weekCount);
+    const verdict = pageBlock
+      ? null
+      : bookingVerdict(plans, rows, { date, start_time: END_OF_DAY, branch_id: branchId }, today);
     return {
       date,
       slots: byDate.get(date) ?? [],
-      weekCount,
-      dayBlock: e.ok || pageBlock ? null : e.block,
+      weekCount: weeklyBookingCount(rows, date, branchId),
+      dayBlock: verdict && !verdict.ok ? verdict.block : null,
     };
   });
 

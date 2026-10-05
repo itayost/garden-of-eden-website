@@ -66,18 +66,24 @@ export function PlanSheet({ traineeId, traineeName, isAdmin, open, onOpenChange 
                 <dd>
                   <PlanStatusBadge status={row.status} />
                 </dd>
-                {row.plan.sessions_total !== null && (
+                {row.sessionsLeft !== null && (
                   <>
-                    <dt className="text-muted-foreground">אימונים</dt>
-                    <dd>
-                      {row.sessionsUsed} / {row.plan.sessions_total}
-                    </dd>
+                    <dt className="text-muted-foreground">נותרו אימונים</dt>
+                    <dd>{row.sessionsLeft}</dd>
                   </>
                 )}
                 <dt className="text-muted-foreground">תוקף</dt>
                 <dd>
-                  {shortDate(row.plan.starts_on)} עד {shortDate(row.plan.ends_on)}
+                  {shortDate(row.shown.startsOn)} עד {shortDate(row.shown.endsOn)}
                 </dd>
+                {row.queue.current && row.queue.queued.length > 0 && (
+                  <>
+                    <dt className="text-muted-foreground">ממתין בתור</dt>
+                    <dd>
+                      {row.queue.queued[0].plan.product?.name_he ?? "מסלול"} מ-{shortDate(row.queue.queued[0].startsOn)}
+                    </dd>
+                  </>
+                )}
                 {row.agreementId && (
                   <>
                     <dt className="text-muted-foreground">הסכם</dt>

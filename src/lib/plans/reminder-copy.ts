@@ -1,4 +1,4 @@
-import type { ReminderMilestone } from "./plan-status";
+import type { ReminderMilestone } from "./plan-queue";
 
 export const REMINDED_COLUMN: Record<
   ReminderMilestone,

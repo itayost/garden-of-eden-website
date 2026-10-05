@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bookingClosed,
-  bookingEligibility,
   cancelState,
-  countReservedFromRows,
   isWithinBookingWindow,
   minutesUntilSlot,
   weekBounds,
@@ -61,43 +59,5 @@ describe("weeklyBookingCount", () => {
       row({ schedule_date: "2026-09-14", branch_id: "haifa" }),
     ];
     expect(weeklyBookingCount(rows, "2026-09-17", "ka")).toBe(2);
-  });
-});
-
-describe("countReservedFromRows", () => {
-  it("counts future active seats inside the plan window only", () => {
-    const plan = { starts_on: "2026-09-01", ends_on: "2026-09-30", branch_id: "ka" };
-    const rows = [
-      row({ schedule_date: "2026-09-10" }),
-      row({ schedule_date: "2026-09-12" }),
-      row({ schedule_date: "2026-09-13", cancelled_at: "2026-09-12T00:00:00Z" }),
-      row({ schedule_date: "2026-10-02" }),
-    ];
-    expect(countReservedFromRows(rows, plan, "2026-09-11")).toBe(1);
-  });
-});
-
-describe("bookingEligibility", () => {
-  const plan = { status: "active" as const, starts_on: "2026-09-01", ends_on: "2026-09-30", sessions_total: 10 };
-  const base = { plan, productKind: "session_card" as const, used: 3, reserved: 2, weekCount: 0, slotDate: "2026-09-15" };
-
-  it("blocks without a plan, on a cancelled plan, outside the window, and for add-ons", () => {
-    expect(bookingEligibility({ ...base, plan: null })).toEqual({ ok: false, block: "no_plan" });
-    expect(bookingEligibility({ ...base, plan: { ...plan, status: "cancelled" } })).toEqual({ ok: false, block: "plan_cancelled" });
-    expect(bookingEligibility({ ...base, slotDate: "2026-10-01" })).toEqual({ ok: false, block: "plan_not_running" });
-    expect(bookingEligibility({ ...base, productKind: "addon" })).toEqual({ ok: false, block: "addon" });
-  });
-
-  it("charges cards net of reserved seats", () => {
-    expect(bookingEligibility({ ...base, used: 5, reserved: 4 })).toEqual({ ok: true });
-    expect(bookingEligibility({ ...base, used: 5, reserved: 5 })).toEqual({ ok: false, block: "no_sessions_left" });
-  });
-
-  it("caps subscriptions and terms at two a week and ignores sessions", () => {
-    const sub = { ...base, plan: { ...plan, sessions_total: null }, productKind: "subscription" as const };
-    expect(bookingEligibility({ ...sub, weekCount: 1 })).toEqual({ ok: true });
-    expect(bookingEligibility({ ...sub, weekCount: 2 })).toEqual({ ok: false, block: "weekly_cap" });
-    expect(bookingEligibility({ ...sub, productKind: "term", weekCount: 2 })).toEqual({ ok: false, block: "weekly_cap" });
-    expect(bookingEligibility({ ...base, weekCount: 5 })).toEqual({ ok: true });
   });
 });
