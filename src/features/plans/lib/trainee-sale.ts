@@ -6,6 +6,7 @@ import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import type { PlanProduct } from "@/types/plans";
+import { toE164 } from "@/lib/plans/local-phone";
 import { findRecentDuplicate } from "./manual-payment";
 
 export interface SaleTrainee {
@@ -37,6 +38,29 @@ export async function introPackRefusal(
     : "חבילת ההיכרות היא לשחקן חדש בלבד ונרכשה כבר. בחרו מסלול אחר.";
 }
 
+/**
+ * Who a sale to an existing trainee names: the child's login phone, the
+ * parent (the child's own phone when no guardian phone is on file), and the
+ * health details the agreement carries.
+ */
+export function saleParties(trainee: SaleTrainee) {
+  const loginPhone = toE164(trainee.phone);
+  return {
+    loginPhone,
+    child: { name: trainee.full_name ?? "מתאמן", birthdate: trainee.birthdate ?? null },
+    parent: {
+      name: trainee.guardian_name ?? "הורה",
+      phone: trainee.guardian_phone ? toE164(trainee.guardian_phone) : loginPhone,
+      email: null,
+    },
+    health: {
+      medicalNotes: trainee.medical_notes ?? null,
+      emergencyContactName: trainee.emergency_contact_name ?? null,
+      emergencyContactPhone: trainee.emergency_contact_phone ?? null,
+    },
+  };
+}
+
 export type TraineeSaleCheck =
   | { ok: true; product: PlanProduct; trainee: SaleTrainee }
   | { error: string }
@@ -51,14 +75,21 @@ export type TraineeSaleCheck =
  */
 export async function checkTraineeSale(
   db: SupabaseClient,
-  input: { traineeId: string; productId: string; isAdmin: boolean; confirmDuplicate: boolean },
+  input: {
+    traineeId: string;
+    productId: string;
+    isAdmin: boolean;
+    confirmDuplicate: boolean;
+    /** A manual Card sells its branch's inactive placeholder product, and only that. */
+    manualCard?: boolean;
+  },
 ): Promise<TraineeSaleCheck> {
   const { data: product } = (await typedFrom(db, "plan_products")
     .select("*")
     .eq("id", input.productId)
-    .eq("is_active", true)
     .maybeSingle()) as { data: PlanProduct | null };
-  if (!product) return { error: "המסלול לא נמצא או אינו פעיל" };
+  const sellable = product && (input.manualCard ? product.staff_terms : product.is_active && !product.staff_terms);
+  if (!product || !sellable) return { error: "המסלול לא נמצא או אינו פעיל" };
   const branchError = await assertBranchWritable(product.branch_id);
   if (branchError.error) return { error: branchError.error };
   // The sheet only offers the trainee's branches; the server holds trainers

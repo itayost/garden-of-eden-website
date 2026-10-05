@@ -9,9 +9,11 @@ import { verifyAgreementToken } from "@/lib/plans/agreement-token";
 import { planTokenSecret } from "@/lib/plans/token-secret";
 import { signAgreementSchema, type SignAgreementInput } from "@/lib/validations/agreement-sign";
 import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
-import type { EnrollmentAgreement } from "@/types/plans";
+import { awaitsCard, payPath } from "@/lib/plans/payment-link";
+import type { EnrollmentAgreement, Order } from "@/types/plans";
 
-type SignResult = { ok: true } | { error: string };
+/** payUrl: the order still waits for the card (a Payment link), so the parent goes on to pay. */
+type SignResult = { ok: true; payUrl?: string } | { error: string };
 
 async function clientIp(): Promise<string> {
   const h = await headers();
@@ -38,11 +40,20 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
 
   const db = createAdminClient();
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("id, signed_at, profile_id")
+    .select("id, signed_at, profile_id, order_id, order:orders(status, payment_link_by)")
     .eq("id", data.agreementId)
-    .maybeSingle()) as { data: Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id"> | null };
+    .maybeSingle()) as {
+    data:
+      | (Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id" | "order_id"> & {
+          order: Pick<Order, "status" | "payment_link_by"> | null;
+        })
+      | null;
+  };
   if (!agreement) return { error: "ההסכם לא נמצא" };
-  if (agreement.signed_at) return { ok: true };
+  // A Payment link goes on to the card page once signed.
+  const payUrl =
+    agreement.order_id && agreement.order && awaitsCard(agreement.order) ? payPath(agreement.order_id) : undefined;
+  if (agreement.signed_at) return { ok: true, payUrl };
 
   const { data: signed, error } = (await typedFrom(db, "enrollment_agreements")
     .update({
@@ -69,7 +80,8 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
     console.error(`[sign-agreement] update failed for ${data.agreementId}:`, error.message);
     return { error: "שגיאה בשמירת החתימה. נסו שוב." };
   }
-  if (!signed || signed.length === 0) return { ok: true };
+  // Signed meanwhile by another request: nothing to adopt here.
+  if (!signed || signed.length === 0) return { ok: true, payUrl };
 
   if (agreement.profile_id) {
     const { data: profile } = await db
@@ -102,5 +114,12 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
         .is("email", null);
     }
   }
-  return { ok: true };
+  if (payUrl) {
+    // The parent who signed is the payer: the charge and the receipt carry their name.
+    await typedFrom(db, "orders")
+      .update({ parent_name: data.parentName, ...(data.parentEmail ? { email: data.parentEmail } : {}) })
+      .eq("id", agreement.order_id!)
+      .in("status", ["pending", "expired"]);
+  }
+  return { ok: true, payUrl };
 }

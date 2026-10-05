@@ -9,6 +9,7 @@ import {
 import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue, type NewPlanTerms } from "@/lib/plans/plan-queue";
 import { appliedStart } from "@/lib/plans/start-date";
+import { orderManualTerms } from "@/lib/plans/manual-card";
 import { loadQueueRows, loadStoredPlans } from "@/features/plans/lib/queries";
 import { israelToday } from "@/lib/utils/tasks";
 import type { EnrollmentAgreement, Order, PlanProduct } from "@/types/plans";
@@ -21,8 +22,10 @@ interface FulfillInput {
   order: Order;
   product: PlanProduct;
   agreement: EnrollmentAgreement | null;
-  /** Null for online orders; the admin for manual grants. */
+  /** Null for online orders; the staff member for staff sales and Payment links. */
   createdBy: string | null;
+  /** How it was paid; by default a staff sale is manual. A Payment link is paid online. */
+  source?: "online" | "manual";
   /** Terms that differ from the product's: what Arbox sold. */
   terms?: Partial<Pick<NewPlanTerms, "notBefore" | "fixedEndsOn" | "sessionsTotal" | "durationDays">>;
   /** A staff-chosen start; it applies only when nothing is current or queued (appliedStart). */
@@ -67,8 +70,11 @@ async function createAccount(
  */
 export async function fulfillFromInput(
   db: SupabaseClient,
-  { order, product, agreement, createdBy, terms: termsOverride, chosenStartsOn = null }: FulfillInput,
+  { order, product, agreement, createdBy, source, terms, chosenStartsOn = null }: FulfillInput,
 ): Promise<FulfillResult> {
+  // A manual Card was sold on the terms staff typed, kept on the order.
+  const manual = orderManualTerms(order);
+  const termsOverride = terms ?? (manual ? { sessionsTotal: manual.sessions, durationDays: manual.days } : undefined);
   try {
     const profileId =
       order.profile_id ??
@@ -133,6 +139,7 @@ export async function fulfillFromInput(
       .maybeSingle()) as { data: { id: string } | null };
 
     let planId = existingPlan?.id ?? null;
+    let startsOn: string | null = null;
     if (!planId) {
       // A sale joins the end of the Trainee's Plan queue, whatever plan a
       // renewal link named (ADR-0008). The stored dates are the queue's
@@ -168,19 +175,24 @@ export async function fulfillFromInput(
           not_before: terms.notBefore,
           duration_days: terms.durationDays,
           fixed_ends_on: terms.fixedEndsOn,
-          source: createdBy ? "manual" : "online",
+          source: source ?? (createdBy ? "manual" : "online"),
           created_by: createdBy,
         })
         .select("id")
         .single()) as { data: { id: string } | null; error: { message: string } | null };
       if (planError || !plan) throw new Error(`plan insert failed: ${planError?.message}`);
       planId = plan.id;
+      startsOn = placed.startsOn;
     }
 
-    if (agreement && !agreement.profile_id) {
-      await typedFrom(db, "enrollment_agreements")
-        .update({ profile_id: profileId })
-        .eq("id", agreement.id);
+    // The agreement names the Trainee and states the Plan's start, which the queue decides at the sale.
+    if (agreement) {
+      const patch: { profile_id?: string; plan_start_on?: string } = {};
+      if (!agreement.profile_id) patch.profile_id = profileId;
+      if (startsOn && agreement.plan_start_on !== startsOn) patch.plan_start_on = startsOn;
+      if (patch.profile_id || patch.plan_start_on) {
+        await typedFrom(db, "enrollment_agreements").update(patch).eq("id", agreement.id);
+      }
     }
 
     const { error: orderError } = await typedFrom(db, "orders")
@@ -228,6 +240,8 @@ export async function fulfillOrder(db: SupabaseClient, orderId: string): Promise
     order: { ...order, amount_ils: Number(order.amount_ils) },
     product: { ...product, price_ils: Number(product.price_ils) },
     agreement,
-    createdBy: null,
+    // Paid by card online; a Payment link names the staff member who sent it.
+    createdBy: order.payment_link_by,
+    source: "online",
   });
 }

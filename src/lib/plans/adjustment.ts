@@ -17,6 +17,9 @@ export type AdjustmentPlan = { ok: true; leftAfter: number; totalAfter: number }
 /** The highest Sessions left staff may type; the server schema enforces the same cap. */
 export const MAX_CARD_BALANCE = 200;
 
+/** The longest validity a Plan may have, in days: the catalog and a manual Card alike. */
+export const MAX_CARD_DAYS = 730;
+
 export function planAdjustment(card: CardCounts, target: number): AdjustmentPlan {
   if (!Number.isInteger(target)) return { ok: false, error: "יתרה היא מספר שלם של אימונים" };
   if (target < 0) return { ok: false, error: "יתרה לא יכולה להיות שלילית" };

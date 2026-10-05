@@ -22,6 +22,8 @@ export interface PlanProduct {
   order_index: number;
   created_at: string;
   updated_at: string;
+  /** Sold on terms staff type (a manual Card); never active, never in the catalog. */
+  staff_terms: boolean;
 }
 
 /** charging: the card is at the acquirer; a second submit finds nothing to claim. */
@@ -76,6 +78,11 @@ export interface Order {
   reference: string | null;
   /** The staff member who took a manual payment. */
   received_by: string | null;
+  /** The staff member who sent this order as a Payment link; null otherwise. */
+  payment_link_by: string | null;
+  /** A manual Card's terms, as staff typed them; null for a catalog sale. */
+  terms_sessions_total: number | null;
+  terms_duration_days: number | null;
   /** The list price of a discounted sale; null when sold at list price (amount_ils is what was paid). */
   list_price_ils: number | null;
   discount_reason: string | null;

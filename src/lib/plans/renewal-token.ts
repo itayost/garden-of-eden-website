@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac } from "crypto";
+import { safeEqualUtf8 } from "@/lib/security/safe-equal";
 import { UUID_REGEX } from "@/lib/validations/common";
 
 /**
@@ -9,31 +10,41 @@ import { UUID_REGEX } from "@/lib/validations/common";
  */
 export const RENEWAL_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 
-function mac(planId: string, expiresAt: number, secret: string): string {
-  return createHmac("sha256", secret).update(`${planId}.${expiresAt}`).digest("hex");
+/** A trainee subject is marked so it can never be read as a plan id. */
+const TRAINEE_PREFIX = "t-";
+
+function mac(subject: string, expiresAt: number, secret: string): string {
+  return createHmac("sha256", secret).update(`${subject}.${expiresAt}`).digest("hex");
 }
 
 export function signRenewalToken(planId: string, expiresAtUnix: number, secret: string): string {
   return `${planId}.${expiresAtUnix}.${mac(planId, expiresAtUnix, secret)}`;
 }
 
+/**
+ * The same link bound to a trainee rather than a Plan: the in-app "buy a
+ * plan" for a trainee who has none, or only a cancelled one.
+ */
+export function signTraineeToken(profileId: string, expiresAtUnix: number, secret: string): string {
+  const subject = `${TRAINEE_PREFIX}${profileId}`;
+  return `${subject}.${expiresAtUnix}.${mac(subject, expiresAtUnix, secret)}`;
+}
+
 export function verifyRenewalToken(
   token: string,
   secret: string,
   nowUnix: number,
-): { planId: string } | null {
+): { planId: string } | { profileId: string } | null {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
-  const [planId, expiresRaw, signature] = parts;
-  if (!UUID_REGEX.test(planId)) return null;
+  const [subject, expiresRaw, signature] = parts;
+  const trainee = subject.startsWith(TRAINEE_PREFIX);
+  const id = trainee ? subject.slice(TRAINEE_PREFIX.length) : subject;
+  if (!UUID_REGEX.test(id)) return null;
 
   const expiresAt = Number(expiresRaw);
   if (!Number.isInteger(expiresAt) || expiresAt <= nowUnix) return null;
 
-  const expected = mac(planId, expiresAt, secret);
-  if (signature.length !== expected.length) return null;
-  if (!timingSafeEqual(Buffer.from(signature, "utf8"), Buffer.from(expected, "utf8"))) {
-    return null;
-  }
-  return { planId };
+  if (!safeEqualUtf8(signature, mac(subject, expiresAt, secret))) return null;
+  return trainee ? { profileId: id } : { planId: id };
 }

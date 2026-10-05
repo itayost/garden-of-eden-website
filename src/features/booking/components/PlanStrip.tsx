@@ -1,20 +1,21 @@
-import Link from "next/link";
 import { CalendarClock, Ticket } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { shortDate } from "@/lib/utils/iso-date";
 import { BOOKING_BLOCK_LABELS_HE } from "@/lib/schedule/booking-rules";
 import { PlanStatusBadge } from "@/features/plans/components/PlanStatusBadge";
+import { PurchaseRequestButton, REQUEST_LABELS } from "@/features/plans/components/PurchaseRequestButton";
 import type { TraineeScheduleView } from "../lib/actions/schedule";
 
 /** The plan at the top of the schedule: what is left, and the way out when it blocks. */
-export function PlanStrip({ plan, block }: Pick<TraineeScheduleView, "plan" | "block">) {
+export function PlanStrip({ plan, block, canAskParent }: Pick<TraineeScheduleView, "plan" | "block" | "canAskParent">) {
   if (!plan) {
     return (
       <div className="rounded-2xl border border-dashed p-4 text-sm">
         <p className="font-medium">{BOOKING_BLOCK_LABELS_HE.no_plan}</p>
-        <Button asChild size="sm" className="mt-3">
-          <Link href="/join">לבחירת מסלול</Link>
-        </Button>
+        {canAskParent && (
+          <div className="mt-3">
+            <PurchaseRequestButton label={REQUEST_LABELS.buy} />
+          </div>
+        )}
       </div>
     );
   }
@@ -42,11 +43,7 @@ export function PlanStrip({ plan, block }: Pick<TraineeScheduleView, "plan" | "b
       {block && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-destructive/5 p-3 text-destructive">
           <span>{BOOKING_BLOCK_LABELS_HE[block]}</span>
-          {plan.renewUrl && (
-            <Button asChild size="sm">
-              <Link href={plan.renewUrl}>חידוש המסלול</Link>
-            </Button>
-          )}
+          {plan.canRenew && <PurchaseRequestButton label={REQUEST_LABELS.renew} />}
         </div>
       )}
     </div>

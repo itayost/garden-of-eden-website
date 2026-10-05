@@ -4,18 +4,18 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyRenewalToken } from "@/lib/plans/renewal-token";
+import { resolveRenewalSubject } from "../renewal-subject";
 import type { EnrollmentInput } from "@/lib/validations/enrollment";
 import { toLocalPhone } from "@/lib/plans/local-phone";
 import { isActiveTrainee, renewalLocks, usableAccount, type RenewalLocks } from "@/lib/plans/bound-renewal";
 import { alreadyRenewedUntil } from "@/lib/plans/plan-queue";
 import { israelToday } from "@/lib/utils/tasks";
 import { loadPlanQueues } from "../queries";
-import type { EnrollmentAgreement, PlanProduct, TraineePlan } from "@/types/plans";
+import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
 
 export interface RenewalPrefill {
   /** Null when the old product cannot be bought again: the catalog opens instead. */
   productId: string | null;
-  planId: string;
   prefill: Partial<EnrollmentInput>;
   /** Child fields that come from the account and show read-only. */
   locks: RenewalLocks;
@@ -35,22 +35,17 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
   if (!verified) return null;
 
   const db = createAdminClient();
-  const { data: plan } = (await typedFrom(db, "trainee_plans")
-    .select("id, product_id, profile_id, order_id")
-    .eq("id", verified.planId)
-    .maybeSingle()) as {
-    data: Pick<TraineePlan, "id" | "product_id" | "profile_id" | "order_id"> | null;
-  };
-  if (!plan) return null;
+  const subject = await resolveRenewalSubject(db, verified);
+  if (!subject || "error" in subject) return null;
+  const { profileId } = subject;
 
   const [{ data: product }, { data: agreement }, { data: profile }, queues] = (await Promise.all([
-    typedFrom(db, "plan_products")
-      .select("id, is_active, once_per_trainee")
-      .eq("id", plan.product_id)
-      .maybeSingle(),
+    subject.productId
+      ? typedFrom(db, "plan_products").select("id, is_active, once_per_trainee").eq("id", subject.productId).maybeSingle()
+      : Promise.resolve({ data: null }),
     typedFrom(db, "enrollment_agreements")
       .select("*")
-      .eq("profile_id", plan.profile_id)
+      .eq("profile_id", profileId)
       .not("signed_at", "is", null)
       .order("signed_at", { ascending: false })
       .limit(1)
@@ -58,9 +53,9 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
     db
       .from("profiles")
       .select("phone, full_name, birthdate, guardian_name, guardian_phone, role, deleted_at")
-      .eq("id", plan.profile_id)
+      .eq("id", profileId)
       .maybeSingle(),
-    loadPlanQueues(db, [plan.profile_id], israelToday()),
+    loadPlanQueues(db, [profileId], israelToday()),
   ])) as [
     { data: Pick<PlanProduct, "id" | "is_active" | "once_per_trainee"> | null },
     { data: EnrollmentAgreement | null },
@@ -96,8 +91,8 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
     emergencyContactPhone: toLocalPhone(agreement?.emergency_contact_phone),
   };
 
-  const queue = queues.get(plan.profile_id)?.queue;
+  const queue = queues.get(profileId)?.queue;
   const renewedUntil = queue ? alreadyRenewedUntil(queue) : null;
 
-  return { productId, planId: plan.id, prefill, locks: renewalLocks(usable), renewedUntil };
+  return { productId, prefill, locks: renewalLocks(usable), renewedUntil };
 }

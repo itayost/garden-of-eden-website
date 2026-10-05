@@ -20,7 +20,7 @@ export default async function TraineeSchedulePage() {
         <p className="text-sm text-muted-foreground">הרשמה לאימונים בסניף קריית אתא, עד שבועיים קדימה.</p>
       </header>
       <TraineeNotices notices={notices} />
-      <PlanStrip plan={view.plan} block={view.block} />
+      <PlanStrip plan={view.plan} block={view.block} canAskParent={view.canAskParent} />
       <ScheduleClient view={view} />
     </div>
   );

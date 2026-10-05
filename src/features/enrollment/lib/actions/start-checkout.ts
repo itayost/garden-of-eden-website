@@ -15,6 +15,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import { enrollmentSchema, type EnrollmentInput } from "@/lib/validations/enrollment";
 import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
 import { loadProductById } from "../catalog";
+import { resolveRenewalSubject } from "@/features/plans/lib/renewal-subject";
 
 /**
  * The card page's address on success. The client opens it with a full page
@@ -61,18 +62,19 @@ async function resolvePurchaser(
   const verified = verifyRenewalToken(data.renewalToken, planTokenSecret(), Math.floor(Date.now() / 1000));
   if (!verified) return fresh;
 
-  // Two foreign keys reach profiles (profile_id, created_by): name the one.
-  const { data: renewed, error: lookupError } = await db
-    .from("trainee_plans")
-    .select("id, profile:profiles!trainee_plans_profile_id_fkey(id, full_name, birthdate, phone, role, deleted_at)")
-    .eq("id", verified.planId)
+  const subject = await resolveRenewalSubject(db, verified);
+  if (subject && "error" in subject) return { error: subject.error };
+  if (!subject) return fresh;
+  const { data: account, error: lookupError } = await db
+    .from("profiles")
+    .select("id, full_name, birthdate, phone, role, deleted_at")
+    .eq("id", subject.profileId)
     .maybeSingle();
   if (lookupError) {
-    console.error("[checkout] renewal lookup failed:", lookupError.message);
-    return { error: "לא הצלחנו לאמת את קישור החידוש. נסו שוב בעוד רגע." };
+    console.error("[checkout] link account lookup failed:", lookupError.message);
+    return { error: "לא הצלחנו לאמת את הקישור. נסו שוב בעוד רגע." };
   }
-  const account = renewed?.profile;
-  if (!renewed || !account || !isActiveTrainee(account)) return fresh;
+  if (!account || !isActiveTrainee(account)) return fresh;
 
   const usable = usableAccount({ fullName: account.full_name, birthdate: account.birthdate, phone: account.phone });
   const bound = bindRenewal(usable, data);
@@ -94,7 +96,7 @@ async function resolvePurchaser(
   }
   return {
     profileId: account.id,
-    renewalOfPlanId: renewed.id,
+    renewalOfPlanId: subject.planId,
     childName: bound.childName,
     childBirthdate: bound.childBirthdate,
     loginPhone: bound.loginPhone,

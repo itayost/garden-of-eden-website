@@ -6,11 +6,12 @@ import { israelToday } from "@/lib/utils/tasks";
 import { fulfillFromInput } from "@/features/enrollment/lib/fulfillment";
 import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import { agreementLink, notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
-import { discountProblem, type Discount } from "@/lib/plans/discount";
-import { TERMS_VERSION } from "../../../../content/terms-kiryat-ata";
+import { insertUnsignedAgreement } from "./unsigned-agreement";
+import type { Discount } from "@/lib/plans/discount";
+import { orderPlanName, type ManualCardTerms } from "@/lib/plans/manual-card";
+import { staffOrderColumns } from "./staff-order";
 import {
   PAYMENT_METHOD_LABELS_HE,
-  type EnrollmentAgreement,
   type Order,
   type PlanProduct,
   type TraineePlan,
@@ -38,6 +39,8 @@ export interface ManualPaymentInput {
   sendWhatsApp: boolean;
   /** A sale below list price, already allowed by the action; null at list price. */
   discount: Discount | null;
+  /** A manual Card's typed terms, already allowed by the action; null for a catalog sale. */
+  manualCard: ManualCardTerms | null;
   actor: { id: string; name: string | null };
 }
 
@@ -90,34 +93,25 @@ export async function recordManualPayment(
   const { product } = input;
   // Cash has no reference; a leftover from a switched method must not stick.
   const reference = input.paymentMethod === "cash" ? null : input.reference;
-  const listPrice = Number(product.price_ils);
   // What was paid: the receipt, the agreement and any refund use it.
-  const paid = input.discount?.amountIls ?? listPrice;
-  // Every sale path passes here; who may give a Discount is the caller's check.
-  const problem = input.discount ? discountProblem(listPrice, input.discount.amountIls) : null;
-  if (problem) return { ok: false, error: problem };
+  const sale = staffOrderColumns(product, { discount: input.discount, manualCard: input.manualCard }, input.actor.id, {
+    profileId: input.trainee.profileId,
+    loginPhone: input.trainee.loginPhone,
+    child: { name: input.trainee.childName, birthdate: input.trainee.childBirthdate },
+    parent: input.parent,
+  });
+  if (!sale.ok) return { ok: false, error: sale.problem };
+  const { paid } = sale;
 
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({
-      product_id: product.id,
-      branch_id: product.branch_id,
+      ...sale.columns,
       status: "paid",
       paid_at: new Date().toISOString(),
       payment_provider: "manual",
       payment_method: input.paymentMethod,
       reference,
       received_by: input.actor.id,
-      amount_ils: paid,
-      list_price_ils: input.discount ? listPrice : null,
-      discount_reason: input.discount?.reason ?? null,
-      discounted_by: input.discount ? input.actor.id : null,
-      parent_name: input.parent.name,
-      payer_phone: input.parent.phone,
-      login_phone: input.trainee.loginPhone,
-      child_name: input.trainee.childName,
-      child_birthdate: input.trainee.childBirthdate,
-      email: input.parent.email,
-      profile_id: input.trainee.profileId,
     })
     .select("*")
     .single()) as { data: Order | null; error: { message: string } | null };
@@ -127,35 +121,18 @@ export async function recordManualPayment(
   }
 
   // Unsigned: the parent completes and signs it from the WhatsApp link.
-  const { data: agreement, error: agreementError } = (await typedFrom(db, "enrollment_agreements")
-    .insert({
-      order_id: order.id,
-      profile_id: input.trainee.profileId,
-      agreement_version: TERMS_VERSION,
-      parent_name: input.parent.name,
-      parent_id_number: "",
-      parent_phone: input.parent.phone,
-      parent_email: input.parent.email,
-      child_name: input.trainee.childName,
-      child_birthdate: input.trainee.childBirthdate,
-      medical_notes: input.health.medicalNotes,
-      plan_name: product.name_he,
-      plan_price_ils: paid,
-      plan_start_on: input.startsOn ?? israelToday(),
-      payment_method: PAYMENT_METHOD_LABELS_HE[input.paymentMethod],
-      emergency_contact_name: input.health.emergencyContactName ?? "",
-      emergency_contact_phone: input.health.emergencyContactPhone ?? "",
-      declares_healthy: false,
-      accepts_terms: false,
-      authorizes_payment: false,
-      photo_consent: false,
-      signature_name: "",
-      signed_at: null,
-    })
-    .select("*")
-    .single()) as { data: EnrollmentAgreement | null; error: { message: string } | null };
-  if (agreementError || !agreement) {
-    console.error("[manual-payment] agreement insert failed:", agreementError?.message);
+  const agreement = await insertUnsignedAgreement(db, {
+    orderId: order.id,
+    profileId: input.trainee.profileId,
+    parent: input.parent,
+    child: { name: input.trainee.childName, birthdate: input.trainee.childBirthdate },
+    health: input.health,
+    planName: orderPlanName(product.name_he, sale.columns),
+    priceIls: paid,
+    startsOn: input.startsOn ?? israelToday(),
+    paymentLabel: PAYMENT_METHOD_LABELS_HE[input.paymentMethod],
+  });
+  if (!agreement) {
     await typedFrom(db, "orders").update({ status: "failed" }).eq("id", order.id);
     return { ok: false, error: "שגיאה בשמירת ההסכם" };
   }
@@ -176,12 +153,6 @@ export async function recordManualPayment(
     .eq("id", fulfilled.planId)
     .select("starts_on, ends_on")
     .single()) as { data: Pick<TraineePlan, "starts_on" | "ends_on"> | null };
-  // The agreement states the plan's start, which the queue may have moved.
-  if (plan && plan.starts_on !== agreement.plan_start_on) {
-    await typedFrom(db, "enrollment_agreements")
-      .update({ plan_start_on: plan.starts_on })
-      .eq("id", agreement.id);
-  }
 
   await db.from("activity_logs").insert({
     user_id: fulfilled.profileId,
@@ -194,7 +165,8 @@ export async function recordManualPayment(
       paymentMethod: input.paymentMethod,
       reference,
       amountIls: paid,
-      ...(input.discount ? { listPriceIls: listPrice, discountReason: input.discount.reason } : {}),
+      ...(input.discount ? { listPriceIls: sale.listPrice, discountReason: input.discount.reason } : {}),
+      ...(input.manualCard ? { manualCard: input.manualCard } : {}),
     },
   });
 

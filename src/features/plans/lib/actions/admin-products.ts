@@ -27,6 +27,8 @@ export async function listProductsAction(): Promise<PlanProduct[]> {
   if (error) return [];
   const { data } = (await typedFrom(createAdminClient(), "plan_products")
     .select("*")
+    // A manual Card's placeholder is not a catalog entry.
+    .eq("staff_terms", false)
     .order("order_index")) as { data: PlanProduct[] | null };
   return (data ?? []).map((p) => ({ ...p, price_ils: Number(p.price_ils) }));
 }

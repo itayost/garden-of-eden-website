@@ -9,7 +9,7 @@ export function waShareUrl(phoneE164: string, text: string): string {
   return `https://wa.me/${phoneE164.replace(/^\+/, "")}?text=${encodeURIComponent(text)}`;
 }
 
-/** The plan_confirmed template's words, for sending by hand. */
+/** The plan_confirmation template's words, for sending by hand. */
 export function planConfirmedText(params: {
   parentName: string;
   childName: string;
@@ -21,7 +21,7 @@ export function planConfirmedText(params: {
     `היי ${params.parentName}, הרישום של ${params.childName} למסלול ${params.planName} בגארדן אוף עדן קריית אתא נקלט.`,
     params.validity ? `המסלול בתוקף עד ${params.validity}.` : "",
     `לצפייה ולחתימה על הסכם ההרשמה: ${params.agreementUrl}`,
-    "אם משהו לא מדויק, כתבו לנו כאן.",
+    "צוות גארדן אוף עדן",
   ]
     .filter(Boolean)
     .join("\n");

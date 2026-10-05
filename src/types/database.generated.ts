@@ -2072,6 +2072,7 @@ export type Database = {
           paid_at: string | null
           parent_name: string
           payer_phone: string
+          payment_link_by: string | null
           payment_method: string | null
           payment_provider: string
           product_id: string
@@ -2083,6 +2084,8 @@ export type Database = {
           reference: string | null
           renewal_of_plan_id: string | null
           status: string
+          terms_duration_days: number | null
+          terms_sessions_total: number | null
           updated_at: string
         }
         Insert: {
@@ -2111,6 +2114,7 @@ export type Database = {
           paid_at?: string | null
           parent_name: string
           payer_phone: string
+          payment_link_by?: string | null
           payment_method?: string | null
           payment_provider?: string
           product_id: string
@@ -2122,6 +2126,8 @@ export type Database = {
           reference?: string | null
           renewal_of_plan_id?: string | null
           status?: string
+          terms_duration_days?: number | null
+          terms_sessions_total?: number | null
           updated_at?: string
         }
         Update: {
@@ -2150,6 +2156,7 @@ export type Database = {
           paid_at?: string | null
           parent_name?: string
           payer_phone?: string
+          payment_link_by?: string | null
           payment_method?: string | null
           payment_provider?: string
           product_id?: string
@@ -2161,6 +2168,8 @@ export type Database = {
           reference?: string | null
           renewal_of_plan_id?: string | null
           status?: string
+          terms_duration_days?: number | null
+          terms_sessions_total?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2174,6 +2183,13 @@ export type Database = {
           {
             foreignKeyName: "orders_discounted_by_fkey"
             columns: ["discounted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_payment_link_by_fkey"
+            columns: ["payment_link_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2443,6 +2459,7 @@ export type Database = {
           price_ils: number
           sessions_total: number | null
           slug: string
+          staff_terms: boolean
           updated_at: string
         }
         Insert: {
@@ -2460,6 +2477,7 @@ export type Database = {
           price_ils: number
           sessions_total?: number | null
           slug: string
+          staff_terms?: boolean
           updated_at?: string
         }
         Update: {
@@ -2477,6 +2495,7 @@ export type Database = {
           price_ils?: number
           sessions_total?: number | null
           slug?: string
+          staff_terms?: boolean
           updated_at?: string
         }
         Relationships: [

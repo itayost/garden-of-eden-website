@@ -6,18 +6,16 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
-import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-manager";
 import { canManageBranches, isInBranchScope } from "@/lib/branches/branch-scope";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isMorningConfigured } from "@/lib/morning/config";
+import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
 import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue } from "@/lib/plans/plan-queue";
-import type { Discount } from "@/lib/plans/discount";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
-import { toE164 } from "@/lib/plans/local-phone";
 import {
   newTraineeSchema,
   resendAgreementSchema,
@@ -27,9 +25,11 @@ import {
 } from "@/lib/validations/plans-admin";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
+import { manualCardDraftFrom, type ManualCardDraft } from "@/lib/plans/manual-card";
+import { pricingRefusal } from "../discount-permission";
 import { findRecentDuplicate, recordManualPayment, type ManualPaymentResult } from "../manual-payment";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { checkTraineeSale, introPackRefusal } from "../trainee-sale";
+import { checkTraineeSale, introPackRefusal, saleParties } from "../trainee-sale";
 import { startDateProblem, latestStartDate } from "@/lib/plans/start-date";
 import { hasPlansAhead, loadQueueRows, loadStoredPlans } from "../queries";
 
@@ -59,24 +59,37 @@ export interface StaffPaymentContext {
   /** A Card ahead can run out before its date, which brings the start forward. */
   startsWhenCardRunsOut: boolean;
   morningConfigured: boolean;
+  /** Online card payments are open, so staff may send a Payment link. */
+  cardLinksOpen: boolean;
+  /**
+   * A manual Card the caller may sell this trainee (Admin or the branch's
+   * manager): its placeholder product, and terms to start from (the branch's
+   * first catalog Card).
+   */
+  manualCard: { productId: string; draft: ManualCardDraft } | null;
   parentPhone: string | null;
 }
 
-/** Active products the caller may sell: their writable branches, optionally narrowed to the trainee's. */
+/**
+ * What the caller may sell, in their writable branches, optionally narrowed
+ * to the trainee's: the active catalog, and the manual Card placeholders of
+ * branches they manage. One read for both.
+ */
 async function sellableProducts(
   db: ReturnType<typeof createAdminClient>,
   traineeBranchIds: readonly string[] | null,
   role: string,
-): Promise<SellableProduct[]> {
+): Promise<{ catalog: SellableProduct[]; manualCards: SellableProduct[] }> {
   const [scopeResult, { data }] = await Promise.all([
     getBranchScopeAction(),
-    typedFrom(db, "plan_products").select("*").eq("is_active", true).order("order_index") as unknown as Promise<{
-      data: PlanProduct[] | null;
-    }>,
+    typedFrom(db, "plan_products")
+      .select("*")
+      .or("is_active.eq.true,staff_terms.eq.true")
+      .order("order_index") as unknown as Promise<{ data: PlanProduct[] | null }>,
   ]);
-  if ("error" in scopeResult) return [];
+  if ("error" in scopeResult) return { catalog: [], manualCards: [] };
   const { scope, managedBranchIds } = scopeResult.data;
-  return (data ?? [])
+  const visible = (data ?? [])
     .filter((p) => isInBranchScope(scope, [p.branch_id]))
     .filter((p) => traineeBranchIds === null || traineeBranchIds.includes(p.branch_id))
     .map((p) => ({
@@ -84,17 +97,17 @@ async function sellableProducts(
       price_ils: Number(p.price_ils),
       managed: canManageBranches(role, managedBranchIds, [p.branch_id]),
     }));
+  return {
+    catalog: visible.filter((p) => !p.staff_terms),
+    manualCards: visible.filter((p) => p.staff_terms && p.managed),
+  };
 }
-
-/** A Discount is for an Admin or the branch's manager; the amount rule is recordManualPayment's. */
-const discountRefusal = (product: PlanProduct, discount: Discount | null): Promise<string | null> =>
-  discount ? verifyAdminOrBranchManager([product.branch_id]) : Promise.resolve(null);
 
 /** Active products in the branches the caller may sell in, for the new-trainee sheet. */
 export async function listSellableProductsAction(): Promise<SellableProduct[]> {
   const { error, profile } = await verifyAdminOrTrainer();
   if (error) return [];
-  return sellableProducts(createAdminClient(), null, profile!.role);
+  return (await sellableProducts(createAdminClient(), null, profile!.role)).catalog;
 }
 
 /** Everything the payment sheet needs to open for one trainee. Staff only, branch scoped. */
@@ -115,11 +128,16 @@ export async function getStaffPaymentContextAction(
   if (!profile) return { error: "המתאמן לא נמצא" };
 
   const today = israelToday();
-  const [products, plansByProfile, rowsByProfile] = await Promise.all([
+  const [{ catalog: products, manualCards }, plansByProfile, rowsByProfile] = await Promise.all([
     sellableProducts(db, memberships.get(traineeId) ?? [], staff!.role),
     loadStoredPlans(db, [traineeId]),
     loadQueueRows(db, [traineeId]),
   ]);
+  // The first of the trainee's branches the caller manages that sells manual Cards.
+  const manualProduct = manualCards[0];
+  const baseCard = manualProduct
+    ? products.find((p) => p.branch_id === manualProduct.branch_id && p.kind === "session_card")
+    : undefined;
   const plans = plansByProfile.get(traineeId) ?? [];
   const rows = rowsByProfile.get(traineeId) ?? [];
   const queue = resolvePlanQueue(plans, rows, today);
@@ -142,6 +160,8 @@ export async function getStaffPaymentContextAction(
     latestStartOn: latestStartDate(today),
     startsWhenCardRunsOut: ahead.some((e) => e.sessionsLeft !== null && e.endsOn === e.expiresOn),
     morningConfigured: isMorningConfigured(),
+    cardLinksOpen: onlinePaymentsOpen(),
+    manualCard: manualProduct ? { productId: manualProduct.id, draft: manualCardDraftFrom(baseCard) } : null,
     parentPhone: profile.guardian_phone ?? profile.phone ?? null,
   };
 }
@@ -163,6 +183,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     productId: data.productId,
     isAdmin: staff?.role === "admin",
     confirmDuplicate: data.confirmDuplicate,
+    manualCard: data.manualCard !== null,
   });
   if (!("ok" in sale)) return sale;
   const { product, trainee } = sale;
@@ -176,33 +197,26 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     needsQueue ? await hasPlansAhead(db, data.traineeId, today) : false,
   );
   if (startProblem) return { error: startProblem };
-  const discountError = await discountRefusal(product, data.discount);
+  const discountError = await pricingRefusal(product.branch_id, data.discount !== null || data.manualCard !== null);
   if (discountError) return { error: discountError };
 
-  const loginPhone = toE164(trainee.phone);
+  const parties = saleParties(trainee);
   const result = await recordManualPayment(db, {
     product,
     trainee: {
       profileId: data.traineeId,
-      loginPhone,
-      childName: trainee.full_name ?? "מתאמן",
-      childBirthdate: trainee.birthdate ?? null,
+      loginPhone: parties.loginPhone,
+      childName: parties.child.name,
+      childBirthdate: parties.child.birthdate,
     },
-    parent: {
-      name: trainee.guardian_name ?? "הורה",
-      phone: trainee.guardian_phone ? toE164(trainee.guardian_phone) : loginPhone,
-      email: null,
-    },
-    health: {
-      medicalNotes: trainee.medical_notes ?? null,
-      emergencyContactName: trainee.emergency_contact_name ?? null,
-      emergencyContactPhone: trainee.emergency_contact_phone ?? null,
-    },
+    parent: parties.parent,
+    health: parties.health,
     paymentMethod: data.paymentMethod,
     reference: data.reference,
     startsOn: data.startsOn,
     sendWhatsApp: data.sendWhatsApp,
     discount: data.discount,
+    manualCard: data.manualCard,
     actor: { id: user!.id, name: staff?.full_name ?? null },
   });
   if (!result.ok) return { error: result.error };
@@ -244,7 +258,8 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
   // current or queued, fulfillment lets the queue decide instead.
   const startProblem = startDateProblem(data.startsOn, israelToday(), false);
   if (startProblem) return { error: startProblem };
-  const discountError = await discountRefusal(product, data.discount);
+  // A new trainee is sold from the catalog; a manual Card is for an existing one.
+  const discountError = await pricingRefusal(product.branch_id, data.discount !== null);
   if (discountError) return { error: discountError };
   if (owner) {
     const scopeError = await assertTraineeInScope(owner.id);
@@ -273,6 +288,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
     startsOn: data.startsOn,
     sendWhatsApp: data.sendWhatsApp,
     discount: data.discount,
+    manualCard: null,
     actor: { id: user!.id, name: staff?.full_name ?? null },
   });
   if (!result.ok) return { error: result.error };

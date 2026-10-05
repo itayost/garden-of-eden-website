@@ -1,25 +1,28 @@
 "use client";
 
-import { Banknote, Dumbbell, Landmark, Smartphone } from "lucide-react";
+import { Banknote, CreditCard, Dumbbell, Landmark, Smartphone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { ManualPaymentMethod } from "@/lib/validations/plans-admin";
 import { PAYMENT_METHOD_LABELS_HE } from "@/types/plans";
 
-/** What a staff sheet may offer: the hand-taken methods, and a plan paid in Arbox. */
-export type PickerMethod = ManualPaymentMethod | "arbox";
+/** What a staff sheet may offer: the hand-taken methods, a Payment link (card), and a plan paid in Arbox. */
+export type PickerMethod = ManualPaymentMethod | "card" | "arbox";
+
 
 const ICONS: Record<PickerMethod, typeof Banknote> = {
   cash: Banknote,
   transfer: Landmark,
   bit: Smartphone,
+  card: CreditCard,
   arbox: Dumbbell,
 };
 
 const MANUAL_METHODS: readonly ManualPaymentMethod[] = ["cash", "transfer", "bit"];
 
-const REFERENCE_COPY: Record<Exclude<PickerMethod, "cash">, { label: string; placeholder: string }> = {
+/** Methods with a reference to type; cash and a card the parent pays from the link have none. */
+const REFERENCE_COPY: Partial<Record<PickerMethod, { label: string; placeholder: string }>> = {
   transfer: { label: "אסמכתא (לא חובה)", placeholder: "4 ספרות אחרונות של האסמכתא" },
   bit: { label: "אסמכתא (לא חובה)", placeholder: "4 ספרות אחרונות של האסמכתא" },
   arbox: { label: "מספר המנוי או הקבלה ב-Arbox (לא חובה)", placeholder: "לדוגמה 18554133" },
@@ -44,6 +47,7 @@ export function PaymentMethodPicker<M extends PickerMethod>({
   methods = MANUAL_METHODS as readonly M[],
   disabled,
 }: PaymentMethodPickerProps<M>) {
+  const referenceCopy = REFERENCE_COPY[method];
   return (
     <div className="space-y-3">
       <div>
@@ -65,7 +69,7 @@ export function PaymentMethodPicker<M extends PickerMethod>({
                 disabled={disabled}
                 onClick={() => {
                   onMethodChange(value);
-                  if (value === "cash") onReferenceChange("");
+                  if (!REFERENCE_COPY[value]) onReferenceChange("");
                 }}
                 className={cn(
                   "flex h-16 flex-col items-center justify-center gap-1 rounded-xl border text-sm font-medium transition-colors",
@@ -81,14 +85,14 @@ export function PaymentMethodPicker<M extends PickerMethod>({
           })}
         </div>
       </div>
-      {method !== "cash" && (
+      {referenceCopy && (
         <div className="space-y-1">
-          <Label htmlFor="payment-reference">{REFERENCE_COPY[method as Exclude<PickerMethod, "cash">].label}</Label>
+          <Label htmlFor="payment-reference">{referenceCopy.label}</Label>
           <Input
             id="payment-reference"
             value={reference}
             onChange={(e) => onReferenceChange(e.target.value)}
-            placeholder={REFERENCE_COPY[method as Exclude<PickerMethod, "cash">].placeholder}
+            placeholder={referenceCopy.placeholder}
             inputMode="numeric"
             dir="ltr"
             className="h-12 rounded-xl text-base text-right"

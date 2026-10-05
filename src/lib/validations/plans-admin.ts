@@ -5,7 +5,7 @@ import {
   isValidPhoneIL,
   isValidDateString,
 } from "@/lib/validations/common";
-import { MAX_CARD_BALANCE } from "@/lib/plans/adjustment";
+import { MAX_CARD_BALANCE, MAX_CARD_DAYS } from "@/lib/plans/adjustment";
 
 const uuid = z.string().regex(UUID_REGEX, "מזהה לא תקין");
 const isoDate = z.string().refine(isValidDateString, "תאריך לא תקין");
@@ -48,6 +48,16 @@ const discountSchema = z
   .nullable()
   .default(null);
 
+/** A manual Card's terms as staff typed them; the action checks them (manualCardProblem). */
+const manualCardSchema = z
+  .object({
+    sessions: z.number().int(),
+    priceIls: z.number().finite(),
+    days: z.number().int(),
+  })
+  .nullable()
+  .default(null);
+
 /**
  * A new trainee signed up at the field. Staff type only what the parent
  * cannot fill in later; birthdate, email, health, and consent come from the
@@ -82,9 +92,20 @@ export const staffPaymentSchema = z.object({
   startsOn: isoDate.nullable().default(null),
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
+  manualCard: manualCardSchema,
   confirmDuplicate: z.boolean().default(false),
 });
 export type StaffPaymentInput = z.input<typeof staffPaymentSchema>;
+
+/** A Payment link: the parent signs and pays by card on their phone. */
+export const paymentLinkSchema = z.object({
+  traineeId: uuid,
+  productId: uuid,
+  sendWhatsApp: z.boolean(),
+  discount: discountSchema,
+  manualCard: manualCardSchema,
+});
+export type PaymentLinkInput = z.input<typeof paymentLinkSchema>;
 
 /**
  * A plan paid in Arbox. The product pre-fills the terms, but Arbox sold its
@@ -141,7 +162,7 @@ export const productSchema = z.object({
   blurb_he: optionalText(200),
   price_ils: z.number().positive("מחיר חייב להיות חיובי").max(100000, "מחיר גבוה מדי"),
   sessions_total: z.number().int().positive("מספר אימונים לא תקין").nullable(),
-  duration_days: z.number().int().positive("נדרש משך בימים").max(730, "משך ארוך מדי"),
+  duration_days: z.number().int().positive("נדרש משך בימים").max(MAX_CARD_DAYS, "משך ארוך מדי"),
   once_per_trainee: z.boolean(),
   gift_he: optionalText(200),
   is_active: z.boolean(),

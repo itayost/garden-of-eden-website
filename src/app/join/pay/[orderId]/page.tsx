@@ -8,6 +8,7 @@ import { PaymentForm } from "@/features/enrollment/components/PaymentForm";
 import { PaymentsClosedNotice } from "@/features/enrollment/components/PaymentsClosedNotice";
 import { FullLoadGuard } from "@/features/enrollment/components/FullLoadGuard";
 import { canPayOnline } from "@/lib/payments/online-payments";
+import { orderPlanName } from "@/lib/plans/manual-card";
 import type { Order, PlanProduct } from "@/types/plans";
 
 export const metadata: Metadata = {
@@ -30,14 +31,35 @@ export default async function PayPage({ params }: PageProps) {
 
   const db = createAdminClient();
   const { data: order } = (await typedFrom(db, "orders")
-    .select("id, status, amount_ils, child_name, parent_name, product_id")
+    .select("id, status, amount_ils, child_name, parent_name, product_id, terms_sessions_total, terms_duration_days, agreements:enrollment_agreements(signed_at)")
     .eq("id", orderId)
     .maybeSingle()) as {
-    data: Pick<Order, "id" | "status" | "amount_ils" | "child_name" | "parent_name" | "product_id"> | null;
+    data:
+      | (Pick<
+          Order,
+          "id" | "status" | "amount_ils" | "child_name" | "parent_name" | "product_id" | "terms_sessions_total" | "terms_duration_days"
+        > & {
+          agreements: { signed_at: string | null }[] | null;
+        })
+      | null;
   };
   if (!order) notFound();
   if (order.status === "paid" || order.status === "charging") redirect(`/join/success?order=${order.id}`);
   if (order.status === "failed") redirect(`/join/failed?order=${order.id}`);
+
+  // A Payment link is signed before the card; the charge refuses an unsigned one too.
+  // The signing link is never derived here: the order id must not unlock the agreement.
+  const agreement = order.agreements?.[0];
+  if (agreement && !agreement.signed_at) {
+    return (
+      <section className="space-y-2 rounded-2xl border bg-white p-4 text-sm">
+        <h1 className="text-xl font-bold">קודם חותמים על ההסכם</h1>
+        <p className="text-black/60">
+          פתחו את הקישור שקיבלתם בוואטסאפ, חתמו על ההסכם, ומשם תעברו לתשלום.
+        </p>
+      </section>
+    );
+  }
 
   const { data: product } = (await typedFrom(db, "plan_products")
     .select("name_he, sessions_total, duration_days")
@@ -60,7 +82,7 @@ export default async function PayPage({ params }: PageProps) {
       <section className="rounded-2xl border bg-white p-4">
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <dt className="text-black/60">מסלול</dt>
-          <dd className="font-medium">{product?.name_he ?? "מסלול"}</dd>
+          <dd className="font-medium">{orderPlanName(product?.name_he ?? "מסלול", order)}</dd>
           <dt className="text-black/60">חניך/ה</dt>
           <dd className="font-medium">{order.child_name}</dd>
           <dt className="text-black/60">משלם/ת</dt>

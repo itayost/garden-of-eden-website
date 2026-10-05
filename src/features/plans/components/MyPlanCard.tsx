@@ -1,25 +1,28 @@
-import Link from "next/link";
 import { CalendarClock, Ticket } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { shortDate } from "@/lib/utils/iso-date";
 import type { PlanQueueView } from "../lib/queries";
 import { PlanStatusBadge } from "./PlanStatusBadge";
+import { PurchaseRequestButton, REQUEST_LABELS } from "./PurchaseRequestButton";
 
 interface MyPlanCardProps {
   planQueue: PlanQueueView;
-  renewUrl: string;
+  /** The parent can be sent the purchase link (canAskParentToBuy). */
+  canAskParent: boolean;
 }
 
 /**
  * The trainee's plan at a glance. An expired plan turns the card into the
- * banner; nothing is blocked, the renewal button is the only change.
+ * banner; nothing is blocked. Renewing sends the parent the purchase link.
  */
-export function MyPlanCard({ planQueue, renewUrl }: MyPlanCardProps) {
+export function MyPlanCard({ planQueue, canAskParent }: MyPlanCardProps) {
   const { queue, product, sessionsLeft, status, endsOn } = planQueue;
   const expired = status === "expired";
   const next = queue.current ? queue.queued[0] : undefined;
+  // Ended, cancelled or about to end: renewing is the next step.
+  const over = expired || status === "cancelled";
+  const urgent = over || status === "ending_soon";
 
   return (
     <Card className={cn(expired && "border-destructive/50 bg-destructive/5")}>
@@ -49,13 +52,13 @@ export function MyPlanCard({ planQueue, renewUrl }: MyPlanCardProps) {
             </p>
           )}
           {expired && (
-            <p className="text-sm text-destructive">המסלול הסתיים. אפשר לחדש אותו בלחיצה.</p>
+            <p className="text-sm text-destructive">
+              {canAskParent ? "המסלול הסתיים. ההורה יקבל קישור לחידוש בלחיצה." : "המסלול הסתיים."}
+            </p>
           )}
         </div>
-        {status !== "cancelled" && (
-          <Button asChild variant={expired || status === "ending_soon" ? "default" : "outline"}>
-            <Link href={renewUrl}>{expired ? "חידוש המסלול" : "חידוש מוקדם"}</Link>
-          </Button>
+        {canAskParent && (
+          <PurchaseRequestButton label={over ? REQUEST_LABELS.renew : REQUEST_LABELS.renewEarly} primary={urgent} />
         )}
       </CardContent>
     </Card>
