@@ -18,7 +18,8 @@ import {
   type ImportTrainee,
   purchaseKey,
 } from "@/lib/plans/arbox-import-plan";
-import { countSessionsUsedFromRows } from "@/lib/plans/plan-status";
+import { resolvePlanQueue, type QueueRow } from "@/lib/plans/plan-queue";
+import { toQueuePlan } from "@/lib/plans/queue-plan-row";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { applyOne, healLeftoverOrders, type Db, type Outcome } from "./arbox-import-apply";
 import { israelToday } from "@/lib/utils/tasks";
@@ -70,10 +71,15 @@ async function loadTrainees(db: Db, branchId: string): Promise<ImportTrainee[]> 
 const PAGE = 1000;
 
 interface RosterRow {
+  readonly id: string;
   readonly trainee_id: string;
   readonly cancelled_at: string | null;
   readonly late_cancel: boolean;
-  readonly slot: { readonly schedule_date: string; readonly branch_id: string | null } | null;
+  readonly slot: {
+    readonly schedule_date: string;
+    readonly start_time: string;
+    readonly branch_id: string | null;
+  } | null;
 }
 
 /**
@@ -85,7 +91,7 @@ async function loadRosterRows(db: Db, profileIds: readonly string[], since: stri
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await db
       .from("daily_schedule_slot_trainees")
-      .select("trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, branch_id)")
+      .select("id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id)")
       .in("trainee_id", [...profileIds])
       .gte("slot.schedule_date", since)
       .order("id")
@@ -102,28 +108,47 @@ async function loadPlans(db: Db, profileIds: readonly string[], today: string): 
   if (profileIds.length === 0) return [];
   const { data, error } = await db
     .from("trainee_plans")
-    .select("id, profile_id, branch_id, starts_on, ends_on, sessions_total, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id)")
+    .select("id, profile_id, branch_id, starts_on, ends_on, sessions_total, not_before, duration_days, fixed_ends_on, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id)")
     .in("profile_id", [...profileIds]);
   if (error) throw new Error(`[arbox-import] plans: ${error.message}`);
   type Row = {
     id: string; profile_id: string; branch_id: string; starts_on: string; ends_on: string; sessions_total: number | null;
+    not_before: string | null; duration_days: number | null; fixed_ends_on: string | null;
     status: string; created_at: string;
     product: { kind: string } | null;
     order: { payment_method: string | null; provider_transaction_id: string | null } | null;
   };
   const plans = (data ?? []) as unknown as Row[];
-  // Usage matters only for plans still in their window; older rosters are not read.
-  const live = plans.filter((r) => r.ends_on >= today);
-  const since = live.reduce<string | null>((acc, r) => (acc === null || r.starts_on < acc ? r.starts_on : acc), null);
+  // Usage comes from each Trainee's Plan queue, which is walked from the
+  // first Plan, so the rosters are read from the earliest start on.
+  const since = plans.reduce<string | null>((acc, r) => {
+    const earliest = r.not_before !== null && r.not_before < r.starts_on ? r.not_before : r.starts_on;
+    return acc === null || earliest < acc ? earliest : acc;
+  }, null);
   const roster = since === null ? [] : await loadRosterRows(db, profileIds, since);
-  const usedBy = (r: Row): number =>
-    countSessionsUsedFromRows(
-      roster
-        .filter((x) => x.trainee_id === r.profile_id && x.slot)
-        .map((x) => ({ schedule_date: x.slot!.schedule_date, branch_id: x.slot!.branch_id, cancelled_at: x.cancelled_at, late_cancel: x.late_cancel })),
-      r,
-      today,
-    );
+  const usedByPlan = new Map<string, number>();
+  for (const profileId of new Set(plans.map((r) => r.profile_id))) {
+    const rows: QueueRow[] = roster
+      .filter((x) => x.trainee_id === profileId && x.slot)
+      .map((x) => ({
+        id: x.id,
+        schedule_date: x.slot!.schedule_date,
+        start_time: x.slot!.start_time,
+        branch_id: x.slot!.branch_id,
+        cancelled_at: x.cancelled_at,
+        late_cancel: x.late_cancel,
+      }));
+    const own = plans
+      .filter((r) => r.profile_id === profileId)
+      .map((r) =>
+        toQueuePlan({
+          ...r,
+          status: r.status === "cancelled" ? ("cancelled" as const) : ("active" as const),
+          product: { kind: (r.product?.kind ?? "addon") as PlanKind },
+        }),
+      );
+    for (const entry of resolvePlanQueue(own, rows, today).plans) usedByPlan.set(entry.plan.id, entry.used);
+  }
   return plans.map((r) => ({
     id: r.id,
     profileId: r.profile_id,
@@ -135,7 +160,7 @@ async function loadPlans(db: Db, profileIds: readonly string[], today: string): 
     createdOn: israelToday(new Date(r.created_at)),
     orderPaymentMethod: r.order?.payment_method ?? null,
     orderProviderTransactionId: r.order?.provider_transaction_id ?? null,
-    sessionsUsed: r.ends_on >= today ? usedBy(r) : 0,
+    sessionsUsed: usedByPlan.get(r.id) ?? 0,
   }));
 }
 

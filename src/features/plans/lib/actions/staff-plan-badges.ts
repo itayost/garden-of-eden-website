@@ -5,7 +5,7 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { israelToday } from "@/lib/utils/tasks";
 import type { StaffPlanBadge } from "@/types/plans";
-import { loadPlansWithUsage } from "../queries";
+import { loadPlanQueues } from "../queries";
 
 /**
  * Plan status and a medical flag for a set of trainees, for roster chips and
@@ -20,20 +20,14 @@ export const loadPlanStatusesForStaff = cache(
 
     const db = createAdminClient();
     const [plans, { data: profiles }] = await Promise.all([
-      loadPlansWithUsage(db, profileIds, israelToday()),
+      loadPlanQueues(db, profileIds, israelToday()),
       db.from("profiles").select("id, medical_notes").in("id", [...profileIds]),
     ]);
     const medical = new Set((profiles ?? []).filter((p) => p.medical_notes).map((p) => p.id));
 
     const result: Record<string, StaffPlanBadge> = {};
-    for (const [profileId, { plan, sessionsUsed, status }] of plans) {
-      result[profileId] = {
-        status,
-        sessionsLeft:
-          plan.sessions_total === null ? null : Math.max(plan.sessions_total - sessionsUsed, 0),
-        endsOn: plan.ends_on,
-        hasMedicalNotes: medical.has(profileId),
-      };
+    for (const [profileId, { status, sessionsLeft, endsOn }] of plans) {
+      result[profileId] = { status, sessionsLeft, endsOn, hasMedicalNotes: medical.has(profileId) };
     }
     // A trainee with medical notes but no plan (all of חיפה) still gets the flag.
     for (const id of medical) {

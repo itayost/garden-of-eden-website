@@ -2,7 +2,6 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { addDays } from "@/lib/utils/iso-date";
 import { israelToday } from "@/lib/utils/tasks";
 import { fulfillFromInput } from "@/features/enrollment/lib/fulfillment";
 import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
@@ -153,22 +152,18 @@ export async function recordManualPayment(
     product: { ...product, price_ils: Number(product.price_ils) },
     agreement,
     createdBy: input.actor.id,
+    // A chosen start date (new trainee) is the earliest the Plan may start.
+    terms: input.startsOn ? { notBefore: input.startsOn } : undefined,
   });
   if (!fulfilled.ok) return { ok: false, error: `ההזמנה נשמרה אך היצירה נכשלה: ${fulfilled.error}` };
 
-  // A chosen start date (new trainee) overrides the chaining default.
-  const today = israelToday();
   const note = `${PAYMENT_METHOD_LABELS_HE[input.paymentMethod]}${reference ? ` ${reference}` : ""}`;
-  const patch =
-    input.startsOn && input.startsOn !== today
-      ? { starts_on: input.startsOn, ends_on: addDays(input.startsOn, product.duration_days - 1), note }
-      : { note };
   const { data: plan } = (await typedFrom(db, "trainee_plans")
-    .update(patch)
+    .update({ note })
     .eq("id", fulfilled.planId)
     .select("starts_on, ends_on")
     .single()) as { data: Pick<TraineePlan, "starts_on" | "ends_on"> | null };
-  // The agreement states the plan's real start, which chaining may have moved.
+  // The agreement states the plan's start, which the queue may have moved.
   if (plan && plan.starts_on !== agreement.plan_start_on) {
     await typedFrom(db, "enrollment_agreements")
       .update({ plan_start_on: plan.starts_on })

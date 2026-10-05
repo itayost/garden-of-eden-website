@@ -28,7 +28,7 @@ import { getOwnNextGame } from "@/features/next-game/lib/actions/next-game";
 import { ClipUploadCard } from "@/components/dashboard/ClipUploadCard";
 import { MentalRecordingsCard } from "@/components/dashboard/MentalRecordingsCard";
 import { getOwnClipWithSignedUrl } from "@/features/clips/lib/actions/clips";
-import { loadOwnPlanWithUsage } from "@/features/plans/lib/queries";
+import { loadOwnPlanQueue } from "@/features/plans/lib/queries";
 import { buildRenewalUrl } from "@/features/plans/lib/renewal-link";
 import { MyPlanCard } from "@/features/plans/components/MyPlanCard";
 import { NextTrainingCard } from "@/features/booking/components/NextTrainingCard";
@@ -78,7 +78,7 @@ export default async function DashboardPage() {
   ]);
 
   const [ownPlan, booking] = await Promise.all([
-    loadOwnPlanWithUsage(israelToday()),
+    loadOwnPlanQueue(israelToday()),
     loadNextBooking(user.id),
   ]);
   const canBook = booking.canBook;
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
       {hasAssessments && <RatingMigrationBanner />}
       {canBook && <NextTrainingCard next={nextBooking} />}
       {ownPlan && (
-        <MyPlanCard planWithUsage={ownPlan} renewUrl={buildRenewalUrl(ownPlan.plan.id)} />
+        <MyPlanCard planQueue={ownPlan} renewUrl={buildRenewalUrl(ownPlan.plan.id)} />
       )}
 
       {/* Player Card Section */}

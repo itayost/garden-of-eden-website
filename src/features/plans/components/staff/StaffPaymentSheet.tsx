@@ -170,6 +170,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
               : context
                 ? method === "arbox"
                   ? "התאריכים, האימונים והסכום כמו שנמכרו ב-Arbox."
+                  : context.startsWhenCardRunsOut
+                  ? `המסלול החדש יתחיל כשהכרטיסייה הנוכחית תיגמר, לכל המאוחר ב-${shortDate(context.startsOn)}.`
                   : context.startsAfterCurrent
                   ? `המסלול החדש יתחיל ב-${shortDate(context.startsOn)}, אחרי סיום המסלול הנוכחי.`
                   : "המסלול החדש מתחיל היום."

@@ -13,6 +13,7 @@ import type {
   MergePlanAction,
 } from "@/lib/plans/arbox-import-plan";
 import type { Database } from "@/types/database";
+import { daysBetween } from "@/lib/utils/iso-date";
 
 export type Db = SupabaseClient<Database>;
 
@@ -111,6 +112,10 @@ async function applyCreate(db: Db, branchId: string, a: CreatePlanAction, orderI
       starts_on: a.plan.startsOn,
       ends_on: a.plan.endsOn,
       sessions_total: a.plan.sessionsTotal,
+      // An Arbox purchase keeps the end date Arbox gave it (ADR-0008).
+      not_before: a.plan.startsOn,
+      duration_days: daysBetween(a.plan.startsOn, a.plan.endsOn) + 1,
+      fixed_ends_on: a.plan.endsOn,
       status: "active",
       source: "manual",
       note: a.plan.note,
@@ -133,7 +138,7 @@ async function applyMerge(db: Db, a: MergePlanAction, targetId: string, resolve:
   };
   const base = db
     .from("trainee_plans")
-    .update({ sessions_total: a.set.sessionsTotal, ends_on: a.set.endsOn, ...clears })
+    .update({ sessions_total: a.set.sessionsTotal, ends_on: a.set.endsOn, fixed_ends_on: a.set.endsOn, ...clears })
     .eq("id", targetId)
     .eq("ends_on", a.target.expectEndsOn);
   // Guarded by the values the plan was read with: a staff edit in between
@@ -155,6 +160,14 @@ async function applyMerge(db: Db, a: MergePlanAction, targetId: string, resolve:
       .eq("id", planId)
       .eq("starts_on", shift.expectStartsOn);
     if (shiftError) console.error(`[arbox-import] moving queued plan ${planId} failed:`, shiftError.message);
+    // The queue reads a fixed end, not ends_on: move it too, or the shifted
+    // Plan would start after its own end and never run.
+    const { error: fixedError } = await db
+      .from("trainee_plans")
+      .update({ fixed_ends_on: shift.endsOn })
+      .eq("id", planId)
+      .not("fixed_ends_on", "is", null);
+    if (fixedError) console.error(`[arbox-import] moving the fixed end of ${planId} failed:`, fixedError.message);
   }
   return targetId;
 }

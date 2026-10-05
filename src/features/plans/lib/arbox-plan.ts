@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { fulfillFromInput } from "@/features/enrollment/lib/fulfillment";
+import { daysBetween } from "@/lib/utils/iso-date";
 import type { Order, PlanProduct } from "@/types/plans";
 
 export interface ArboxPlanInput {
@@ -79,6 +80,13 @@ export async function recordArboxPlan(
     product,
     agreement: null,
     createdBy: input.actor.id,
+    // What Arbox sold, not the product: its end date never moves (ADR-0008).
+    terms: {
+      notBefore: terms.startsOn,
+      fixedEndsOn: terms.endsOn,
+      durationDays: daysBetween(terms.startsOn, terms.endsOn) + 1,
+      sessionsTotal,
+    },
   });
   if (!fulfilled.ok) {
     // A paid order left unfulfilled offers a retry, and the retry path sends
@@ -88,20 +96,11 @@ export async function recordArboxPlan(
     return { ok: false, error: `יצירת המסלול נכשלה, נסו שוב: ${fulfilled.error}` };
   }
 
-  // Fulfillment wrote the product's terms; Arbox's are the real ones.
   const note = `Arbox${input.reference ? ` ${input.reference}` : ""}`;
   const { error: planError } = await typedFrom(db, "trainee_plans")
-    .update({
-      starts_on: terms.startsOn,
-      ends_on: terms.endsOn,
-      sessions_total: sessionsTotal,
-      note,
-    })
+    .update({ note })
     .eq("id", fulfilled.planId);
-  if (planError) {
-    console.error("[arbox-plan] plan terms update failed:", planError.message);
-    return { ok: false, error: "המסלול נוצר עם תנאי המוצר, ועדכון התאריכים והאימונים נכשל. תקנו אותו בכרטיס המתאמן." };
-  }
+  if (planError) console.error("[arbox-plan] plan note update failed:", planError.message);
 
   const { error: logError } = await db.from("activity_logs").insert({
     user_id: fulfilled.profileId,

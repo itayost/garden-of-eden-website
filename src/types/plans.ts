@@ -91,9 +91,20 @@ export interface TraineePlan {
   product_id: string;
   branch_id: string;
   order_id: string | null;
+  /**
+   * A cached copy of the dates the Plan queue gave the Plan when it was
+   * written. The queue (src/lib/plans/plan-queue.ts) is the authority.
+   */
   starts_on: string;
   ends_on: string;
+  /** Sale-time terms: sessions on a Card, copied at sale. */
   sessions_total: number | null;
+  /** Sale-time terms: the earliest day the Plan may start. Null on Plans older than the queue. */
+  not_before: string | null;
+  /** Sale-time terms: days the Plan runs once it starts. Null on Plans older than the queue. */
+  duration_days: number | null;
+  /** Sale-time terms: the end date of an Arbox purchase, which never moves. */
+  fixed_ends_on: string | null;
   status: PlanRowStatus;
   source: PlanSource;
   note: string | null;

@@ -12,7 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isMorningConfigured } from "@/lib/morning/config";
 import { phoneVariants } from "@/lib/plans/phone-variants";
-import { renewalStartDate } from "@/lib/plans/plan-status";
+import { placeNewPlan, resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import { toE164 } from "@/lib/plans/local-phone";
@@ -28,7 +28,7 @@ import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
 import { findRecentDuplicate, recordManualPayment, type ManualPaymentResult } from "../manual-payment";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { checkTraineeSale } from "../trainee-sale";
-import { loadPlansWithUsage } from "../queries";
+import { loadQueueRows, loadStoredPlans } from "../queries";
 
 export type StaffPaymentOutcome =
   | ManualPaymentResult
@@ -39,9 +39,12 @@ export interface StaffPaymentContext {
   traineeName: string;
   products: PlanProduct[];
   currentProductId: string | null;
-  /** What chaining will do. */
+  /** Where a Plan sold now lands in the queue: at the latest, when a Card ahead may run out sooner. */
   startsOn: string;
+  /** A paid Plan is current or queued, so the new one waits behind it. */
   startsAfterCurrent: boolean;
+  /** A Card ahead can run out before its date, which brings the start forward. */
+  startsWhenCardRunsOut: boolean;
   morningConfigured: boolean;
   parentPhone: string | null;
 }
@@ -89,17 +92,30 @@ export async function getStaffPaymentContextAction(
   if (!profile) return { error: "המתאמן לא נמצא" };
 
   const today = israelToday();
-  const [products, current] = await Promise.all([
+  const [products, plansByProfile, rowsByProfile] = await Promise.all([
     sellableProducts(db, memberships.get(traineeId) ?? []),
-    loadPlansWithUsage(db, [traineeId], today).then((m) => m.get(traineeId) ?? null),
+    loadStoredPlans(db, [traineeId]),
+    loadQueueRows(db, [traineeId]),
   ]);
-  const running = current !== null && (current.status === "active" || current.status === "ending_soon");
+  const plans = plansByProfile.get(traineeId) ?? [];
+  const rows = rowsByProfile.get(traineeId) ?? [];
+  const queue = resolvePlanQueue(plans, rows, today);
+  const { ahead } = queue;
+  const probe = {
+    kind: "subscription" as const,
+    branchId: ahead.at(-1)?.plan.branchId ?? "",
+    sessionsTotal: null,
+    durationDays: 1,
+    notBefore: today,
+    fixedEndsOn: null,
+  };
   return {
     traineeName: profile.full_name ?? "מתאמן",
     products,
-    currentProductId: current?.plan.product_id ?? null,
-    startsOn: renewalStartDate(running ? current.plan.ends_on : null, today),
-    startsAfterCurrent: running,
+    currentProductId: queue.shown?.plan.product_id ?? null,
+    startsOn: placeNewPlan(plans, rows, probe, today).startsOn,
+    startsAfterCurrent: ahead.length > 0,
+    startsWhenCardRunsOut: ahead.some((e) => e.sessionsLeft !== null && e.endsOn === e.expiresOn),
     morningConfigured: isMorningConfigured(),
     parentPhone: profile.guardian_phone ?? profile.phone ?? null,
   };

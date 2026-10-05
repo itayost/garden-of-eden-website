@@ -4,120 +4,159 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { countSessionsUsedFromRows, resolvePlanStatus } from "@/lib/plans/plan-status";
-import { pickRelevantPlan } from "@/lib/plans/pick-relevant";
+import {
+  resolvePlanQueue,
+  type PlanInQueue,
+  type PlanQueue,
+  type QueuePlan,
+  type QueueRow,
+} from "@/lib/plans/plan-queue";
+import { toQueuePlan } from "@/lib/plans/queue-plan-row";
 import type { PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
 
-export interface PlanWithUsage {
-  plan: TraineePlan;
-  product: Pick<PlanProduct, "name_he" | "kind">;
-  sessionsUsed: number;
+type ProductBits = Pick<PlanProduct, "name_he" | "kind">;
+
+/** A stored Plan with its product and its sale-time terms in the queue's shape. */
+export type StoredPlan = TraineePlan & { product: ProductBits | null } & QueuePlan;
+
+/** What every screen shows for one Trainee, all from the one Plan queue. */
+export interface PlanQueueView {
+  queue: PlanQueue<StoredPlan>;
+  /** The Plan to name: current, else next, else the last that ended. */
+  shown: PlanInQueue<StoredPlan>;
+  /** shown.plan, the stored row. */
+  plan: StoredPlan;
+  product: ProductBits;
   status: PlanStatus;
+  /** Sessions left on the whole queue; null when it holds no Card. */
+  sessionsLeft: number | null;
+  /** The last day of the queue. */
+  endsOn: string;
 }
 
-type PlanRow = TraineePlan & { product: Pick<PlanProduct, "name_he" | "kind"> | null };
+const FALLBACK_PRODUCT: ProductBits = { name_he: "מסלול", kind: "subscription" };
 
-interface RosterRow {
-  trainee_id: string;
-  cancelled_at: string | null;
-  late_cancel: boolean;
-  slot: { schedule_date: string; branch_id: string | null } | null;
-}
-
-/**
- * Roster rows for these trainees in one query. PostgREST embeds the slot so
- * the date and branch come along; the window filter is applied in memory per
- * plan because each plan has its own window.
- */
-async function loadRosterRows(
+/** Every Plan of these Trainees with its product, grouped by Trainee. */
+export async function loadStoredPlans(
   db: SupabaseClient,
   profileIds: readonly string[],
-): Promise<RosterRow[]> {
-  if (profileIds.length === 0) return [];
-  const { data, error } = (await typedFrom(db, "daily_schedule_slot_trainees")
-    .select("trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, branch_id)")
-    .in("trainee_id", [...profileIds])) as {
-    data: RosterRow[] | null;
-    error: { message: string } | null;
-  };
-  if (error) {
-    console.error("loadRosterRows error:", error);
-    return [];
-  }
-  return data ?? [];
-}
-
-export function toPlanWithUsage(
-  row: PlanRow,
-  rosterRows: readonly RosterRow[],
-  today: string,
-): PlanWithUsage {
-  const rows = rosterRows
-    .filter((r) => r.trainee_id === row.profile_id && r.slot)
-    .map((r) => ({
-      schedule_date: r.slot!.schedule_date,
-      branch_id: r.slot!.branch_id,
-      cancelled_at: r.cancelled_at,
-      late_cancel: r.late_cancel,
-    }));
-  const sessionsUsed = countSessionsUsedFromRows(rows, row, today);
-  return {
-    plan: row,
-    product: row.product ?? { name_he: "מסלול", kind: "subscription" },
-    sessionsUsed,
-    status: resolvePlanStatus(row, sessionsUsed, today),
-  };
-}
-
-/**
- * The plan to show for each profile, with its usage and derived status.
- *
- * Takes the service-role client: trainee_plans is readable by its owner, but
- * the roster tables are staff-only, so the usage count needs the admin client
- * for everyone. Callers gate on the session first.
- */
-export async function loadPlansWithUsage(
-  db: SupabaseClient,
-  profileIds: readonly string[],
-  today: string,
-): Promise<Map<string, PlanWithUsage>> {
-  const result = new Map<string, PlanWithUsage>();
+): Promise<Map<string, StoredPlan[]>> {
+  const result = new Map<string, StoredPlan[]>();
   if (profileIds.length === 0) return result;
-
   const { data, error } = (await typedFrom(db, "trainee_plans")
     .select("*, product:plan_products(name_he, kind)")
     .in("profile_id", [...profileIds])) as {
-    data: PlanRow[] | null;
+    data: (TraineePlan & { product: ProductBits | null })[] | null;
     error: { message: string } | null;
   };
   if (error) {
-    console.error("loadPlansWithUsage error:", error);
+    console.error("loadStoredPlans error:", error);
     return result;
   }
-
-  const byProfile = new Map<string, PlanRow[]>();
   for (const row of data ?? []) {
-    byProfile.set(row.profile_id, [...(byProfile.get(row.profile_id) ?? []), row]);
+    result.set(row.profile_id, [...(result.get(row.profile_id) ?? []), toQueuePlan(row)]);
   }
+  return result;
+}
 
-  const rosterRows = await loadRosterRows(db, [...byProfile.keys()]);
-  for (const [profileId, plans] of byProfile) {
-    const relevant = pickRelevantPlan(plans, today);
-    if (relevant) result.set(profileId, toPlanWithUsage(relevant, rosterRows, today));
+interface RosterRow {
+  id: string;
+  trainee_id: string;
+  cancelled_at: string | null;
+  late_cancel: boolean;
+  slot: { schedule_date: string; start_time: string; branch_id: string | null } | null;
+}
+
+const PAGE = 1000;
+
+/**
+ * Roster rows of these Trainees, grouped by Trainee, page by page: PostgREST
+ * caps a response at 1000 rows, and a silently truncated roster would
+ * undercount every queue.
+ */
+export async function loadQueueRows(
+  db: SupabaseClient,
+  profileIds: readonly string[],
+): Promise<Map<string, QueueRow[]>> {
+  const result = new Map<string, QueueRow[]>();
+  if (profileIds.length === 0) return result;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = (await typedFrom(db, "daily_schedule_slot_trainees")
+      .select(
+        "id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id)",
+      )
+      .in("trainee_id", [...profileIds])
+      .order("id")
+      .range(from, from + PAGE - 1)) as {
+      data: RosterRow[] | null;
+      error: { message: string } | null;
+    };
+    if (error) {
+      console.error("loadQueueRows error:", error);
+      return result;
+    }
+    for (const row of data ?? []) {
+      if (!row.slot) continue;
+      const queueRow: QueueRow = {
+        id: row.id,
+        schedule_date: row.slot.schedule_date,
+        start_time: row.slot.start_time,
+        branch_id: row.slot.branch_id,
+        cancelled_at: row.cancelled_at,
+        late_cancel: row.late_cancel,
+      };
+      result.set(row.trainee_id, [...(result.get(row.trainee_id) ?? []), queueRow]);
+    }
+    if ((data ?? []).length < PAGE) return result;
+  }
+}
+
+/** The screen view of one resolved queue; null when there is nothing to show. */
+export function toPlanQueueView(queue: PlanQueue<StoredPlan>): PlanQueueView | null {
+  if (!queue.shown || !queue.status || !queue.endsOn) return null;
+  return {
+    queue,
+    shown: queue.shown,
+    plan: queue.shown.plan,
+    product: queue.shown.plan.product ?? FALLBACK_PRODUCT,
+    status: queue.status,
+    sessionsLeft: queue.sessionsLeft,
+    endsOn: queue.endsOn,
+  };
+}
+
+/**
+ * The Plan queue of each Trainee who has one.
+ *
+ * Takes the service-role client: trainee_plans is readable by its owner, but
+ * the roster tables are staff-only, so the count needs the admin client for
+ * everyone. Callers gate on the session first.
+ */
+export async function loadPlanQueues(
+  db: SupabaseClient,
+  profileIds: readonly string[],
+  today: string,
+): Promise<Map<string, PlanQueueView>> {
+  const result = new Map<string, PlanQueueView>();
+  const plans = await loadStoredPlans(db, profileIds);
+  const rows = await loadQueueRows(db, [...plans.keys()]);
+  for (const [profileId, own] of plans) {
+    const view = toPlanQueueView(resolvePlanQueue(own, rows.get(profileId) ?? [], today));
+    if (view) result.set(profileId, view);
   }
   return result;
 }
 
 /**
- * The signed-in trainee's own plan. The user client proves who is asking;
+ * The signed-in Trainee's own queue. The user client proves who is asking;
  * the admin client does the read because the roster tables are staff-only.
  */
-export async function loadOwnPlanWithUsage(today: string): Promise<PlanWithUsage | null> {
+export async function loadOwnPlanQueue(today: string): Promise<PlanQueueView | null> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const map = await loadPlansWithUsage(createAdminClient(), [user.id], today);
+  const map = await loadPlanQueues(createAdminClient(), [user.id], today);
   return map.get(user.id) ?? null;
 }

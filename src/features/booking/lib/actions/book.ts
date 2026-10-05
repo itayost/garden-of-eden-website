@@ -11,20 +11,15 @@ import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import {
   BOOKING_BLOCK_LABELS_HE,
-  WEEKLY_CAP,
-  WEEKLY_CAP_KINDS,
   bookingClosed,
-  bookingEligibility,
   cancelState,
-  countReservedFromRows,
-  countSessionsLeft,
   isWithinBookingWindow,
-  weeklyBookingCount,
+  rowCounts,
   type BookingBlock,
 } from "@/lib/schedule/booking-rules";
-import { countSessionsUsedFromRows } from "@/lib/plans/plan-status";
+import { bookingVerdict, resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
-import { loadPlansWithUsage } from "@/features/plans/lib/queries";
+import { loadStoredPlans } from "@/features/plans/lib/queries";
 import type { ScheduleSlot } from "@/types/schedule";
 import { loadTraineeRosterRows } from "../queries";
 
@@ -33,12 +28,12 @@ type CancelResult = { ok: true; late: boolean } | { error: string };
 
 const RPC_ERRORS: Record<string, { message: string; block: BookingBlock }> = {
   capacity_full: { message: "האימון התמלא רגע לפני", block: "full" },
-  no_sessions_left: { message: BOOKING_BLOCK_LABELS_HE.no_sessions_left, block: "no_sessions_left" },
-  weekly_cap: { message: BOOKING_BLOCK_LABELS_HE.weekly_cap, block: "weekly_cap" },
   already_booked: { message: BOOKING_BLOCK_LABELS_HE.already_booked, block: "already_booked" },
   slot_not_bookable: { message: BOOKING_BLOCK_LABELS_HE.staff_only, block: "staff_only" },
   slot_not_found: { message: BOOKING_BLOCK_LABELS_HE.not_found, block: "not_found" },
 };
+/** The trainee's roster changed between the read and the lock; the verdict is stale. */
+const ROSTER_CHANGED = "roster_changed";
 
 function blocked(block: BookingBlock): BookResult {
   return { error: BOOKING_BLOCK_LABELS_HE[block], block };
@@ -60,9 +55,9 @@ function revalidate(): void {
 }
 
 /**
- * A trainee takes a seat. Every rule runs here against fresh reads, then the
- * seat itself is taken inside book_slot, which locks the slot row so the
- * last seat cannot go twice.
+ * A trainee takes a seat. Every rule runs here against fresh reads, through
+ * the Plan queue, then the seat itself is taken inside book_slot_checked,
+ * which locks the slot row so the last seat cannot go twice.
  */
 export async function bookSlotAction(slotId: string): Promise<BookResult> {
   const user = await currentUser();
@@ -88,11 +83,11 @@ export async function bookSlotAction(slotId: string): Promise<BookResult> {
   if (!isWithinBookingWindow(slot.schedule_date, today)) return blocked("outside_window");
   if (bookingClosed(slot.schedule_date, slot.start_time, now)) return blocked("closed");
 
-  const [memberships, profile, rows, plans] = await Promise.all([
+  const [memberships, profile, rows, storedPlans] = await Promise.all([
     loadBranchIdsByProfile(db, [user.id]),
     db.from("profiles").select("full_name, role, is_active").eq("id", user.id).maybeSingle(),
     loadTraineeRosterRows(db, user.id),
-    loadPlansWithUsage(db, [user.id], today),
+    loadStoredPlans(db, [user.id]),
   ]);
   if (!profile.data || profile.data.role !== "trainee" || !profile.data.is_active) {
     return { error: "ההרשמה זמינה למתאמנים פעילים בלבד" };
@@ -100,38 +95,30 @@ export async function bookSlotAction(slotId: string): Promise<BookResult> {
   if (!(memberships.get(user.id) ?? []).includes(slot.branch_id)) return blocked("wrong_branch");
   if (rows.some((r) => r.slot_id === slot.id && r.cancelled_at === null)) return blocked("already_booked");
 
-  const current = plans.get(user.id) ?? null;
-  if (current && current.plan.branch_id !== slot.branch_id) return blocked("wrong_branch");
-  const used = current ? countSessionsUsedFromRows(rows, current.plan, today) : 0;
-  const reserved = current ? countReservedFromRows(rows, current.plan, today) : 0;
-  const eligibility = bookingEligibility({
-    plan: current?.plan ?? null,
-    productKind: current?.product.kind ?? null,
-    used,
-    reserved,
-    weekCount: weeklyBookingCount(rows, slot.schedule_date, slot.branch_id),
-    slotDate: slot.schedule_date,
-  });
-  if (!eligibility.ok) return blocked(eligibility.block);
+  // The Plan queue decides: the Booking must land on a Plan, in date order.
+  const plans = storedPlans.get(user.id) ?? [];
+  const target = { date: slot.schedule_date, start_time: slot.start_time, branch_id: slot.branch_id };
+  // A rebooking reactivates this slot's own row (cancelled, maybe late), so
+  // judge the queue without it; the database still compares every counted row.
+  const otherRows = rows.filter((r) => r.slot_id !== slot.id);
+  const verdict = bookingVerdict(plans, otherRows, target, today);
+  if (!verdict.ok) return blocked(verdict.block);
 
-  // book_slot is not in the generated types; the same cast the roster RPC uses.
+  // book_slot_checked is not in the generated types; the same cast the roster RPC uses.
   const rpcClient = db as unknown as {
     rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
   };
-  // The plan caps are counted again inside the function under a per-trainee
-  // lock, so parallel requests cannot all pass the checks above.
-  const { error } = await rpcClient.rpc("book_slot", {
+  // The verdict holds only for the rows it was made on. The function compares
+  // them with the trainee's rows under a per-trainee lock, so parallel
+  // requests cannot all pass on the same picture.
+  const { error } = await rpcClient.rpc("book_slot_checked", {
     p_slot_id: slot.id,
     p_trainee_id: user.id,
     p_trainee_name: profile.data.full_name ?? "מתאמן",
-    p_plan_starts: current!.plan.starts_on,
-    p_plan_ends: current!.plan.ends_on,
-    p_sessions_total: current!.plan.sessions_total,
-    p_sessions_used: used,
-    p_weekly_cap: WEEKLY_CAP_KINDS.includes(current!.product.kind) ? WEEKLY_CAP : null,
-    p_today: today,
+    p_counted_row_ids: rows.filter(rowCounts).map((r) => r.id),
   });
   if (error) {
+    if (error.message.includes(ROSTER_CHANGED)) return { error: "ההרשמות שלך השתנו הרגע. נסו שוב." };
     const known = Object.keys(RPC_ERRORS).find((key) => error.message.includes(key));
     if (known) return { error: RPC_ERRORS[known].message, block: RPC_ERRORS[known].block };
     console.error(`[book] rpc failed for ${slot.id}:`, error.message);
@@ -139,10 +126,15 @@ export async function bookSlotAction(slotId: string): Promise<BookResult> {
   }
 
   revalidate();
-  return {
-    ok: true,
-    sessionsLeft: current ? countSessionsLeft(current.plan, used, reserved + 1) : null,
+  const booked = {
+    id: "booked",
+    schedule_date: slot.schedule_date,
+    start_time: slot.start_time,
+    branch_id: slot.branch_id,
+    cancelled_at: null,
+    late_cancel: false,
   };
+  return { ok: true, sessionsLeft: resolvePlanQueue(plans, [...otherRows, booked], today).sessionsLeft };
 }
 
 /** A trainee gives a seat back. Inside the cutoff it still counts as used. */
