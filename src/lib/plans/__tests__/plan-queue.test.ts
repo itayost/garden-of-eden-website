@@ -11,6 +11,7 @@ import {
   type QueuePlan,
   type QueueRow,
 } from "../plan-queue";
+import { addDays } from "@/lib/utils/iso-date";
 
 const TODAY = "2026-10-05"; // a Monday
 
@@ -657,5 +658,85 @@ describe("an Adjustment", () => {
 
     expect(after.plans[0].endsOn).toBe("2026-10-01");
     expect(after.current?.plan.id).toBe(queued.id);
+  });
+});
+
+describe("a Freeze", () => {
+  it("a 28-day Freeze moves the Current plan's end and the Queued plan by 28 days", () => {
+    const current = subscription({ notBefore: "2026-09-20" }); // to 19.10
+    const queued = subscription({ notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+    const frozen = { ...current, freezes: [{ startsOn: "2026-10-06", endsOn: "2026-11-02" }] };
+
+    const before = resolvePlanQueue([current, queued], [], TODAY);
+    const after = resolvePlanQueue([frozen, queued], [], TODAY);
+
+    expect(before.plans[0].endsOn).toBe("2026-10-19");
+    expect(after.plans[0].endsOn).toBe("2026-11-16");
+    expect(after.queued[0].startsOn).toBe("2026-11-17");
+    expect(after.queued[0].endsOn).toBe(addDays(before.queued[0].endsOn, 28));
+  });
+
+  it("charges nothing inside a Freeze: a Booking there is left for the shrink rule", () => {
+    const current = card(10, { notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-06", endsOn: "2026-10-20" }] });
+    const inside = session("2026-10-12");
+    const after = session("2026-10-26");
+
+    const queue = resolvePlanQueue([current], [session("2026-10-01"), inside, after], TODAY);
+
+    expect(queue.current?.charged.map((r) => r.id)).not.toContain(inside.id);
+    expect(queue.current?.charged.map((r) => r.id)).toContain(after.id);
+    expect(queue.current?.sessionsLeft).toBe(8);
+  });
+
+  it("an open-ended Freeze counts its days up to today and holds every later date, on every Plan behind it too", () => {
+    const current = subscription({ notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-01", endsOn: null }] });
+    const queued = card(10, { notBefore: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+    const rows = [session("2026-09-28"), session("2026-10-08"), session("2026-11-30")];
+
+    const queue = resolvePlanQueue([current, queued], rows, TODAY);
+
+    // Five days so far (1.10 to 5.10): 19.10 becomes 24.10.
+    expect(queue.plans[0].endsOn).toBe("2026-10-24");
+    expect(queue.queued[0].startsOn).toBe("2026-10-25");
+    expect(queue.plans.flatMap((e) => e.charged).map((r) => r.schedule_date)).toEqual(["2026-09-28"]);
+  });
+
+  it("ending an open-ended Freeze applies its length then", () => {
+    const open = subscription({ notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-01", endsOn: null }] });
+    const ended = { ...open, freezes: [{ startsOn: "2026-10-01", endsOn: "2026-10-14" }] };
+
+    expect(resolvePlanQueue([open], [], "2026-10-14").plans[0].endsOn).toBe("2026-11-02");
+    expect(resolvePlanQueue([ended], [], "2026-10-20").plans[0].endsOn).toBe("2026-11-02");
+  });
+
+  it("refuses a Booking inside a Freeze, or after the start of an open-ended one, as frozen", () => {
+    const closed = card(10, { notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-06", endsOn: "2026-10-20" }] });
+    const open = card(10, { notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-06", endsOn: null }] });
+    const slot = (date: string) => ({ date, start_time: "17:00:00", branch_id: "ka" });
+
+    expect(bookingVerdict([closed], [], slot("2026-10-12"), TODAY)).toEqual({ ok: false, block: "plan_frozen" });
+    expect(bookingVerdict([closed], [], slot("2026-10-21"), TODAY)).toMatchObject({ ok: true });
+    expect(bookingVerdict([open], [], slot("2026-10-19"), TODAY)).toEqual({ ok: false, block: "plan_frozen" });
+    expect(bookingVerdict([open], [], slot(TODAY), TODAY)).toMatchObject({ ok: true });
+  });
+});
+
+describe("dueReminder during a Freeze", () => {
+  const unstamped = {
+    reminded_3_days_at: null,
+    reminded_last_session_at: null,
+    reminded_expired_at: null,
+    paidInArbox: false,
+  };
+
+  it("sends nothing while today is frozen, closed or open-ended", () => {
+    const rows = [session("2026-09-28"), session("2026-10-01")];
+    const closed = { ...card(3, { notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-03", endsOn: "2026-10-09" }] }), ...unstamped };
+    const open = { ...card(3, { notBefore: "2026-09-20", freezes: [{ startsOn: "2026-10-03", endsOn: null }] }), ...unstamped };
+    const thawed = { ...card(3, { notBefore: "2026-09-20", freezes: [{ startsOn: "2026-09-21", endsOn: "2026-09-22" }] }), ...unstamped };
+
+    expect(dueReminder(resolvePlanQueue([closed], rows, TODAY))).toBeNull();
+    expect(dueReminder(resolvePlanQueue([open], rows, TODAY))).toBeNull();
+    expect(dueReminder(resolvePlanQueue([thawed], rows, TODAY))?.milestone).toBe("last_session");
   });
 });
