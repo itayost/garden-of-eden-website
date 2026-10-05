@@ -48,6 +48,9 @@ const withFreezes = (ctx: PlanContext, freezes: readonly PlanFreeze[]) =>
 function refusalFor(ctx: PlanContext, queue: PlanQueue<StoredPlan>, freeze: PlanFreeze): string | null {
   // Its dates live in Arbox; freezing it here would part the two.
   if (ctx.plan.paidInArbox) return "מסלול ששולם ב-Arbox מוקפא ב-Arbox";
+  // A queued Arbox Plan keeps the end Arbox gave it, so a Freeze here would
+  // cost it the frozen days; it is frozen in Arbox too (owner, 2026-10-06).
+  if (queue.queued.some((e) => e.plan.paidInArbox)) return "יש בתור מסלול מ-Arbox: מקפיאים גם ב-Arbox";
   return freezeProblem(queue, ctx.plan.id, freeze);
 }
 
