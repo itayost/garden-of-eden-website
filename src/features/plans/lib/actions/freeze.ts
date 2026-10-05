@@ -2,7 +2,6 @@
 
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isValidUUID } from "@/lib/validations/common";
 import { israelToday } from "@/lib/utils/tasks";
 import { freezeProblem } from "@/lib/plans/freeze";
 import { resolvePlanQueue, type PlanFreeze } from "@/lib/plans/plan-queue";
@@ -11,6 +10,7 @@ import { countedRowIds } from "@/lib/schedule/booking-rules";
 import {
   endFreezeSchema,
   freezePlanSchema,
+  freezePreviewSchema,
   type EndFreezeInput,
   type FreezePlanInput,
 } from "@/lib/validations/plans-admin";
@@ -50,7 +50,7 @@ const withFreezes = (ctx: PlanContext, freezes: readonly PlanFreeze[]) =>
 /** Why this Freeze cannot go on the Plan, or null. */
 function refusalFor(ctx: PlanContext, freeze: PlanFreeze, today: string): string | null {
   // Its dates live in Arbox; freezing it here would part the two.
-  if (ctx.order?.payment_method === "arbox") return "מסלול ששולם ב-Arbox מוקפא ב-Arbox";
+  if (ctx.plan.paidInArbox) return "מסלול ששולם ב-Arbox מוקפא ב-Arbox";
   return freezeProblem(resolvePlanQueue(ctx.plans, ctx.rows, today), ctx.plan.id, freeze);
 }
 
@@ -60,8 +60,9 @@ export async function previewFreezeAction(
   startsOn: string,
   endsOn: string | null,
 ): Promise<FreezePreview | { error: string }> {
-  if (!isValidUUID(planId)) return { error: "מזהה לא תקין" };
-  const ctx = await loadPlanContext(createAdminClient(), planId);
+  const parsed = freezePreviewSchema.safeParse({ planId, startsOn, endsOn });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
+  const ctx = await loadPlanContext(createAdminClient(), planId, { withOrder: false });
   if ("error" in ctx) return ctx;
 
   const today = israelToday();
@@ -102,7 +103,7 @@ export async function freezePlanAction(input: FreezePlanInput): Promise<FreezeRe
   const data = parsed.data;
 
   const db = createAdminClient();
-  const ctx = await loadPlanContext(db, data.planId);
+  const ctx = await loadPlanContext(db, data.planId, { withOrder: false });
   if ("error" in ctx) return ctx;
   const today = israelToday();
   const freeze: PlanFreeze = { startsOn: data.startsOn, endsOn: data.endsOn };

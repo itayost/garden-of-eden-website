@@ -201,10 +201,13 @@ export const freezePlanSchema = z.object({
   planId: uuid,
   startsOn: isoDate,
   endsOn: isoDate.nullable(),
-  medicalCertificate: z.literal(true, { message: "הקפאה רק באישור רפואי" }),
+  medicalCertificate: z.boolean().refine((v) => v, "הקפאה רק באישור רפואי"),
   reason,
 });
 export type FreezePlanInput = z.input<typeof freezePlanSchema>;
+
+/** The dates a Freeze preview is worked out on; checked like the Freeze itself. */
+export const freezePreviewSchema = freezePlanSchema.pick({ planId: true, startsOn: true, endsOn: true });
 
 /** Ends an open-ended Freeze on a day; its length counts then. */
 export const endFreezeSchema = z.object({
