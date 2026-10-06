@@ -5254,6 +5254,10 @@ export type Database = {
         Args: { p_program_id: string; p_rows: Json }
         Returns: undefined
       }
+      seed_manual_card_placeholder: {
+        Args: { p_branch_id: string }
+        Returns: undefined
+      }
       shares_branch_with: { Args: { p_profile_id: string }; Returns: boolean }
       soft_delete_user: { Args: { target_user_id: string }; Returns: undefined }
       update_user_streak: {
