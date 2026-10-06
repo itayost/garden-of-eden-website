@@ -37,7 +37,7 @@ export async function setAgeGroupOverride(
   const db = createAdminClient();
   const { data: trainee, error: readError } = await db
     .from("profiles")
-    .select("role, birthdate")
+    .select("role, birthdate, age_group_override")
     .eq("id", userId)
     .maybeSingle();
   if (readError) {
@@ -72,7 +72,7 @@ export async function setAgeGroupOverride(
     action: "age_group_override_changed",
     actor_id: user.id,
     actor_name: actor?.full_name || "צוות",
-    changes: { age_group_override: override, age_group_override_until: until },
+    changes: [{ field: "age_group_override", old_value: trainee.age_group_override, new_value: override }],
   });
   if (logError) {
     console.error("setAgeGroupOverride activity log failed:", logError.message);

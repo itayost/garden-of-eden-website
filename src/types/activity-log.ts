@@ -14,6 +14,13 @@ export const ACTIVITY_ACTIONS = {
   ASSESSMENT_UPDATED: "assessment_updated",
   PLAN_GRANTED: "plan_granted",
   INVOICE_ISSUED: "invoice_issued",
+  PLAN_VOIDED: "plan_voided",
+  PLAN_CANCELLED: "plan_cancelled",
+  PLAN_ENDED_EARLY: "plan_ended_early",
+  PAYMENT_LINK_CREATED: "payment_link_created",
+  SLOT_CALLED_OFF: "slot_called_off",
+  SLOT_CALLED_OFF_CLEARED: "slot_called_off_cleared",
+  AGE_GROUP_OVERRIDE_CHANGED: "age_group_override_changed",
 } as const;
 
 export type ActivityAction =
@@ -52,6 +59,13 @@ export const ACTIVITY_ACTION_LABELS_HE: Record<ActivityAction, string> = {
   assessment_updated: "מבדק עודכן",
   plan_granted: "מסלול נרשם",
   invoice_issued: "חשבונית הופקה",
+  plan_voided: "ביטול רישום",
+  plan_cancelled: "ביטול עסקה",
+  plan_ended_early: "סיום מוקדם",
+  payment_link_created: "קישור תשלום נשלח",
+  slot_called_off: "אימון סומן כבוטל",
+  slot_called_off_cleared: "סימון הביטול הוסר",
+  age_group_override_changed: "קבוצת גיל שונתה",
 };
 
 // Hebrew labels for fields
@@ -66,6 +80,7 @@ export const FIELD_LABELS_HE: Record<string, string> = {
   avatar_url: "תמונת פרופיל",
   club: "מועדון",
   branches: "סניפים",
+  age_group_override: "קבוצת גיל",
 };
 
 // Hebrew labels for role values
