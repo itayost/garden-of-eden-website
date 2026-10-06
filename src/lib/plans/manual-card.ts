@@ -74,3 +74,15 @@ export function manualCardDraftFrom(
     days: String(base?.duration_days ?? 90),
   };
 }
+
+/**
+ * A Plan's name on every screen: a manual Card by the terms it was sold on
+ * (its Plan's sessions and days), a catalog product by its own name.
+ */
+export function planDisplayName(
+  product: { name_he: string; staff_terms: boolean },
+  plan: { sessions_total: number | null; duration_days: number | null },
+): string {
+  if (!product.staff_terms || plan.sessions_total == null || plan.duration_days == null) return product.name_he;
+  return manualCardLabel(product.name_he, { sessions: plan.sessions_total, days: plan.duration_days });
+}

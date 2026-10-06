@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { manualCardProblem, orderManualTerms, orderPlanName, readManualCard } from "../manual-card";
+import { manualCardProblem, orderManualTerms, orderPlanName, planDisplayName, readManualCard } from "../manual-card";
 
 describe("manualCardProblem", () => {
   it("accepts whole sessions, a price in shekels and agorot, and whole days", () => {
@@ -60,5 +60,21 @@ describe("orderPlanName", () => {
 
   it("names a catalog sale by its product", () => {
     expect(orderPlanName("כרטיסיית 10", { terms_sessions_total: null, terms_duration_days: null })).toBe("כרטיסיית 10");
+  });
+});
+
+describe("planDisplayName", () => {
+  it("names a manual Card by the terms its Plan carries", () => {
+    expect(planDisplayName({ name_he: "כרטיסייה ידנית", staff_terms: true }, { sessions_total: 8, duration_days: 60 })).toBe(
+      "כרטיסייה ידנית: 8 אימונים, 60 ימים",
+    );
+  });
+
+  it("leaves a catalog product's name as it is", () => {
+    expect(planDisplayName({ name_he: "כרטיסייה 10", staff_terms: false }, { sessions_total: 10, duration_days: 90 })).toBe("כרטיסייה 10");
+  });
+
+  it("falls back to the product name when the terms are missing", () => {
+    expect(planDisplayName({ name_he: "כרטיסייה ידנית", staff_terms: true }, { sessions_total: null, duration_days: 60 })).toBe("כרטיסייה ידנית");
   });
 });

@@ -10,6 +10,7 @@ import { fulfillOrder } from "@/features/enrollment/lib/fulfillment";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import type { MorningWebhookEvent, Order } from "@/types/plans";
+import { orderPlanName } from "@/lib/plans/manual-card";
 
 export type AdminOrderRow = Order & {
   productName: string;
@@ -54,7 +55,8 @@ function toAdminOrderRow({ product, agreement, receiver, discounter, refunds, ..
     amount_ils: Number(order.amount_ils),
     list_price_ils: order.list_price_ils == null ? null : Number(order.list_price_ils),
     discountedByName: discounter?.full_name ?? null,
-    productName: product?.name_he ?? "",
+    // A manual Card is named by the terms the order carries.
+    productName: product ? orderPlanName(product.name_he, order) : "",
     agreementId: agreement?.[0]?.id ?? null,
     receivedByName: receiver?.full_name ?? null,
     // Only a receipt in Morning has something to credit.
