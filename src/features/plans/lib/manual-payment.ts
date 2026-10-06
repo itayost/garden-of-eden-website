@@ -32,7 +32,8 @@ export interface ManualPaymentInput {
     emergencyContactName: string | null;
     emergencyContactPhone: string | null;
   };
-  paymentMethod: "cash" | "transfer" | "bit";
+  /** free: given without charging (amount 0, no receipt), with freeReason. */
+  paymentMethod: "cash" | "transfer" | "bit" | "free";
   reference: string | null;
   /** Null lets fulfillment chain after a running plan (existing trainee). */
   startsOn: string | null;
@@ -41,11 +42,15 @@ export interface ManualPaymentInput {
   discount: Discount | null;
   /** A manual Card's typed terms, already allowed by the action; null for a catalog sale. */
   manualCard: ManualCardTerms | null;
+  /** Why a Plan is given without charging; required for method free, null otherwise. */
+  freeReason: string | null;
   actor: { id: string; name: string | null };
 }
 
 export interface ManualPaymentResult {
   ok: true;
+  /** Given without charging: no receipt. */
+  free: boolean;
   orderId: string;
   agreementId: string;
   profileId: string;
@@ -91,10 +96,12 @@ export async function recordManualPayment(
   input: ManualPaymentInput,
 ): Promise<ManualPaymentResult | { ok: false; error: string }> {
   const { product } = input;
-  // Cash has no reference; a leftover from a switched method must not stick.
-  const reference = input.paymentMethod === "cash" ? null : input.reference;
+  // Cash and a free Plan have no reference; a leftover from a switched method must not stick.
+  const reference = input.paymentMethod === "cash" || input.paymentMethod === "free" ? null : input.reference;
+  const free = input.paymentMethod === "free";
+  if (free && !input.freeReason) return { ok: false, error: "נדרשת סיבה למסלול ללא תשלום" };
   // What was paid: the receipt, the agreement and any refund use it.
-  const sale = staffOrderColumns(product, { discount: input.discount, manualCard: input.manualCard }, input.actor.id, {
+  const sale = staffOrderColumns(product, { discount: input.discount, manualCard: input.manualCard, freeReason: free ? input.freeReason : null }, input.actor.id, {
     profileId: input.trainee.profileId,
     loginPhone: input.trainee.loginPhone,
     child: { name: input.trainee.childName, birthdate: input.trainee.childBirthdate },
@@ -167,16 +174,21 @@ export async function recordManualPayment(
       amountIls: paid,
       ...(input.discount ? { listPriceIls: sale.listPrice, discountReason: input.discount.reason } : {}),
       ...(input.manualCard ? { manualCard: input.manualCard } : {}),
+      ...(free ? { worthIls: sale.listPrice, freeReason: input.freeReason } : {}),
     },
   });
 
-  const invoice = await issueOrderInvoice(db, order.id, input.actor);
+  // Nothing was paid, so there is nothing for Morning to receipt.
+  const invoice = free
+    ? { ok: false as const, error: "ללא תשלום: אין קבלה", skipped: true }
+    : await issueOrderInvoice(db, order.id, input.actor);
   const whatsapp = input.sendWhatsApp
     ? await notifyOrderFulfilled(db, order.id)
     : null;
 
   return {
     ok: true,
+    free,
     orderId: order.id,
     agreementId: agreement.id,
     profileId: fulfilled.profileId,

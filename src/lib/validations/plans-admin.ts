@@ -27,7 +27,7 @@ const optionalText = (max: number) =>
     .transform((v) => (v === "" ? null : v));
 
 /** What staff may record by hand. Card payments only ever come from the card page. */
-export const manualPaymentMethodSchema = z.enum(["cash", "transfer", "bit"]);
+export const manualPaymentMethodSchema = z.enum(["cash", "transfer", "bit", "free"]);
 export type ManualPaymentMethod = z.infer<typeof manualPaymentMethodSchema>;
 
 const singleLine = /^[^\r\n\t]+$/;
@@ -75,6 +75,8 @@ export const newTraineeSchema = z.object({
   startsOn: isoDate,
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
+  /** Why a Plan is given without charging (method free); required then. */
+  freeReason: reasonSchema.nullable().default(null),
   /** Set after the duplicate prompt; the action refuses a repeat without it. */
   confirmDuplicate: z.boolean().default(false),
 });
@@ -93,6 +95,7 @@ export const staffPaymentSchema = z.object({
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
   manualCard: manualCardSchema,
+  freeReason: reasonSchema.nullable().default(null),
   confirmDuplicate: z.boolean().default(false),
 });
 export type StaffPaymentInput = z.input<typeof staffPaymentSchema>;

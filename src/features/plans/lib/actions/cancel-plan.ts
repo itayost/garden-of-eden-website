@@ -16,6 +16,7 @@ import {
 } from "@/lib/validations/plans-admin";
 import { applyShrinkCancellations } from "../apply-shrink";
 import { loadPlanContext, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
+import { suggestedRefundMethod } from "../plan-context";
 import type { StoredPlan } from "../queries";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { claimAndRecordUndo } from "../undo-plan";
@@ -125,7 +126,7 @@ export async function previewCancellationAction(
     proposal: assessed.proposal,
     amountPaid: assessed.amountPaid,
     singlePriceFromCardRate: assessed.fromCardRate,
-    suggestedMethod: ctx.order ? (ctx.order.payment_method ?? "card") : "none",
+    suggestedMethod: suggestedRefundMethod(ctx.order),
     receiptUrl: ctx.order?.morning_document_url ?? null,
     moved: impact.moved.map((m) => toBooking(m.row)),
     cancelled: impact.cancelled.map(toBooking),

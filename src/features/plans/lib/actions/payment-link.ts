@@ -59,7 +59,7 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   const discountError = await pricingRefusal(product.branch_id, data.discount !== null || data.manualCard !== null);
   if (discountError) return { error: discountError };
   const { loginPhone, child, parent, health } = saleParties(trainee);
-  const priced = staffOrderColumns(product, data, user!.id, { profileId: data.traineeId, loginPhone, child, parent });
+  const priced = staffOrderColumns(product, { ...data, freeReason: null }, user!.id, { profileId: data.traineeId, loginPhone, child, parent });
   if (!priced.ok) return { error: priced.problem };
   const amount = priced.paid;
   const planName = orderPlanName(product.name_he, priced.columns);

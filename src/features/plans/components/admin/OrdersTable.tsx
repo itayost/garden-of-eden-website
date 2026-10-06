@@ -105,7 +105,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                 ₪{order.amount_ils.toLocaleString("he-IL")}
                 {order.list_price_ils !== null && (
                   <div>
-                    <DiscountNote listPrice={order.list_price_ils} reason={order.discount_reason} by={order.discountedByName} />
+                    <DiscountNote listPrice={order.list_price_ils} reason={order.discount_reason} by={order.discountedByName} free={order.payment_method === "free"} />
                   </div>
                 )}
                 {order.payment_method && (

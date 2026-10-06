@@ -5,6 +5,7 @@ import { verifyAdminOrBranchManager } from "@/lib/actions/shared/verify-branch-m
 import type { Database } from "@/types/database";
 import type { QueueRow } from "@/lib/plans/plan-queue";
 import type { Order } from "@/types/plans";
+import type { RefundMethod } from "@/lib/validations/plans-admin";
 import { loadQueueRows, loadStoredPlans, type StoredPlan } from "./queries";
 
 export type PlanOrder = Pick<
@@ -19,6 +20,16 @@ export interface PlanContext {
   plans: StoredPlan[];
   rows: QueueRow[];
   order: PlanOrder | null;
+}
+
+/**
+ * How money goes back for this order: the way it came in, card for an order
+ * paid on Morning's hosted page (no method stored), and none when nothing was
+ * paid (a free sale) or there is no order.
+ */
+export function suggestedRefundMethod(order: Pick<PlanOrder, "payment_method"> | null): RefundMethod {
+  if (!order || order.payment_method === "free") return "none";
+  return order.payment_method ?? "card";
 }
 
 /** A Bookings line for a confirmation. */

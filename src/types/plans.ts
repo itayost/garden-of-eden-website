@@ -31,7 +31,8 @@ export interface PlanProduct {
  * How the money arrived. card = the site's own card page; arbox = paid in
  * Arbox, recorded here only to create the plan; the rest are taken by staff.
  */
-export type PaymentMethod = "cash" | "transfer" | "bit" | "card" | "arbox";
+/** free: registered without charging (amount 0, with a reason). */
+export type PaymentMethod = "cash" | "transfer" | "bit" | "card" | "arbox" | "free";
 
 export const PAYMENT_METHOD_LABELS_HE: Record<PaymentMethod, string> = {
   cash: "מזומן",
@@ -39,6 +40,7 @@ export const PAYMENT_METHOD_LABELS_HE: Record<PaymentMethod, string> = {
   bit: "ביט",
   card: "כרטיס אשראי",
   arbox: "Arbox",
+  free: "ללא תשלום",
 };
 
 /** voided: the sale was undone (Void); refunded: money went back after a Cancellation. */

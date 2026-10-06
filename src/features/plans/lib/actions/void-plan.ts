@@ -10,6 +10,7 @@ import { shrinkImpact, voidRefusal } from "@/lib/plans/shrink";
 import { applyShrinkCancellations } from "../apply-shrink";
 import type { StoredPlan } from "../queries";
 import { loadPlanContext, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
+import { suggestedRefundMethod } from "../plan-context";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { claimAndRecordUndo } from "../undo-plan";
 
@@ -46,9 +47,7 @@ export async function previewVoidAction(planId: string): Promise<VoidPreview | {
     planName: ctx.plan.product?.name_he ?? "מסלול",
     refusal: voidRefusal(ctx.plans, ctx.rows, planId, today),
     amountPaid: ctx.order ? Number(ctx.order.amount_ils) : null,
-    // The same way back as in; an order paid on Morning's hosted page has no
-    // method stored, and was paid by card.
-    suggestedMethod: ctx.order ? (ctx.order.payment_method ?? "card") : "none",
+    suggestedMethod: suggestedRefundMethod(ctx.order),
     receiptUrl: ctx.order?.morning_document_url ?? null,
     moved: impact.moved.map((m) => toBooking(m.row)),
     cancelled: impact.cancelled.map(toBooking),

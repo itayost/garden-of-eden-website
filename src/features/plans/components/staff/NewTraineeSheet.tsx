@@ -16,6 +16,7 @@ import { latestStartDate } from "@/lib/plans/start-date";
 import { createTraineeWithPaymentAction, type SellableProduct } from "../../lib/actions/staff-payment";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { DiscountFields } from "./DiscountFields";
+import { FreeReasonField, freeReasonReady } from "./FreeReasonField";
 import { useDiscount } from "./useDiscount";
 import { DuplicatePrompt } from "./DuplicatePrompt";
 import { PaymentMethodPicker } from "./PaymentMethodPicker";
@@ -40,6 +41,8 @@ interface FormState {
   reference: string;
   startsOn: string;
   sendWhatsApp: boolean;
+  /** Why the Plan is given without charging (method free). */
+  freeReason: string;
 }
 
 const emptyForm = (): FormState => ({
@@ -53,6 +56,7 @@ const emptyForm = (): FormState => ({
   reference: "",
   startsOn: israelToday(),
   sendWhatsApp: true,
+  freeReason: "",
 });
 
 /**
@@ -72,7 +76,8 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
 
   const product = products.find((p) => p.id === form.productId) ?? null;
   // Admins and the branch's manager may sell below list price.
-  const discount = useDiscount(product);
+  const free = form.paymentMethod === "free";
+  const discount = useDiscount(product, !free);
 
   const toInput = (confirmDuplicate: boolean): NewTraineeInput => ({
     productId: form.productId,
@@ -85,6 +90,7 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
     startsOn: form.startsOn,
     sendWhatsApp: form.sendWhatsApp,
     discount: discount.discount,
+    freeReason: free ? form.freeReason : null,
     confirmDuplicate,
   });
 
@@ -180,6 +186,9 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
                   onReferenceChange={(r) => set("reference", r)}
                   disabled={pending}
                 />
+                {free && (
+                  <FreeReasonField idPrefix="nt" value={form.freeReason} onChange={(r) => set("freeReason", r)} disabled={pending} />
+                )}
 
                 <div className="space-y-1">
                   <Label htmlFor="nt-start">תאריך תחילה</Label>
@@ -207,7 +216,7 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
                 {duplicate !== null ? (
                   <DuplicatePrompt minutesAgo={duplicate} onConfirm={() => submit(true)} onCancel={() => setDuplicate(null)} pending={pending} />
                 ) : (
-                  <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !form.productId || !form.childName || !form.loginPhone || Boolean(discount.problem)}>
+                  <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !form.productId || !form.childName || !form.loginPhone || Boolean(discount.problem) || (free && !freeReasonReady(form.freeReason))}>
                     {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
                     רישום התשלום
                   </Button>

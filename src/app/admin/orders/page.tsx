@@ -79,7 +79,7 @@ function DiscountsCard({ rows }: { rows: DiscountRow[] }) {
             </span>
             <span className="tabular-nums">₪{order.amountIls.toLocaleString("he-IL")}</span>
             <span className="w-full">
-              <DiscountNote listPrice={order.listPriceIls} reason={order.reason} by={order.byName} />
+              <DiscountNote listPrice={order.listPriceIls} reason={order.reason} by={order.byName} free={order.free} />
               <span className="text-xs text-muted-foreground"> · {formatDateTime(order.createdAt)}</span>
             </span>
           </div>
