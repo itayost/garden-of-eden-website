@@ -5123,6 +5123,10 @@ export type Database = {
               seats_taken: number
             }[]
           }
+      cancel_shrunk_bookings: {
+        Args: { p_notices: string[]; p_row_ids: string[]; p_trainee_id: string }
+        Returns: number
+      }
       clear_slot_workout: { Args: { p_slot_id: string }; Returns: number }
       compute_age_group: { Args: { p_birthdate: string }; Returns: string }
       count_weekdays_missed: {
@@ -5144,6 +5148,20 @@ export type Database = {
           p_ends_on: string
           p_freeze_id: string
           p_plan_ends_on: string
+          p_plan_stamps: string[]
+        }
+        Returns: undefined
+      }
+      end_plan_early: {
+        Args: {
+          p_actor: string
+          p_actor_name: string
+          p_cancel_notices: string[]
+          p_cancel_row_ids: string[]
+          p_counted_row_ids: string[]
+          p_ended_on: string
+          p_log_metadata: Json
+          p_plan_id: string
           p_plan_stamps: string[]
         }
         Returns: undefined
@@ -5183,6 +5201,38 @@ export type Database = {
           p_plan_id: string
           p_plan_stamps: string[]
         }
+        Returns: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          duration_days: number | null
+          ended_on: string | null
+          ends_on: string
+          fixed_ends_on: string | null
+          id: string
+          not_before: string | null
+          note: string | null
+          order_id: string | null
+          product_id: string
+          profile_id: string
+          reminded_3_days_at: string | null
+          reminded_expired_at: string | null
+          reminded_last_session_at: string | null
+          sessions_total: number | null
+          source: string
+          starts_on: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trainee_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      lock_trainee_plan: {
+        Args: { p_plan_id: string }
         Returns: {
           branch_id: string
           created_at: string
@@ -5260,6 +5310,29 @@ export type Database = {
       }
       shares_branch_with: { Args: { p_profile_id: string }; Returns: boolean }
       soft_delete_user: { Args: { target_user_id: string }; Returns: undefined }
+      undo_plan: {
+        Args: {
+          p_actor: string
+          p_actor_name: string
+          p_amount_ils: number
+          p_cancel_notices: string[]
+          p_cancel_row_ids: string[]
+          p_counted_row_ids: string[]
+          p_defect: boolean
+          p_ended_on: string
+          p_log_metadata: Json
+          p_method: string
+          p_order_status: string
+          p_override_reason: string
+          p_plan_id: string
+          p_plan_stamps: string[]
+          p_proposed_amount_ils: number
+          p_reason: string
+          p_reference: string
+          p_status: string
+        }
+        Returns: string
+      }
       update_user_streak: {
         Args: { p_activity_timestamp: string; p_user_id: string }
         Returns: undefined
