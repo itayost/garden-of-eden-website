@@ -4,10 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 import type { QueueRow } from "@/lib/plans/plan-queue";
-import { countedRowIds } from "@/lib/schedule/booking-rules";
+import { guardArgs } from "@/lib/plans/read-guard";
 import { shrinkImpact } from "@/lib/plans/shrink";
 import type { PlanContext } from "./plan-context";
-import { planStamps, type StoredPlan } from "./queries";
+import type { StoredPlan } from "./queries";
 import { revalidateStaffSurfaces } from "./revalidate-staff";
 
 /** The notice a Trainee reads for one Booking the shrink rule cancelled. */
@@ -24,8 +24,7 @@ export function guardedShrinkArgs(ctx: Pick<PlanContext, "rows" | "plans">, canc
   return {
     p_cancel_row_ids: cancelled.map((r) => r.id),
     p_cancel_notices: cancelled.map(cancelledBookingNotice),
-    p_counted_row_ids: countedRowIds(ctx.rows),
-    p_plan_stamps: planStamps(ctx.plans),
+    ...guardArgs(ctx.rows, ctx.plans),
   };
 }
 

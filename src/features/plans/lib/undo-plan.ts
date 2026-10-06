@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import type { QueueRow } from "@/lib/plans/plan-queue";
 import { guardedShrinkArgs } from "./apply-shrink";
-import { guardRefusal, type PlanContext } from "./plan-context";
+import { actFailure, type PlanContext } from "./plan-context";
 
 type RefundRow = Pick<
   Database["public"]["Tables"]["plan_refunds"]["Insert"],
@@ -14,9 +14,9 @@ type RefundRow = Pick<
 /**
  * An undo act (Void, Cancellation), whole or not at all: undo_plan sets the
  * Plan, writes the plan_refunds audit row, marks the order, cancels the
- * Bookings the shrink rule drops and writes the activity record (the refund
- * id added to logMetadata), in one transaction under the per-trainee booking
- * lock. It refuses if the Trainee's roster or Plans changed since ctx was
+ * Bookings the shrink rule drops and writes the activity record (the act's
+ * common fields, logExtra and the refund id), in one transaction under the
+ * per-trainee booking lock. It refuses if the Trainee's roster or Plans changed since ctx was
  * read, so two staff cannot undo it twice and a Booking made in between
  * cannot escape the shrink rule.
  */
@@ -30,8 +30,11 @@ export async function undoPlan(
     orderStatus: "voided" | "refunded" | null;
     /** The Bookings the shrink rule cancels, latest first. */
     cancelled: readonly QueueRow[];
+    /** How many Bookings a Queued plan now pays for. */
+    movedCount: number;
     actorName: string;
-    logMetadata: { [key: string]: Json };
+    /** What this act logs beyond the common fields. */
+    logExtra?: { [key: string]: Json };
   },
 ): Promise<{ refundId: string } | { error: string }> {
   const { refund } = undo;
@@ -50,14 +53,18 @@ export async function undoPlan(
     p_order_status: undo.orderStatus as string,
     p_actor: refund.created_by,
     p_actor_name: undo.actorName,
-    p_log_metadata: undo.logMetadata,
+    p_log_metadata: {
+      planId: ctx.plan.id,
+      orderId: ctx.order?.id ?? null,
+      reason: refund.reason,
+      amountIls: refund.amount_ils,
+      method: refund.method,
+      bookingsMoved: undo.movedCount,
+      bookingsCancelled: undo.cancelled.length,
+      ...undo.logExtra,
+    },
     ...guardedShrinkArgs(ctx, undo.cancelled),
   });
-  if (error || !refundId) {
-    const known = error && guardRefusal(error.message);
-    if (known) return { error: known };
-    console.error("[undo] undo_plan failed:", error?.message);
-    return { error: "הפעולה נכשלה. נסו שוב." };
-  }
+  if (error || !refundId) return { error: actFailure("undo", error, "הפעולה נכשלה. נסו שוב.") };
   return { refundId };
 }

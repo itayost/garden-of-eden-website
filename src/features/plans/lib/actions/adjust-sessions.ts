@@ -8,8 +8,7 @@ import { planAdjustment } from "@/lib/plans/adjustment";
 import { resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { adjustSessionsSchema, type AdjustSessionsInput } from "@/lib/validations/plans-admin";
 import { applyShrinkAfter } from "../apply-shrink";
-import { countedRowIds } from "@/lib/schedule/booking-rules";
-import { planStamps } from "../queries";
+import { guardArgs } from "@/lib/plans/read-guard";
 import { guardRefusal, loadPlanContext, STALE_READ, withPlanChange, type PlanContext } from "../plan-context";
 
 export interface AdjustmentContext {
@@ -76,8 +75,7 @@ export async function adjustSessionsAction(
     p_plan_id: data.planId,
     p_new_total: plan.totalAfter,
     p_used: counts.used,
-    p_counted_row_ids: countedRowIds(ctx.rows),
-    p_plan_stamps: planStamps(ctx.plans),
+    ...guardArgs(ctx.rows, ctx.plans),
     p_reason: data.reason,
     p_actor: user!.id,
   });

@@ -8,7 +8,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import { creditNoteSchema, voidPlanSchema, type RefundMethod, type VoidPlanInput } from "@/lib/validations/plans-admin";
 import { shrinkImpact, voidRefusal } from "@/lib/plans/shrink";
 import type { StoredPlan } from "../queries";
-import { readToken } from "@/lib/plans/read-token";
+import { readToken } from "@/lib/plans/read-guard";
 import { loadPlanContext, STALE_READ, suggestedRefundMethod, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { undoPlan } from "../undo-plan";
@@ -97,16 +97,8 @@ export async function voidPlanAction(input: VoidPlanInput): Promise<VoidOutcome>
     },
     orderStatus: "voided",
     cancelled: impact.cancelled,
+    movedCount: impact.moved.length,
     actorName: staff?.full_name ?? "צוות",
-    logMetadata: {
-      planId: data.planId,
-      orderId: ctx.order?.id ?? null,
-      reason: data.reason,
-      amountIls: data.amountIls,
-      method: data.method,
-      bookingsMoved: impact.moved.length,
-      bookingsCancelled: impact.cancelled.length,
-    },
   });
   if ("error" in recorded) return recorded;
 

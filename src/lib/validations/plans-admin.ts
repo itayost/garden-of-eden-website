@@ -184,10 +184,10 @@ export type HealthInput = z.input<typeof healthSchema>;
 export const refundMethodSchema = z.enum(["card", "cash", "transfer", "bit", "arbox", "none"]);
 export type RefundMethod = z.infer<typeof refundMethodSchema>;
 
-/** A Void: the reason is required, and how the money went back is recorded. */
-/** What the confirmation showed (readToken() in src/lib/plans/read-token.ts). */
+/** What the confirmation showed (readToken() in src/lib/plans/read-guard.ts). */
 const readTokenField = z.string().regex(/^[0-9a-f]{64}$/, "הנתונים לא נטענו. רעננו ונסו שוב.");
 
+/** A Void: the reason is required, and how the money went back is recorded. */
 export const voidPlanSchema = z
   .object({
     planId: uuid,

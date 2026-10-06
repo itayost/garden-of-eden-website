@@ -14,7 +14,7 @@ import {
   type CancelPlanWithRefundInput,
   type RefundMethod,
 } from "@/lib/validations/plans-admin";
-import { readToken } from "@/lib/plans/read-token";
+import { readToken } from "@/lib/plans/read-guard";
 import {
   loadPlanContext,
   STALE_READ,
@@ -189,18 +189,12 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
     // Money went back: the order is refunded. Nothing went back: it stays paid.
     orderStatus: data.amountIls > 0 ? "refunded" : null,
     cancelled: impact.cancelled,
+    movedCount: impact.moved.length,
     actorName: staff?.full_name ?? "צוות",
-    logMetadata: {
-      planId: data.planId,
-      orderId: ctx.order?.id ?? null,
-      reason: data.reason,
+    logExtra: {
       proposedIls: assessed.proposal.proposed,
-      amountIls: data.amountIls,
       overrideReason: overridden ? data.overrideReason : null,
       defect: data.defect,
-      method: data.method,
-      bookingsMoved: impact.moved.length,
-      bookingsCancelled: impact.cancelled.length,
     },
   });
   if ("error" in recorded) return recorded;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readToken } from "../read-token";
+import { readToken } from "../read-guard";
 
 const row = (id: string, over: { cancelled_at?: string | null; late_cancel?: boolean; called_off?: boolean } = {}) => ({
   id,

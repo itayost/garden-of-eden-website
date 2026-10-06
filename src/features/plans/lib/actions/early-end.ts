@@ -1,6 +1,5 @@
 "use server";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidUUID } from "@/lib/validations/common";
@@ -8,10 +7,9 @@ import { israelToday } from "@/lib/utils/tasks";
 import { resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { earlyEndRefusal, shrinkImpact, type ShrinkImpact } from "@/lib/plans/shrink";
 import { earlyEndSchema, type EarlyEndInput } from "@/lib/validations/plans-admin";
-import type { Database } from "@/types/database";
 import { guardedShrinkArgs } from "../apply-shrink";
-import { readToken } from "@/lib/plans/read-token";
-import { guardRefusal, loadPlanContext, STALE_READ, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
+import { readToken } from "@/lib/plans/read-guard";
+import { actFailure, loadPlanContext, STALE_READ, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 
 export interface EarlyEndPreview {
@@ -56,42 +54,11 @@ export async function previewEarlyEndAction(planId: string): Promise<EarlyEndPre
 }
 
 /**
- * An Early end, whole or not at all (end_plan_early): the Plan ends today, the
- * Bookings the shrink rule drops are cancelled, and the reason and actor are
- * recorded, in one transaction under the per-trainee booking lock. It refuses
- * a Plan already ended or a roster or queue that changed since ctx was read,
- * so a Booking made in between cannot escape the shrink rule.
- */
-async function endEarly(
-  db: SupabaseClient<Database>,
-  ctx: PlanContext,
-  audit: { reason: string; today: string; actorId: string; actorName: string; impact: ShrinkImpact },
-): Promise<string | null> {
-  const { error } = await db.rpc("end_plan_early", {
-    p_plan_id: ctx.plan.id,
-    p_ended_on: audit.today,
-    p_actor: audit.actorId,
-    p_actor_name: audit.actorName,
-    p_log_metadata: {
-      planId: ctx.plan.id,
-      reason: audit.reason,
-      endedOn: audit.today,
-      bookingsMoved: audit.impact.moved.length,
-      bookingsCancelled: audit.impact.cancelled.length,
-    },
-    ...guardedShrinkArgs(ctx, audit.impact.cancelled),
-  });
-  if (!error) return null;
-  const known = guardRefusal(error.message);
-  if (known) return known;
-  console.error("[early-end] end_plan_early failed:", error.message);
-  return "סיום המסלול נכשל. נסו שוב.";
-}
-
-/**
  * Early end: the Current plan ends today and the Queued plan behind it starts
  * today. What is left on it is forfeited; no order, refund or receipt
- * changes. Bookings that no longer fit follow the shrink rule.
+ * changes. end_plan_early ends it, cancels the Bookings the shrink rule drops
+ * and records the reason in one transaction under the per-trainee booking
+ * lock, refused if the roster or Plans changed since ctx was read.
  */
 export async function earlyEndPlanAction(
   input: EarlyEndInput,
@@ -110,14 +77,21 @@ export async function earlyEndPlanAction(
   if (refusal) return { error: refusal };
 
   const impact = impactOf(ctx, today);
-  const failed = await endEarly(db, ctx, {
-    reason: parsed.data.reason,
-    today,
-    actorId: user!.id,
-    actorName: staff?.full_name ?? "צוות",
-    impact,
+  const { error } = await db.rpc("end_plan_early", {
+    p_plan_id: ctx.plan.id,
+    p_ended_on: today,
+    p_actor: user!.id,
+    p_actor_name: staff?.full_name ?? "צוות",
+    p_log_metadata: {
+      planId: ctx.plan.id,
+      reason: parsed.data.reason,
+      endedOn: today,
+      bookingsMoved: impact.moved.length,
+      bookingsCancelled: impact.cancelled.length,
+    },
+    ...guardedShrinkArgs(ctx, impact.cancelled),
   });
-  if (failed) return { error: failed };
+  if (error) return { error: actFailure("early-end", error, "סיום המסלול נכשל. נסו שוב.") };
 
   revalidateStaffSurfaces(ctx.plan.profile_id);
   return { ok: true, cancelledCount: impact.cancelled.length, movedCount: impact.moved.length };
