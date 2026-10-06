@@ -109,7 +109,7 @@ Single public bucket `avatars` stores avatars, meal plan PDFs, and other uploads
 - CSV exports in `src/components/admin/exports/` — Hebrew headers, BOM, Papa.unparse
 - `BranchCheckboxGroup` from `src/features/branches/components/` — branch membership picker used by the user create and edit forms
 
-The post-training report's trainer list is every active trainer and admin (`listTrainingStaffAction()` in `src/lib/actions/admin-trainers-list.ts`, read with the service role because trainees may not read admin profiles).
+The post-training report's trainer list is every active trainer and admin, loaded in its server page by `loadStaffOptions()` (`src/lib/staff-options.ts`, server-only; the service role, because trainees may not read admin profiles under RLS) and passed to the client form.
 
 ### Shared Hooks & Utilities
 
