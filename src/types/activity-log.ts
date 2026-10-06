@@ -1,31 +1,5 @@
 // Activity Log Types for User Editing Feature
 
-// Activity action types
-export const ACTIVITY_ACTIONS = {
-  USER_CREATED: "user_created",
-  USER_UPDATED: "user_updated",
-  USER_ACTIVATED: "user_activated",
-  USER_DEACTIVATED: "user_deactivated",
-  ROLE_CHANGED: "role_changed",
-  PROFILE_UPDATED: "profile_updated",
-  STATS_CREATED: "stats_created",
-  STATS_UPDATED: "stats_updated",
-  ASSESSMENT_CREATED: "assessment_created",
-  ASSESSMENT_UPDATED: "assessment_updated",
-  PLAN_GRANTED: "plan_granted",
-  INVOICE_ISSUED: "invoice_issued",
-  PLAN_VOIDED: "plan_voided",
-  PLAN_CANCELLED: "plan_cancelled",
-  PLAN_ENDED_EARLY: "plan_ended_early",
-  PAYMENT_LINK_CREATED: "payment_link_created",
-  SLOT_CALLED_OFF: "slot_called_off",
-  SLOT_CALLED_OFF_CLEARED: "slot_called_off_cleared",
-  AGE_GROUP_OVERRIDE_CHANGED: "age_group_override_changed",
-} as const;
-
-export type ActivityAction =
-  (typeof ACTIVITY_ACTIONS)[keyof typeof ACTIVITY_ACTIONS];
-
 // Activity log entry (matches database schema)
 export interface ActivityLog {
   id: string;
@@ -45,8 +19,8 @@ export interface FieldChange {
   new_value: string | number | boolean | null;
 }
 
-// Hebrew labels for actions
-export const ACTIVITY_ACTION_LABELS_HE: Record<ActivityAction, string> = {
+// Hebrew labels for actions; its keys are every action the history knows.
+export const ACTIVITY_ACTION_LABELS_HE = {
   user_created: "משתמש נוצר",
   user_updated: "משתמש עודכן",
   user_activated: "משתמש הופעל",
@@ -66,7 +40,9 @@ export const ACTIVITY_ACTION_LABELS_HE: Record<ActivityAction, string> = {
   slot_called_off: "אימון סומן כבוטל",
   slot_called_off_cleared: "סימון הביטול הוסר",
   age_group_override_changed: "קבוצת גיל שונתה",
-};
+} as const satisfies Record<string, string>;
+
+export type ActivityAction = keyof typeof ACTIVITY_ACTION_LABELS_HE;
 
 // Hebrew labels for fields
 export const FIELD_LABELS_HE: Record<string, string> = {
