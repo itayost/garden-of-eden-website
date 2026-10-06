@@ -11,7 +11,7 @@ export interface TrainerOption {
 /**
  * Active, non-deleted trainers and admins (Branch managers are trainers), by
  * name; null when the read failed. The post-training report reads it with
- * the service role in its server page (trainees may not read admin profiles
+ * the service role in its server page (trainees may not read staff profiles
  * under RLS), so only names and ids reach the browser and no endpoint exists.
  */
 export async function loadStaffOptions(db: SupabaseClient<Database>): Promise<TrainerOption[] | null> {

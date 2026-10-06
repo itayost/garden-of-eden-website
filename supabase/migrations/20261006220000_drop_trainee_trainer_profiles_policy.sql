@@ -11,3 +11,13 @@
 -- Contract: apply after #126 is live (it is).
 
 DROP POLICY IF EXISTS "Trainees can view trainer profiles" ON public.profiles;
+
+-- DROP POLICY IF EXISTS passes silently on a name mismatch; fail instead.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_policies
+              WHERE schemaname = 'public' AND tablename = 'profiles'
+                AND policyname = 'Trainees can view trainer profiles') THEN
+    RAISE EXCEPTION 'policy "Trainees can view trainer profiles" still present';
+  END IF;
+END $$;
