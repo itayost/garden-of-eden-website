@@ -21,6 +21,7 @@ import { reconcileChargingOrderAction } from "../../lib/actions/admin-orders-rec
 import { CreditNoteField } from "./CreditNoteField";
 import { PAYMENT_METHOD_LABELS_HE, type OrderStatus } from "@/types/plans";
 import { DiscountNote } from "./DiscountNote";
+import { paidNothing } from "@/lib/plans/paid";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "ממתין לתשלום",
@@ -105,7 +106,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                 ₪{order.amount_ils.toLocaleString("he-IL")}
                 {order.list_price_ils !== null && (
                   <div>
-                    <DiscountNote listPrice={order.list_price_ils} reason={order.discount_reason} by={order.discountedByName} />
+                    <DiscountNote listPrice={order.list_price_ils} reason={order.discount_reason} by={order.discountedByName} free={paidNothing(order)} />
                   </div>
                 )}
                 {order.payment_method && (
@@ -155,7 +156,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap items-center gap-2">
-                  {order.status === "paid" && order.fulfilled_at && !order.morning_document_url && order.payment_method !== "arbox" && (
+                  {order.status === "paid" && order.fulfilled_at && !order.morning_document_url && order.payment_method !== "arbox" && !paidNothing(order) && (
                     <Button
                       size="sm"
                       variant="outline"

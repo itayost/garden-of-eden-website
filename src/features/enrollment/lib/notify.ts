@@ -9,6 +9,7 @@ import type { WhatsAppResult } from "@/lib/whatsapp/api";
 import { sendPlanConfirmed } from "@/lib/whatsapp/plan-templates";
 import { planConfirmedText, templateMissing, waShareUrl } from "@/lib/whatsapp/share";
 import { validityText } from "@/lib/plans/confirmation-copy";
+import { orderPlanName } from "@/lib/plans/manual-card";
 import { israelToday } from "@/lib/utils/tasks";
 import { loadPlanPlacement } from "@/features/plans/lib/queries";
 import type { Order } from "@/types/plans";
@@ -87,7 +88,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
   const message = {
     parentName: order.parent_name,
     childName: order.child_name,
-    planName: product?.name_he ?? "המסלול",
+    planName: orderPlanName(product?.name_he ?? "המסלול", order),
     validity: placement ? validityText(placement.start, placement.endsOn) : "",
     agreementUrl,
   };

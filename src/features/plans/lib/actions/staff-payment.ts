@@ -217,6 +217,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     sendWhatsApp: data.sendWhatsApp,
     discount: data.discount,
     manualCard: data.manualCard,
+    freeReason: data.freeReason,
     actor: { id: user!.id, name: staff?.full_name ?? null },
   });
   if (!result.ok) return { error: result.error };
@@ -289,6 +290,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
     sendWhatsApp: data.sendWhatsApp,
     discount: data.discount,
     manualCard: null,
+    freeReason: data.freeReason,
     actor: { id: user!.id, name: staff?.full_name ?? null },
   });
   if (!result.ok) return { error: result.error };

@@ -25,6 +25,7 @@ import { PaymentLinkResult } from "./PaymentLinkResult";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { ArboxTermsFields } from "./ArboxTermsFields";
 import { DiscountFields } from "./DiscountFields";
+import { FreeReasonField, freeReasonReady } from "./FreeReasonField";
 import { ManualCardFields } from "./ManualCardFields";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { readManualCard, type ManualCardDraft } from "@/lib/plans/manual-card";
@@ -34,7 +35,7 @@ import { PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
 
-const SHEET_METHODS: readonly PickerMethod[] = ["cash", "transfer", "bit"];
+const SHEET_METHODS: readonly PickerMethod[] = ["cash", "transfer", "bit", "free"];
 
 /**
  * What the sheet offers: the hand-taken methods, a Payment link once online
@@ -72,6 +73,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   // Only offered when nothing is current or queued; otherwise the queue decides.
   const [startsOn, setStartsOn] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
+  // A Plan given without charging: its reason (any staff member).
+  const [freeReason, setFreeReason] = useState("");
   const [duplicate, setDuplicate] = useState<number | null>(null);
   // What the sheet shows when done: a recorded payment, or a Payment link.
   const [done, setDone] = useState<{ kind: "paid"; result: ManualPaymentResult } | { kind: "link"; result: LinkResult } | null>(null);
@@ -129,7 +132,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
 
   // Admins and the branch's manager: an Arbox repair, or a Discount.
   const isManaged = (id: string | null) => context?.products.find((p) => p.id === id)?.managed ?? false;
-  const discount = useDiscount(selectedProduct, method !== "arbox" && !manualDraft);
+  const free = method === "free";
+  const discount = useDiscount(selectedProduct, method !== "arbox" && !free && !manualDraft);
 
   const chooseProduct = (next: string) => {
     setProductId(next);
@@ -203,6 +207,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         startsOn: canChooseStart ? startsOn : null,
         sendWhatsApp,
         discount: discount.discount,
+        freeReason: freeReason,
         confirmDuplicate,
       });
       if ("error" in outcome) {
@@ -223,6 +228,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     onOpenChange(false, paid);
     if (paid) router.refresh();
     setDone(null);
+    setFreeReason("");
     setManualDraft(null);
     setDuplicate(null);
     setMethod("cash");
@@ -319,6 +325,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                 </>
               ) : (
                 <>
+                  {free && <FreeReasonField idPrefix="sp" value={freeReason} onChange={setFreeReason} disabled={pending} />}
                   {discount.offered && selectedProduct && (
                     <DiscountFields
                       idPrefix="sp"
@@ -356,7 +363,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                     </Label>
                     <Switch id="sp-wa" checked={sendWhatsApp} onCheckedChange={setSendWhatsApp} disabled={pending} />
                   </div>
-                  {method !== "card" && (
+                  {method !== "card" && !free && (
                     <p className="text-xs text-muted-foreground">
                       {context.morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
                     </p>
@@ -366,7 +373,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
               {duplicate !== null ? (
                 <DuplicatePrompt minutesAgo={duplicate} onConfirm={() => submit(true)} onCancel={() => setDuplicate(null)} pending={pending} />
               ) : (
-                <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !saleProductId || Boolean(discount.problem) || Boolean(manual?.problem)}>
+                <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !saleProductId || Boolean(discount.problem) || Boolean(manual?.problem) || (free && !freeReasonReady(freeReason))}>
                   {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
                   {method === "arbox" ? "יצירת המסלול" : method === "card" ? "יצירת קישור לתשלום" : "רישום התשלום"}
                 </Button>

@@ -80,7 +80,11 @@ export function PaymentResult({
           {result.endsOn && <div className="text-muted-foreground">בתוקף עד {shortDate(result.endsOn)}</div>}
         </Line>
 
-        {invoice.skipped ? (
+        {invoice === null ? (
+          <Line ok={null}>
+            <div className="font-medium">ללא תשלום: לא מופקת קבלה</div>
+          </Line>
+        ) : invoice.skipped ? (
           <Line ok={null}>
             <div className="font-medium">חשבונית תופק ידנית ב-Morning</div>
             <div className="text-muted-foreground">החיבור ל-Morning עדיין לא הוגדר</div>

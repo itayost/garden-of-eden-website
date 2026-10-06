@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, CreditCard, Dumbbell, Landmark, Smartphone } from "lucide-react";
+import { Banknote, CreditCard, Dumbbell, Gift, Landmark, Smartphone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -17,9 +17,10 @@ const ICONS: Record<PickerMethod, typeof Banknote> = {
   bit: Smartphone,
   card: CreditCard,
   arbox: Dumbbell,
+  free: Gift,
 };
 
-const MANUAL_METHODS: readonly ManualPaymentMethod[] = ["cash", "transfer", "bit"];
+const MANUAL_METHODS: readonly ManualPaymentMethod[] = ["cash", "transfer", "bit", "free"];
 
 /** Methods with a reference to type; cash and a card the parent pays from the link have none. */
 const REFERENCE_COPY: Partial<Record<PickerMethod, { label: string; placeholder: string }>> = {

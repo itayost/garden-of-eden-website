@@ -10,6 +10,7 @@ import { AgreementPrintable } from "@/features/enrollment/components/AgreementPr
 import { AgreementSignForm } from "@/features/enrollment/components/AgreementSignForm";
 import { awaitsCard, payPath } from "@/lib/plans/payment-link";
 import type { EnrollmentAgreement, Order } from "@/types/plans";
+import { paidNothing } from "@/lib/plans/paid";
 
 export const metadata: Metadata = { title: "הסכם הרשמה", robots: { index: false, follow: false } };
 
@@ -31,10 +32,10 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
 
   const db = createAdminClient();
   const { data: row } = (await typedFrom(db, "enrollment_agreements")
-    .select("*, order:orders(id, morning_document_url, status, payment_link_by)")
+    .select("*, order:orders(id, morning_document_url, status, payment_link_by, amount_ils)")
     .eq("id", id)
     .maybeSingle()) as {
-    data: (EnrollmentAgreement & { order: Pick<Order, "id" | "morning_document_url" | "status" | "payment_link_by"> | null }) | null;
+    data: (EnrollmentAgreement & { order: Pick<Order, "id" | "morning_document_url" | "status" | "payment_link_by" | "amount_ils"> | null }) | null;
   };
   if (!row) notFound();
   const { order, ...data } = row;
@@ -50,7 +51,7 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
   }
 
   if (!data.signed_at) {
-    return <AgreementSignForm agreement={data} token={t} awaitingCard={order !== null && awaitsCard(order)} />;
+    return <AgreementSignForm agreement={data} token={t} payment={order && awaitsCard(order) ? "card" : order && paidNothing(order) ? "free" : "paid"} />;
   }
 
   return (

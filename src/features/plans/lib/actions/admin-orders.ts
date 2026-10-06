@@ -10,6 +10,8 @@ import { fulfillOrder } from "@/features/enrollment/lib/fulfillment";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import type { MorningWebhookEvent, Order } from "@/types/plans";
+import { orderPlanName } from "@/lib/plans/manual-card";
+import { paidNothing } from "@/lib/plans/paid";
 
 export type AdminOrderRow = Order & {
   productName: string;
@@ -54,7 +56,7 @@ function toAdminOrderRow({ product, agreement, receiver, discounter, refunds, ..
     amount_ils: Number(order.amount_ils),
     list_price_ils: order.list_price_ils == null ? null : Number(order.list_price_ils),
     discountedByName: discounter?.full_name ?? null,
-    productName: product?.name_he ?? "",
+    productName: orderPlanName(product?.name_he ?? "", order),
     agreementId: agreement?.[0]?.id ?? null,
     receivedByName: receiver?.full_name ?? null,
     // Only a receipt in Morning has something to credit.
@@ -99,6 +101,8 @@ export interface DiscountRow {
   reason: string | null;
   byName: string | null;
   createdAt: string;
+  /** Given without charging rather than discounted. */
+  free: boolean;
 }
 
 /** Every sale below list price, newest first: Admins only. */
@@ -130,6 +134,7 @@ export async function listDiscountedOrdersAction(): Promise<DiscountRow[]> {
     reason: row.discount_reason,
     byName: row.discounter?.full_name ?? null,
     createdAt: row.created_at,
+    free: paidNothing(row),
   }));
 }
 
