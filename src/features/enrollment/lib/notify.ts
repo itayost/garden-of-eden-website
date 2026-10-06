@@ -88,8 +88,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
   const message = {
     parentName: order.parent_name,
     childName: order.child_name,
-    // A manual Card is named by the terms the order carries.
-    planName: product ? orderPlanName(product.name_he, order) : "המסלול",
+    planName: orderPlanName(product?.name_he ?? "המסלול", order),
     validity: placement ? validityText(placement.start, placement.endsOn) : "",
     agreementUrl,
   };

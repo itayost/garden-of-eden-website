@@ -55,8 +55,7 @@ function toAdminOrderRow({ product, agreement, receiver, discounter, refunds, ..
     amount_ils: Number(order.amount_ils),
     list_price_ils: order.list_price_ils == null ? null : Number(order.list_price_ils),
     discountedByName: discounter?.full_name ?? null,
-    // A manual Card is named by the terms the order carries.
-    productName: product ? orderPlanName(product.name_he, order) : "",
+    productName: orderPlanName(product?.name_he ?? "", order),
     agreementId: agreement?.[0]?.id ?? null,
     receivedByName: receiver?.full_name ?? null,
     // Only a receipt in Morning has something to credit.

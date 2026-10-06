@@ -73,9 +73,7 @@ export async function loadStoredPlans(
   for (const { order, product, ...row } of data ?? []) {
     // Every screen names the Plan from here: a manual Card by the terms its
     // order was sold on (an Adjustment changes the Plan's terms, not the sale).
-    const named = product
-      ? { name_he: order ? orderPlanName(product.name_he, order) : product.name_he, kind: product.kind }
-      : null;
+    const named = product && order ? { ...product, name_he: orderPlanName(product.name_he, order) } : product;
     const stored: StoredPlan = { ...toQueuePlan({ ...row, product: named }), paidInArbox: order?.payment_method === "arbox" };
     result.set(row.profile_id, [...(result.get(row.profile_id) ?? []), stored]);
   }
