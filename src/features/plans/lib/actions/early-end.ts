@@ -10,7 +10,9 @@ import { earlyEndRefusal, shrinkImpact, type ShrinkImpact } from "@/lib/plans/sh
 import { earlyEndSchema, type EarlyEndInput } from "@/lib/validations/plans-admin";
 import type { Database } from "@/types/database";
 import { applyShrinkCancellations } from "../apply-shrink";
-import { loadPlanContext, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
+import { countedRowIds } from "@/lib/schedule/booking-rules";
+import { guardRefusal, loadPlanContext, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
+import { planStamps } from "../queries";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 
 export interface EarlyEndPreview {
@@ -52,52 +54,36 @@ export async function previewEarlyEndAction(planId: string): Promise<EarlyEndPre
 }
 
 /**
- * Claims the Plan (only one request ends it) and writes the audit record:
- * the reason and the actor. Without the record there is no Early end, so a
- * failed log puts back exactly the claim this request made.
+ * Ends the Plan today and records the reason and the actor, in one
+ * transaction (end_plan_early) under the per-trainee booking lock. It refuses
+ * a Plan already ended or a roster or queue that changed since ctx was read,
+ * so a Booking made in between cannot escape the shrink rule.
  */
-async function claimAndLog(
+async function endAndLog(
   db: SupabaseClient<Database>,
   ctx: PlanContext,
   audit: { reason: string; today: string; actorId: string; actorName: string; impact: ShrinkImpact },
 ): Promise<string | null> {
-  const { data: claimed, error: claimError } = await db
-    .from("trainee_plans")
-    .update({ ended_on: audit.today })
-    .eq("id", ctx.plan.id)
-    .eq("status", "active")
-    .is("ended_on", null)
-    .select("id");
-  if (claimError) {
-    console.error("[early-end] plan update failed:", claimError.message);
-    return "סיום המסלול נכשל. נסו שוב.";
-  }
-  if (!claimed?.length) return "המסלול השתנה בינתיים. פתחו אותו מחדש ונסו שוב.";
-
-  const { error: logError } = await db.from("activity_logs").insert({
-    user_id: ctx.plan.profile_id,
-    action: "plan_ended_early",
-    actor_id: audit.actorId,
-    actor_name: audit.actorName,
-    metadata: {
+  const { error } = await db.rpc("end_plan_early", {
+    p_plan_id: ctx.plan.id,
+    p_ended_on: audit.today,
+    p_actor: audit.actorId,
+    p_actor_name: audit.actorName,
+    p_metadata: {
       planId: ctx.plan.id,
       reason: audit.reason,
       endedOn: audit.today,
       bookingsMoved: audit.impact.moved.length,
       bookingsToCancel: audit.impact.cancelled.length,
     },
+    p_counted_row_ids: countedRowIds(ctx.rows),
+    p_plan_stamps: planStamps(ctx.plans),
   });
-  if (logError) {
-    console.error("[early-end] activity log failed:", logError.message);
-    await db
-      .from("trainee_plans")
-      .update({ ended_on: null })
-      .eq("id", ctx.plan.id)
-      .eq("status", "active")
-      .eq("ended_on", audit.today);
-    return "שמירת הסיבה נכשלה, והמסלול לא הסתיים. נסו שוב.";
-  }
-  return null;
+  if (!error) return null;
+  const known = guardRefusal(error.message);
+  if (known) return known;
+  console.error("[early-end] end_plan_early failed:", error.message);
+  return "סיום המסלול נכשל. נסו שוב.";
 }
 
 /**
@@ -121,7 +107,7 @@ export async function earlyEndPlanAction(
   if (refusal) return { error: refusal };
 
   const impact = impactOf(ctx, today);
-  const failed = await claimAndLog(db, ctx, {
+  const failed = await endAndLog(db, ctx, {
     reason: parsed.data.reason,
     today,
     actorId: user!.id,

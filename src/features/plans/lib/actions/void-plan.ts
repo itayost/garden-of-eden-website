@@ -84,7 +84,6 @@ export async function voidPlanAction(input: VoidPlanInput): Promise<VoidOutcome>
   const recorded = await claimAndRecordUndo(db, ctx, {
     plan: { status: "voided" },
     refund: {
-      kind: "void",
       reason: data.reason,
       amount_ils: data.amountIls,
       method: data.method,

@@ -2,15 +2,21 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import type { PlanContext } from "./plan-context";
+import { countedRowIds } from "@/lib/schedule/booking-rules";
+import { guardRefusal, type PlanContext } from "./plan-context";
+import { planStamps } from "./queries";
 
-type RefundRow = Omit<Database["public"]["Tables"]["plan_refunds"]["Insert"], "plan_id" | "order_id">;
+type RefundRow = Pick<
+  Database["public"]["Tables"]["plan_refunds"]["Insert"],
+  "reason" | "amount_ils" | "method" | "reference" | "proposed_amount_ils" | "override_reason" | "defect" | "created_by"
+>;
 
 /**
- * The write half of an undo act (Void, Cancellation): claim the Plan, write
- * the plan_refunds audit row, then mark the order. The claim matches the
- * status the Plan was read with, so two staff cannot undo it twice; any
- * later failure puts the Plan back exactly as it was.
+ * The write half of an undo act (Void, Cancellation): undo_plan sets the
+ * Plan, writes the plan_refunds audit row and marks the order in one
+ * transaction, under the per-trainee booking lock, and refuses if the
+ * Trainee's roster or Plans changed since ctx was read. So two staff cannot
+ * undo it twice, and a Booking made in between cannot escape the shrink rule.
  */
 export async function claimAndRecordUndo(
   db: SupabaseClient<Database>,
@@ -22,46 +28,30 @@ export async function claimAndRecordUndo(
     orderStatus: "voided" | "refunded" | null;
   },
 ): Promise<{ refundId: string } | { error: string }> {
-  const planId = ctx.plan.id;
-  // Matched on both fields it was read with: an Early end in between leaves
-  // the status alone but sets ended_on, and must stop this claim.
-  const base = db
-    .from("trainee_plans")
-    .update({ ...undo.plan, ...(undo.plan.status === "voided" ? { ended_on: null } : {}) })
-    .eq("id", planId)
-    .eq("status", ctx.plan.status);
-  const { data: claimed, error: claimError } = await (ctx.plan.ended_on
-    ? base.eq("ended_on", ctx.plan.ended_on)
-    : base.is("ended_on", null)
-  ).select("id");
-  if (claimError) {
-    console.error("[undo] plan update failed:", claimError.message);
+  const { refund } = undo;
+  const { data: refundId, error } = await db.rpc("undo_plan", {
+    p_plan_id: ctx.plan.id,
+    p_status: undo.plan.status,
+    // The generated types mark every argument required; NULL is how SQL reads an absent one.
+    p_ended_on: (undo.plan.status === "cancelled" ? undo.plan.ended_on : null) as string,
+    p_kind: undo.plan.status === "voided" ? "void" : "cancellation",
+    p_reason: refund.reason,
+    p_amount_ils: refund.amount_ils,
+    p_proposed_amount_ils: (refund.proposed_amount_ils ?? null) as number,
+    p_override_reason: (refund.override_reason ?? null) as string,
+    p_defect: refund.defect ?? false,
+    p_method: refund.method,
+    p_reference: (refund.reference ?? null) as string,
+    p_order_status: undo.orderStatus as string,
+    p_actor: refund.created_by,
+    p_counted_row_ids: countedRowIds(ctx.rows),
+    p_plan_stamps: planStamps(ctx.plans),
+  });
+  if (error || !refundId) {
+    const known = error && guardRefusal(error.message);
+    if (known) return { error: known };
+    console.error("[undo] undo_plan failed:", error?.message);
     return { error: "הפעולה נכשלה. נסו שוב." };
   }
-  if (!claimed?.length) return { error: "המסלול השתנה בינתיים. פתחו אותו מחדש ונסו שוב." };
-  const restore = () =>
-    db.from("trainee_plans").update({ status: ctx.plan.status, ended_on: ctx.plan.ended_on }).eq("id", planId);
-
-  const { data: refund, error: refundError } = await db
-    .from("plan_refunds")
-    .insert({ ...undo.refund, plan_id: planId, order_id: ctx.order?.id ?? null })
-    .select("id")
-    .single();
-  if (refundError || !refund) {
-    console.error("[undo] refund record failed:", refundError?.message);
-    await restore();
-    return { error: "שמירת הפעולה נכשלה. נסו שוב." };
-  }
-
-  if (ctx.order && undo.orderStatus) {
-    const { error: orderError } = await db.from("orders").update({ status: undo.orderStatus }).eq("id", ctx.order.id);
-    if (orderError) {
-      // A Plan undone on an order still marked paid would count as revenue: undo it all.
-      console.error("[undo] order update failed:", orderError.message);
-      await db.from("plan_refunds").delete().eq("id", refund.id);
-      await restore();
-      return { error: "הפעולה נכשלה. נסו שוב." };
-    }
-  }
-  return { refundId: refund.id };
+  return { refundId };
 }

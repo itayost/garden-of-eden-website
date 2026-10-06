@@ -171,7 +171,6 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
   const recorded = await claimAndRecordUndo(db, ctx, {
     plan: { status: "cancelled", ended_on: today },
     refund: {
-      kind: "cancellation",
       reason: data.reason,
       amount_ils: data.amountIls,
       proposed_amount_ils: assessed.proposal.proposed,
