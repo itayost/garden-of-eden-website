@@ -11,6 +11,7 @@ import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import type { MorningWebhookEvent, Order } from "@/types/plans";
 import { orderPlanName } from "@/lib/plans/manual-card";
+import { paidNothing } from "@/lib/plans/paid";
 
 export type AdminOrderRow = Order & {
   productName: string;
@@ -110,13 +111,13 @@ export async function listDiscountedOrdersAction(): Promise<DiscountRow[]> {
   if (error) return [];
   const { data, error: readError } = (await typedFrom(createAdminClient(), "orders")
     .select(
-      "id, child_name, amount_ils, list_price_ils, discount_reason, payment_method, created_at, product:plan_products(name_he), discounter:profiles!orders_discounted_by_fkey(full_name)",
+      "id, child_name, amount_ils, list_price_ils, discount_reason, created_at, product:plan_products(name_he), discounter:profiles!orders_discounted_by_fkey(full_name)",
     )
     .not("list_price_ils", "is", null)
     .order("created_at", { ascending: false })
     .limit(ORDERS_LIMIT)) as {
     data:
-      | (Pick<Order, "id" | "child_name" | "amount_ils" | "list_price_ils" | "discount_reason" | "payment_method" | "created_at"> & {
+      | (Pick<Order, "id" | "child_name" | "amount_ils" | "list_price_ils" | "discount_reason" | "created_at"> & {
           product: { name_he: string } | null;
           discounter: { full_name: string | null } | null;
         })[]
@@ -133,7 +134,7 @@ export async function listDiscountedOrdersAction(): Promise<DiscountRow[]> {
     reason: row.discount_reason,
     byName: row.discounter?.full_name ?? null,
     createdAt: row.created_at,
-    free: row.payment_method === "free",
+    free: paidNothing(row),
   }));
 }
 

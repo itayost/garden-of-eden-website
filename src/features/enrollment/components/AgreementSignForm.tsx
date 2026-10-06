@@ -42,18 +42,25 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  * know, the declarations, and the signature. Phone-first like the online
  * form; the page turns into the printable copy once signed.
  */
+/** What the page says before the form, by how the Plan is paid. */
+const INTRO = {
+  paid: "התשלום התקבל. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה.",
+  card: "כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה. אחרי החתימה עוברים לתשלום באשראי.",
+  free: "המסלול ניתן ללא תשלום. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה.",
+} as const;
+
 export function AgreementSignForm({
   agreement,
   token,
-  awaitingCard,
-  free = false,
+  payment,
 }: {
   agreement: EnrollmentAgreement;
   token: string;
-  /** A Payment link: the card is paid after signing, so nothing is paid yet. */
-  awaitingCard: boolean;
-  /** Given without charging: nothing is paid and nothing is authorized. */
-  free?: boolean;
+  /**
+   * paid: taken by staff. card: a Payment link, the card comes after signing.
+   * free: given without charging, nothing is paid or authorized.
+   */
+  payment: "paid" | "card" | "free";
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -73,7 +80,7 @@ export function AgreementSignForm({
       declaresHealthy: false,
       acceptsTerms: false,
       // Nothing is charged on a free Plan: the box is hidden and the server stores false.
-      authorizesPayment: free,
+      authorizesPayment: payment === "free",
       photoConsent: undefined,
       signatureName: "",
     },
@@ -104,11 +111,7 @@ export function AgreementSignForm({
         <p className="text-sm font-medium text-black/60">סניף קריית אתא</p>
         <h1 className="mt-1 text-2xl font-bold sm:text-3xl">חתימה על הסכם ההרשמה</h1>
         <p className="mt-2 text-sm text-black/60">
-          {awaitingCard
-            ? "כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה. אחרי החתימה עוברים לתשלום באשראי."
-            : free
-              ? "המסלול ניתן ללא תשלום. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה."
-              : "התשלום התקבל. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה."}
+          {INTRO[payment]}
         </p>
       </header>
 
@@ -122,8 +125,8 @@ export function AgreementSignForm({
           <dd className="font-medium">₪{Number(agreement.plan_price_ils).toLocaleString("he-IL")}</dd>
           <dt className="text-black/60">תחילה</dt>
           <dd className="font-medium">{ddmmyyyy(agreement.plan_start_on)}</dd>
-          <dt className="text-black/60">{awaitingCard || free ? "תשלום" : "שולם ב"}</dt>
-          <dd className="font-medium">{awaitingCard ? "כרטיס אשראי, אחרי החתימה" : agreement.payment_method}</dd>
+          <dt className="text-black/60">{payment === "paid" ? "שולם ב" : "תשלום"}</dt>
+          <dd className="font-medium">{payment === "card" ? "כרטיס אשראי, אחרי החתימה" : agreement.payment_method}</dd>
         </dl>
       </section>
 
@@ -167,7 +170,7 @@ export function AgreementSignForm({
           </Section>
 
           <Section title="הצהרות ואישורים">
-            <AgreementDeclarations control={form.control} disabled={loading} showPayment={!free} />
+            <AgreementDeclarations control={form.control} disabled={loading} showPayment={payment !== "free"} />
           </Section>
 
           <Section title="חתימה">

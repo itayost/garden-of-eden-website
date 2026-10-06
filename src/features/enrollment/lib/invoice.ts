@@ -9,6 +9,7 @@ import type { CardBrand } from "@/lib/payments/card";
 import { israelToday } from "@/lib/utils/tasks";
 import type { Order, PlanProduct } from "@/types/plans";
 import { orderPlanName } from "@/lib/plans/manual-card";
+import { paidNothing } from "@/lib/plans/paid";
 
 export type InvoiceOutcome =
   | { ok: true; url: string | null; alreadyIssued: boolean }
@@ -59,9 +60,7 @@ export async function issueOrderInvoice(
   }
   // Nothing was paid, so there is nothing to receipt; paymentFor would also
   // fall through to a card receipt.
-  if (order.payment_method === "free") {
-    return { ok: false, error: "ללא תשלום: אין קבלה", skipped: false };
-  }
+  if (paidNothing(order)) return { ok: false, error: "ללא תשלום: אין קבלה", skipped: true };
   if (order.morning_document_id) return { ok: true, url: order.morning_document_url, alreadyIssued: true };
 
   const { data: product } = (await typedFrom(db, "plan_products")

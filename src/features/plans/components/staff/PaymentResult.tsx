@@ -80,7 +80,7 @@ export function PaymentResult({
           {result.endsOn && <div className="text-muted-foreground">בתוקף עד {shortDate(result.endsOn)}</div>}
         </Line>
 
-        {result.free ? (
+        {invoice === null ? (
           <Line ok={null}>
             <div className="font-medium">ללא תשלום: לא מופקת קבלה</div>
           </Line>

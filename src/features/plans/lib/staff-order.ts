@@ -30,6 +30,7 @@ export function staffOrderColumns(
     ok: true as const,
     paid: price.paid,
     listPrice: price.listPrice,
+    reason: price.reason,
     columns: {
       product_id: product.id,
       branch_id: product.branch_id,

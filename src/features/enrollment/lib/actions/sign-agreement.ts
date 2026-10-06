@@ -11,6 +11,7 @@ import { signAgreementSchema, type SignAgreementInput } from "@/lib/validations/
 import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
 import { awaitsCard, payPath } from "@/lib/plans/payment-link";
 import type { EnrollmentAgreement, Order } from "@/types/plans";
+import { paidNothing } from "@/lib/plans/paid";
 
 /** payUrl: the order still waits for the card (a Payment link), so the parent goes on to pay. */
 type SignResult = { ok: true; payUrl?: string } | { error: string };
@@ -40,12 +41,12 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
 
   const db = createAdminClient();
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("id, signed_at, profile_id, order_id, order:orders(status, payment_link_by, payment_method)")
+    .select("id, signed_at, profile_id, order_id, order:orders(status, payment_link_by, amount_ils)")
     .eq("id", data.agreementId)
     .maybeSingle()) as {
     data:
       | (Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id" | "order_id"> & {
-          order: Pick<Order, "status" | "payment_link_by" | "payment_method"> | null;
+          order: Pick<Order, "status" | "payment_link_by" | "amount_ils"> | null;
         })
       | null;
   };
@@ -68,7 +69,7 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
       declares_healthy: data.declaresHealthy,
       accepts_terms: data.acceptsTerms,
       // A Plan given without charging authorizes nothing.
-      authorizes_payment: agreement.order?.payment_method === "free" ? false : data.authorizesPayment,
+      authorizes_payment: agreement.order && paidNothing(agreement.order) ? false : data.authorizesPayment,
       photo_consent: data.photoConsent,
       signature_name: data.signatureName,
       signed_at: new Date().toISOString(),

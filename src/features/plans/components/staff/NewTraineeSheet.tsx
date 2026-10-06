@@ -90,7 +90,7 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
     startsOn: form.startsOn,
     sendWhatsApp: form.sendWhatsApp,
     discount: discount.discount,
-    freeReason: free ? form.freeReason : null,
+    freeReason: form.freeReason,
     confirmDuplicate,
   });
 
