@@ -26,7 +26,7 @@ export function EarlyEndDialog({ planId, onClose }: { planId: string; onClose: (
 
   const confirm = () =>
     startTransition(async () => {
-      const result = await earlyEndPlanAction({ planId, reason });
+      const result = await earlyEndPlanAction({ planId, reason, readToken: preview?.readToken ?? "" });
       if ("error" in result) {
         toast.error(result.error);
         return;

@@ -10,7 +10,8 @@ import { earlyEndRefusal, shrinkImpact, type ShrinkImpact } from "@/lib/plans/sh
 import { earlyEndSchema, type EarlyEndInput } from "@/lib/validations/plans-admin";
 import type { Database } from "@/types/database";
 import { guardedShrinkArgs } from "../apply-shrink";
-import { guardRefusal, loadPlanContext, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
+import { readToken } from "@/lib/plans/read-token";
+import { guardRefusal, loadPlanContext, STALE_READ, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 
 export interface EarlyEndPreview {
@@ -20,6 +21,8 @@ export interface EarlyEndPreview {
   refusal: string | null;
   moved: AffectedBooking[];
   cancelled: AffectedBooking[];
+  /** Sent back with the act: it is refused if the roster or Plans moved since. */
+  readToken: string;
 }
 
 /** Every reason the Current plan cannot end early today, or null. */
@@ -48,6 +51,7 @@ export async function previewEarlyEndAction(planId: string): Promise<EarlyEndPre
     refusal: refusalFor(ctx, today),
     moved: impact.moved.map((m) => toBooking(m.row)),
     cancelled: impact.cancelled.map(toBooking),
+    readToken: readToken(ctx.rows, ctx.plans),
   };
 }
 
@@ -101,6 +105,7 @@ export async function earlyEndPlanAction(
   const ctx = await loadPlanContext(db, parsed.data.planId);
   if ("error" in ctx) return ctx;
   const today = israelToday();
+  if (readToken(ctx.rows, ctx.plans) !== parsed.data.readToken) return { error: STALE_READ };
   const refusal = refusalFor(ctx, today);
   if (refusal) return { error: refusal };
 

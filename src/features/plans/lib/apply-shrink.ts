@@ -36,7 +36,7 @@ export function guardedShrinkArgs(ctx: Pick<PlanContext, "rows" | "plans">, canc
  * gets an in-app notice. Rows moved to a Queued plan need no write: the
  * queue charges them there on its own. Returns how many were cancelled.
  */
-export async function applyShrinkCancellations(
+async function applyShrinkCancellations(
   db: SupabaseClient<Database>,
   profileId: string,
   rows: readonly QueueRow[],

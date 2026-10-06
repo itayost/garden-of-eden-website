@@ -42,7 +42,7 @@ export function VoidPlanDialog({ planId, onClose: close }: { planId: string; onC
 
   const confirm = () =>
     startTransition(async () => {
-      const result = await voidPlanAction({ planId, reason, method, reference, amountIls: amount });
+      const result = await voidPlanAction({ planId, readToken: preview?.readToken ?? "", reason, method, reference, amountIls: amount });
       if ("error" in result) {
         toast.error(result.error);
         return;

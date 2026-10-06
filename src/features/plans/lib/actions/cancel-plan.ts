@@ -14,8 +14,10 @@ import {
   type CancelPlanWithRefundInput,
   type RefundMethod,
 } from "@/lib/validations/plans-admin";
+import { readToken } from "@/lib/plans/read-token";
 import {
   loadPlanContext,
+  STALE_READ,
   suggestedRefundMethod,
   toBooking,
   withPlanChange,
@@ -41,6 +43,8 @@ export interface CancellationPreview {
   receiptUrl: string | null;
   moved: AffectedBooking[];
   cancelled: AffectedBooking[];
+  /** Sent back with the act: it is refused if the roster or Plans moved since. */
+  readToken: string;
 }
 
 const asCancelled = (plans: readonly StoredPlan[], planId: string, today: string) =>
@@ -137,6 +141,7 @@ export async function previewCancellationAction(
     receiptUrl: ctx.order?.morning_document_url ?? null,
     moved: impact.moved.map((m) => toBooking(m.row)),
     cancelled: impact.cancelled.map(toBooking),
+    readToken: readToken(ctx.rows, ctx.plans),
   };
 }
 
@@ -147,8 +152,8 @@ export type CancellationOutcome =
 /**
  * A parent's Cancellation: the Plan ends today, sessions used stay used, and
  * the refund follows the policy unless staff override it with a reason. The
- * Plan is claimed, the audit record written and the order marked together
- * (claimAndRecordUndo), then the shrink rule runs. No money moves here.
+ * Plan, its audit record, its order, the shrink rule's cancellations and the
+ * activity record are written together (undoPlan). No money moves here.
  */
 export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInput): Promise<CancellationOutcome> {
   const { error: authError, user, profile: staff } = await verifyAdminOrTrainer();
@@ -161,6 +166,7 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
   const ctx = await loadPlanContext(db, data.planId);
   if ("error" in ctx) return ctx;
   const today = israelToday();
+  if (readToken(ctx.rows, ctx.plans) !== data.readToken) return { error: STALE_READ };
   const assessed = await assess(db, ctx, today, data.defect);
   if (assessed.refusal || !assessed.proposal) return { error: assessed.refusal ?? "לא ניתן לחשב החזר" };
   if (data.amountIls > assessed.amountPaid) return { error: "סכום ההחזר גבוה מהסכום ששולם" };
@@ -190,7 +196,7 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
       reason: data.reason,
       proposedIls: assessed.proposal.proposed,
       amountIls: data.amountIls,
-      overrideReason: overridden ? (data.overrideReason ?? null) : null,
+      overrideReason: overridden ? data.overrideReason : null,
       defect: data.defect,
       method: data.method,
       bookingsMoved: impact.moved.length,
@@ -198,15 +204,13 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
     },
   });
   if ("error" in recorded) return recorded;
-  const refund = { id: recorded.refundId };
-  const cancelledCount = impact.cancelled.length;
 
   revalidateStaffSurfaces(ctx.plan.profile_id);
   return {
     ok: true,
-    refundId: refund.id,
+    refundId: recorded.refundId,
     receiptUrl: ctx.order?.morning_document_url ?? null,
-    cancelledCount,
+    cancelledCount: impact.cancelled.length,
     movedCount: impact.moved.length,
   };
 }

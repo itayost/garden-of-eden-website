@@ -8,7 +8,8 @@ import { israelToday } from "@/lib/utils/tasks";
 import { creditNoteSchema, voidPlanSchema, type RefundMethod, type VoidPlanInput } from "@/lib/validations/plans-admin";
 import { shrinkImpact, voidRefusal } from "@/lib/plans/shrink";
 import type { StoredPlan } from "../queries";
-import { loadPlanContext, suggestedRefundMethod, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
+import { readToken } from "@/lib/plans/read-token";
+import { loadPlanContext, STALE_READ, suggestedRefundMethod, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { undoPlan } from "../undo-plan";
 
@@ -28,6 +29,8 @@ export interface VoidPreview {
   moved: AffectedBooking[];
   /** Bookings that will be cancelled, latest first. */
   cancelled: AffectedBooking[];
+  /** Sent back with the Void: it is refused if the roster or Plans moved since. */
+  readToken: string;
 }
 
 const asVoided = (plans: readonly StoredPlan[], planId: string) => withPlanChange(plans, planId, { status: "voided" });
@@ -49,6 +52,7 @@ export async function previewVoidAction(planId: string): Promise<VoidPreview | {
     receiptUrl: ctx.order?.morning_document_url ?? null,
     moved: impact.moved.map((m) => toBooking(m.row)),
     cancelled: impact.cancelled.map(toBooking),
+    readToken: readToken(ctx.rows, ctx.plans),
   };
 }
 
@@ -74,6 +78,7 @@ export async function voidPlanAction(input: VoidPlanInput): Promise<VoidOutcome>
   const ctx = await loadPlanContext(db, data.planId);
   if ("error" in ctx) return ctx;
   const today = israelToday();
+  if (readToken(ctx.rows, ctx.plans) !== data.readToken) return { error: STALE_READ };
   const refusal = voidRefusal(ctx.plans, ctx.rows, data.planId, today);
   if (refusal) return { error: refusal };
   if (ctx.order && data.amountIls > Number(ctx.order.amount_ils)) {
@@ -104,15 +109,13 @@ export async function voidPlanAction(input: VoidPlanInput): Promise<VoidOutcome>
     },
   });
   if ("error" in recorded) return recorded;
-  const refund = { id: recorded.refundId };
-  const cancelledCount = impact.cancelled.length;
 
   revalidateStaffSurfaces(ctx.plan.profile_id);
   return {
     ok: true,
-    refundId: refund.id,
+    refundId: recorded.refundId,
     receiptUrl: ctx.order?.morning_document_url ?? null,
-    cancelledCount,
+    cancelledCount: impact.cancelled.length,
     movedCount: impact.moved.length,
   };
 }

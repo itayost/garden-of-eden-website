@@ -185,9 +185,13 @@ export const refundMethodSchema = z.enum(["card", "cash", "transfer", "bit", "ar
 export type RefundMethod = z.infer<typeof refundMethodSchema>;
 
 /** A Void: the reason is required, and how the money went back is recorded. */
+/** What the confirmation showed (readToken() in src/lib/plans/read-token.ts). */
+const readTokenField = z.string().regex(/^[0-9a-f]{64}$/, "הנתונים לא נטענו. רעננו ונסו שוב.");
+
 export const voidPlanSchema = z
   .object({
     planId: uuid,
+    readToken: readTokenField,
     reason,
     method: refundMethodSchema,
     reference: optionalText(60),
@@ -212,6 +216,7 @@ export const creditNoteSchema = z.object({
 export const cancelPlanWithRefundSchema = z
   .object({
     planId: uuid,
+    readToken: readTokenField,
     reason,
     defect: z.boolean(),
     method: refundMethodSchema,
@@ -229,6 +234,7 @@ export type CancelPlanWithRefundInput = z.input<typeof cancelPlanWithRefundSchem
 /** An Early end: the Current plan ends today so the next one starts. Reason required. */
 export const earlyEndSchema = z.object({
   planId: uuid,
+  readToken: readTokenField,
   reason,
 });
 export type EarlyEndInput = z.input<typeof earlyEndSchema>;
