@@ -14,8 +14,8 @@ import {
   type QueueRow,
 } from "@/lib/plans/plan-queue";
 import { PLAN_FREEZES_EMBED, toQueuePlan, type PlanFreezeRow } from "@/lib/plans/queue-plan-row";
-import { planDisplayName } from "@/lib/plans/manual-card";
-import type { PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
+import { orderPlanName } from "@/lib/plans/manual-card";
+import type { Order, PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
 
 type ProductBits = Pick<PlanProduct, "name_he" | "kind">;
 
@@ -54,13 +54,13 @@ export async function loadStoredPlans(
   if (profileIds.length === 0) return result;
   const { data, error } = (await typedFrom(db, "trainee_plans")
     .select(
-      `*, product:plan_products(name_he, kind, staff_terms), order:orders!trainee_plans_order_id_fkey(payment_method), ${PLAN_FREEZES_EMBED}`,
+      `*, product:plan_products(name_he, kind), order:orders!trainee_plans_order_id_fkey(payment_method, terms_sessions_total, terms_duration_days), ${PLAN_FREEZES_EMBED}`,
     )
     .in("profile_id", [...profileIds])) as {
     data:
       | (TraineePlan & {
-          product: (ProductBits & { staff_terms: boolean }) | null;
-          order: { payment_method: string | null } | null;
+          product: ProductBits | null;
+          order: Pick<Order, "payment_method" | "terms_sessions_total" | "terms_duration_days"> | null;
           plan_freezes: PlanFreezeRow[] | null;
         })[]
       | null;
@@ -71,8 +71,11 @@ export async function loadStoredPlans(
     return result;
   }
   for (const { order, product, ...row } of data ?? []) {
-    // Every screen names the Plan from here: a manual Card by its terms.
-    const named = product ? { name_he: planDisplayName(product, row), kind: product.kind } : null;
+    // Every screen names the Plan from here: a manual Card by the terms its
+    // order was sold on (an Adjustment changes the Plan's terms, not the sale).
+    const named = product
+      ? { name_he: order ? orderPlanName(product.name_he, order) : product.name_he, kind: product.kind }
+      : null;
     const stored: StoredPlan = { ...toQueuePlan({ ...row, product: named }), paidInArbox: order?.payment_method === "arbox" };
     result.set(row.profile_id, [...(result.get(row.profile_id) ?? []), stored]);
   }

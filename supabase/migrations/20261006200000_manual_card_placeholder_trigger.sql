@@ -37,6 +37,9 @@ END $function$;
 REVOKE ALL ON FUNCTION public.ensure_manual_card_placeholder() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS plan_products_manual_card_placeholder ON public.plan_products;
+-- branch_id too: an active product moved to a branch makes it a selling branch.
 CREATE TRIGGER plan_products_manual_card_placeholder
-  AFTER INSERT OR UPDATE OF is_active ON public.plan_products
-  FOR EACH ROW EXECUTE FUNCTION public.ensure_manual_card_placeholder();
+  AFTER INSERT OR UPDATE OF is_active, branch_id ON public.plan_products
+  FOR EACH ROW
+  WHEN (NEW.is_active AND NOT NEW.staff_terms)
+  EXECUTE FUNCTION public.ensure_manual_card_placeholder();
