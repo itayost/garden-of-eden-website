@@ -14,7 +14,6 @@ import {
   type CancelPlanWithRefundInput,
   type RefundMethod,
 } from "@/lib/validations/plans-admin";
-import { applyShrinkCancellations } from "../apply-shrink";
 import {
   loadPlanContext,
   suggestedRefundMethod,
@@ -25,7 +24,7 @@ import {
 } from "../plan-context";
 import type { StoredPlan } from "../queries";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { claimAndRecordUndo } from "../undo-plan";
+import { undoPlan } from "../undo-plan";
 
 /** The 10-Card's per-session rate is the fallback Single-session price. */
 const TEN_CARD_SESSIONS = 10;
@@ -168,7 +167,8 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
   const overridden = data.amountIls !== assessed.proposal.proposed;
   if (overridden && !data.overrideReason) return { error: "סכום שונה מההצעה דורש סיבה" };
 
-  const recorded = await claimAndRecordUndo(db, ctx, {
+  const impact = shrinkImpact(ctx.plans, asCancelled(ctx.plans, data.planId, today), ctx.rows, today);
+  const recorded = await undoPlan(db, ctx, {
     plan: { status: "cancelled", ended_on: today },
     refund: {
       reason: data.reason,
@@ -182,33 +182,24 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
     },
     // Money went back: the order is refunded. Nothing went back: it stays paid.
     orderStatus: data.amountIls > 0 ? "refunded" : null,
-  });
-  if ("error" in recorded) return recorded;
-  const refund = { id: recorded.refundId };
-
-  const impact = shrinkImpact(ctx.plans, asCancelled(ctx.plans, data.planId, today), ctx.rows, today);
-  const cancelledCount = await applyShrinkCancellations(db, ctx.plan.profile_id, impact.cancelled);
-
-  const { error: logError } = await db.from("activity_logs").insert({
-    user_id: ctx.plan.profile_id,
-    action: "plan_cancelled",
-    actor_id: user!.id,
-    actor_name: staff?.full_name ?? "צוות",
-    metadata: {
+    cancelled: impact.cancelled,
+    actorName: staff?.full_name ?? "צוות",
+    logMetadata: {
       planId: data.planId,
       orderId: ctx.order?.id ?? null,
-      refundId: refund.id,
       reason: data.reason,
       proposedIls: assessed.proposal.proposed,
       amountIls: data.amountIls,
-      overrideReason: overridden ? data.overrideReason : null,
+      overrideReason: overridden ? (data.overrideReason ?? null) : null,
       defect: data.defect,
       method: data.method,
       bookingsMoved: impact.moved.length,
-      bookingsCancelled: cancelledCount,
+      bookingsCancelled: impact.cancelled.length,
     },
   });
-  if (logError) console.error("[cancel] activity log failed:", logError.message);
+  if ("error" in recorded) return recorded;
+  const refund = { id: recorded.refundId };
+  const cancelledCount = impact.cancelled.length;
 
   revalidateStaffSurfaces(ctx.plan.profile_id);
   return {

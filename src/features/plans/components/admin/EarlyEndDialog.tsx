@@ -31,13 +31,9 @@ export function EarlyEndDialog({ planId, onClose }: { planId: string; onClose: (
         toast.error(result.error);
         return;
       }
-      if (result.incomplete) {
-        toast.error("המסלול הסתיים, אך חלק מהאימונים לא בוטלו. בדקו את לוח השיבוץ של המתאמן.");
-      } else {
-        toast.success(
-          result.cancelledCount > 0 ? `המסלול הסתיים. ${result.cancelledCount} אימונים בוטלו והמתאמן קיבל הודעה.` : "המסלול הסתיים",
-        );
-      }
+      toast.success(
+        result.cancelledCount > 0 ? `המסלול הסתיים. ${result.cancelledCount} אימונים בוטלו והמתאמן קיבל הודעה.` : "המסלול הסתיים",
+      );
       router.refresh();
       onClose();
     });

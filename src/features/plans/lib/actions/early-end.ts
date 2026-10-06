@@ -9,10 +9,8 @@ import { resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { earlyEndRefusal, shrinkImpact, type ShrinkImpact } from "@/lib/plans/shrink";
 import { earlyEndSchema, type EarlyEndInput } from "@/lib/validations/plans-admin";
 import type { Database } from "@/types/database";
-import { applyShrinkCancellations } from "../apply-shrink";
-import { countedRowIds } from "@/lib/schedule/booking-rules";
+import { guardedShrinkArgs } from "../apply-shrink";
 import { guardRefusal, loadPlanContext, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
-import { planStamps } from "../queries";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 
 export interface EarlyEndPreview {
@@ -54,12 +52,13 @@ export async function previewEarlyEndAction(planId: string): Promise<EarlyEndPre
 }
 
 /**
- * Ends the Plan today and records the reason and the actor, in one
- * transaction (end_plan_early) under the per-trainee booking lock. It refuses
+ * An Early end, whole or not at all (end_plan_early): the Plan ends today, the
+ * Bookings the shrink rule drops are cancelled, and the reason and actor are
+ * recorded, in one transaction under the per-trainee booking lock. It refuses
  * a Plan already ended or a roster or queue that changed since ctx was read,
  * so a Booking made in between cannot escape the shrink rule.
  */
-async function endAndLog(
+async function endEarly(
   db: SupabaseClient<Database>,
   ctx: PlanContext,
   audit: { reason: string; today: string; actorId: string; actorName: string; impact: ShrinkImpact },
@@ -69,15 +68,14 @@ async function endAndLog(
     p_ended_on: audit.today,
     p_actor: audit.actorId,
     p_actor_name: audit.actorName,
-    p_metadata: {
+    p_log_metadata: {
       planId: ctx.plan.id,
       reason: audit.reason,
       endedOn: audit.today,
       bookingsMoved: audit.impact.moved.length,
-      bookingsToCancel: audit.impact.cancelled.length,
+      bookingsCancelled: audit.impact.cancelled.length,
     },
-    p_counted_row_ids: countedRowIds(ctx.rows),
-    p_plan_stamps: planStamps(ctx.plans),
+    ...guardedShrinkArgs(ctx, audit.impact.cancelled),
   });
   if (!error) return null;
   const known = guardRefusal(error.message);
@@ -93,7 +91,7 @@ async function endAndLog(
  */
 export async function earlyEndPlanAction(
   input: EarlyEndInput,
-): Promise<{ ok: true; cancelledCount: number; movedCount: number; incomplete: boolean } | { error: string }> {
+): Promise<{ ok: true; cancelledCount: number; movedCount: number } | { error: string }> {
   const { error: authError, user, profile: staff } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
   const parsed = earlyEndSchema.safeParse(input);
@@ -107,7 +105,7 @@ export async function earlyEndPlanAction(
   if (refusal) return { error: refusal };
 
   const impact = impactOf(ctx, today);
-  const failed = await endAndLog(db, ctx, {
+  const failed = await endEarly(db, ctx, {
     reason: parsed.data.reason,
     today,
     actorId: user!.id,
@@ -116,11 +114,6 @@ export async function earlyEndPlanAction(
   });
   if (failed) return { error: failed };
 
-  const cancelledCount = await applyShrinkCancellations(db, ctx.plan.profile_id, impact.cancelled);
-  const incomplete = cancelledCount < impact.cancelled.length;
-  if (incomplete) {
-    console.error(`[early-end] plan ${ctx.plan.id}: cancelled ${cancelledCount} of ${impact.cancelled.length} bookings`);
-  }
   revalidateStaffSurfaces(ctx.plan.profile_id);
-  return { ok: true, cancelledCount, movedCount: impact.moved.length, incomplete };
+  return { ok: true, cancelledCount: impact.cancelled.length, movedCount: impact.moved.length };
 }

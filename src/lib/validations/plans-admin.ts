@@ -217,7 +217,8 @@ export const cancelPlanWithRefundSchema = z
     method: refundMethodSchema,
     reference: optionalText(60),
     amountIls: z.number().min(0, "סכום לא תקין").max(100_000, "סכום לא תקין"),
-    overrideReason: optionalText(300),
+    // plan_refunds_override_reason_check: 2 to 300 characters when given.
+    overrideReason: optionalText(300).refine((v) => v === null || v.length >= 2, "הסיבה קצרה מדי"),
   })
   .refine((v) => v.method !== "none" || v.amountIls === 0, {
     message: "כשלא הוחזר כסף, הסכום הוא 0",

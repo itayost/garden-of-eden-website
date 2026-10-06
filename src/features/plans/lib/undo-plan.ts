@@ -1,10 +1,10 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
-import { countedRowIds } from "@/lib/schedule/booking-rules";
+import type { Database, Json } from "@/types/database";
+import type { QueueRow } from "@/lib/plans/plan-queue";
+import { guardedShrinkArgs } from "./apply-shrink";
 import { guardRefusal, type PlanContext } from "./plan-context";
-import { planStamps } from "./queries";
 
 type RefundRow = Pick<
   Database["public"]["Tables"]["plan_refunds"]["Insert"],
@@ -12,13 +12,15 @@ type RefundRow = Pick<
 >;
 
 /**
- * The write half of an undo act (Void, Cancellation): undo_plan sets the
- * Plan, writes the plan_refunds audit row and marks the order in one
- * transaction, under the per-trainee booking lock, and refuses if the
- * Trainee's roster or Plans changed since ctx was read. So two staff cannot
- * undo it twice, and a Booking made in between cannot escape the shrink rule.
+ * An undo act (Void, Cancellation), whole or not at all: undo_plan sets the
+ * Plan, writes the plan_refunds audit row, marks the order, cancels the
+ * Bookings the shrink rule drops and writes the activity record (the refund
+ * id added to logMetadata), in one transaction under the per-trainee booking
+ * lock. It refuses if the Trainee's roster or Plans changed since ctx was
+ * read, so two staff cannot undo it twice and a Booking made in between
+ * cannot escape the shrink rule.
  */
-export async function claimAndRecordUndo(
+export async function undoPlan(
   db: SupabaseClient<Database>,
   ctx: PlanContext,
   undo: {
@@ -26,6 +28,10 @@ export async function claimAndRecordUndo(
     refund: RefundRow;
     /** Null leaves the order as it is. */
     orderStatus: "voided" | "refunded" | null;
+    /** The Bookings the shrink rule cancels, latest first. */
+    cancelled: readonly QueueRow[];
+    actorName: string;
+    logMetadata: { [key: string]: Json };
   },
 ): Promise<{ refundId: string } | { error: string }> {
   const { refund } = undo;
@@ -34,7 +40,6 @@ export async function claimAndRecordUndo(
     p_status: undo.plan.status,
     // The generated types mark every argument required; NULL is how SQL reads an absent one.
     p_ended_on: (undo.plan.status === "cancelled" ? undo.plan.ended_on : null) as string,
-    p_kind: undo.plan.status === "voided" ? "void" : "cancellation",
     p_reason: refund.reason,
     p_amount_ils: refund.amount_ils,
     p_proposed_amount_ils: (refund.proposed_amount_ils ?? null) as number,
@@ -44,8 +49,9 @@ export async function claimAndRecordUndo(
     p_reference: (refund.reference ?? null) as string,
     p_order_status: undo.orderStatus as string,
     p_actor: refund.created_by,
-    p_counted_row_ids: countedRowIds(ctx.rows),
-    p_plan_stamps: planStamps(ctx.plans),
+    p_actor_name: undo.actorName,
+    p_log_metadata: undo.logMetadata,
+    ...guardedShrinkArgs(ctx, undo.cancelled),
   });
   if (error || !refundId) {
     const known = error && guardRefusal(error.message);
