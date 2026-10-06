@@ -40,12 +40,12 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
 
   const db = createAdminClient();
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("id, signed_at, profile_id, order_id, order:orders(status, payment_link_by)")
+    .select("id, signed_at, profile_id, order_id, order:orders(status, payment_link_by, payment_method)")
     .eq("id", data.agreementId)
     .maybeSingle()) as {
     data:
       | (Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id" | "order_id"> & {
-          order: Pick<Order, "status" | "payment_link_by"> | null;
+          order: Pick<Order, "status" | "payment_link_by" | "payment_method"> | null;
         })
       | null;
   };
@@ -67,7 +67,8 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
       emergency_contact_phone: data.emergencyContactPhone,
       declares_healthy: data.declaresHealthy,
       accepts_terms: data.acceptsTerms,
-      authorizes_payment: data.authorizesPayment,
+      // A Plan given without charging authorizes nothing.
+      authorizes_payment: agreement.order?.payment_method === "free" ? false : data.authorizesPayment,
       photo_consent: data.photoConsent,
       signature_name: data.signatureName,
       signed_at: new Date().toISOString(),

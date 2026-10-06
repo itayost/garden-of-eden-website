@@ -11,8 +11,14 @@ ALTER TABLE public.orders ADD CONSTRAINT orders_payment_method_check CHECK (
   OR payment_method = ANY (ARRAY['cash'::text, 'transfer'::text, 'bit'::text, 'card'::text, 'arbox'::text, 'free'::text])
 );
 
--- Every order costs something, except one registered without charging.
+-- Every order costs something, except one registered without charging, which
+-- costs nothing and is recorded by staff (so never charged on the card page).
+-- IS NOT DISTINCT FROM: an online order has no payment_method until paid, and
+-- a plain "= 'free'" would be NULL there, which a CHECK lets through.
 ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_amount_ils_check;
 ALTER TABLE public.orders ADD CONSTRAINT orders_amount_ils_check CHECK (
-  amount_ils > 0 OR (amount_ils = 0 AND payment_method = 'free')
+  CASE
+    WHEN payment_method IS NOT DISTINCT FROM 'free' THEN amount_ils = 0 AND payment_provider = 'manual'
+    ELSE amount_ils > 0
+  END
 );

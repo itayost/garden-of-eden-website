@@ -46,11 +46,14 @@ export function AgreementSignForm({
   agreement,
   token,
   awaitingCard,
+  free = false,
 }: {
   agreement: EnrollmentAgreement;
   token: string;
   /** A Payment link: the card is paid after signing, so nothing is paid yet. */
   awaitingCard: boolean;
+  /** Given without charging: nothing is paid and nothing is authorized. */
+  free?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -69,7 +72,8 @@ export function AgreementSignForm({
       emergencyContactPhone: toLocalPhone(agreement.emergency_contact_phone),
       declaresHealthy: false,
       acceptsTerms: false,
-      authorizesPayment: false,
+      // Nothing is charged on a free Plan: the box is hidden and the server stores false.
+      authorizesPayment: free,
       photoConsent: undefined,
       signatureName: "",
     },
@@ -102,7 +106,9 @@ export function AgreementSignForm({
         <p className="mt-2 text-sm text-black/60">
           {awaitingCard
             ? "כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה. אחרי החתימה עוברים לתשלום באשראי."
-            : "התשלום התקבל. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה."}
+            : free
+              ? "המסלול ניתן ללא תשלום. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה."
+              : "התשלום התקבל. נשארו כמה פרטים שרק אתם יכולים למלא, ההצהרות והחתימה."}
         </p>
       </header>
 
@@ -116,7 +122,7 @@ export function AgreementSignForm({
           <dd className="font-medium">₪{Number(agreement.plan_price_ils).toLocaleString("he-IL")}</dd>
           <dt className="text-black/60">תחילה</dt>
           <dd className="font-medium">{ddmmyyyy(agreement.plan_start_on)}</dd>
-          <dt className="text-black/60">{awaitingCard ? "תשלום" : "שולם ב"}</dt>
+          <dt className="text-black/60">{awaitingCard || free ? "תשלום" : "שולם ב"}</dt>
           <dd className="font-medium">{awaitingCard ? "כרטיס אשראי, אחרי החתימה" : agreement.payment_method}</dd>
         </dl>
       </section>
@@ -161,7 +167,7 @@ export function AgreementSignForm({
           </Section>
 
           <Section title="הצהרות ואישורים">
-            <AgreementDeclarations control={form.control} disabled={loading} />
+            <AgreementDeclarations control={form.control} disabled={loading} showPayment={!free} />
           </Section>
 
           <Section title="חתימה">

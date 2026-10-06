@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { reasonSchema } from "@/lib/validations/plans-admin";
 
 /** Why a Plan is given without charging: required, shown on the orders list. */
 export function FreeReasonField({
@@ -32,5 +33,5 @@ export function FreeReasonField({
   );
 }
 
-/** A free sale may be sent once its reason is long enough (the server checks the same). */
-export const freeReasonReady = (reason: string) => reason.trim().length >= 2;
+/** A free sale may be sent once its reason passes the server's own rule. */
+export const freeReasonReady = (reason: string) => reasonSchema.safeParse(reason).success;

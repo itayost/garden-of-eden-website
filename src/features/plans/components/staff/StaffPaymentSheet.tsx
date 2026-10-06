@@ -363,7 +363,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                     </Label>
                     <Switch id="sp-wa" checked={sendWhatsApp} onCheckedChange={setSendWhatsApp} disabled={pending} />
                   </div>
-                  {method !== "card" && (
+                  {method !== "card" && !free && (
                     <p className="text-xs text-muted-foreground">
                       {context.morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
                     </p>

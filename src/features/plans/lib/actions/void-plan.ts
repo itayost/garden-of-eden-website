@@ -9,8 +9,7 @@ import { creditNoteSchema, voidPlanSchema, type RefundMethod, type VoidPlanInput
 import { shrinkImpact, voidRefusal } from "@/lib/plans/shrink";
 import { applyShrinkCancellations } from "../apply-shrink";
 import type { StoredPlan } from "../queries";
-import { loadPlanContext, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
-import { suggestedRefundMethod } from "../plan-context";
+import { loadPlanContext, suggestedRefundMethod, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { claimAndRecordUndo } from "../undo-plan";
 

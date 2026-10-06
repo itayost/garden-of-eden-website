@@ -15,8 +15,14 @@ import {
   type RefundMethod,
 } from "@/lib/validations/plans-admin";
 import { applyShrinkCancellations } from "../apply-shrink";
-import { loadPlanContext, toBooking, withPlanChange, type AffectedBooking, type PlanContext } from "../plan-context";
-import { suggestedRefundMethod } from "../plan-context";
+import {
+  loadPlanContext,
+  suggestedRefundMethod,
+  toBooking,
+  withPlanChange,
+  type AffectedBooking,
+  type PlanContext,
+} from "../plan-context";
 import type { StoredPlan } from "../queries";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
 import { claimAndRecordUndo } from "../undo-plan";
@@ -83,9 +89,11 @@ async function assess(db: SupabaseClient<Database>, ctx: PlanContext, today: str
     return { refusal: null, proposal, amountPaid, fromCardRate: false };
   }
 
-  // Only a Card's used sessions are priced; a Plan sold by time never needs it.
-  const single = ctx.plan.sessionsTotal === null ? null : await loadSingleSessionPrice(db, ctx.plan.branch_id);
-  if (ctx.plan.sessionsTotal !== null && !single) {
+  // Only a Card's used sessions are priced; a Plan sold by time never needs
+  // it, and neither does one given without charging (nothing to refund).
+  const pricesSessions = ctx.plan.sessionsTotal !== null && amountPaid > 0;
+  const single = pricesSessions ? await loadSingleSessionPrice(db, ctx.plan.branch_id) : null;
+  if (pricesSessions && !single) {
     return { refusal: "לא הוגדר מחיר אימון בודד לסניף, ואין כרטיסיית 10 להשוואה", proposal: null, amountPaid, fromCardRate: false };
   }
 

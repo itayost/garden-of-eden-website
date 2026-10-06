@@ -31,10 +31,10 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
 
   const db = createAdminClient();
   const { data: row } = (await typedFrom(db, "enrollment_agreements")
-    .select("*, order:orders(id, morning_document_url, status, payment_link_by)")
+    .select("*, order:orders(id, morning_document_url, status, payment_link_by, payment_method)")
     .eq("id", id)
     .maybeSingle()) as {
-    data: (EnrollmentAgreement & { order: Pick<Order, "id" | "morning_document_url" | "status" | "payment_link_by"> | null }) | null;
+    data: (EnrollmentAgreement & { order: Pick<Order, "id" | "morning_document_url" | "status" | "payment_link_by" | "payment_method"> | null }) | null;
   };
   if (!row) notFound();
   const { order, ...data } = row;
@@ -50,7 +50,7 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
   }
 
   if (!data.signed_at) {
-    return <AgreementSignForm agreement={data} token={t} awaitingCard={order !== null && awaitsCard(order)} />;
+    return <AgreementSignForm agreement={data} token={t} awaitingCard={order !== null && awaitsCard(order)} free={order?.payment_method === "free"} />;
   }
 
   return (

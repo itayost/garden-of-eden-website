@@ -57,9 +57,12 @@ function DeclarationField<T extends DeclarationValues>({
 export function AgreementDeclarations<T extends DeclarationValues>({
   control,
   disabled,
+  showPayment = true,
 }: {
   control: Control<T>;
   disabled?: boolean;
+  /** False for a Plan given without charging: there is nothing to authorize. */
+  showPayment?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -75,9 +78,11 @@ export function AgreementDeclarations<T extends DeclarationValues>({
           במלואם, הבנתי את תנאיהם, לרבות החזרים וחיוב, ואני מסכים/ה להם.
         </span>
       </DeclarationField>
-      <DeclarationField control={control} name="authorizesPayment" disabled={disabled}>
-        אני מסמיך/ה את גארדן אוף עדן לחייב את אמצעי התשלום שנמסר בהתאם למסלול שנבחר, כמפורט בתקנון.
-      </DeclarationField>
+      {showPayment && (
+        <DeclarationField control={control} name="authorizesPayment" disabled={disabled}>
+          אני מסמיך/ה את גארדן אוף עדן לחייב את אמצעי התשלום שנמסר בהתאם למסלול שנבחר, כמפורט בתקנון.
+        </DeclarationField>
+      )}
 
       <FormField
         control={control}

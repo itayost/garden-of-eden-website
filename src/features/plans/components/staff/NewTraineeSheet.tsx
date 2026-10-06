@@ -209,9 +209,11 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
                   <Label htmlFor="nt-wa">שלח אישור וקישור לחתימה בוואטסאפ</Label>
                   <Switch id="nt-wa" checked={form.sendWhatsApp} onCheckedChange={(v) => set("sendWhatsApp", v)} disabled={pending} />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
-                </p>
+                {!free && (
+                  <p className="text-xs text-muted-foreground">
+                    {morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
+                  </p>
+                )}
 
                 {duplicate !== null ? (
                   <DuplicatePrompt minutesAgo={duplicate} onConfirm={() => submit(true)} onCancel={() => setDuplicate(null)} pending={pending} />

@@ -155,7 +155,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap items-center gap-2">
-                  {order.status === "paid" && order.fulfilled_at && !order.morning_document_url && order.payment_method !== "arbox" && (
+                  {order.status === "paid" && order.fulfilled_at && !order.morning_document_url && order.payment_method !== "arbox" && order.payment_method !== "free" && (
                     <Button
                       size="sm"
                       variant="outline"
