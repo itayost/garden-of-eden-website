@@ -184,10 +184,14 @@ export type HealthInput = z.input<typeof healthSchema>;
 export const refundMethodSchema = z.enum(["card", "cash", "transfer", "bit", "arbox", "none"]);
 export type RefundMethod = z.infer<typeof refundMethodSchema>;
 
+/** What the confirmation showed (readToken() in src/lib/plans/read-guard.ts). */
+const readTokenField = z.string().regex(/^[0-9a-f]{64}$/, "הנתונים לא נטענו. רעננו ונסו שוב.");
+
 /** A Void: the reason is required, and how the money went back is recorded. */
 export const voidPlanSchema = z
   .object({
     planId: uuid,
+    readToken: readTokenField,
     reason,
     method: refundMethodSchema,
     reference: optionalText(60),
@@ -212,12 +216,14 @@ export const creditNoteSchema = z.object({
 export const cancelPlanWithRefundSchema = z
   .object({
     planId: uuid,
+    readToken: readTokenField,
     reason,
     defect: z.boolean(),
     method: refundMethodSchema,
     reference: optionalText(60),
     amountIls: z.number().min(0, "סכום לא תקין").max(100_000, "סכום לא תקין"),
-    overrideReason: optionalText(300),
+    // plan_refunds_override_reason_check: 2 to 300 characters when given.
+    overrideReason: optionalText(300).refine((v) => v === null || v.length >= 2, "הסיבה קצרה מדי"),
   })
   .refine((v) => v.method !== "none" || v.amountIls === 0, {
     message: "כשלא הוחזר כסף, הסכום הוא 0",
@@ -228,6 +234,7 @@ export type CancelPlanWithRefundInput = z.input<typeof cancelPlanWithRefundSchem
 /** An Early end: the Current plan ends today so the next one starts. Reason required. */
 export const earlyEndSchema = z.object({
   planId: uuid,
+  readToken: readTokenField,
   reason,
 });
 export type EarlyEndInput = z.input<typeof earlyEndSchema>;

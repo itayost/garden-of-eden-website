@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 import type { QueueRow } from "@/lib/plans/plan-queue";
+import { guardArgs } from "@/lib/plans/read-guard";
 import { shrinkImpact } from "@/lib/plans/shrink";
 import type { PlanContext } from "./plan-context";
 import type { StoredPlan } from "./queries";
@@ -15,13 +16,26 @@ export function cancelledBookingNotice(row: Pick<QueueRow, "schedule_date" | "st
 }
 
 /**
+ * What a guarded act's function (undo_plan, end_plan_early) takes to run the
+ * shrink rule's cancellations in its own transaction, and the roster and Plan
+ * stamps it was read on, compared under the per-trainee lock.
+ */
+export function guardedShrinkArgs(ctx: Pick<PlanContext, "rows" | "plans">, cancelled: readonly QueueRow[]) {
+  return {
+    p_cancel_row_ids: cancelled.map((r) => r.id),
+    p_cancel_notices: cancelled.map(cancelledBookingNotice),
+    ...guardArgs(ctx.rows, ctx.plans),
+  };
+}
+
+/**
  * Carries out the shrink rule's cancellations for one Trainee: each row is
  * cancelled as a normal, not late, cancellation, which frees the seat and
  * costs no session; the slot's group workout leaves with it; and the Trainee
  * gets an in-app notice. Rows moved to a Queued plan need no write: the
  * queue charges them there on its own. Returns how many were cancelled.
  */
-export async function applyShrinkCancellations(
+async function applyShrinkCancellations(
   db: SupabaseClient<Database>,
   profileId: string,
   rows: readonly QueueRow[],

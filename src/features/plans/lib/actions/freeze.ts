@@ -6,7 +6,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import { freezeProblem } from "@/lib/plans/freeze";
 import { resolvePlanQueue, type PlanFreeze, type PlanQueue } from "@/lib/plans/plan-queue";
 import { shrinkImpact } from "@/lib/plans/shrink";
-import { countedRowIds } from "@/lib/schedule/booking-rules";
+import { guardArgs } from "@/lib/plans/read-guard";
 import {
   endFreezeSchema,
   freezePlanSchema,
@@ -23,7 +23,7 @@ import {
   type AffectedBooking,
   type PlanContext,
 } from "../plan-context";
-import { planStamps, type StoredPlan } from "../queries";
+import type { StoredPlan } from "../queries";
 
 export interface FreezePreview {
   refusal: string | null;
@@ -105,8 +105,7 @@ async function commitFreeze(
 ): Promise<FreezeResult> {
   const { error } = await write({
     p_plan_ends_on: endIn(resolvePlanQueue(after, ctx.rows, today), ctx),
-    p_counted_row_ids: countedRowIds(ctx.rows),
-    p_plan_stamps: planStamps(ctx.plans),
+    ...guardArgs(ctx.rows, ctx.plans),
   });
   if (error) {
     const known = freezeRefusal(error.message);

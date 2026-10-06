@@ -59,6 +59,7 @@ export function CancelPlanDialog({ planId, onClose: close }: { planId: string; o
     startTransition(async () => {
       const result = await cancelPlanWithRefundAction({
         planId,
+        readToken: preview?.readToken ?? "",
         reason,
         defect,
         method: amount === 0 ? "none" : method,

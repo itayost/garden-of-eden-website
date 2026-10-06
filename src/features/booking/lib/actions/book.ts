@@ -14,12 +14,12 @@ import {
   bookingClosed,
   cancelState,
   isWithinBookingWindow,
-  countedRowIds,
   type BookingBlock,
 } from "@/lib/schedule/booking-rules";
 import { bookingVerdict, resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
-import { loadStoredPlans, planStamps } from "@/features/plans/lib/queries";
+import { loadStoredPlans } from "@/features/plans/lib/queries";
+import { guardArgs } from "@/lib/plans/read-guard";
 import type { ScheduleSlot } from "@/types/schedule";
 import { loadTraineeRosterRows } from "../queries";
 
@@ -116,8 +116,7 @@ export async function bookSlotAction(slotId: string): Promise<BookResult> {
     p_slot_id: slot.id,
     p_trainee_id: user.id,
     p_trainee_name: profile.data.full_name ?? "מתאמן",
-    p_counted_row_ids: countedRowIds(rows),
-    p_plan_stamps: planStamps(plans),
+    ...guardArgs(rows, plans),
   });
   if (error) {
     if (error.message.includes(ROSTER_CHANGED)) return { error: "ההרשמות שלך השתנו הרגע. נסו שוב." };

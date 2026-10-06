@@ -1,18 +1,26 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
-import type { PlanContext } from "./plan-context";
+import type { Database, Json } from "@/types/database";
+import type { QueueRow } from "@/lib/plans/plan-queue";
+import { guardedShrinkArgs } from "./apply-shrink";
+import { actFailure, type PlanContext } from "./plan-context";
 
-type RefundRow = Omit<Database["public"]["Tables"]["plan_refunds"]["Insert"], "plan_id" | "order_id">;
+type RefundRow = Pick<
+  Database["public"]["Tables"]["plan_refunds"]["Insert"],
+  "reason" | "amount_ils" | "method" | "reference" | "proposed_amount_ils" | "override_reason" | "defect" | "created_by"
+>;
 
 /**
- * The write half of an undo act (Void, Cancellation): claim the Plan, write
- * the plan_refunds audit row, then mark the order. The claim matches the
- * status the Plan was read with, so two staff cannot undo it twice; any
- * later failure puts the Plan back exactly as it was.
+ * An undo act (Void, Cancellation), whole or not at all: undo_plan sets the
+ * Plan, writes the plan_refunds audit row, marks the order, cancels the
+ * Bookings the shrink rule drops and writes the activity record (the act's
+ * common fields, logExtra and the refund id), in one transaction under the
+ * per-trainee booking lock. It refuses if the Trainee's roster or Plans changed since ctx was
+ * read, so two staff cannot undo it twice and a Booking made in between
+ * cannot escape the shrink rule.
  */
-export async function claimAndRecordUndo(
+export async function undoPlan(
   db: SupabaseClient<Database>,
   ctx: PlanContext,
   undo: {
@@ -20,48 +28,43 @@ export async function claimAndRecordUndo(
     refund: RefundRow;
     /** Null leaves the order as it is. */
     orderStatus: "voided" | "refunded" | null;
+    /** The Bookings the shrink rule cancels, latest first. */
+    cancelled: readonly QueueRow[];
+    /** How many Bookings a Queued plan now pays for. */
+    movedCount: number;
+    actorName: string;
+    /** What this act logs beyond the common fields. */
+    logExtra?: { [key: string]: Json };
   },
 ): Promise<{ refundId: string } | { error: string }> {
-  const planId = ctx.plan.id;
-  // Matched on both fields it was read with: an Early end in between leaves
-  // the status alone but sets ended_on, and must stop this claim.
-  const base = db
-    .from("trainee_plans")
-    .update({ ...undo.plan, ...(undo.plan.status === "voided" ? { ended_on: null } : {}) })
-    .eq("id", planId)
-    .eq("status", ctx.plan.status);
-  const { data: claimed, error: claimError } = await (ctx.plan.ended_on
-    ? base.eq("ended_on", ctx.plan.ended_on)
-    : base.is("ended_on", null)
-  ).select("id");
-  if (claimError) {
-    console.error("[undo] plan update failed:", claimError.message);
-    return { error: "הפעולה נכשלה. נסו שוב." };
-  }
-  if (!claimed?.length) return { error: "המסלול השתנה בינתיים. פתחו אותו מחדש ונסו שוב." };
-  const restore = () =>
-    db.from("trainee_plans").update({ status: ctx.plan.status, ended_on: ctx.plan.ended_on }).eq("id", planId);
-
-  const { data: refund, error: refundError } = await db
-    .from("plan_refunds")
-    .insert({ ...undo.refund, plan_id: planId, order_id: ctx.order?.id ?? null })
-    .select("id")
-    .single();
-  if (refundError || !refund) {
-    console.error("[undo] refund record failed:", refundError?.message);
-    await restore();
-    return { error: "שמירת הפעולה נכשלה. נסו שוב." };
-  }
-
-  if (ctx.order && undo.orderStatus) {
-    const { error: orderError } = await db.from("orders").update({ status: undo.orderStatus }).eq("id", ctx.order.id);
-    if (orderError) {
-      // A Plan undone on an order still marked paid would count as revenue: undo it all.
-      console.error("[undo] order update failed:", orderError.message);
-      await db.from("plan_refunds").delete().eq("id", refund.id);
-      await restore();
-      return { error: "הפעולה נכשלה. נסו שוב." };
-    }
-  }
-  return { refundId: refund.id };
+  const { refund } = undo;
+  const { data: refundId, error } = await db.rpc("undo_plan", {
+    p_plan_id: ctx.plan.id,
+    p_status: undo.plan.status,
+    // The generated types mark every argument required; NULL is how SQL reads an absent one.
+    p_ended_on: (undo.plan.status === "cancelled" ? undo.plan.ended_on : null) as string,
+    p_reason: refund.reason,
+    p_amount_ils: refund.amount_ils,
+    p_proposed_amount_ils: (refund.proposed_amount_ils ?? null) as number,
+    p_override_reason: (refund.override_reason ?? null) as string,
+    p_defect: refund.defect ?? false,
+    p_method: refund.method,
+    p_reference: (refund.reference ?? null) as string,
+    p_order_status: undo.orderStatus as string,
+    p_actor: refund.created_by,
+    p_actor_name: undo.actorName,
+    p_log_metadata: {
+      planId: ctx.plan.id,
+      orderId: ctx.order?.id ?? null,
+      reason: refund.reason,
+      amountIls: refund.amount_ils,
+      method: refund.method,
+      bookingsMoved: undo.movedCount,
+      bookingsCancelled: undo.cancelled.length,
+      ...undo.logExtra,
+    },
+    ...guardedShrinkArgs(ctx, undo.cancelled),
+  });
+  if (error || !refundId) return { error: actFailure("undo", error, "הפעולה נכשלה. נסו שוב.") };
+  return { refundId };
 }

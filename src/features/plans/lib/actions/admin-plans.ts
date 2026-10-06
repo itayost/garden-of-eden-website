@@ -18,11 +18,10 @@ import { planHistory, type PlanHistoryRow } from "@/lib/plans/plan-history";
 import {
   loadPlanQueues,
   loadStoredPlans,
-  planStamps,
   type PlanQueueView,
   type StoredPlan,
 } from "../queries";
-import { countedRowIds } from "@/lib/schedule/booking-rules";
+import { guardArgs } from "@/lib/plans/read-guard";
 import { guardRefusal, loadPlanContext, STALE_READ, withPlanChange } from "../plan-context";
 
 export type AdminPlanRow = PlanQueueView & {
@@ -170,8 +169,7 @@ export async function extendPlanAction(input: {
     p_fixed_ends_on: (fixed ? endsOn : null) as string,
     p_ends_on: endsOn,
     p_ends_before: endsBefore,
-    p_counted_row_ids: countedRowIds(ctx.rows),
-    p_plan_stamps: planStamps(ctx.plans),
+    ...guardArgs(ctx.rows, ctx.plans),
     p_reason: reason,
     p_actor: user!.id,
   });

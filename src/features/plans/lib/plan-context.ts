@@ -60,6 +60,14 @@ export function guardRefusal(message: string): string | null {
   return null;
 }
 
+/** What staff read when a guarded act's function fails: a known refusal, else the fallback (and a log line). */
+export function actFailure(tag: string, error: { message: string } | null, fallback: string): string {
+  const known = error && guardRefusal(error.message);
+  if (known) return known;
+  console.error(`[${tag}] rpc failed:`, error?.message);
+  return fallback;
+}
+
 export const toBooking = (row: Pick<QueueRow, "schedule_date" | "start_time">): AffectedBooking => ({
   date: row.schedule_date,
   time: row.start_time.slice(0, 5),

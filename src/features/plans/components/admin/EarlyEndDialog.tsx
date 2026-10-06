@@ -26,18 +26,14 @@ export function EarlyEndDialog({ planId, onClose }: { planId: string; onClose: (
 
   const confirm = () =>
     startTransition(async () => {
-      const result = await earlyEndPlanAction({ planId, reason });
+      const result = await earlyEndPlanAction({ planId, reason, readToken: preview?.readToken ?? "" });
       if ("error" in result) {
         toast.error(result.error);
         return;
       }
-      if (result.incomplete) {
-        toast.error("המסלול הסתיים, אך חלק מהאימונים לא בוטלו. בדקו את לוח השיבוץ של המתאמן.");
-      } else {
-        toast.success(
-          result.cancelledCount > 0 ? `המסלול הסתיים. ${result.cancelledCount} אימונים בוטלו והמתאמן קיבל הודעה.` : "המסלול הסתיים",
-        );
-      }
+      toast.success(
+        result.cancelledCount > 0 ? `המסלול הסתיים. ${result.cancelledCount} אימונים בוטלו והמתאמן קיבל הודעה.` : "המסלול הסתיים",
+      );
       router.refresh();
       onClose();
     });

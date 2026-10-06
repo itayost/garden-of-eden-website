@@ -7,11 +7,11 @@ import { isValidUUID } from "@/lib/validations/common";
 import { israelToday } from "@/lib/utils/tasks";
 import { creditNoteSchema, voidPlanSchema, type RefundMethod, type VoidPlanInput } from "@/lib/validations/plans-admin";
 import { shrinkImpact, voidRefusal } from "@/lib/plans/shrink";
-import { applyShrinkCancellations } from "../apply-shrink";
 import type { StoredPlan } from "../queries";
-import { loadPlanContext, suggestedRefundMethod, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
+import { readToken } from "@/lib/plans/read-guard";
+import { loadPlanContext, STALE_READ, suggestedRefundMethod, toBooking, withPlanChange, type AffectedBooking } from "../plan-context";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { claimAndRecordUndo } from "../undo-plan";
+import { undoPlan } from "../undo-plan";
 
 export type { AffectedBooking } from "../plan-context";
 
@@ -29,6 +29,8 @@ export interface VoidPreview {
   moved: AffectedBooking[];
   /** Bookings that will be cancelled, latest first. */
   cancelled: AffectedBooking[];
+  /** Sent back with the Void: it is refused if the roster or Plans moved since. */
+  readToken: string;
 }
 
 const asVoided = (plans: readonly StoredPlan[], planId: string) => withPlanChange(plans, planId, { status: "voided" });
@@ -50,6 +52,7 @@ export async function previewVoidAction(planId: string): Promise<VoidPreview | {
     receiptUrl: ctx.order?.morning_document_url ?? null,
     moved: impact.moved.map((m) => toBooking(m.row)),
     cancelled: impact.cancelled.map(toBooking),
+    readToken: readToken(ctx.rows, ctx.plans),
   };
 }
 
@@ -58,9 +61,9 @@ export type VoidOutcome =
   | { error: string };
 
 /**
- * A Void: the Plan recorded by mistake is undone as if never sold. The Plan
- * is claimed, the audit record written and the order voided together
- * (claimAndRecordUndo), then the shrink rule runs. The system moves
+ * A Void: the Plan recorded by mistake is undone as if never sold. The
+ * Plan, its audit record, its order, the shrink rule's cancellations and the
+ * activity record are written together (undoPlan). The system moves
  * no money: the refund was made by a person, and the Morning credit note is
  * issued by hand and recorded with recordCreditNoteAction.
  */
@@ -75,16 +78,17 @@ export async function voidPlanAction(input: VoidPlanInput): Promise<VoidOutcome>
   const ctx = await loadPlanContext(db, data.planId);
   if ("error" in ctx) return ctx;
   const today = israelToday();
+  if (readToken(ctx.rows, ctx.plans) !== data.readToken) return { error: STALE_READ };
   const refusal = voidRefusal(ctx.plans, ctx.rows, data.planId, today);
   if (refusal) return { error: refusal };
   if (ctx.order && data.amountIls > Number(ctx.order.amount_ils)) {
     return { error: "סכום ההחזר גבוה מהסכום ששולם" };
   }
 
-  const recorded = await claimAndRecordUndo(db, ctx, {
+  const impact = shrinkImpact(ctx.plans, asVoided(ctx.plans, data.planId), ctx.rows, today);
+  const recorded = await undoPlan(db, ctx, {
     plan: { status: "voided" },
     refund: {
-      kind: "void",
       reason: data.reason,
       amount_ils: data.amountIls,
       method: data.method,
@@ -92,37 +96,18 @@ export async function voidPlanAction(input: VoidPlanInput): Promise<VoidOutcome>
       created_by: user!.id,
     },
     orderStatus: "voided",
+    cancelled: impact.cancelled,
+    movedCount: impact.moved.length,
+    actorName: staff?.full_name ?? "צוות",
   });
   if ("error" in recorded) return recorded;
-  const refund = { id: recorded.refundId };
-
-  const impact = shrinkImpact(ctx.plans, asVoided(ctx.plans, data.planId), ctx.rows, today);
-  const cancelledCount = await applyShrinkCancellations(db, ctx.plan.profile_id, impact.cancelled);
-
-  const { error: logError } = await db.from("activity_logs").insert({
-    user_id: ctx.plan.profile_id,
-    action: "plan_voided",
-    actor_id: user!.id,
-    actor_name: staff?.full_name ?? "צוות",
-    metadata: {
-      planId: data.planId,
-      orderId: ctx.order?.id ?? null,
-      refundId: refund.id,
-      reason: data.reason,
-      amountIls: data.amountIls,
-      method: data.method,
-      bookingsMoved: impact.moved.length,
-      bookingsCancelled: cancelledCount,
-    },
-  });
-  if (logError) console.error("[void] activity log failed:", logError.message);
 
   revalidateStaffSurfaces(ctx.plan.profile_id);
   return {
     ok: true,
-    refundId: refund.id,
+    refundId: recorded.refundId,
     receiptUrl: ctx.order?.morning_document_url ?? null,
-    cancelledCount,
+    cancelledCount: impact.cancelled.length,
     movedCount: impact.moved.length,
   };
 }

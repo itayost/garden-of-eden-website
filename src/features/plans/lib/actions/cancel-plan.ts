@@ -14,9 +14,10 @@ import {
   type CancelPlanWithRefundInput,
   type RefundMethod,
 } from "@/lib/validations/plans-admin";
-import { applyShrinkCancellations } from "../apply-shrink";
+import { readToken } from "@/lib/plans/read-guard";
 import {
   loadPlanContext,
+  STALE_READ,
   suggestedRefundMethod,
   toBooking,
   withPlanChange,
@@ -25,7 +26,7 @@ import {
 } from "../plan-context";
 import type { StoredPlan } from "../queries";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { claimAndRecordUndo } from "../undo-plan";
+import { undoPlan } from "../undo-plan";
 
 /** The 10-Card's per-session rate is the fallback Single-session price. */
 const TEN_CARD_SESSIONS = 10;
@@ -42,6 +43,8 @@ export interface CancellationPreview {
   receiptUrl: string | null;
   moved: AffectedBooking[];
   cancelled: AffectedBooking[];
+  /** Sent back with the act: it is refused if the roster or Plans moved since. */
+  readToken: string;
 }
 
 const asCancelled = (plans: readonly StoredPlan[], planId: string, today: string) =>
@@ -138,6 +141,7 @@ export async function previewCancellationAction(
     receiptUrl: ctx.order?.morning_document_url ?? null,
     moved: impact.moved.map((m) => toBooking(m.row)),
     cancelled: impact.cancelled.map(toBooking),
+    readToken: readToken(ctx.rows, ctx.plans),
   };
 }
 
@@ -148,8 +152,8 @@ export type CancellationOutcome =
 /**
  * A parent's Cancellation: the Plan ends today, sessions used stay used, and
  * the refund follows the policy unless staff override it with a reason. The
- * Plan is claimed, the audit record written and the order marked together
- * (claimAndRecordUndo), then the shrink rule runs. No money moves here.
+ * Plan, its audit record, its order, the shrink rule's cancellations and the
+ * activity record are written together (undoPlan). No money moves here.
  */
 export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInput): Promise<CancellationOutcome> {
   const { error: authError, user, profile: staff } = await verifyAdminOrTrainer();
@@ -162,16 +166,17 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
   const ctx = await loadPlanContext(db, data.planId);
   if ("error" in ctx) return ctx;
   const today = israelToday();
+  if (readToken(ctx.rows, ctx.plans) !== data.readToken) return { error: STALE_READ };
   const assessed = await assess(db, ctx, today, data.defect);
   if (assessed.refusal || !assessed.proposal) return { error: assessed.refusal ?? "לא ניתן לחשב החזר" };
   if (data.amountIls > assessed.amountPaid) return { error: "סכום ההחזר גבוה מהסכום ששולם" };
   const overridden = data.amountIls !== assessed.proposal.proposed;
   if (overridden && !data.overrideReason) return { error: "סכום שונה מההצעה דורש סיבה" };
 
-  const recorded = await claimAndRecordUndo(db, ctx, {
+  const impact = shrinkImpact(ctx.plans, asCancelled(ctx.plans, data.planId, today), ctx.rows, today);
+  const recorded = await undoPlan(db, ctx, {
     plan: { status: "cancelled", ended_on: today },
     refund: {
-      kind: "cancellation",
       reason: data.reason,
       amount_ils: data.amountIls,
       proposed_amount_ils: assessed.proposal.proposed,
@@ -183,40 +188,23 @@ export async function cancelPlanWithRefundAction(input: CancelPlanWithRefundInpu
     },
     // Money went back: the order is refunded. Nothing went back: it stays paid.
     orderStatus: data.amountIls > 0 ? "refunded" : null,
-  });
-  if ("error" in recorded) return recorded;
-  const refund = { id: recorded.refundId };
-
-  const impact = shrinkImpact(ctx.plans, asCancelled(ctx.plans, data.planId, today), ctx.rows, today);
-  const cancelledCount = await applyShrinkCancellations(db, ctx.plan.profile_id, impact.cancelled);
-
-  const { error: logError } = await db.from("activity_logs").insert({
-    user_id: ctx.plan.profile_id,
-    action: "plan_cancelled",
-    actor_id: user!.id,
-    actor_name: staff?.full_name ?? "צוות",
-    metadata: {
-      planId: data.planId,
-      orderId: ctx.order?.id ?? null,
-      refundId: refund.id,
-      reason: data.reason,
+    cancelled: impact.cancelled,
+    movedCount: impact.moved.length,
+    actorName: staff?.full_name ?? "צוות",
+    logExtra: {
       proposedIls: assessed.proposal.proposed,
-      amountIls: data.amountIls,
       overrideReason: overridden ? data.overrideReason : null,
       defect: data.defect,
-      method: data.method,
-      bookingsMoved: impact.moved.length,
-      bookingsCancelled: cancelledCount,
     },
   });
-  if (logError) console.error("[cancel] activity log failed:", logError.message);
+  if ("error" in recorded) return recorded;
 
   revalidateStaffSurfaces(ctx.plan.profile_id);
   return {
     ok: true,
-    refundId: refund.id,
+    refundId: recorded.refundId,
     receiptUrl: ctx.order?.morning_document_url ?? null,
-    cancelledCount,
+    cancelledCount: impact.cancelled.length,
     movedCount: impact.moved.length,
   };
 }

@@ -25,8 +25,6 @@ export type StoredPlan = TraineePlan & { product: ProductBits | null } & QueuePl
   paidInArbox: boolean;
 };
 
-/** The Plan stamps a guarded function compares with the trainee's (assert_trainee_unchanged). */
-export const planStamps = (plans: readonly Pick<StoredPlan, "updated_at">[]): string[] => plans.map((p) => p.updated_at);
 
 /** What every screen shows for one Trainee, all from the one Plan queue. */
 export interface PlanQueueView {
