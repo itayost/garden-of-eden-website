@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createClient } from "@/lib/supabase/client";
 import { postWorkoutSchema, type PostWorkoutFormData, type PostWorkoutFormInput } from "@/lib/validations/forms";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,8 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-interface TrainerOption { id: string; full_name: string | null; }
 import { useFormDraft } from "@/features/form-drafts";
+import { listTrainingStaffAction, type TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { useFormSubmission, fetchUserProfile } from "@/hooks/useFormSubmission";
 import { FormBackButton, FormSubmitButton } from "@/components/forms";
 import { FormShell } from "@/components/forms/FormShell";
@@ -71,25 +70,14 @@ export default function PostWorkoutFormPage() {
     },
   });
 
+  // Trainers and admins alike: whoever ran the session can be named.
   useEffect(() => {
-    const fetchTrainers = async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .eq("role", "trainer")
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("full_name") as unknown as { data: TrainerOption[] | null; error: unknown };
-
-      if (error) {
-        toast.error("שגיאה בטעינת רשימת המאמנים");
-      } else if (data) {
-        setTrainers(data);
-      }
-    };
-
-    fetchTrainers();
+    listTrainingStaffAction()
+      .then((result) => {
+        if ("error" in result) toast.error("שגיאה בטעינת רשימת המאמנים");
+        else setTrainers(result.data);
+      })
+      .catch(() => toast.error("שגיאה בטעינת רשימת המאמנים"));
   }, []);
 
 
