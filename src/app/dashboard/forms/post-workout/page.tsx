@@ -113,7 +113,7 @@ export default function PostWorkoutFormPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>מי המאמן שאימן אותך היום?</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="בחר מאמן" />
