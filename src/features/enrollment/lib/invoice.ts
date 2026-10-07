@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isMorningConfigured } from "@/lib/morning/config";
 import { createReceiptDocument } from "@/lib/morning/documents";
+import { receiptClient } from "@/lib/morning/receipt-client";
 import type { ReceiptPayment } from "@/lib/morning/payment-mapping";
 import type { CardBrand } from "@/lib/payments/card";
 import { israelToday } from "@/lib/utils/tasks";
@@ -72,7 +73,7 @@ export async function issueOrderInvoice(
     description: `${orderPlanName(product?.name_he ?? "מסלול", order)} - ${order.child_name}`,
     amountIls: Number(order.amount_ils),
     paidOn: order.paid_at ? order.paid_at.slice(0, 10) : israelToday(),
-    client: { name: order.parent_name, phone: order.payer_phone, email: order.email },
+    client: receiptClient(order),
     payment: paymentFor(order),
   });
 
