@@ -37,6 +37,19 @@ export const reasonSchema = z.string().trim().min(2, "נדרשת סיבה").max(
 const reason = reasonSchema;
 
 /**
+ * Why a Plan is given without charging. The sheets send an empty field with
+ * every other method, so empty means none; recordManualPayment requires one
+ * for method free.
+ */
+const freeReasonSchema = z
+  .string()
+  .trim()
+  .transform((v) => (v === "" ? null : v))
+  .pipe(reasonSchema.nullable())
+  .nullable()
+  .default(null);
+
+/**
  * A sale below list price: the amount actually paid and why. The action
  * checks the caller may give it and that it is below the list price.
  */
@@ -76,7 +89,7 @@ export const newTraineeSchema = z.object({
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
   /** Why a Plan is given without charging (method free); required then. */
-  freeReason: reasonSchema.nullable().default(null),
+  freeReason: freeReasonSchema,
   /** Set after the duplicate prompt; the action refuses a repeat without it. */
   confirmDuplicate: z.boolean().default(false),
 });
@@ -95,7 +108,7 @@ export const staffPaymentSchema = z.object({
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
   manualCard: manualCardSchema,
-  freeReason: reasonSchema.nullable().default(null),
+  freeReason: freeReasonSchema,
   confirmDuplicate: z.boolean().default(false),
 });
 export type StaffPaymentInput = z.input<typeof staffPaymentSchema>;

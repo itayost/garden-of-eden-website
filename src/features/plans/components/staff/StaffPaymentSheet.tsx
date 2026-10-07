@@ -207,7 +207,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         startsOn: canChooseStart ? startsOn : null,
         sendWhatsApp,
         discount: discount.discount,
-        freeReason: freeReason,
+        freeReason: free ? freeReason : null,
         confirmDuplicate,
       });
       if ("error" in outcome) {

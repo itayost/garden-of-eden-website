@@ -16,6 +16,26 @@ describe("staffPaymentSchema", () => {
     expect(parsed.confirmDuplicate).toBe(false);
   });
 
+  it("accepts a manual Card paid in cash with the empty free reason the sheet sends", () => {
+    const parsed = staffPaymentSchema.parse({
+      traineeId: UUID,
+      productId: UUID,
+      paymentMethod: "cash",
+      reference: "",
+      sendWhatsApp: true,
+      manualCard: { sessions: 10, priceIls: 500, days: 90 },
+      freeReason: "",
+    });
+    expect(parsed.freeReason).toBeNull();
+    expect(parsed.manualCard).toEqual({ sessions: 10, priceIls: 500, days: 90 });
+  });
+
+  it("keeps a free reason and refuses one too short to explain anything", () => {
+    const base = { traineeId: UUID, productId: UUID, paymentMethod: "free", reference: "", sendWhatsApp: true };
+    expect(staffPaymentSchema.parse({ ...base, freeReason: "  מלגה  " }).freeReason).toBe("מלגה");
+    expect(staffPaymentSchema.safeParse({ ...base, freeReason: "א" }).success).toBe(false);
+  });
+
   it("refuses arbox: an Arbox plan has its own action with its own terms", () => {
     const result = staffPaymentSchema.safeParse({
       traineeId: UUID,
@@ -55,6 +75,22 @@ describe("newTraineeSchema", () => {
     expect(parsed.loginPhone).toBe("+972521234567");
     expect(parsed.parentName).toBeNull();
     expect(parsed.reference).toBe("1234");
+  });
+
+  it("accepts the empty free reason the sheet sends for a paid method", () => {
+    const parsed = newTraineeSchema.parse({
+      productId: UUID,
+      childName: "דני כהן",
+      loginPhone: "0521234567",
+      payerPhone: "0521234567",
+      parentName: "",
+      paymentMethod: "cash",
+      reference: "",
+      startsOn: "2026-09-11",
+      sendWhatsApp: true,
+      freeReason: "",
+    });
+    expect(parsed.freeReason).toBeNull();
   });
 
   it("normalizes Auth and punctuated phone spellings", () => {
