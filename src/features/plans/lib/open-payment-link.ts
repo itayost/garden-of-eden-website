@@ -89,17 +89,24 @@ export async function openPaymentLink(
   }
   const url = agreementLink(agreement.id);
 
-  // None of these wait on each other. The newest link is the only one the
-  // parent can pay: older unpaid links for this child close, so two messages
-  // can never mean two charges; one being charged right now (charging) is
-  // left to finish.
-  const [{ error: supersedeError }, , sent] = await Promise.all([
-    typedFrom(db, "orders")
-      .update({ status: "failed", fulfillment_error: "replaced by a newer Payment link" })
-      .eq("profile_id", profileId)
-      .not("payment_link_by", "is", null)
-      .in("status", ["pending", "expired"])
-      .neq("id", order.id),
+  // The newest link is the only one the parent can pay: older unpaid links
+  // for this child close before this one is sent, so two messages can never
+  // mean two charges. One being charged right now (charging) is left to
+  // finish. If they cannot be closed, this link is not sent at all.
+  const { error: supersedeError } = await typedFrom(db, "orders")
+    .update({ status: "failed", fulfillment_error: "replaced by a newer Payment link" })
+    .eq("profile_id", profileId)
+    .not("payment_link_by", "is", null)
+    .in("status", ["pending", "expired"])
+    .neq("id", order.id);
+  if (supersedeError) {
+    console.error("[payment-link] closing older links failed:", supersedeError.message);
+    await typedFrom(db, "orders").update({ status: "failed" }).eq("id", order.id);
+    return { error: "שגיאה ביצירת הקישור. נסו שוב." };
+  }
+
+  // The log and the message do not wait on each other.
+  const [, sent] = await Promise.all([
     db.from("activity_logs").insert({
       user_id: profileId,
       action: "payment_link_created",
@@ -123,7 +130,6 @@ export async function openPaymentLink(
         })
       : null,
   ]);
-  if (supersedeError) console.error("[payment-link] closing older links failed:", supersedeError.message);
   const whatsapp: PaymentLinkResult["whatsapp"] = !sent
     ? { sentTo: null, error: null, skipped: true }
     : sent.success
