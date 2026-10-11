@@ -124,6 +124,21 @@ export const paymentLinkSchema = z.object({
 export type PaymentLinkInput = z.input<typeof paymentLinkSchema>;
 
 /**
+ * A Payment link for a new trainee: the child and the two phones, no start
+ * date (the Plan starts when the card is charged) and no manual Card.
+ */
+export const newTraineeLinkSchema = newTraineeSchema.pick({
+  productId: true,
+  childName: true,
+  loginPhone: true,
+  payerPhone: true,
+  parentName: true,
+  sendWhatsApp: true,
+  discount: true,
+});
+export type NewTraineeLinkInput = z.input<typeof newTraineeLinkSchema>;
+
+/**
  * A plan paid in Arbox. The product pre-fills the terms, but Arbox sold its
  * own, so staff enter the dates, sessions, and amount to match. No receipt
  * and no agreement: Arbox already issued one and holds the signature.

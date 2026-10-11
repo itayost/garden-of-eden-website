@@ -95,6 +95,10 @@ export async function fulfillFromInput(
       throw new Error(`login phone belongs to a ${profile.role} account`);
     }
 
+    // A new trainee's Payment link is signed before there is an account, so
+    // the birthdate the parent gave lives only on the agreement.
+    const childBirthdate = order.child_birthdate || agreement?.child_birthdate || null;
+
     // Existing values win: a renewal or a second plan must not let whoever
     // paid rewrite the guardian, medical notes, or emergency contact that
     // staff may have corrected. Staff edit those on the trainee page.
@@ -102,11 +106,11 @@ export async function fulfillFromInput(
       .from("profiles")
       .update({
         full_name: profile?.full_name || order.child_name,
-        birthdate: profile?.birthdate || order.child_birthdate,
+        birthdate: profile?.birthdate || childBirthdate,
         role: "trainee",
         // A staff signup carries no birthdate until the parent signs; leave the
         // app's onboarding to ask for what is still missing.
-        profile_completed: Boolean(profile?.birthdate || order.child_birthdate),
+        profile_completed: Boolean(profile?.birthdate || childBirthdate),
         guardian_name: profile?.guardian_name ?? order.parent_name,
         guardian_phone: profile?.guardian_phone ?? order.payer_phone,
         medical_notes: profile?.medical_notes ?? agreement?.medical_notes ?? null,

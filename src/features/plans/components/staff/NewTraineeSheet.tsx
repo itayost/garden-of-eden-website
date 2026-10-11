@@ -14,19 +14,23 @@ import type { ManualPaymentMethod, NewTraineeInput } from "@/lib/validations/pla
 import { israelToday } from "@/lib/utils/tasks";
 import { latestStartDate } from "@/lib/plans/start-date";
 import { createTraineeWithPaymentAction, type SellableProduct } from "../../lib/actions/staff-payment";
-import type { ManualPaymentResult } from "../../lib/manual-payment";
+import { createNewTraineePaymentLinkAction } from "../../lib/actions/payment-link";
 import { DiscountFields } from "./DiscountFields";
 import { FreeReasonField, freeReasonReady } from "./FreeReasonField";
 import { useDiscount } from "./useDiscount";
 import { DuplicatePrompt } from "./DuplicatePrompt";
-import { PaymentMethodPicker } from "./PaymentMethodPicker";
+import { PaymentLinkResult, type SheetDone } from "./PaymentLinkResult";
+import { handMethods, PaymentMethodPicker } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
 
+type SheetMethod = ManualPaymentMethod | "card";
 
 interface NewTraineeSheetProps {
   products: SellableProduct[];
   morningConfigured: boolean;
+  /** Online card payments are open, so staff may send a Payment link. */
+  cardLinksOpen: boolean;
   isAdmin: boolean;
 }
 
@@ -37,7 +41,7 @@ interface FormState {
   sameNumber: boolean;
   payerPhone: string;
   parentName: string;
-  paymentMethod: ManualPaymentMethod;
+  paymentMethod: SheetMethod;
   reference: string;
   startsOn: string;
   sendWhatsApp: boolean;
@@ -63,12 +67,12 @@ const emptyForm = (): FormState => ({
  * A new trainee at the field: the child, two phones, the plan, the money.
  * Everything else the parent fills in when signing from the WhatsApp link.
  */
-export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTraineeSheetProps) {
+export function NewTraineeSheet({ products, morningConfigured, cardLinksOpen, isAdmin }: NewTraineeSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [duplicate, setDuplicate] = useState<number | null>(null);
-  const [result, setResult] = useState<ManualPaymentResult | null>(null);
+  const [done, setDone] = useState<SheetDone | null>(null);
   const [pending, startTransition] = useTransition();
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -77,26 +81,38 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
   const product = products.find((p) => p.id === form.productId) ?? null;
   // Admins and the branch's manager may sell below list price.
   const free = form.paymentMethod === "free";
+  const card = form.paymentMethod === "card";
   const discount = useDiscount(product, !free);
 
-  const toInput = (confirmDuplicate: boolean): NewTraineeInput => ({
+  const people = () => ({
     productId: form.productId,
     childName: form.childName,
     loginPhone: form.loginPhone,
     payerPhone: form.sameNumber ? form.loginPhone : form.payerPhone,
     parentName: form.parentName,
-    paymentMethod: form.paymentMethod,
-    reference: form.reference,
-    startsOn: form.startsOn,
     sendWhatsApp: form.sendWhatsApp,
     discount: discount.discount,
+  });
+
+  const toInput = (paymentMethod: ManualPaymentMethod, confirmDuplicate: boolean): NewTraineeInput => ({
+    ...people(),
+    paymentMethod,
+    reference: form.reference,
+    startsOn: form.startsOn,
     freeReason: free ? form.freeReason : null,
     confirmDuplicate,
   });
 
-  const submit = (confirmDuplicate = false) =>
+  const submit = (confirmDuplicate = false) => {
+    const paymentMethod = form.paymentMethod;
     startTransition(async () => {
-      const outcome = await createTraineeWithPaymentAction(toInput(confirmDuplicate));
+      if (paymentMethod === "card") {
+        const link = await createNewTraineePaymentLinkAction(people());
+        if ("error" in link) toast.error(link.error);
+        else setDone({ kind: "link", result: link });
+        return;
+      }
+      const outcome = await createTraineeWithPaymentAction(toInput(paymentMethod, confirmDuplicate));
       if ("error" in outcome) {
         toast.error(outcome.error);
         return;
@@ -106,13 +122,14 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
         return;
       }
       setDuplicate(null);
-      setResult(outcome);
+      setDone({ kind: "paid", result: outcome });
     });
+  };
 
   const close = () => {
     setOpen(false);
-    if (result) router.refresh();
-    setResult(null);
+    if (done) router.refresh();
+    setDone(null);
     setDuplicate(null);
     setForm(emptyForm());
     discount.reset();
@@ -127,17 +144,21 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
       <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : close())}>
         <SheetDialogContent>
           <DialogHeader className="px-4 pt-4 pb-3 text-start sm:px-6 sm:pt-6">
-            <DialogTitle>{result ? "נרשם" : "מתאמן חדש"}</DialogTitle>
+            <DialogTitle>{done?.kind === "paid" ? "נרשם" : done ? "קישור לתשלום" : "מתאמן חדש"}</DialogTitle>
             <DialogDescription>
-              {result
+              {done
                 ? "מה ההורה קיבל"
-                : "רק מה שההורה לא יכול למלא בעצמו. את השאר ההורה משלים בחתימה מהוואטסאפ."}
+                : card
+                  ? "ההורה יקבל קישור לחתימה ולתשלום באשראי. החשבון והמסלול נפתחים אחרי התשלום."
+                  : "רק מה שההורה לא יכול למלא בעצמו. את השאר ההורה משלים בחתימה מהוואטסאפ."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
-            {result ? (
-              <PaymentResult result={result} isAdmin={isAdmin} onClose={close} />
+            {done?.kind === "paid" ? (
+              <PaymentResult result={done.result} isAdmin={isAdmin} onClose={close} />
+            ) : done ? (
+              <PaymentLinkResult result={done.result} onClose={close} />
             ) : (
               <>
                 <div className="space-y-1">
@@ -180,9 +201,14 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
                 )}
 
                 <PaymentMethodPicker
+                  methods={handMethods(cardLinksOpen)}
                   method={form.paymentMethod}
                   reference={form.reference}
-                  onMethodChange={(m) => set("paymentMethod", m)}
+                  onMethodChange={(m) => {
+                    set("paymentMethod", m);
+                    // The duplicate prompt answers the method it was raised for.
+                    setDuplicate(null);
+                  }}
                   onReferenceChange={(r) => set("reference", r)}
                   disabled={pending}
                 />
@@ -190,26 +216,28 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
                   <FreeReasonField idPrefix="nt" value={form.freeReason} onChange={(r) => set("freeReason", r)} disabled={pending} />
                 )}
 
-                <div className="space-y-1">
-                  <Label htmlFor="nt-start">תאריך תחילה</Label>
-                  <Input
-                    id="nt-start"
-                    type="date"
-                    className="h-12 rounded-xl text-base"
-                    value={form.startsOn}
-                    min={israelToday()}
-                    max={latestStartDate(israelToday())}
-                    onChange={(e) => set("startsOn", e.target.value)}
-                    disabled={pending}
-                  />
-                  <p className="text-xs text-muted-foreground">היום או עד 30 יום קדימה. למתאמן עם מסלול פעיל המסלול החדש מתחיל אחריו.</p>
-                </div>
+                {!card && (
+                  <div className="space-y-1">
+                    <Label htmlFor="nt-start">תאריך תחילה</Label>
+                    <Input
+                      id="nt-start"
+                      type="date"
+                      className="h-12 rounded-xl text-base"
+                      value={form.startsOn}
+                      min={israelToday()}
+                      max={latestStartDate(israelToday())}
+                      onChange={(e) => set("startsOn", e.target.value)}
+                      disabled={pending}
+                    />
+                    <p className="text-xs text-muted-foreground">היום או עד 30 יום קדימה. למתאמן עם מסלול פעיל המסלול החדש מתחיל אחריו.</p>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between rounded-xl border p-3">
-                  <Label htmlFor="nt-wa">שלח אישור וקישור לחתימה בוואטסאפ</Label>
+                  <Label htmlFor="nt-wa">{card ? "שלח להורה את הקישור לתשלום בוואטסאפ" : "שלח אישור וקישור לחתימה בוואטסאפ"}</Label>
                   <Switch id="nt-wa" checked={form.sendWhatsApp} onCheckedChange={(v) => set("sendWhatsApp", v)} disabled={pending} />
                 </div>
-                {!free && (
+                {!free && !card && (
                   <p className="text-xs text-muted-foreground">
                     {morningConfigured ? "חשבונית מס קבלה תופק אוטומטית ב-Morning." : "חשבונית תופק ידנית ב-Morning עד שהחיבור יוגדר."}
                   </p>
@@ -220,7 +248,7 @@ export function NewTraineeSheet({ products, morningConfigured, isAdmin }: NewTra
                 ) : (
                   <Button className="h-12 w-full rounded-full text-base" onClick={() => submit(false)} disabled={pending || !form.productId || !form.childName || !form.loginPhone || Boolean(discount.problem) || (free && !freeReasonReady(form.freeReason))}>
                     {pending ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : null}
-                    רישום התשלום
+                    {card ? "יצירת קישור לתשלום" : "רישום התשלום"}
                   </Button>
                 )}
               </>

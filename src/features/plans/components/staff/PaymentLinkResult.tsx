@@ -4,7 +4,11 @@ import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toLocalPhone } from "@/lib/plans/local-phone";
 import type { PaymentLinkResult as LinkResult } from "../../lib/actions/payment-link";
+import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { copy, Line } from "./PaymentResult";
+
+/** What a staff sheet ends on: a payment recorded now, or a Payment link the parent pays later. */
+export type SheetDone = { kind: "paid"; result: ManualPaymentResult } | { kind: "link"; result: LinkResult };
 
 /**
  * A Payment link was made: the link to copy, and whether the WhatsApp went

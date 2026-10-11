@@ -1,10 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { waitUntil } from "@vercel/functions";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
-import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { canManageBranches, isInBranchScope } from "@/lib/branches/branch-scope";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
@@ -12,7 +10,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isMorningConfigured } from "@/lib/morning/config";
 import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
-import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue } from "@/lib/plans/plan-queue";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
@@ -29,7 +26,7 @@ import { manualCardDraftFrom, type ManualCardDraft } from "@/lib/plans/manual-ca
 import { pricingRefusal } from "../discount-permission";
 import { findRecentDuplicate, recordManualPayment, type ManualPaymentResult } from "../manual-payment";
 import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { checkTraineeSale, introPackRefusal, saleParties } from "../trainee-sale";
+import { checkNewTraineeSale, checkTraineeSale, saleParties } from "../trainee-sale";
 import { startDateProblem, latestStartDate } from "@/lib/plans/start-date";
 import { hasPlansAhead, loadQueueRows, loadStoredPlans } from "../queries";
 
@@ -237,45 +234,26 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
   const data = parsed.data;
 
-  const db = createAdminClient();
-  const { data: product } = (await typedFrom(db, "plan_products")
-    .select("*")
-    .eq("id", data.productId)
-    .eq("is_active", true)
-    .maybeSingle()) as { data: PlanProduct | null };
-  if (!product) return { error: "המסלול לא נמצא או אינו פעיל" };
-  const branchError = await assertBranchWritable(product.branch_id);
-  if (branchError.error) return { error: branchError.error };
-
-  const { data: owner } = await db
-    .from("profiles")
-    .select("id, role, birthdate")
-    .in("phone", phoneVariants(data.loginPhone))
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
-  if (owner && owner.role !== "trainee") return { error: "מספר הטלפון שייך לחשבון צוות" };
   // The date's bounds hold for everyone. For an existing trainee with a Plan
   // current or queued, fulfillment lets the queue decide instead.
   const startProblem = startDateProblem(data.startsOn, israelToday(), false);
   if (startProblem) return { error: startProblem };
-  // A new trainee is sold from the catalog; a manual Card is for an existing one.
-  const discountError = await pricingRefusal(product.branch_id, data.discount !== null);
-  if (discountError) return { error: discountError };
-  if (owner) {
-    const scopeError = await assertTraineeInScope(owner.id);
-    if (scopeError) return { error: scopeError };
-    // An existing phone is a sale to that trainee: the intro pack is still once only.
-    const introRefusal = await introPackRefusal(db, owner.id, product);
-    if (introRefusal) return { error: introRefusal };
-    if (!data.confirmDuplicate) {
-      const duplicate = await findRecentDuplicate(db, owner.id, product.id);
-      if (duplicate) return { duplicate };
-    }
+
+  const db = createAdminClient();
+  const sale = await checkNewTraineeSale(db, {
+    productId: data.productId,
+    loginPhone: data.loginPhone,
+    setsPrice: data.discount !== null,
+  });
+  if (!("ok" in sale)) return sale;
+  const { product, owner } = sale;
+  if (owner && !data.confirmDuplicate) {
+    const duplicate = await findRecentDuplicate(db, owner.id, product.id);
+    if (duplicate) return { duplicate };
   }
 
   const result = await recordManualPayment(db, {
-    product: { ...product, price_ils: Number(product.price_ils) },
+    product,
     trainee: {
       profileId: owner?.id ?? null,
       loginPhone: data.loginPhone,
@@ -295,7 +273,6 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
   });
   if (!result.ok) return { error: result.error };
   revalidateStaffSurfaces(result.profileId);
-  revalidatePath("/admin/users");
   return result;
 }
 

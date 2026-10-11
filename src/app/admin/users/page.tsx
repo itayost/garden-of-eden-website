@@ -20,6 +20,7 @@ import { getBranchScopeAction } from "@/lib/actions/shared";
 import { loadPlanStatusesForStaff } from "@/features/plans/lib/actions/staff-plan-badges";
 import { listSellableProductsAction } from "@/features/plans/lib/actions/staff-payment";
 import { NewTraineeSheet } from "@/features/plans/components/staff/NewTraineeSheet";
+import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
 import { isMorningConfigured } from "@/lib/morning/config";
 
 // The "סנכרון עם Arbox" action runs on this page and reads ~500 Arbox clients.
@@ -136,7 +137,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {sellable.length > 0 && (
-            <NewTraineeSheet products={sellable} morningConfigured={isMorningConfigured()} isAdmin={isAdmin} />
+            <NewTraineeSheet products={sellable} morningConfigured={isMorningConfigured()} cardLinksOpen={onlinePaymentsOpen()} isAdmin={isAdmin} />
           )}
           <ArboxSyncButton />
           {isAdmin && <UserImportDialog />}

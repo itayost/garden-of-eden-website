@@ -20,9 +20,8 @@ import {
   type StaffPaymentContext,
 } from "../../lib/actions/staff-payment";
 import { recordArboxPlanAction } from "../../lib/actions/staff-arbox-plan";
-import { createPaymentLinkAction, type PaymentLinkResult as LinkResult } from "../../lib/actions/payment-link";
-import { PaymentLinkResult } from "./PaymentLinkResult";
-import type { ManualPaymentResult } from "../../lib/manual-payment";
+import { createPaymentLinkAction } from "../../lib/actions/payment-link";
+import { PaymentLinkResult, type SheetDone } from "./PaymentLinkResult";
 import { ArboxTermsFields } from "./ArboxTermsFields";
 import { DiscountFields } from "./DiscountFields";
 import { FreeReasonField, freeReasonReady } from "./FreeReasonField";
@@ -31,11 +30,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { readManualCard, type ManualCardDraft } from "@/lib/plans/manual-card";
 import { useDiscount } from "./useDiscount";
 import { DuplicatePrompt } from "./DuplicatePrompt";
-import { PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
+import { handMethods, PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
 import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
-
-const SHEET_METHODS: readonly PickerMethod[] = ["cash", "transfer", "bit", "free"];
 
 /**
  * What the sheet offers: the hand-taken methods, a Payment link once online
@@ -43,8 +40,7 @@ const SHEET_METHODS: readonly PickerMethod[] = ["cash", "transfer", "bit", "free
  * the import missed, as a repair.
  */
 const methodsFor = (cardLinksOpen: boolean, managed: boolean): PickerMethod[] => [
-  ...SHEET_METHODS,
-  ...(cardLinksOpen ? (["card"] as const) : []),
+  ...handMethods(cardLinksOpen),
   ...(managed ? (["arbox"] as const) : []),
 ];
 
@@ -77,7 +73,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   const [freeReason, setFreeReason] = useState("");
   const [duplicate, setDuplicate] = useState<number | null>(null);
   // What the sheet shows when done: a recorded payment, or a Payment link.
-  const [done, setDone] = useState<{ kind: "paid"; result: ManualPaymentResult } | { kind: "link"; result: LinkResult } | null>(null);
+  const [done, setDone] = useState<SheetDone | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
