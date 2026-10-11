@@ -2,17 +2,13 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
-import {
-  loadBranchIdsByProfile,
-  replaceProfileBranches,
-} from "@/features/branches/lib/memberships";
-import { phoneVariants } from "@/lib/plans/phone-variants";
 import { placeNewPlan, resolvePlanQueue, type NewPlanTerms } from "@/lib/plans/plan-queue";
 import { appliedStart } from "@/lib/plans/start-date";
 import { orderManualTerms } from "@/lib/plans/manual-card";
 import { loadQueueRows, loadStoredPlans } from "@/features/plans/lib/queries";
 import { israelToday } from "@/lib/utils/tasks";
 import type { EnrollmentAgreement, Order, PlanProduct } from "@/types/plans";
+import { ensureBranchMembership, findOrCreateAccount } from "./trainee-account";
 
 export type FulfillResult =
   | { ok: true; profileId: string; planId: string }
@@ -32,37 +28,6 @@ interface FulfillInput {
   chosenStartsOn?: string | null;
 }
 
-/** The profile whose auth phone is this login phone, in any stored spelling. */
-async function findProfileByPhone(db: SupabaseClient, e164: string): Promise<string | null> {
-  const { data } = await db
-    .from("profiles")
-    .select("id")
-    .in("phone", phoneVariants(e164))
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
-  return data?.id ?? null;
-}
-
-async function createAccount(
-  db: SupabaseClient,
-  e164: string,
-  childName: string,
-): Promise<string> {
-  const { data, error } = await db.auth.admin.createUser({
-    phone: e164,
-    phone_confirm: true,
-    user_metadata: { full_name: childName },
-  });
-  if (error || !data.user) {
-    // A race with a parallel webhook can create the user first; look again.
-    const existing = await findProfileByPhone(db, e164);
-    if (existing) return existing;
-    throw new Error(`auth createUser failed: ${error?.message ?? "no user"}`);
-  }
-  return data.user.id;
-}
-
 /**
  * Turns a paid order into a person with a plan. Every step is safe to rerun:
  * an existing account is reused, memberships are merged, and the plan is
@@ -76,10 +41,7 @@ export async function fulfillFromInput(
   const manual = orderManualTerms(order);
   const termsOverride = terms ?? (manual ? { sessionsTotal: manual.sessions, durationDays: manual.days } : undefined);
   try {
-    const profileId =
-      order.profile_id ??
-      (await findProfileByPhone(db, order.login_phone)) ??
-      (await createAccount(db, order.login_phone, order.child_name));
+    const profileId = order.profile_id ?? (await findOrCreateAccount(db, order.login_phone, order.child_name));
 
     const { data: profile } = await db
       .from("profiles")
@@ -95,10 +57,6 @@ export async function fulfillFromInput(
       throw new Error(`login phone belongs to a ${profile.role} account`);
     }
 
-    // A new trainee's Payment link is signed before there is an account, so
-    // the birthdate the parent gave lives only on the agreement.
-    const childBirthdate = order.child_birthdate || agreement?.child_birthdate || null;
-
     // Existing values win: a renewal or a second plan must not let whoever
     // paid rewrite the guardian, medical notes, or emergency contact that
     // staff may have corrected. Staff edit those on the trainee page.
@@ -106,11 +64,11 @@ export async function fulfillFromInput(
       .from("profiles")
       .update({
         full_name: profile?.full_name || order.child_name,
-        birthdate: profile?.birthdate || childBirthdate,
+        birthdate: profile?.birthdate || order.child_birthdate,
         role: "trainee",
         // A staff signup carries no birthdate until the parent signs; leave the
         // app's onboarding to ask for what is still missing.
-        profile_completed: Boolean(profile?.birthdate || childBirthdate),
+        profile_completed: Boolean(profile?.birthdate || order.child_birthdate),
         guardian_name: profile?.guardian_name ?? order.parent_name,
         guardian_phone: profile?.guardian_phone ?? order.payer_phone,
         medical_notes: profile?.medical_notes ?? agreement?.medical_notes ?? null,
@@ -126,16 +84,7 @@ export async function fulfillFromInput(
       .eq("id", profileId);
     if (profileError) throw new Error(`profile update failed: ${profileError.message}`);
 
-    const memberships = (await loadBranchIdsByProfile(db, [profileId])).get(profileId) ?? [];
-    if (!memberships.includes(order.branch_id)) {
-      const { error } = await replaceProfileBranches(
-        db,
-        profileId,
-        [...memberships, order.branch_id],
-        { stampAdmin: true },
-      );
-      if (error) throw new Error(`branch link failed: ${error}`);
-    }
+    await ensureBranchMembership(db, profileId, order.branch_id);
 
     const { data: existingPlan } = (await typedFrom(db, "trainee_plans")
       .select("id")

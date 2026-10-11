@@ -4,7 +4,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { israelToday } from "@/lib/utils/tasks";
 import { sendPaymentLink } from "@/lib/whatsapp/plan-templates";
-import { sameTraineeOrders } from "@/lib/plans/bound-renewal";
 import { orderPlanName, type ManualCardTerms } from "@/lib/plans/manual-card";
 import type { Discount } from "@/lib/plans/discount";
 import { agreementLink } from "@/features/enrollment/lib/notify";
@@ -23,8 +22,7 @@ export interface PaymentLinkResult {
 
 export interface OpenPaymentLinkInput {
   product: PlanProduct;
-  /** Null for a new trainee: fulfillment finds or creates the account once the card is charged. */
-  profileId: string | null;
+  profileId: string;
   /** E.164; the child's WhatsApp, which is the login. */
   loginPhone: string;
   child: UnsignedAgreementInput["child"];
@@ -92,33 +90,29 @@ export async function openPaymentLink(
   const url = agreementLink(agreement.id);
 
   // None of these wait on each other. The newest link is the only one the
-  // parent can pay: older unpaid links for this child (by account, or by
-  // login phone before there is one) close, so two messages can never mean
-  // two charges; one being charged right now (charging) is left to finish.
-  // A new trainee has no account to log against yet; the order names who
-  // sent the link.
+  // parent can pay: older unpaid links for this child close, so two messages
+  // can never mean two charges; one being charged right now (charging) is
+  // left to finish.
   const [{ error: supersedeError }, , sent] = await Promise.all([
     typedFrom(db, "orders")
       .update({ status: "failed", fulfillment_error: "replaced by a newer Payment link" })
-      .or(sameTraineeOrders(loginPhone, profileId))
+      .eq("profile_id", profileId)
       .not("payment_link_by", "is", null)
       .in("status", ["pending", "expired"])
       .neq("id", order.id),
-    profileId
-      ? db.from("activity_logs").insert({
-          user_id: profileId,
-          action: "payment_link_created",
-          actor_id: actor.id,
-          actor_name: actor.name ?? "צוות",
-          metadata: {
-            orderId: order.id,
-            productId: product.id,
-            amountIls: amount,
-            ...(input.discount ? { listPriceIls: priced.listPrice } : {}),
-            ...(input.manualCard ? { manualCard: input.manualCard } : {}),
-          },
-        })
-      : null,
+    db.from("activity_logs").insert({
+      user_id: profileId,
+      action: "payment_link_created",
+      actor_id: actor.id,
+      actor_name: actor.name ?? "צוות",
+      metadata: {
+        orderId: order.id,
+        productId: product.id,
+        amountIls: amount,
+        ...(input.discount ? { listPriceIls: priced.listPrice } : {}),
+        ...(input.manualCard ? { manualCard: input.manualCard } : {}),
+      },
+    }),
     input.sendWhatsApp
       ? sendPaymentLink(parent.phone, {
           parentName: parent.name,
