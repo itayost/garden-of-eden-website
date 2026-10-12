@@ -1,4 +1,5 @@
 import { addDays, daysBetween } from "@/lib/utils/iso-date";
+import { isValidDateString } from "@/lib/validations/common";
 
 /** The longest range a report reads; a longer ask keeps its last days. */
 export const MAX_RANGE_DAYS = 93;
@@ -23,11 +24,9 @@ export interface RangeParams {
   to?: string;
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** A real calendar date: 2026-02-30 is rejected because it would roll over. */
+/** A real calendar date: 2026-02-30 and month 13 are rejected. */
 const isIsoDate = (value: string | undefined): value is string =>
-  value !== undefined && ISO_DATE.test(value) && addDays(value, 0) === value;
+  value !== undefined && isValidDateString(value);
 
 /** The report range from the URL; anything unusable falls back to today. */
 export function parseRange(params: RangeParams, today: string): ReportRange {

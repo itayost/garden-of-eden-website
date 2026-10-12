@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ToolbarDateRange } from "@/components/admin/TableToolbar";
 import { cn } from "@/lib/utils";
+import { isValidDateString } from "@/lib/validations/common";
 import type { RangePreset, ReportRange } from "../lib/range";
 
 const PRESETS: { value: RangePreset; label: string }[] = [
@@ -12,6 +13,16 @@ const PRESETS: { value: RangePreset; label: string }[] = [
   { value: "month", label: "חודש" },
   { value: "custom", label: "טווח" },
 ];
+
+/**
+ * A date input reports every keystroke: typing a year passes through 0002-,
+ * 0020- and 0202-. Only a full date from this century moves the report, so
+ * the page does not clip the half-typed range and reset the field.
+ */
+const isSettledDate = (value: string) => isValidDateString(value) && value >= "2000-01-01";
+
+/** Both ends settled and in order: a reversed range mid-edit would fall back to "day". */
+const isSettledRange = (from: string, to: string) => isSettledDate(from) && isSettledDate(to) && from <= to;
 
 /** Day, week, month or a typed range, kept in the URL so the server page reads it. */
 export function RangeControl({ range }: { range: ReportRange }) {
@@ -58,11 +69,11 @@ export function RangeControl({ range }: { range: ReportRange }) {
           endDate={to}
           onStartDateChange={(value) => {
             setFrom(value);
-            go({ range: "custom", from: value, to });
+            if (isSettledRange(value, to)) go({ range: "custom", from: value, to });
           }}
           onEndDateChange={(value) => {
             setTo(value);
-            go({ range: "custom", from, to: value });
+            if (isSettledRange(from, value)) go({ range: "custom", from, to: value });
           }}
         />
       )}

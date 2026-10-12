@@ -8,7 +8,7 @@ export function IncomeLedger({ report }: { report: IncomeReport }) {
     <section aria-label="פירוט" className="min-w-0 rounded-xl border bg-card">
       <Tabs defaultValue="payments" dir="rtl">
         <TabsList className="m-3">
-          <TabsTrigger value="payments">תשלומים ({report.paymentCount})</TabsTrigger>
+          <TabsTrigger value="payments">תשלומים ({report.payments.length})</TabsTrigger>
           <TabsTrigger value="refunds">החזרים ({report.refundRows.length})</TabsTrigger>
           <TabsTrigger value="arbox">Arbox ({report.arbox.entries.length}) · מחוץ לסכום</TabsTrigger>
         </TabsList>

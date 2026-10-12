@@ -13,6 +13,7 @@ export function revalidateStaffSurfaces(profileId: string): void {
   revalidatePath("/admin/calendar");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/finance/ending-soon");
-  // Next 16 takes a cache-life profile; expire 0 drops the cached count now.
-  revalidateTag(ENDING_SOON_TAG, { expire: 0 });
+  // Stale-while-revalidate: the next navigation serves the old badge count
+  // and the recount runs in the background instead of blocking it.
+  revalidateTag(ENDING_SOON_TAG, "max");
 }

@@ -5,7 +5,7 @@ import { BranchUrlFilter } from "@/features/branches/components/BranchUrlFilter"
 import { loadEndingSoon, loadFinanceBranches } from "@/features/finance/lib/queries";
 import { parseBranchParam } from "@/features/finance/lib/range";
 import { endingCounts, filterEnding, parseEndingFilter, type EndingFilter } from "@/features/finance/lib/ending-soon";
-import { EndingFilters } from "@/features/finance/components/EndingFilters";
+import { EndingFilters, ENDING_FILTER_LABELS, ENDING_RULE_TEXT } from "@/features/finance/components/EndingFilters";
 import { EndingList } from "@/features/finance/components/EndingList";
 
 export const metadata: Metadata = { title: "מסתיימים בקרוב | Garden of Eden" };
@@ -14,13 +14,7 @@ interface PageProps {
   searchParams: Promise<{ branch?: string; show?: string }>;
 }
 
-const TITLES: Record<EndingFilter, string> = {
-  all: "לפי דחיפות",
-  link: "קישור ממתין",
-  reminded: "קיבלו תזכורת",
-  arbox: "שולם ב-Arbox",
-  expired: "פגו לאחרונה",
-};
+const TITLES: Record<EndingFilter, string> = { ...ENDING_FILTER_LABELS, all: "לפי דחיפות" };
 
 export default async function EndingSoonPage({ searchParams }: PageProps) {
   const { error } = await verifyAdmin();
@@ -44,7 +38,7 @@ export default async function EndingSoonPage({ searchParams }: PageProps) {
         <div>
           <h1 className="mb-1 text-3xl font-bold">מסתיימים בקרוב</h1>
           <p className="text-muted-foreground">
-            מסלול שמסתיים בעוד 7 ימים או פחות, או כרטיסייה עם 2 אימונים או פחות. ההורה מקבל תזכורת לבד ב-3 ימים או אימון אחד.
+            {ENDING_RULE_TEXT} ההורה מקבל תזכורת לבד ב-3 ימים או אימון אחד.
           </p>
         </div>
         {branches.selling.length > 1 && <BranchUrlFilter branches={branches.selling} />}
@@ -60,7 +54,7 @@ export default async function EndingSoonPage({ searchParams }: PageProps) {
           <div className="space-y-6">
             <EndingList rows={filterEnding(result.data, show)} title={TITLES[show]} empty="אין כרגע אף חניך ברשימה הזאת" />
             {show === "all" && result.data.expired.length > 0 && (
-              <EndingList rows={result.data.expired} title="פגו לאחרונה" empty="" />
+              <EndingList rows={result.data.expired} title={ENDING_FILTER_LABELS.expired} empty="" />
             )}
           </div>
         </div>

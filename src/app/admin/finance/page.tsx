@@ -22,7 +22,8 @@ export default async function FinanceIncomePage({ searchParams }: PageProps) {
   if (error) redirect("/admin");
 
   const params = await searchParams;
-  const range = parseRange(params, israelToday());
+  const today = israelToday();
+  const range = parseRange(params, today);
   const branches = await loadFinanceBranches();
   const branchId = parseBranchParam(params.branch, branches.selling.map((b) => b.id));
   const result = await loadIncomeReport(range, branchId);
@@ -67,7 +68,7 @@ export default async function FinanceIncomePage({ searchParams }: PageProps) {
           <IncomeSummary
             report={result.data}
             dayHref={dayHref}
-            isToday={range.from === range.to && range.to === israelToday()}
+            isToday={range.from === range.to && range.to === today}
           />
           <div className="min-w-0 space-y-2">
             <IncomeLedger report={result.data} />

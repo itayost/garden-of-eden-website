@@ -24,6 +24,12 @@ describe("parseRange", () => {
   test("malformed or impossible dates fall back to today", () => {
     expect(parseRange({ range: "custom", from: "2026-02-30", to: "2026-03-01" }, TODAY).preset).toBe("day");
     expect(parseRange({ range: "custom", from: "yesterday", to: TODAY }, TODAY).preset).toBe("day");
+    expect(parseRange({ range: "custom", from: "2026-13-01", to: TODAY }, TODAY)).toEqual({
+      from: TODAY,
+      to: TODAY,
+      preset: "day",
+      clipped: false,
+    });
     expect(parseRange({ range: "custom" }, TODAY).preset).toBe("day");
   });
   test("a reversed range falls back to today", () => {

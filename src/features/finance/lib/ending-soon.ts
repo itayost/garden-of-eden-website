@@ -103,33 +103,30 @@ export interface EndingCounts {
   expired: number;
 }
 
+type EndingRow<T extends EndingInput> = EndingEntry<T> | ExpiredEntry<T>;
+
+/** The rows each filter shows; the counts and the list read the same map. */
+const PICK: Record<EndingFilter, <T extends EndingInput>(split: EndingSplit<T>) => EndingRow<T>[]> = {
+  all: (split) => split.ending,
+  link: (split) => split.ending.filter((e) => e.linkWaiting),
+  reminded: (split) => split.ending.filter((e) => e.reminded),
+  arbox: (split) => split.ending.filter((e) => e.paidInArbox),
+  expired: (split) => split.expired,
+};
+
 export function endingCounts<T extends EndingInput>(split: EndingSplit<T>): EndingCounts {
-  const { ending, expired } = split;
+  const { ending } = split;
   return {
-    all: ending.length,
+    all: PICK.all(split).length,
     byDate: ending.filter((e) => e.by === "date").length,
     bySessions: ending.filter((e) => e.by === "sessions").length,
-    link: ending.filter((e) => e.linkWaiting).length,
-    reminded: ending.filter((e) => e.reminded).length,
-    arbox: ending.filter((e) => e.paidInArbox).length,
-    expired: expired.length,
+    link: PICK.link(split).length,
+    reminded: PICK.reminded(split).length,
+    arbox: PICK.arbox(split).length,
+    expired: PICK.expired(split).length,
   };
 }
 
-export function filterEnding<T extends EndingInput>(
-  split: EndingSplit<T>,
-  filter: EndingFilter,
-): (EndingEntry<T> | ExpiredEntry<T>)[] {
-  switch (filter) {
-    case "link":
-      return split.ending.filter((e) => e.linkWaiting);
-    case "reminded":
-      return split.ending.filter((e) => e.reminded);
-    case "arbox":
-      return split.ending.filter((e) => e.paidInArbox);
-    case "expired":
-      return split.expired;
-    default:
-      return split.ending;
-  }
+export function filterEnding<T extends EndingInput>(split: EndingSplit<T>, filter: EndingFilter): EndingRow<T>[] {
+  return PICK[filter](split);
 }

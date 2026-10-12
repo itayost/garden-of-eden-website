@@ -1,12 +1,17 @@
 import "server-only";
 
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyAdmin } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { typedFrom } from "@/lib/supabase/helpers";
 import { addDays } from "@/lib/utils/iso-date";
 import { israelToday } from "@/lib/utils/tasks";
 import { orderPlanName } from "@/lib/plans/manual-card";
+import { AWAITING_CARD_STATUSES } from "@/lib/plans/payment-link";
+import { queueTail } from "@/lib/plans/plan-queue";
+import { REMINDED_COLUMN } from "@/lib/plans/reminder-copy";
+import type { RefundMethod } from "@/lib/validations/plans-admin";
+import { loadAllBranches, loadBranchOptions } from "@/features/branches/lib/memberships";
 import { loadPlanQueues, type PlanQueueView } from "@/features/plans/lib/queries";
 import type { BranchOption } from "@/types/branches";
 import type { OrderStatus, PaymentMethod } from "@/types/plans";
@@ -16,7 +21,6 @@ import {
   type IncomeOrderRow,
   type IncomeRefundRow,
   type IncomeReport,
-  type RefundMethod,
   type StaffRef,
   UNKNOWN_STAFF,
 } from "./income";
@@ -39,21 +43,18 @@ export async function loadFinanceBranches(): Promise<FinanceBranches> {
   const { error } = await verifyAdmin();
   if (error) return { selling: [], notSelling: [] };
   const db = createAdminClient();
-  const { data: branches } = (await typedFrom(db, "branches")
-    .select("id, name_he")
-    .eq("is_active", true)
-    .order("order_index")) as { data: { id: string; name_he: string }[] | null };
+  const options = await loadBranchOptions(db);
 
   const sells = await Promise.all(
-    (branches ?? []).map(async (b) => {
+    options.map(async (b) => {
       const [products, orders] = await Promise.all([
-        typedFrom(db, "plan_products").select("id", { count: "exact", head: true }).eq("branch_id", b.id).eq("is_active", true),
-        typedFrom(db, "orders").select("id", { count: "exact", head: true }).eq("branch_id", b.id).in("status", [...COUNTED_STATUSES]),
+        db.from("plan_products").select("id").eq("branch_id", b.id).eq("is_active", true).limit(1),
+        // Arbox sales are not sold in the app.
+        db.from("orders").select("id").eq("branch_id", b.id).in("status", [...COUNTED_STATUSES]).neq("payment_method", "arbox").limit(1),
       ]);
-      return (products.count ?? 0) + (orders.count ?? 0) > 0;
+      return (products.data?.length ?? 0) + (orders.data?.length ?? 0) > 0;
     }),
   );
-  const options = (branches ?? []).map((b) => ({ id: b.id, nameHe: b.name_he }));
   return {
     selling: options.filter((_, i) => sells[i]),
     notSelling: options.filter((_, i) => !sells[i]),
@@ -61,7 +62,7 @@ export async function loadFinanceBranches(): Promise<FinanceBranches> {
 }
 
 const ORDER_SELECT =
-  "id, status, paid_at, amount_ils, payment_method, installments, list_price_ils, discount_reason, reference, child_name, parent_name, profile_id, branch_id, morning_document_url, arbox_purchased_on, terms_sessions_total, terms_duration_days, product:plan_products(name_he), branch:branches(name_he), receiver:profiles!orders_received_by_fkey(id, full_name), linker:profiles!orders_payment_link_by_fkey(id, full_name)";
+  "id, status, paid_at, amount_ils, payment_method, installments, list_price_ils, discount_reason, reference, child_name, parent_name, branch_id, morning_document_url, arbox_purchased_on, terms_sessions_total, terms_duration_days, product:plan_products(name_he), branch:branches(name_he), receiver:profiles!orders_received_by_fkey(id, full_name), linker:profiles!orders_payment_link_by_fkey(id, full_name)";
 
 interface OrderSelectRow {
   id: string;
@@ -75,7 +76,6 @@ interface OrderSelectRow {
   reference: string | null;
   child_name: string;
   parent_name: string;
-  profile_id: string | null;
   branch_id: string;
   morning_document_url: string | null;
   arbox_purchased_on: string | null;
@@ -125,7 +125,6 @@ function toOrderRow(o: OrderSelectRow): IncomeOrderRow {
     paymentLinkBy: staffRef(o.linker),
     childName: o.child_name,
     parentName: o.parent_name,
-    profileId: o.profile_id,
     planName: orderPlanName(o.product?.name_he ?? "מסלול", o),
     branchId: o.branch_id,
     branchName: o.branch?.name_he ?? "",
@@ -149,6 +148,12 @@ function toRefundRow(r: RefundSelectRow): IncomeRefundRow {
     salePaidAt: r.order?.paid_at ?? null,
   };
 }
+
+/** The counted-order read, narrowed to one branch when asked. */
+const countedOrders = (db: SupabaseClient, branchId: string | null) => {
+  const base = db.from("orders").select(ORDER_SELECT);
+  return (branchId ? base.eq("branch_id", branchId) : base).in("status", [...COUNTED_STATUSES]);
+};
 
 const PAGE = 1000;
 const ID_CHUNK = 200;
@@ -188,28 +193,20 @@ export async function loadIncomeReport(
     const toIso = `${addDays(range.to, 2)}T00:00:00Z`;
 
     const [byPaidAt, arboxByDay, refunds] = await Promise.all([
-      fetchAllPages<OrderSelectRow>((lo, hi) => {
-        const base = typedFrom(db, "orders").select(ORDER_SELECT);
-        return (branchId ? base.eq("branch_id", branchId) : base)
-          .in("status", [...COUNTED_STATUSES])
-          .gte("paid_at", fromIso)
-          .lt("paid_at", toIso)
-          .order("id")
-          .range(lo, hi);
-      }),
+      fetchAllPages<OrderSelectRow>((lo, hi) =>
+        countedOrders(db, branchId).gte("paid_at", fromIso).lt("paid_at", toIso).order("id").range(lo, hi),
+      ),
       // An Arbox purchase can be imported days after it happened.
-      fetchAllPages<OrderSelectRow>((lo, hi) => {
-        const base = typedFrom(db, "orders").select(ORDER_SELECT);
-        return (branchId ? base.eq("branch_id", branchId) : base)
-          .in("status", [...COUNTED_STATUSES])
+      fetchAllPages<OrderSelectRow>((lo, hi) =>
+        countedOrders(db, branchId)
           .eq("payment_method", "arbox")
           .gte("arbox_purchased_on", range.from)
           .lte("arbox_purchased_on", range.to)
           .order("id")
-          .range(lo, hi);
-      }),
+          .range(lo, hi),
+      ),
       fetchAllPages<RefundSelectRow>((lo, hi) =>
-        typedFrom(db, "plan_refunds")
+        db.from("plan_refunds")
           .select(REFUND_SELECT)
           .gte("created_at", fromIso)
           .lt("created_at", toIso)
@@ -247,7 +244,6 @@ export async function loadIncomeReport(
 export interface EndingRow extends EndingInput {
   traineeName: string;
   guardianName: string | null;
-  guardianPhone: string | null;
   /** guardian_phone, else the trainee's own phone; null with neither. */
   contactPhone: string | null;
   /** contactPhone is the trainee's own number, not a parent's. */
@@ -255,15 +251,13 @@ export interface EndingRow extends EndingInput {
   branchId: string;
   branchName: string;
   planName: string;
-  /** "מוקפא עד 20.10" or "מוקפא" for an open freeze; null when not frozen. */
-  frozenLabel: string | null;
 }
 
-const REMINDER_STAMPS = ["reminded_3_days_at", "reminded_last_session_at", "reminded_expired_at"] as const;
+const REMINDER_STAMPS = Object.values(REMINDED_COLUMN);
 
 function toEndingInput(profileId: string, view: PlanQueueView, linkWaiting: boolean): EndingInput {
   // Flags come from the last Plan that actually runs (a Plan whose Card ran out before its start does not).
-  const last = view.queue.plans.filter((p) => p.startsOn <= p.endsOn).at(-1)?.plan ?? view.plan;
+  const last = queueTail(view.queue)?.plan ?? view.plan;
   return {
     profileId,
     status: view.status,
@@ -278,23 +272,34 @@ function toEndingInput(profileId: string, view: PlanQueueView, linkWaiting: bool
   };
 }
 
-/** Plan queues for every id chunk, merged. A fixed-size request keeps one failure from emptying the rest silently. */
+/** Plan queues for every id chunk, merged. */
 async function loadQueuesInChunks(
   db: SupabaseClient,
   idChunks: readonly (readonly string[])[],
   today: string,
 ): Promise<Map<string, PlanQueueView>> {
   const maps = await Promise.all(idChunks.map((part) => loadPlanQueues(db, part, today)));
-  const merged = maps.reduce((all, m) => new Map([...all, ...m]), new Map<string, PlanQueueView>());
-  // loadPlanQueues swallows read errors into an empty result; ids went in, so an empty map is a failure.
+  const merged = new Map(maps.flatMap((m) => [...m]));
+  // loadPlanQueues swallows read errors into an empty result, so this only
+  // detects a total failure: ids went in and nothing came out. A partial
+  // failure (one chunk missing) is a known follow-up in the shared loaders.
   if (idChunks.length > 0 && merged.size === 0) throw new Error("plan queues read failed");
   return merged;
 }
 
-/** Every Trainee with a sold Plan, as ending-soon inputs. No auth check: callers gate. */
-export async function loadEndingInputs(db: SupabaseClient, branchId: string | null): Promise<EndingRow[]> {
+/**
+ * Every Trainee with a sold Plan, as ending-soon inputs. No auth check:
+ * callers gate. Cached per request, so the page and the menu badge share one read.
+ */
+export const loadEndingInputs = cache(async (branchId: string | null): Promise<EndingRow[]> => {
+  const db = createAdminClient();
+  // A deleted trainee is no longer anyone to call: filtered here, not after the queues load.
   const { data: planRows, error: planError } = await fetchAllPages<{ profile_id: string }>((lo, hi) => {
-    const base = typedFrom(db, "trainee_plans").select("profile_id").neq("status", "voided");
+    const base = db
+      .from("trainee_plans")
+      .select("profile_id, profile:profiles!trainee_plans_profile_id_fkey!inner(deleted_at)")
+      .is("profile.deleted_at", null)
+      .neq("status", "voided");
     return (branchId ? base.eq("branch_id", branchId) : base).order("id").range(lo, hi);
   });
   if (planError) throw new Error(`trainee_plans read failed: ${planError.message}`);
@@ -303,22 +308,22 @@ export async function loadEndingInputs(db: SupabaseClient, branchId: string | nu
 
   const today = israelToday();
   const idChunks = chunk(ids, ID_CHUNK);
-  const [queues, profileChunks, linkChunks, { data: branches }] = await Promise.all([
+  const [queues, profileChunks, linkChunks, allBranches] = await Promise.all([
     loadQueuesInChunks(db, idChunks, today),
     Promise.all(
       idChunks.map((part) =>
-        typedFrom(db, "profiles").select("id, full_name, guardian_name, guardian_phone, phone").in("id", part),
+        db.from("profiles").select("id, full_name, guardian_name, guardian_phone, phone").in("id", part),
       ),
     ),
     Promise.all(
       idChunks.map((part) =>
-        typedFrom(db, "orders").select("profile_id").in("status", ["pending", "expired"]).not("payment_link_by", "is", null).in("profile_id", part),
+        db.from("orders").select("profile_id").in("status", [...AWAITING_CARD_STATUSES]).not("payment_link_by", "is", null).in("profile_id", part),
       ),
     ),
-    typedFrom(db, "branches").select("id, name_he"),
+    loadAllBranches(db),
   ]);
-  const failed = [...profileChunks, ...linkChunks].find((r) => r.error);
-  if (failed) throw new Error(`ending-soon read failed: ${failed.error.message}`);
+  const failed = [...profileChunks, ...linkChunks].find((r) => r.error)?.error;
+  if (failed) throw new Error(`ending-soon read failed: ${failed.message}`);
   const profiles = profileChunks.flatMap((r) => r.data ?? []) as {
     id: string;
     full_name: string | null;
@@ -329,37 +334,30 @@ export async function loadEndingInputs(db: SupabaseClient, branchId: string | nu
   const links = linkChunks.flatMap((r) => r.data ?? []) as { profile_id: string | null }[];
   const profileById = new Map(profiles.map((p) => [p.id, p]));
   const waiting = new Set(links.map((l) => l.profile_id));
-  const branchName = new Map(((branches ?? []) as { id: string; name_he: string }[]).map((b) => [b.id, b.name_he]));
+  const branchName = new Map(allBranches.map((b) => [b.id, b.name_he]));
 
-  return [...queues].map(([profileId, view]) => {
+  return [...queues].map(([profileId, view]): EndingRow => {
     const profile = profileById.get(profileId);
-    const input = toEndingInput(profileId, view, waiting.has(profileId));
-    const freezeEnd = input.frozen?.endsOn;
     const guardianPhone = profile?.guardian_phone ?? null;
+    const ownPhone = profile?.phone ?? null;
     return {
-      ...input,
+      ...toEndingInput(profileId, view, waiting.has(profileId)),
       traineeName: profile?.full_name ?? "ללא שם",
       guardianName: profile?.guardian_name ?? null,
-      guardianPhone,
-      contactPhone: guardianPhone ?? profile?.phone ?? null,
-      contactIsTrainee: guardianPhone === null && (profile?.phone ?? null) !== null,
+      contactPhone: guardianPhone ?? ownPhone,
+      contactIsTrainee: guardianPhone === null && ownPhone !== null,
       branchId: view.plan.branch_id,
       branchName: branchName.get(view.plan.branch_id) ?? "",
       planName: view.product.name_he,
-      frozenLabel: input.frozen
-        ? freezeEnd
-          ? `מוקפא עד ${Number(freezeEnd.slice(8, 10))}.${Number(freezeEnd.slice(5, 7))}`
-          : "מוקפא"
-        : null,
     };
   });
-}
+});
 
 export async function loadEndingSoon(branchId: string | null): Promise<FinanceResult<EndingSplit<EndingRow>>> {
   const { error } = await verifyAdmin();
   if (error) return { success: false, error: NO_ACCESS };
   try {
-    const rows = await loadEndingInputs(createAdminClient(), branchId);
+    const rows = await loadEndingInputs(branchId);
     return { success: true, data: splitEnding(rows, israelToday()) };
   } catch (err) {
     console.error("loadEndingSoon failed:", err);

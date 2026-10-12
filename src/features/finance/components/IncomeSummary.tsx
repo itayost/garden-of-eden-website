@@ -2,23 +2,18 @@ import Link from "next/link";
 import { ArrowLeftRight, Banknote, CreditCard, Gift, Smartphone, type LucideIcon } from "lucide-react";
 import { formatIls } from "@/lib/utils/money";
 import { cn } from "@/lib/utils";
-import { shortDay } from "../lib/format";
+import { INCOME_METHOD_LABEL, shortDay } from "../lib/format";
 import type { IncomeMethod, IncomeReport } from "../lib/income";
+import { Money } from "./Money";
 import { SummarySection } from "./SummarySection";
 
-const METHOD: Record<IncomeMethod, { label: string; icon: LucideIcon }> = {
-  cash: { label: "מזומן", icon: Banknote },
-  card: { label: "אשראי", icon: CreditCard },
-  bit: { label: "ביט", icon: Smartphone },
-  transfer: { label: "העברה", icon: ArrowLeftRight },
-  free: { label: "ללא תשלום", icon: Gift },
+const METHOD_ICON: Record<IncomeMethod, LucideIcon> = {
+  cash: Banknote,
+  card: CreditCard,
+  bit: Smartphone,
+  transfer: ArrowLeftRight,
+  free: Gift,
 };
-
-const Money = ({ amount, className }: { amount: number; className?: string }) => (
-  <span dir="ltr" className={cn("tabular-nums", className)}>
-    {formatIls(amount)}
-  </span>
-);
 
 export function IncomeSummary({
   report,
@@ -30,7 +25,6 @@ export function IncomeSummary({
   isToday: boolean;
 }) {
   const maxMethod = Math.max(1, ...report.byMethod.map((m) => m.total));
-  const branchTotal = report.byBranch.reduce((total, b) => total + b.total, 0);
 
   return (
     <aside aria-label="סיכום" className="rounded-xl border bg-card lg:sticky lg:top-4">
@@ -61,7 +55,7 @@ export function IncomeSummary({
           התקבל <Money amount={report.received} className="font-semibold" /> · הוחזר{" "}
           <Money amount={report.refunds} className="font-semibold text-destructive" />
         </p>
-        {(report.arbox.entries.length > 0) && (
+        {report.arbox.entries.length > 0 && (
           <p className="mt-2 text-sm text-muted-foreground">
             נמכר ב-Arbox: <Money amount={report.arbox.total} className="font-semibold text-foreground" /> (
             {report.arbox.entries.length} רכישות)
@@ -77,7 +71,8 @@ export function IncomeSummary({
         ) : (
           <ul className="space-y-3">
             {report.byMethod.map((m) => {
-              const { label, icon: Icon } = METHOD[m.method];
+              const label = INCOME_METHOD_LABEL[m.method];
+              const Icon = METHOD_ICON[m.method];
               return (
                 <li key={m.method}>
                   <div className="flex items-center justify-between gap-2 text-sm">
@@ -106,13 +101,13 @@ export function IncomeSummary({
       </SummarySection>
 
       <SummarySection title="לפי סניף" meta={`${report.byBranch.length} סניפים`}>
-        {report.byBranch.length > 1 && branchTotal > 0 && (
+        {report.byBranch.length > 1 && report.received > 0 && (
           <div className="mb-2 flex h-2 overflow-hidden rounded-full bg-muted">
             {report.byBranch.map((b, i) => (
               <div
                 key={b.branchId}
                 className={i === 0 ? "bg-primary" : "bg-primary/40"}
-                style={{ inlineSize: `${(b.total / branchTotal) * 100}%` }}
+                style={{ inlineSize: `${(b.total / report.received) * 100}%` }}
               />
             ))}
           </div>
@@ -145,9 +140,9 @@ export function IncomeSummary({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {[
-                    s.cash > 0 && `מזומן ${formatIls(s.cash)}`,
-                    s.bit > 0 && `ביט ${formatIls(s.bit)}`,
-                    s.transfer > 0 && `העברה ${formatIls(s.transfer)}`,
+                    s.cash > 0 && `${INCOME_METHOD_LABEL.cash} ${formatIls(s.cash)}`,
+                    s.bit > 0 && `${INCOME_METHOD_LABEL.bit} ${formatIls(s.bit)}`,
+                    s.transfer > 0 && `${INCOME_METHOD_LABEL.transfer} ${formatIls(s.transfer)}`,
                     s.freeGiven > 0 && `${s.freeGiven} ללא תשלום`,
                   ]
                     .filter(Boolean)

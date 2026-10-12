@@ -1,13 +1,31 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import type { EndingCounts, EndingFilter } from "../lib/ending-soon";
+import {
+  RECENTLY_EXPIRED_DAYS,
+  STAFF_ENDING_DAYS,
+  STAFF_ENDING_SESSIONS,
+  type EndingCounts,
+  type EndingFilter,
+} from "../lib/ending-soon";
 
-const ITEMS: { value: EndingFilter; label: string; hint: (c: EndingCounts) => string; count: (c: EndingCounts) => number; attention?: boolean }[] = [
-  { value: "all", label: "כל המסתיימים", hint: (c) => `${c.byDate} לפי תאריך · ${c.bySessions} לפי אימונים`, count: (c) => c.all },
-  { value: "link", label: "קישור ממתין", hint: () => "ההורה קיבל קישור ועוד לא שילם", count: (c) => c.link },
-  { value: "reminded", label: "קיבלו תזכורת", hint: () => "ההודעה האוטומטית כבר יצאה", count: (c) => c.reminded },
-  { value: "arbox", label: "שולם ב-Arbox", hint: () => "אין תזכורת אוטומטית, צריך לפנות", count: (c) => c.arbox, attention: true },
-  { value: "expired", label: "פגו לאחרונה", hint: () => "ב-14 הימים האחרונים, בלי מסלול חדש", count: (c) => c.expired },
+/** The filter names; the page's list titles reuse them. */
+export const ENDING_FILTER_LABELS: Record<EndingFilter, string> = {
+  all: "כל המסתיימים",
+  link: "קישור ממתין",
+  reminded: "קיבלו תזכורת",
+  arbox: "שולם ב-Arbox",
+  expired: "פגו לאחרונה",
+};
+
+/** Who counts as ending, shared by the page subtitle and the filter footer. */
+export const ENDING_RULE_TEXT = `מסלול שמסתיים בעוד ${STAFF_ENDING_DAYS} ימים או פחות, או כרטיסייה עם ${STAFF_ENDING_SESSIONS} אימונים או פחות.`;
+
+const ITEMS: { value: EndingFilter; hint?: string; attention?: boolean }[] = [
+  { value: "all" },
+  { value: "link", hint: "ההורה קיבל קישור ועוד לא שילם" },
+  { value: "reminded", hint: "ההודעה האוטומטית כבר יצאה" },
+  { value: "arbox", hint: "אין תזכורת אוטומטית, צריך לפנות", attention: true },
+  { value: "expired", hint: `ב-${RECENTLY_EXPIRED_DAYS} הימים האחרונים, בלי מסלול חדש` },
 ];
 
 export function EndingFilters({ counts, active, hrefFor }: { counts: EndingCounts; active: EndingFilter; hrefFor: (f: EndingFilter) => string }) {
@@ -15,7 +33,8 @@ export function EndingFilters({ counts, active, hrefFor }: { counts: EndingCount
     <nav aria-label="סינון" className="rounded-xl border bg-card p-2 lg:sticky lg:top-4">
       <ul className="flex gap-2 overflow-x-auto lg:flex-col lg:gap-1">
         {ITEMS.map((item) => {
-          const count = item.count(counts);
+          const count = counts[item.value];
+          const hint = item.hint ?? `${counts.byDate} לפי תאריך · ${counts.bySessions} לפי אימונים`;
           return (
             <li key={item.value} className="shrink-0">
               <Link
@@ -27,8 +46,8 @@ export function EndingFilters({ counts, active, hrefFor }: { counts: EndingCount
                 )}
               >
                 <span>
-                  <span className="block font-semibold">{item.label}</span>
-                  <span className="hidden text-xs text-muted-foreground lg:block">{item.hint(counts)}</span>
+                  <span className="block font-semibold">{ENDING_FILTER_LABELS[item.value]}</span>
+                  <span className="hidden text-xs text-muted-foreground lg:block">{hint}</span>
                 </span>
                 <span className={cn("text-lg font-bold tabular-nums", item.attention && count > 0 && "text-warning-emphasis")}>{count}</span>
               </Link>
@@ -37,7 +56,7 @@ export function EndingFilters({ counts, active, hrefFor }: { counts: EndingCount
         })}
       </ul>
       <p className="hidden border-t px-3 pt-2 text-xs text-muted-foreground lg:block">
-        מסלול שמסתיים בעוד 7 ימים או פחות, או כרטיסייה עם 2 אימונים או פחות. מסלול שכבר חודש לא מופיע כאן.
+        {ENDING_RULE_TEXT} מסלול שכבר חודש לא מופיע כאן.
       </p>
     </nav>
   );

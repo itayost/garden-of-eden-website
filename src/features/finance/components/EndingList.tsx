@@ -4,25 +4,35 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPhoneToLocal } from "@/lib/validations/common";
 import { waShareUrl } from "@/lib/whatsapp/share";
+import { shortDate } from "@/lib/utils/iso-date";
 import { cn } from "@/lib/utils";
-import type { EndingEntry, ExpiredEntry } from "../lib/ending-soon";
+import { STAFF_ENDING_DAYS, type EndingEntry, type ExpiredEntry } from "../lib/ending-soon";
 import type { EndingRow } from "../lib/queries";
 
 type Row = EndingEntry<EndingRow> | ExpiredEntry<EndingRow>;
 
 const isExpired = (row: Row): row is ExpiredEntry<EndingRow> => "daysAgo" in row;
 
+const daysText = (n: number) => (n === 1 ? "יום אחד" : `${n} ימים`);
+
+const sessionsText = (left: number) => (left === 0 ? "0 נותרו" : left === 1 ? "אימון אחד" : `${left} אימונים`);
+
 function leftLabel(row: Row): { text: string; urgent: boolean } {
-  if (isExpired(row)) return { text: `לפני ${row.daysAgo === 1 ? "יום" : `${row.daysAgo} ימים`}`, urgent: true };
+  if (isExpired(row)) {
+    if (row.daysAgo === 0) return { text: "הסתיים היום", urgent: true };
+    return { text: `לפני ${row.daysAgo === 1 ? "יום" : daysText(row.daysAgo)}`, urgent: true };
+  }
   if (row.by === "sessions") {
     const left = row.sessionsLeft ?? 0;
-    const base = left === 0 ? "0 נותרו" : left === 1 ? "אימון אחד" : `${left} אימונים`;
-    const withBooked = row.booked > 0 ? `${base} · ${row.booked} שמורים` : base;
-    const text = row.daysLeft <= 7 ? `${withBooked} · ${row.daysLeft === 0 ? "היום" : row.daysLeft === 1 ? "יום אחד" : `${row.daysLeft} ימים`}` : withBooked;
-    return { text, urgent: left <= 1 };
+    const parts = [
+      sessionsText(left),
+      row.booked > 0 ? `${row.booked} שמורים` : null,
+      row.daysLeft <= STAFF_ENDING_DAYS ? (row.daysLeft === 0 ? "היום" : daysText(row.daysLeft)) : null,
+    ];
+    return { text: parts.filter((part) => part !== null).join(" · "), urgent: left <= 1 };
   }
   if (row.daysLeft === 0) return { text: "מסתיים היום", urgent: true };
-  return { text: row.daysLeft === 1 ? "יום אחד" : `${row.daysLeft} ימים`, urgent: row.daysLeft <= 3 };
+  return { text: daysText(row.daysLeft), urgent: row.daysLeft <= 3 };
 }
 
 function Flags({ row }: { row: Row }) {
@@ -38,9 +48,9 @@ function Flags({ row }: { row: Row }) {
           <Link2 className="h-3 w-3" aria-hidden /> קישור ממתין
         </Badge>
       )}
-      {row.frozenLabel && (
+      {row.frozen && (
         <Badge variant="outline" className="gap-1 font-normal text-info">
-          <Snowflake className="h-3 w-3" aria-hidden /> {row.frozenLabel}
+          <Snowflake className="h-3 w-3" aria-hidden /> {row.frozen.endsOn ? `מוקפא עד ${shortDate(row.frozen.endsOn)}` : "מוקפא"}
         </Badge>
       )}
       {row.paidInArbox && (
@@ -112,7 +122,7 @@ export function EndingList({ rows, title, empty }: { rows: Row[]; title: string;
                 <div className="text-sm">
                   {row.planName}
                   <div className="text-xs text-muted-foreground">
-                    {row.branchName} · {isExpired(row) ? "הסתיים" : "מסתיים"} {Number(row.endsOn.slice(8, 10))}.{Number(row.endsOn.slice(5, 7))}
+                    {row.branchName} · {isExpired(row) ? "הסתיים" : "מסתיים"} {shortDate(row.endsOn)}
                   </div>
                 </div>
                 <span className={cn("font-bold tabular-nums", left.urgent ? "text-destructive" : "text-warning-emphasis")}>{left.text}</span>

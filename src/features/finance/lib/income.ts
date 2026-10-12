@@ -6,15 +6,14 @@
  */
 import { addDays, daysBetween } from "@/lib/utils/iso-date";
 import { israelDateStr } from "@/lib/utils/israel-time";
+import { ARBOX_PLACEHOLDER_ILS } from "@/lib/plans/arbox-import-plan";
+import type { RefundMethod } from "@/lib/validations/plans-admin";
 import type { OrderStatus, PaymentMethod } from "@/types/plans";
 
 /** A sale counts on the day it was paid even if it was later voided or refunded. */
 export const COUNTED_STATUSES: readonly OrderStatus[] = ["paid", "refunded", "voided"];
-/** The Arbox import writes 1 ILS when Arbox reported no amount. */
-export const ARBOX_PLACEHOLDER_ILS = 1;
 export const INCOME_METHODS = ["cash", "card", "bit", "transfer", "free"] as const;
 export type IncomeMethod = (typeof INCOME_METHODS)[number];
-export type RefundMethod = "card" | "cash" | "transfer" | "bit" | "arbox" | "none";
 
 export interface StaffRef {
   id: string;
@@ -41,7 +40,6 @@ export interface IncomeOrderRow {
   paymentLinkBy: StaffRef | null;
   childName: string;
   parentName: string;
-  profileId: string | null;
   planName: string;
   branchId: string;
   branchName: string;
@@ -116,7 +114,7 @@ export interface StaffCashUp {
   /** cash + bit + transfer - cashRefundsOut: what they should account for. */
   inHand: number;
   /** Card links they sent that were paid: listed, never added. */
-  linksSent: { orderId: string; childName: string; amountIls: number }[];
+  linksSent: { childName: string; amountIls: number }[];
   freeGiven: number;
 }
 
@@ -126,8 +124,6 @@ export interface IncomeReport {
   received: number;
   refunds: number;
   net: number;
-  paymentCount: number;
-  freeCount: number;
   installmentsIls: number;
   days: DayTotal[];
   byMethod: MethodTotal[];
@@ -190,7 +186,7 @@ function staffCashUp(payments: readonly IncomePayment[], refunds: readonly Incom
         transfer,
         cashRefundsOut,
         inHand: sum([cash, bit, transfer, -cashRefundsOut]),
-        linksSent: links.map((p) => ({ orderId: p.id, childName: p.childName, amountIls: p.amountIls })),
+        linksSent: links.map((p) => ({ childName: p.childName, amountIls: p.amountIls })),
         freeGiven: own.filter((p) => p.incomeMethod === "free").length,
       };
     })
@@ -251,8 +247,6 @@ export function buildIncomeReport({ from, to, stripFrom, orders, refunds }: Inco
     received,
     refunds: refunded,
     net: sum([received, -refunded]),
-    paymentCount: payments.length,
-    freeCount: payments.filter((p) => p.incomeMethod === "free").length,
     installmentsIls: sum(payments.filter((p) => p.incomeMethod === "card" && p.installments > 1).map((p) => p.amountIls)),
     days,
     byMethod,

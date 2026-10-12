@@ -27,7 +27,6 @@ function order(overrides: Partial<IncomeOrderRow> = {}): IncomeOrderRow {
     paymentLinkBy: null,
     childName: "אורי לוי",
     parentName: "מיכל לוי",
-    profileId: "p-1",
     planName: "מנוי חודשי",
     branchId: "ka",
     branchName: "קריית אתא",
@@ -77,7 +76,7 @@ describe("Israel days", () => {
   });
   test("the night clocks go back still counts to the right day", () => {
     const night = order({ paidAt: "2026-10-24T21:30:00Z" });
-    expect(report([night], [], "2026-10-25", "2026-10-25").paymentCount).toBe(1);
+    expect(report([night], [], "2026-10-25", "2026-10-25").payments).toHaveLength(1);
   });
 });
 
@@ -187,7 +186,6 @@ describe("methods, installments and free", () => {
   });
   test("free adds nothing but is counted", () => {
     expect(report(rows).received).toBe(2470);
-    expect(report(rows).freeCount).toBe(1);
   });
   test("a legacy Morning order with no method is a card payment", () => {
     expect(report([order({ method: null, receivedBy: null })]).byMethod[0].method).toBe("card");
@@ -238,7 +236,7 @@ describe("cash-up per staff member", () => {
   test("card links are listed, never added to what they hold", () => {
     const noa = report(rows, refunds).staff.find((s) => s.staff.id === NOA.id);
     expect(noa?.inHand).toBe(380);
-    expect(noa?.linksSent).toEqual([{ orderId: "n2", childName: "דניאל מזרחי", amountIls: 1200 }]);
+    expect(noa?.linksSent).toEqual([{ childName: "דניאל מזרחי", amountIls: 1200 }]);
   });
   test("an Arbox repair is not part of anyone's cash-up", () => {
     const repair = order({ id: "ar", method: "arbox", receivedBy: EDEN, amountIls: 1329, arboxPurchasedOn: DAY });
@@ -275,7 +273,7 @@ describe("days", () => {
 describe("an empty day", () => {
   test("zeros and empty lists, never undefined", () => {
     const r = report([]);
-    expect(r).toMatchObject({ received: 0, refunds: 0, net: 0, paymentCount: 0, freeCount: 0, installmentsIls: 0 });
+    expect(r).toMatchObject({ received: 0, refunds: 0, net: 0, installmentsIls: 0 });
     expect(r.byMethod).toEqual([]);
     expect(r.staff).toEqual([]);
     expect(r.arbox).toEqual({ entries: [], total: 0, unknownCount: 0, undoneCount: 0 });
