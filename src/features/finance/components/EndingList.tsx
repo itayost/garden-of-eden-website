@@ -1,0 +1,138 @@
+import Link from "next/link";
+import { BellRing, ChevronLeft, Link2, MessageCircle, Phone, Snowflake, Store } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatPhoneToLocal } from "@/lib/validations/common";
+import { waShareUrl } from "@/lib/whatsapp/share";
+import { shortDate } from "@/lib/utils/iso-date";
+import { cn } from "@/lib/utils";
+import { STAFF_ENDING_DAYS, type EndingEntry, type ExpiredEntry } from "../lib/ending-soon";
+import type { EndingRow } from "../lib/queries";
+
+type Row = EndingEntry<EndingRow> | ExpiredEntry<EndingRow>;
+
+const isExpired = (row: Row): row is ExpiredEntry<EndingRow> => "daysAgo" in row;
+
+const daysText = (n: number) => (n === 1 ? "יום אחד" : `${n} ימים`);
+
+const sessionsText = (left: number) => (left === 0 ? "0 נותרו" : left === 1 ? "אימון אחד" : `${left} אימונים`);
+
+function leftLabel(row: Row): { text: string; urgent: boolean } {
+  if (isExpired(row)) {
+    if (row.daysAgo === 0) return { text: "הסתיים היום", urgent: true };
+    return { text: `לפני ${row.daysAgo === 1 ? "יום" : daysText(row.daysAgo)}`, urgent: true };
+  }
+  if (row.by === "sessions") {
+    const left = row.sessionsLeft ?? 0;
+    const parts = [
+      sessionsText(left),
+      row.booked > 0 ? `${row.booked} שמורים` : null,
+      row.daysLeft <= STAFF_ENDING_DAYS ? (row.daysLeft === 0 ? "היום" : daysText(row.daysLeft)) : null,
+    ];
+    return { text: parts.filter((part) => part !== null).join(" · "), urgent: left <= 1 };
+  }
+  if (row.daysLeft === 0) return { text: "מסתיים היום", urgent: true };
+  return { text: daysText(row.daysLeft), urgent: row.daysLeft <= 3 };
+}
+
+function Flags({ row }: { row: Row }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {row.reminded && (
+        <Badge variant="outline" className="gap-1 font-normal">
+          <BellRing className="h-3 w-3" aria-hidden /> תזכורת נשלחה
+        </Badge>
+      )}
+      {row.linkWaiting && (
+        <Badge variant="outline" className="gap-1 border-info/40 font-normal text-info">
+          <Link2 className="h-3 w-3" aria-hidden /> קישור ממתין
+        </Badge>
+      )}
+      {row.frozen && (
+        <Badge variant="outline" className="gap-1 font-normal text-info">
+          <Snowflake className="h-3 w-3" aria-hidden /> {row.frozen.endsOn ? `מוקפא עד ${shortDate(row.frozen.endsOn)}` : "מוקפא"}
+        </Badge>
+      )}
+      {row.paidInArbox && (
+        <Badge className="gap-1 bg-warning font-normal text-warning-foreground hover:bg-warning">
+          <Store className="h-3 w-3" aria-hidden /> שולם ב-Arbox · אין תזכורת
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+function Contact({ row }: { row: Row }) {
+  const who = row.contactIsTrainee ? "לחניך" : "להורה";
+  const name = row.contactIsTrainee ? row.traineeName : (row.guardianName ?? "הורה");
+  return (
+    <div className="flex items-center gap-1">
+      {row.contactPhone ? (
+        <>
+          <Button asChild variant="outline" size="icon" aria-label={`התקשרות ${who} ${name}`}>
+            <a href={`tel:${row.contactPhone}`}>
+              <Phone className="h-4 w-4" />
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="icon" aria-label={`וואטסאפ ${who} ${name}`}>
+            <a href={waShareUrl(row.contactPhone, "")} target="_blank" rel="noreferrer">
+              <MessageCircle className="h-4 w-4" />
+            </a>
+          </Button>
+        </>
+      ) : (
+        <span className="text-xs text-muted-foreground">אין טלפון</span>
+      )}
+      <Button asChild variant="ghost" size="icon" aria-label={`לדף של ${row.traineeName}`}>
+        <Link href={`/admin/users/${row.profileId}`}>
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+export function EndingList({ rows, title, empty }: { rows: Row[]; title: string; empty: string }) {
+  return (
+    <section aria-label={title} className="min-w-0 rounded-xl border bg-card">
+      <h2 className="flex items-baseline justify-between px-4 pt-4 font-bold">
+        {title}
+        <span className="text-xs font-normal text-muted-foreground tabular-nums">{rows.length} חניכים</span>
+      </h2>
+      {rows.length === 0 ? (
+        <p className="px-4 py-12 text-center text-muted-foreground">{empty}</p>
+      ) : (
+        <ul className="mt-2 divide-y">
+          {rows.map((row) => {
+            const left = leftLabel(row);
+            return (
+              <li key={row.profileId} className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_7rem_minmax(0,1.2fr)_auto] md:items-center">
+                <div className="min-w-0">
+                  <Link href={`/admin/users/${row.profileId}`} className="font-bold hover:underline">
+                    {row.traineeName}
+                  </Link>
+                  <div className="text-xs text-muted-foreground">{row.guardianName ?? "הורה לא רשום"}</div>
+                  {row.contactPhone && (
+                    <div className="text-xs text-muted-foreground">
+                      <span dir="ltr" className="tabular-nums">{formatPhoneToLocal(row.contactPhone)}</span>
+                      {row.contactIsTrainee && " · טלפון החניך"}
+                    </div>
+                  )}
+                </div>
+                <div className="text-sm">
+                  {row.planName}
+                  <div className="text-xs text-muted-foreground">
+                    {row.branchName} · {isExpired(row) ? "הסתיים" : "מסתיים"} {shortDate(row.endsOn)}
+                  </div>
+                </div>
+                <span className={cn("font-bold tabular-nums", left.urgent ? "text-destructive" : "text-warning-emphasis")}>{left.text}</span>
+                <Flags row={row} />
+                <Contact row={row} />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}

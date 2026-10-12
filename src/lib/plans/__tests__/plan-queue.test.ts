@@ -5,6 +5,7 @@ import {
   dueReminder,
   placeNewPlan,
   planStart,
+  queueTail,
   queueBookingBlock,
   resolvePlanQueue,
   type NewPlanTerms,
@@ -338,6 +339,21 @@ describe("resolvePlanQueue shown plan", () => {
     expect(resolvePlanQueue([ended, later], [], TODAY).shown?.plan.id).toBe(later.id);
     expect(resolvePlanQueue([ended, cancelled], [], TODAY).shown?.plan.id).toBe(ended.id);
     expect(resolvePlanQueue([cancelled], [], TODAY).shown?.plan.id).toBe(cancelled.id);
+  });
+});
+
+describe("queueTail", () => {
+  it("is the last Plan that runs, skipping one queued past its own end", () => {
+    const running = subscription({ notBefore: "2026-09-09" }); // to 2026-10-08
+    const never = card(5, { kind: "session_card", fixedEndsOn: "2026-10-01", createdAt: "2026-10-01T09:00:00Z" });
+    const queue = resolvePlanQueue([running, never], [], TODAY);
+
+    expect(queue.plans).toHaveLength(2);
+    expect(queueTail(queue)?.plan.id).toBe(running.id);
+  });
+
+  it("is null for an empty queue", () => {
+    expect(queueTail(resolvePlanQueue([], [], TODAY))).toBeNull();
   });
 });
 

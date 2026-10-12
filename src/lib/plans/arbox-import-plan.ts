@@ -19,6 +19,8 @@ const LONG_MEMBERSHIP_DAYS = 45;
 const CARD_10_MAX_SESSIONS = 10;
 const E164_IL = /^\+972\d{9}$/;
 const REFERENCE_MAX = 60;
+/** The 1 ILS an Arbox import writes when Arbox reported no amount. */
+export const ARBOX_PLACEHOLDER_ILS = 1;
 
 export const purchaseKey = (p: Pick<ArboxPurchase, "membershipUserId">): string =>
   `arbox:${p.membershipUserId}`;
@@ -68,6 +70,8 @@ export interface ImportOrderDraft {
   readonly profileId: string;
   readonly amountIls: number;
   readonly reference: string;
+  /** The day the purchase was made in Arbox; the order's paid_at is the import night. */
+  readonly purchasedOn: string;
   readonly childName: string;
   readonly childBirthdate: string | null;
   readonly parentName: string;
@@ -158,8 +162,9 @@ function orderDraft(p: ArboxPurchase, trainee: ImportTrainee, productId: string)
     key: purchaseKey(p),
     productId,
     profileId: trainee.profileId,
-    amountIls: p.paid !== null && p.paid > 0 ? p.paid : 1,
+    amountIls: p.paid !== null && p.paid > 0 ? p.paid : ARBOX_PLACEHOLDER_ILS,
     reference: `Arbox ${p.itemName} ${shortDate(p.purchaseDate)}`.slice(0, REFERENCE_MAX),
+    purchasedOn: p.purchaseDate,
     childName: trainee.name,
     childBirthdate: trainee.birthdate,
     parentName: trainee.guardianName ?? "הורה",
