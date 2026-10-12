@@ -144,6 +144,29 @@ function toRefundRow(r: RefundSelectRow): IncomeRefundRow {
   };
 }
 
+const PAGE = 1000;
+const ID_CHUNK = 200;
+
+type PageResult = { data: unknown[] | null; error: { message: string } | null };
+
+/** Reads every row of a query, a page at a time (PostgREST caps one response at 1000). */
+async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<PageResult>,
+): Promise<{ data: T[]; error: { message: string } | null }> {
+  for (let from = 0, rows: T[] = []; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1);
+    if (error) return { data: [], error };
+    const next = rows.concat((data ?? []) as T[]);
+    if ((data ?? []).length < PAGE) return { data: next, error: null };
+    rows = next;
+  }
+}
+
+/** Splits an id list so no `.in()` puts too many ids in the request URL. */
+function chunk<T>(items: readonly T[], size: number): T[][] {
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
+}
+
 export async function loadIncomeReport(
   range: ReportRange,
   branchId: string | null,
@@ -158,29 +181,44 @@ export async function loadIncomeReport(
     const fromIso = `${addDays(stripFrom, -1)}T00:00:00Z`;
     const toIso = `${addDays(range.to, 2)}T00:00:00Z`;
 
-    const paidBase = typedFrom(db, "orders").select(ORDER_SELECT);
-    const arboxBase = typedFrom(db, "orders").select(ORDER_SELECT);
     const [byPaidAt, arboxByDay, refunds] = await Promise.all([
-      (branchId ? paidBase.eq("branch_id", branchId) : paidBase)
-        .in("status", [...COUNTED_STATUSES])
-        .gte("paid_at", fromIso)
-        .lt("paid_at", toIso),
+      fetchAllPages<OrderSelectRow>((lo, hi) => {
+        const base = typedFrom(db, "orders").select(ORDER_SELECT);
+        return (branchId ? base.eq("branch_id", branchId) : base)
+          .in("status", [...COUNTED_STATUSES])
+          .gte("paid_at", fromIso)
+          .lt("paid_at", toIso)
+          .order("id")
+          .range(lo, hi);
+      }),
       // An Arbox purchase can be imported days after it happened.
-      (branchId ? arboxBase.eq("branch_id", branchId) : arboxBase)
-        .in("status", [...COUNTED_STATUSES])
-        .eq("payment_method", "arbox")
-        .gte("arbox_purchased_on", range.from)
-        .lte("arbox_purchased_on", range.to),
-      typedFrom(db, "plan_refunds").select(REFUND_SELECT).gte("created_at", fromIso).lt("created_at", toIso),
+      fetchAllPages<OrderSelectRow>((lo, hi) => {
+        const base = typedFrom(db, "orders").select(ORDER_SELECT);
+        return (branchId ? base.eq("branch_id", branchId) : base)
+          .in("status", [...COUNTED_STATUSES])
+          .eq("payment_method", "arbox")
+          .gte("arbox_purchased_on", range.from)
+          .lte("arbox_purchased_on", range.to)
+          .order("id")
+          .range(lo, hi);
+      }),
+      fetchAllPages<RefundSelectRow>((lo, hi) =>
+        typedFrom(db, "plan_refunds")
+          .select(REFUND_SELECT)
+          .gte("created_at", fromIso)
+          .lt("created_at", toIso)
+          .order("id")
+          .range(lo, hi),
+      ),
     ]);
     if (byPaidAt.error || arboxByDay.error || refunds.error) {
       console.error("loadIncomeReport error:", byPaidAt.error ?? arboxByDay.error ?? refunds.error);
       return { success: false, error: LOAD_FAILED };
     }
 
-    const orderRows = [...((byPaidAt.data ?? []) as OrderSelectRow[]), ...((arboxByDay.data ?? []) as OrderSelectRow[])];
+    const orderRows = [...byPaidAt.data, ...arboxByDay.data];
     const uniqueOrders = [...new Map(orderRows.map((o) => [o.id, o])).values()].filter((o) => o.paid_at !== null);
-    const refundRows = ((refunds.data ?? []) as RefundSelectRow[])
+    const refundRows = refunds.data
       .map(toRefundRow)
       .filter((r) => !branchId || r.branchId === branchId);
 
@@ -231,26 +269,41 @@ function toEndingInput(profileId: string, view: PlanQueueView, linkWaiting: bool
 
 /** Every Trainee with a sold Plan, as ending-soon inputs. No auth check: callers gate. */
 export async function loadEndingInputs(db: SupabaseClient, branchId: string | null): Promise<EndingRow[]> {
-  const planQuery = typedFrom(db, "trainee_plans").select("profile_id").neq("status", "voided");
-  const { data: planRows } = (await (branchId ? planQuery.eq("branch_id", branchId) : planQuery)) as {
-    data: { profile_id: string }[] | null;
-  };
-  const ids = [...new Set((planRows ?? []).map((r) => r.profile_id))];
+  const { data: planRows, error: planError } = await fetchAllPages<{ profile_id: string }>((lo, hi) => {
+    const base = typedFrom(db, "trainee_plans").select("profile_id").neq("status", "voided");
+    return (branchId ? base.eq("branch_id", branchId) : base).order("id").range(lo, hi);
+  });
+  if (planError) throw new Error(`trainee_plans read failed: ${planError.message}`);
+  const ids = [...new Set(planRows.map((r) => r.profile_id))];
   if (ids.length === 0) return [];
 
   const today = israelToday();
-  const [queues, { data: profiles }, { data: links }, { data: branches }] = await Promise.all([
+  const idChunks = chunk(ids, ID_CHUNK);
+  const [queues, profileChunks, linkChunks, { data: branches }] = await Promise.all([
     loadPlanQueues(db, ids, today),
-    typedFrom(db, "profiles").select("id, full_name, guardian_name, guardian_phone").in("id", ids),
-    typedFrom(db, "orders").select("profile_id").in("status", ["pending", "expired"]).in("profile_id", ids),
+    Promise.all(
+      idChunks.map((part) =>
+        typedFrom(db, "profiles").select("id, full_name, guardian_name, guardian_phone").in("id", part),
+      ),
+    ),
+    Promise.all(
+      idChunks.map((part) =>
+        typedFrom(db, "orders").select("profile_id").in("status", ["pending", "expired"]).in("profile_id", part),
+      ),
+    ),
     typedFrom(db, "branches").select("id, name_he"),
   ]);
-  const profileById = new Map(
-    ((profiles ?? []) as { id: string; full_name: string | null; guardian_name: string | null; guardian_phone: string | null }[]).map(
-      (p) => [p.id, p],
-    ),
-  );
-  const waiting = new Set(((links ?? []) as { profile_id: string | null }[]).map((l) => l.profile_id));
+  const failed = [...profileChunks, ...linkChunks].find((r) => r.error);
+  if (failed) throw new Error(`ending-soon read failed: ${failed.error.message}`);
+  const profiles = profileChunks.flatMap((r) => r.data ?? []) as {
+    id: string;
+    full_name: string | null;
+    guardian_name: string | null;
+    guardian_phone: string | null;
+  }[];
+  const links = linkChunks.flatMap((r) => r.data ?? []) as { profile_id: string | null }[];
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
+  const waiting = new Set(links.map((l) => l.profile_id));
   const branchName = new Map(((branches ?? []) as { id: string; name_he: string }[]).map((b) => [b.id, b.name_he]));
 
   return [...queues].map(([profileId, view]) => {
