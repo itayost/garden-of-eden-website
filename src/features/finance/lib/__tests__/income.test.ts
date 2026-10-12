@@ -59,7 +59,8 @@ const report = (
   from = DAY,
   to = DAY,
   stripFrom = from,
-) => buildIncomeReport({ from, to, stripFrom, orders, refunds });
+  stripTo = to,
+) => buildIncomeReport({ from, to, stripFrom, stripTo, orders, refunds });
 
 describe("Israel days", () => {
   test("23:30 in Israel stays on its day; 00:30 belongs to the next, in summer", () => {
@@ -267,6 +268,19 @@ describe("days", () => {
       { day: "2026-10-12", received: 450, refunds: 310, net: 140, count: 1 },
     ]);
     expect(r.received).toBe(450);
+  });
+});
+
+describe("strip days after the range", () => {
+  test("a later strip day shows its own net without touching the range totals", () => {
+    const later = order({ id: "later", paidAt: "2026-10-13T09:00:00Z", amountIls: 300 });
+    const r = report([order(), later], [], DAY, DAY, DAY, "2026-10-13");
+    expect(r.days.map((d) => [d.day, d.net])).toEqual([
+      [DAY, 450],
+      ["2026-10-13", 300],
+    ]);
+    expect(r.received).toBe(450);
+    expect(r.payments.map((p) => p.id)).toEqual(["o-1"]);
   });
 });
 
