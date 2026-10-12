@@ -19,7 +19,8 @@ Success: Eden opens one page and sees today's net, its split, the cash each staf
 |---|---|
 | Who sees it | Admins only (`verifyAdmin()`). Branch managers and trainers do not. |
 | "מי סלק" | Both: the payer (child and parent) and the staff member who took the money. |
-| Arbox purchases | A separate block, never inside a total. |
+| Arbox purchases | Their own total beside the app total, never merged into it, dated by the real Arbox purchase date. 1 ILS placeholders are flagged and left out of the Arbox total. |
+| Branches | Only branches that sell in the app (today קריית אתא). חיפה has 519 trainees and no plans, orders or products in the app (checked in production 2026-10-12); it stays on Arbox and שימור לקוחות and joins these pages on its own once it sells in the app. |
 | Card installments | Counted in full on the day of the charge (matches the Morning receipt). Card rows show the installment count; the card line says how much of it is in installments. Bank arrival is out of scope. |
 | Cash refunds | A refund a staff member pays out in cash comes off that person's cash in hand. |
 | Staff "ending soon" | 7 days or fewer to the end of the queue, or a cards-only queue with 2 or fewer sessions left. Parent reminders stay at 3 days / 1 session. |
@@ -28,7 +29,7 @@ Success: Eden opens one page and sees today's net, its split, the cash each staf
 
 ## Out of scope (phase 1)
 
-CSV or Excel export, charts beyond the bars in the summary column, an index on `orders.paid_at`, branch-manager access, bank-deposit forecasting, debt or balances, trainer payroll, and the later reports (refund ledger, discounts, receipt reconciliation, payment-link funnel, churn, unused-session liability, per-staff sales, branch comparison).
+Haifa's Arbox data (memberships or sales), CSV or Excel export, charts beyond the bars in the summary column, an index on `orders.paid_at`, branch-manager access, bank-deposit forecasting, debt or balances, trainer payroll, and the later reports (refund ledger, discounts, receipt reconciliation, payment-link funnel, churn, unused-session liability, per-staff sales, branch comparison).
 
 ## Data rules
 
@@ -36,7 +37,7 @@ CSV or Excel export, charts beyond the bars in the summary column, an index on `
 
 - **The ledger is `orders`.** A payment belongs to the Israel day of its `paid_at`.
 - **Counted orders:** status `paid`, `refunded` or `voided`. A sale later voided or refunded still counts on the day the money came in; the refund subtracts separately. `failed`, `pending`, `charging` and `expired` never count. (A manual order can be inserted `paid` with `paid_at` set and then flipped to `failed`; filtering on status keeps it out.)
-- **Arbox:** orders with `payment_method = 'arbox'` are excluded from every total and listed in the Arbox block. Their `paid_at` is the import night and their amount may be a 1 ILS placeholder (shown as "סכום לא ידוע"); the purchase date comes from `orders.reference`.
+- **Arbox:** orders with `payment_method = 'arbox'` never join the app total. They form their own total, "Arbox", dated by `orders.arbox_purchased_on` (new column, below) and, when that is NULL (a hand-entered Arbox repair), by the Israel day of `paid_at`. An amount of 1 ILS is the import's placeholder for "Arbox reported no amount": the row is listed and flagged "סכום לא ידוע" and left out of the Arbox total, which states how many rows it left out. Context from production (2026-10-12): 98 of קריית אתא's 111 paid orders are Arbox imports, so the Arbox total carries most of the branch's real income.
 - **Free:** `payment_method = 'free'` rows are listed at 0 with their list price and reason, and counted ("N ניתנו ללא תשלום").
 - **Refunds:** `plan_refunds` rows subtract on the Israel day of their own `created_at`, whatever the sale's date. A refund row of 0 with method `none` is listed but changes nothing.
 - **Net** = counted received minus refunds, per day and for the range.
@@ -47,6 +48,7 @@ CSV or Excel export, charts beyond the bars in the summary column, an index on `
   - neither: "אונליין" (a parent paying on `/join`).
 - **Method:** `payment_method`, with legacy Morning orders (`payment_provider = 'morning'`, method NULL) shown as card.
 - **Cash-up per staff member:** for each `received_by`, the sum of their cash, Bit and transfer payments, minus cash refunds they recorded with method `cash` (by `plan_refunds.created_by`). Card links they sent are listed beside it, not added. Free plans they gave are counted, not added.
+- **Branches:** the branch select lists branches with an active `plan_products` row or any counted order. A branch with none is not offered; the page says in one line that חיפה is tracked in Arbox and links to שימור לקוחות.
 - **Range:** `from` and `to` are Israel dates in the URL (`?from=&to=`), default today, capped at 93 days. A bad, reversed or future range falls back to today; an over-long range is clipped with a note.
 
 ### Ending soon
@@ -72,14 +74,14 @@ Mockups: `.impeccable/mockups/finance/split.html` (local, gitignored), screensho
 - Header: title, the date, a range control (היום / שבוע / חודש / טווח), a branch select (כל הסניפים / חיפה / קריית אתא).
 - **Start-side sticky column (about 340px):**
   1. A strip of the range's days with each day's net; the current day selected. In a single-day view it shows the last 6 days for context.
-  2. Net, large, with "התקבל ₪X · הוחזר ₪Y" beneath.
+  2. Net, large, with "התקבל ₪X · הוחזר ₪Y" beneath, and directly under it a separate line "נמכר ב-Arbox: ₪Z (N רכישות)" with "M ללא סכום" when placeholders were left out. The two totals are never added together on the page.
   3. By method: a bar per method with amount and count; the card line notes "מתוכם ₪X בתשלומים"; free as a text line.
   4. By branch: one split bar with both amounts.
   5. Cash-up per staff member: cash / Bit / transfer and "בידיים"; card links they sent listed beneath as "לא עבר בידיים"; a cash refund they paid out shown and subtracted.
 - **End side:** tabs תשלומים (N) / החזרים (N) / Arbox (N) · מחוץ לסכום.
   - Payments: time, child and parent, plan, branch, method (with transfer or Bit reference), amount (discount: list price struck and reason; installments count under card amounts), taken by, receipt link (Morning document URL, "אין" for free). A voided or refunded sale keeps its row with a badge.
   - Refunds: time, child, plan, kind (ביטול רישום / ביטול מסלול), amount (negative), method, recorded by, credit note number or "חסר זיכוי", original sale date.
-  - Arbox: child, item, purchase date from the reference, amount or "סכום לא ידוע".
+  - Arbox: child, item, purchase date (`arbox_purchased_on`), amount or "סכום לא ידוע", and the import date when it differs.
 - Over a range, payment and refund rows show date and time.
 - **Phone:** net card with the day strip, then collapsible sections (cash-up open; method and branch closed), then the tabs with stacked rows.
 
@@ -110,6 +112,11 @@ New feature module `src/features/finance/`:
 
 Pages: `src/app/admin/finance/page.tsx`, `src/app/admin/finance/ending-soon/page.tsx` (server components; filters in the URL).
 
+Database (one migration, then `npm run db:types`):
+- `orders.arbox_purchased_on date NULL`, CHECK it is NULL unless `payment_method = 'arbox'`.
+- Backfill the existing Arbox imports from their Plan's note (`trainee_plans.note` holds `Arbox import <item> <YYYY-MM-DD> (<membership id>)`, joined on `trainee_plans.order_id`); rows the pattern does not match stay NULL and fall back to `paid_at`. Capture the matched and unmatched counts with a SELECT before the UPDATE.
+- The nightly import (`src/lib/plans/arbox-import-plan.ts` draft, `src/features/plans/lib/arbox-import-apply.ts` insert) writes `arbox_purchased_on = purchase.purchaseDate` from then on.
+
 Touched:
 - `src/lib/navigation/admin-nav.ts`: the new section.
 - `src/app/admin/layout.tsx`: adds the badge to `navBadges` for admins.
@@ -134,7 +141,7 @@ The project tests pure functions only, no mocks. Tests are written first.
 - A payment at 23:30 Israel time on the 12th (20:30 UTC) lands on the 12th; at 00:30 on the 13th (21:30 UTC on the 12th) lands on the 13th; both on summer and winter dates and the daylight-saving switch days.
 - `failed`, `pending`, `charging`, `expired` are excluded; `voided` and `refunded` count on their paid day.
 - A refund subtracts on its own day, not the sale's.
-- Arbox stays out of every total and appears in the Arbox block; a 1 ILS Arbox amount is flagged unknown.
+- Arbox never joins the app total; it has its own total by `arbox_purchased_on`, falling back to the Israel day of `paid_at` when NULL; a 1 ILS amount is flagged, listed, and left out of the Arbox total with a count.
 - Free adds 0 and is counted.
 - Installments total sums card orders with `installments > 1`.
 - Cash-up groups by `received_by`, keeps card links separate, and subtracts that person's cash refunds.
@@ -147,6 +154,8 @@ The project tests pure functions only, no mocks. Tests are written first.
 - The 14-day expired window, inclusive.
 - Urgency order, and the badge counts only the ending-soon group.
 - Flags: reminder stamp, pending link, frozen, paid in Arbox.
+
+`arbox-import-plan.ts`: the draft carries the purchase date for `arbox_purchased_on`.
 
 `range.ts`: default today, reversed and malformed input, future dates, the 93-day cap.
 
