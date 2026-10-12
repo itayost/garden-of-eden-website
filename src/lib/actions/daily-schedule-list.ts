@@ -2,6 +2,8 @@
 
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
+import { birthYearOf } from "@/lib/schedule/roster-name";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidDateString, isValidUUID } from "@/lib/validations/common";
@@ -84,7 +86,43 @@ export async function getSlotsForWeekAction(
     return { error: "שגיאה בטעינת הלוח" };
   }
 
-  return { success: true, data: withSortedRoster(data) };
+  return { success: true, data: await withProfileMarks(withSortedRoster(data)) };
+}
+
+/**
+ * Each linked roster name's birth year and A mark, so the calendar can show
+ * "יונתן 08 A". Service role: the profiles policies hide trainee rows from a trainer, and
+ * the caller has already checked staff access and branch scope; only those
+ * two columns are read. A failed read leaves the names bare rather than failing
+ * the calendar.
+ */
+async function withProfileMarks(slots: ScheduleSlot[]): Promise<ScheduleSlot[]> {
+  const ids = Array.from(
+    new Set(slots.flatMap((slot) => slot.trainees.flatMap((t) => (t.trainee_id ? [t.trainee_id] : [])))),
+  );
+  if (ids.length === 0) return slots;
+
+  const { data, error } = await createAdminClient()
+    .from("profiles")
+    .select("id, birthdate, plays_up")
+    .in("id", ids);
+  if (error) {
+    console.error("Get roster profile marks error:", error);
+    return slots;
+  }
+
+  const profiles = new Map((data ?? []).map((profile) => [profile.id, profile]));
+  return slots.map((slot) => ({
+    ...slot,
+    trainees: slot.trainees.map((t) => {
+      const profile = t.trainee_id ? profiles.get(t.trainee_id) : undefined;
+      return {
+        ...t,
+        birth_year: birthYearOf(profile?.birthdate ?? null),
+        plays_up: profile?.plays_up ?? false,
+      };
+    }),
+  }));
 }
 
 /**

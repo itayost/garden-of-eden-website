@@ -35,6 +35,7 @@ import type { Profile, UserRole } from "@/types/database";
 import { BranchCheckboxGroup } from "@/features/branches/components/BranchCheckboxGroup";
 import type { BranchOption } from "@/types/branches";
 import { AgeGroupPicker } from "@/components/admin/users/AgeGroupPicker";
+import { PlaysUpToggle } from "@/components/admin/users/PlaysUpToggle";
 
 interface UserEditFormProps {
   user: Profile;
@@ -160,6 +161,7 @@ export function UserEditForm({
                   isBirthdateEdited={isBirthdateEdited}
                 />
               )}
+              {user.role === "trainee" && <PlaysUpToggle userId={user.id} playsUp={user.plays_up} />}
             </FormItem>
           )}
         />

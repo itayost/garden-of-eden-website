@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -2053,6 +2053,9 @@ export type Database = {
           branch_id: string
           card_brand: string | null
           card_last4: string | null
+          cheque_account: string | null
+          cheque_bank: string | null
+          cheque_branch: string | null
           child_birthdate: string | null
           child_name: string
           created_at: string
@@ -2096,6 +2099,9 @@ export type Database = {
           branch_id: string
           card_brand?: string | null
           card_last4?: string | null
+          cheque_account?: string | null
+          cheque_bank?: string | null
+          cheque_branch?: string | null
           child_birthdate?: string | null
           child_name: string
           created_at?: string
@@ -2139,6 +2145,9 @@ export type Database = {
           branch_id?: string
           card_brand?: string | null
           card_last4?: string | null
+          cheque_account?: string | null
+          cheque_bank?: string | null
+          cheque_branch?: string | null
           child_birthdate?: string | null
           child_name?: string
           created_at?: string
@@ -3237,6 +3246,7 @@ export type Database = {
           nutrition_appointment_status: Database["public"]["Enums"]["nutrition_appointment_status"]
           phone: string | null
           photo_consent: boolean | null
+          plays_up: boolean
           position: string | null
           processed_avatar_url: string | null
           profile_completed: boolean | null
@@ -3270,6 +3280,7 @@ export type Database = {
           nutrition_appointment_status?: Database["public"]["Enums"]["nutrition_appointment_status"]
           phone?: string | null
           photo_consent?: boolean | null
+          plays_up?: boolean
           position?: string | null
           processed_avatar_url?: string | null
           profile_completed?: boolean | null
@@ -3303,6 +3314,7 @@ export type Database = {
           nutrition_appointment_status?: Database["public"]["Enums"]["nutrition_appointment_status"]
           phone?: string | null
           photo_consent?: boolean | null
+          plays_up?: boolean
           position?: string | null
           processed_avatar_url?: string | null
           profile_completed?: boolean | null

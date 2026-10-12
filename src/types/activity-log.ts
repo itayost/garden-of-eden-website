@@ -40,6 +40,7 @@ export const ACTIVITY_ACTION_LABELS_HE = {
   slot_called_off: "אימון סומן כבוטל",
   slot_called_off_cleared: "סימון הביטול הוסר",
   age_group_override_changed: "קבוצת גיל שונתה",
+  plays_up_changed: "סימון A שונה",
 } as const satisfies Record<string, string>;
 
 export type ActivityAction = keyof typeof ACTIVITY_ACTION_LABELS_HE;
@@ -57,6 +58,7 @@ export const FIELD_LABELS_HE: Record<string, string> = {
   club: "מועדון",
   branches: "סניפים",
   age_group_override: "קבוצת גיל",
+  plays_up: "סימון A (עולה שנתון)",
 };
 
 // Hebrew labels for role values

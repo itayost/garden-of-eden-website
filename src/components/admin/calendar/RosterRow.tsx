@@ -9,6 +9,8 @@ import { STAFF_PLAN_CHIP } from "@/lib/plans/status-styles";
 import type { RosterSession } from "@/lib/schedule/roster-exercise";
 import type { StaffPlanBadge } from "@/types/plans";
 import type { SlotTrainee } from "@/types/schedule";
+import { shortBirthYear } from "@/lib/schedule/roster-name";
+import { PlaysUpMark } from "@/components/admin/schedule/PlaysUpMark";
 
 type StatusKey = "not_built" | "built" | "completed";
 
@@ -92,7 +94,13 @@ export function RosterRow({
               className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", expanded && "rotate-180")}
               aria-hidden="true"
             />
-            <span className="min-w-0 flex-1 truncate text-sm">{entry.trainee_name}</span>
+            <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-sm">
+              <span className="truncate">{entry.trainee_name}</span>
+              {shortBirthYear(entry.birth_year) && (
+                <span className="shrink-0 tabular-nums text-muted-foreground">{shortBirthYear(entry.birth_year)}</span>
+              )}
+              {entry.plays_up && <PlaysUpMark className="self-center" />}
+            </span>
             {entry.source === "self" && (
               <CalendarCheck className="h-4 w-4 shrink-0 text-forest" aria-label="נרשם בעצמו" />
             )}
