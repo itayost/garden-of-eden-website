@@ -40,7 +40,7 @@ export default async function FinanceIncomePage({ searchParams }: PageProps) {
           <p className="text-muted-foreground">{rangeLabel(range)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <RangeControl range={range} />
+          <RangeControl key={`${range.preset}:${range.from}:${range.to}`} range={range} />
           {branches.selling.length > 1 && <BranchUrlFilter branches={branches.selling} />}
         </div>
       </header>
