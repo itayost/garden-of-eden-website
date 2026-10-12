@@ -49,6 +49,15 @@ function endingBy(q: EndingInput, today: string): "date" | "sessions" | null {
   return null;
 }
 
+/** A nearly used-up card ranks like a date: 0 sessions left is today, 1 tomorrow, 2 in three days. */
+const SESSION_URGENCY_DAYS = [0, 1, 3] as const;
+
+export function urgencyDays(entry: EndingEntry<EndingInput>): number {
+  if (entry.by === "date" || entry.sessionsLeft === null) return entry.daysLeft;
+  const ranked = SESSION_URGENCY_DAYS[Math.max(0, entry.sessionsLeft)] ?? entry.daysLeft;
+  return Math.min(entry.daysLeft, ranked);
+}
+
 const bySessionsLeft = (q: EndingInput) => q.sessionsLeft ?? Number.MAX_SAFE_INTEGER;
 
 export function splitEnding<T extends EndingInput>(inputs: readonly T[], today: string): EndingSplit<T> {
@@ -57,7 +66,10 @@ export function splitEnding<T extends EndingInput>(inputs: readonly T[], today: 
       const by = endingBy(q, today);
       return by ? [{ ...q, by, daysLeft: daysBetween(today, q.endsOn) }] : [];
     })
-    .sort((a, b) => a.daysLeft - b.daysLeft || bySessionsLeft(a) - bySessionsLeft(b));
+    .sort(
+      (a, b) =>
+        urgencyDays(a) - urgencyDays(b) || bySessionsLeft(a) - bySessionsLeft(b) || a.daysLeft - b.daysLeft,
+    );
 
   const expired = inputs
     .flatMap((q): ExpiredEntry<T>[] => {

@@ -62,7 +62,7 @@ Haifa's Arbox data (memberships or sales), CSV or Excel export, charts beyond th
   - Renewal link waiting: an order for this trainee with status `pending` or `expired` (a Payment link not yet paid; an expired link can still be paid until it is purged).
   - Frozen: `queue.frozen`, with its end date.
   - Paid in Arbox: the queue's last Plan has `paidInArbox`; the app sends that parent no reminder, so the row says so.
-- **Sort:** most urgent first: days left ascending, then sessions left ascending; recently expired sorted by most recent.
+- **Sort:** most urgent first: a cards-only queue ranks by sessions left (0 like today, 1 like tomorrow, 2 like three days, or its days left if sooner); everyone else by days left; ties by sessions left. Recently expired sorted by most recent.
 - **Badge:** the count of the ending-soon group (not the expired group), on the "מסתיימים בקרוב" menu item, admins only.
 
 ## Pages (layout B)

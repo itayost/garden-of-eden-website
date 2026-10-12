@@ -80,8 +80,18 @@ describe("order and count", () => {
     queue({ profileId: "card2", cardsOnly: true, sessionsLeft: 2, endsOn: "2026-10-16" }),
     queue({ profileId: "gone", status: "expired", endsOn: "2026-10-10" }),
   ];
-  test("most urgent first: days left, then sessions left", () => {
-    expect(splitEnding(inputs, TODAY).ending.map((e) => e.profileId)).toEqual(["near", "card0", "card2", "far"]);
+  test("most urgent first: cards rank by sessions left, the rest by days left", () => {
+    expect(splitEnding(inputs, TODAY).ending.map((e) => e.profileId)).toEqual(["card0", "near", "card2", "far"]);
+  });
+  test("a card with 1 session left and 40 days to expiry sorts before a subscription ending in 3 days", () => {
+    const split = splitEnding(
+      [
+        queue({ profileId: "sub", endsOn: "2026-10-15" }),
+        queue({ profileId: "card1", cardsOnly: true, sessionsLeft: 1, endsOn: "2026-11-21" }),
+      ],
+      TODAY,
+    );
+    expect(split.ending.map((e) => e.profileId)).toEqual(["card1", "sub"]);
   });
   test("the badge counts only the ending group", () => {
     expect(endingSoonCount(inputs, TODAY)).toBe(4);
