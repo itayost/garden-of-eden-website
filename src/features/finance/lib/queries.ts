@@ -18,6 +18,7 @@ import {
   type IncomeReport,
   type RefundMethod,
   type StaffRef,
+  UNKNOWN_STAFF,
 } from "./income";
 import { splitEnding, type EndingInput, type EndingSplit } from "./ending-soon";
 import { stripStart, type ReportRange } from "./range";
@@ -87,7 +88,7 @@ interface OrderSelectRow {
 }
 
 const REFUND_SELECT =
-  "id, created_at, amount_ils, method, kind, credit_note_number, creator:profiles!plan_refunds_created_by_fkey(id, full_name), plan:trainee_plans!plan_refunds_plan_id_fkey(branch_id, product:plan_products(name_he), trainee:profiles!trainee_plans_profile_id_fkey(full_name)), order:orders!plan_refunds_order_id_fkey(child_name, paid_at)";
+  "id, created_at, amount_ils, method, kind, credit_note_number, creator:profiles!plan_refunds_created_by_fkey(id, full_name), plan:trainee_plans!plan_refunds_plan_id_fkey(branch_id, product:plan_products(name_he), trainee:profiles!trainee_plans_profile_id_fkey(full_name)), order:orders!plan_refunds_order_id_fkey(child_name, paid_at, terms_sessions_total, terms_duration_days)";
 
 interface RefundSelectRow {
   id: string;
@@ -98,7 +99,12 @@ interface RefundSelectRow {
   credit_note_number: string | null;
   creator: { id: string; full_name: string | null } | null;
   plan: { branch_id: string; product: { name_he: string } | null; trainee: { full_name: string | null } | null } | null;
-  order: { child_name: string; paid_at: string | null } | null;
+  order: {
+    child_name: string;
+    paid_at: string | null;
+    terms_sessions_total: number | null;
+    terms_duration_days: number | null;
+  } | null;
 }
 
 const staffRef = (p: { id: string; full_name: string | null } | null): StaffRef | null =>
@@ -135,9 +141,9 @@ function toRefundRow(r: RefundSelectRow): IncomeRefundRow {
     amountIls: Number(r.amount_ils),
     method: r.method,
     kind: r.kind,
-    createdBy: staffRef(r.creator) ?? { id: "unknown", name: "לא ידוע" },
+    createdBy: staffRef(r.creator) ?? UNKNOWN_STAFF,
     childName: r.order?.child_name ?? r.plan?.trainee?.full_name ?? "",
-    planName: r.plan?.product?.name_he ?? "מסלול",
+    planName: orderPlanName(r.plan?.product?.name_he ?? "מסלול", r.order ?? { terms_sessions_total: null, terms_duration_days: null }),
     branchId: r.plan?.branch_id ?? "",
     creditNoteNumber: r.credit_note_number,
     salePaidAt: r.order?.paid_at ?? null,
@@ -242,6 +248,10 @@ export interface EndingRow extends EndingInput {
   traineeName: string;
   guardianName: string | null;
   guardianPhone: string | null;
+  /** guardian_phone, else the trainee's own phone; null with neither. */
+  contactPhone: string | null;
+  /** contactPhone is the trainee's own number, not a parent's. */
+  contactIsTrainee: boolean;
   branchId: string;
   branchName: string;
   planName: string;
@@ -252,7 +262,8 @@ export interface EndingRow extends EndingInput {
 const REMINDER_STAMPS = ["reminded_3_days_at", "reminded_last_session_at", "reminded_expired_at"] as const;
 
 function toEndingInput(profileId: string, view: PlanQueueView, linkWaiting: boolean): EndingInput {
-  const last = view.queue.plans.at(-1)?.plan ?? view.plan;
+  // Flags come from the last Plan that actually runs (a Plan whose Card ran out before its start does not).
+  const last = view.queue.plans.filter((p) => p.startsOn <= p.endsOn).at(-1)?.plan ?? view.plan;
   return {
     profileId,
     status: view.status,
@@ -265,6 +276,19 @@ function toEndingInput(profileId: string, view: PlanQueueView, linkWaiting: bool
     frozen: view.queue.frozen ? { endsOn: view.queue.frozen.endsOn } : null,
     paidInArbox: last.paidInArbox,
   };
+}
+
+/** Plan queues for every id chunk, merged. A fixed-size request keeps one failure from emptying the rest silently. */
+async function loadQueuesInChunks(
+  db: SupabaseClient,
+  idChunks: readonly (readonly string[])[],
+  today: string,
+): Promise<Map<string, PlanQueueView>> {
+  const maps = await Promise.all(idChunks.map((part) => loadPlanQueues(db, part, today)));
+  const merged = maps.reduce((all, m) => new Map([...all, ...m]), new Map<string, PlanQueueView>());
+  // loadPlanQueues swallows read errors into an empty result; ids went in, so an empty map is a failure.
+  if (idChunks.length > 0 && merged.size === 0) throw new Error("plan queues read failed");
+  return merged;
 }
 
 /** Every Trainee with a sold Plan, as ending-soon inputs. No auth check: callers gate. */
@@ -280,15 +304,15 @@ export async function loadEndingInputs(db: SupabaseClient, branchId: string | nu
   const today = israelToday();
   const idChunks = chunk(ids, ID_CHUNK);
   const [queues, profileChunks, linkChunks, { data: branches }] = await Promise.all([
-    loadPlanQueues(db, ids, today),
+    loadQueuesInChunks(db, idChunks, today),
     Promise.all(
       idChunks.map((part) =>
-        typedFrom(db, "profiles").select("id, full_name, guardian_name, guardian_phone").in("id", part),
+        typedFrom(db, "profiles").select("id, full_name, guardian_name, guardian_phone, phone").in("id", part),
       ),
     ),
     Promise.all(
       idChunks.map((part) =>
-        typedFrom(db, "orders").select("profile_id").in("status", ["pending", "expired"]).in("profile_id", part),
+        typedFrom(db, "orders").select("profile_id").in("status", ["pending", "expired"]).not("payment_link_by", "is", null).in("profile_id", part),
       ),
     ),
     typedFrom(db, "branches").select("id, name_he"),
@@ -300,6 +324,7 @@ export async function loadEndingInputs(db: SupabaseClient, branchId: string | nu
     full_name: string | null;
     guardian_name: string | null;
     guardian_phone: string | null;
+    phone: string | null;
   }[];
   const links = linkChunks.flatMap((r) => r.data ?? []) as { profile_id: string | null }[];
   const profileById = new Map(profiles.map((p) => [p.id, p]));
@@ -310,11 +335,14 @@ export async function loadEndingInputs(db: SupabaseClient, branchId: string | nu
     const profile = profileById.get(profileId);
     const input = toEndingInput(profileId, view, waiting.has(profileId));
     const freezeEnd = input.frozen?.endsOn;
+    const guardianPhone = profile?.guardian_phone ?? null;
     return {
       ...input,
       traineeName: profile?.full_name ?? "ללא שם",
       guardianName: profile?.guardian_name ?? null,
-      guardianPhone: profile?.guardian_phone ?? null,
+      guardianPhone,
+      contactPhone: guardianPhone ?? profile?.phone ?? null,
+      contactIsTrainee: guardianPhone === null && (profile?.phone ?? null) !== null,
       branchId: view.plan.branch_id,
       branchName: branchName.get(view.plan.branch_id) ?? "",
       planName: view.product.name_he,

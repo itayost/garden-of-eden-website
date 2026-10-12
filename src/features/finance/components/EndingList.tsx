@@ -17,7 +17,9 @@ function leftLabel(row: Row): { text: string; urgent: boolean } {
   if (row.by === "sessions") {
     const left = row.sessionsLeft ?? 0;
     const base = left === 0 ? "0 נותרו" : left === 1 ? "אימון אחד" : `${left} אימונים`;
-    return { text: row.booked > 0 ? `${base} · ${row.booked} שמורים` : base, urgent: left <= 1 };
+    const withBooked = row.booked > 0 ? `${base} · ${row.booked} שמורים` : base;
+    const text = row.daysLeft <= 7 ? `${withBooked} · ${row.daysLeft === 0 ? "היום" : row.daysLeft === 1 ? "יום אחד" : `${row.daysLeft} ימים`}` : withBooked;
+    return { text, urgent: left <= 1 };
   }
   if (row.daysLeft === 0) return { text: "מסתיים היום", urgent: true };
   return { text: row.daysLeft === 1 ? "יום אחד" : `${row.daysLeft} ימים`, urgent: row.daysLeft <= 3 };
@@ -51,19 +53,26 @@ function Flags({ row }: { row: Row }) {
 }
 
 function Contact({ row }: { row: Row }) {
-  if (!row.guardianPhone) return <span className="text-xs text-muted-foreground">אין טלפון הורה</span>;
+  const who = row.contactIsTrainee ? "לחניך" : "להורה";
+  const name = row.contactIsTrainee ? row.traineeName : (row.guardianName ?? "הורה");
   return (
-    <div className="flex gap-1">
-      <Button asChild variant="outline" size="icon" aria-label={`התקשרות ל${row.guardianName ?? "הורה"}`}>
-        <a href={`tel:${row.guardianPhone}`}>
-          <Phone className="h-4 w-4" />
-        </a>
-      </Button>
-      <Button asChild variant="outline" size="icon" aria-label={`וואטסאפ ל${row.guardianName ?? "הורה"}`}>
-        <a href={waShareUrl(row.guardianPhone, "")} target="_blank" rel="noreferrer">
-          <MessageCircle className="h-4 w-4" />
-        </a>
-      </Button>
+    <div className="flex items-center gap-1">
+      {row.contactPhone ? (
+        <>
+          <Button asChild variant="outline" size="icon" aria-label={`התקשרות ${who} ${name}`}>
+            <a href={`tel:${row.contactPhone}`}>
+              <Phone className="h-4 w-4" />
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="icon" aria-label={`וואטסאפ ${who} ${name}`}>
+            <a href={waShareUrl(row.contactPhone, "")} target="_blank" rel="noreferrer">
+              <MessageCircle className="h-4 w-4" />
+            </a>
+          </Button>
+        </>
+      ) : (
+        <span className="text-xs text-muted-foreground">אין טלפון</span>
+      )}
       <Button asChild variant="ghost" size="icon" aria-label={`לדף של ${row.traineeName}`}>
         <Link href={`/admin/users/${row.profileId}`}>
           <ChevronLeft className="h-4 w-4" />
@@ -93,9 +102,10 @@ export function EndingList({ rows, title, empty }: { rows: Row[]; title: string;
                     {row.traineeName}
                   </Link>
                   <div className="text-xs text-muted-foreground">{row.guardianName ?? "הורה לא רשום"}</div>
-                  {row.guardianPhone && (
-                    <div dir="ltr" className="text-end text-xs text-muted-foreground tabular-nums md:text-start">
-                      {formatPhoneToLocal(row.guardianPhone)}
+                  {row.contactPhone && (
+                    <div className="text-xs text-muted-foreground">
+                      <span dir="ltr" className="tabular-nums">{formatPhoneToLocal(row.contactPhone)}</span>
+                      {row.contactIsTrainee && " · טלפון החניך"}
                     </div>
                   )}
                 </div>

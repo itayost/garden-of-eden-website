@@ -63,7 +63,7 @@ export function splitEnding<T extends EndingInput>(inputs: readonly T[], today: 
     .flatMap((q): ExpiredEntry<T>[] => {
       if (q.status !== "expired") return [];
       const daysAgo = daysBetween(q.endsOn, today);
-      return daysAgo >= 1 && daysAgo <= RECENTLY_EXPIRED_DAYS ? [{ ...q, daysAgo }] : [];
+      return daysAgo >= 0 && daysAgo <= RECENTLY_EXPIRED_DAYS ? [{ ...q, daysAgo }] : [];
     })
     .sort((a, b) => a.daysAgo - b.daysAgo);
 

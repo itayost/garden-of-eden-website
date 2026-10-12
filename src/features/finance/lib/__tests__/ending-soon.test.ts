@@ -54,9 +54,10 @@ describe("statuses", () => {
     const split = splitEnding([queue({ status: "cancelled", endsOn: "2026-10-13" })], TODAY);
     expect(split).toEqual({ ending: [], expired: [] });
   });
-  test("expired 1 to 14 days ago is recently expired; 15 is not", () => {
+  test("expired 0 to 14 days ago is recently expired; 15 is not", () => {
     const split = splitEnding(
       [
+        queue({ profileId: "t", status: "expired", endsOn: "2026-10-12" }),
         queue({ profileId: "a", status: "expired", endsOn: "2026-10-11" }),
         queue({ profileId: "b", status: "expired", endsOn: "2026-09-28" }),
         queue({ profileId: "c", status: "expired", endsOn: "2026-09-27" }),
@@ -64,6 +65,7 @@ describe("statuses", () => {
       TODAY,
     );
     expect(split.expired.map((e) => [e.profileId, e.daysAgo])).toEqual([
+      ["t", 0],
       ["a", 1],
       ["b", 14],
     ]);
