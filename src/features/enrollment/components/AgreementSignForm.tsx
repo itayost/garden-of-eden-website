@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { toLocalPhone } from "@/lib/plans/local-phone";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import { signAgreementSchema, type SignAgreementInput } from "@/lib/validations/agreement-sign";
 import type { EnrollmentAgreement } from "@/types/plans";
 import { signAgreementAction } from "../lib/actions/sign-agreement";
@@ -76,7 +76,7 @@ export function AgreementSignForm({
       childBirthdate: agreement.child_birthdate ?? "",
       medicalNotes: agreement.medical_notes ?? "",
       emergencyContactName: agreement.emergency_contact_name ?? "",
-      emergencyContactPhone: toLocalPhone(agreement.emergency_contact_phone),
+      emergencyContactPhone: formatPhoneToLocal(agreement.emergency_contact_phone),
       declaresHealthy: false,
       acceptsTerms: false,
       // Nothing is charged on a free Plan: the box is hidden and the server stores false.

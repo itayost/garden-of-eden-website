@@ -7,17 +7,14 @@ import {
   LEAD_STATUSES,
 } from "@/types/leads";
 import { leadTabSlugSchema } from "./lead-tabs";
-import {
-  formatPhoneToInternational,
-  isValidMobilePhoneIL,
-} from "./common";
+import { normalizePhoneIL } from "./common";
 
 /** Normalize Israeli phone formats to 972xxxxxxxxx. Returns null if unrecognizable. */
 export function normalizeLeadPhone(phone: string): string | null {
   const clean = phone.replace(/\D/g, "");
   if (clean.startsWith("5") && clean.length === 9) return "972" + clean;
-  if (!isValidMobilePhoneIL(phone)) return null;
-  return formatPhoneToInternational(phone).slice(1);
+  const e164 = normalizePhoneIL(phone);
+  return e164?.startsWith("+9725") ? e164.slice(1) : null;
 }
 
 /**

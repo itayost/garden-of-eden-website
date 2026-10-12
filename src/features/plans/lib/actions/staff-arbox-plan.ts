@@ -6,7 +6,7 @@ import { BRANCH_MANAGER_REQUIRED } from "@/lib/actions/shared/verify-branch-mana
 import { canManageBranches } from "@/lib/branches/branch-scope";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { toE164 } from "@/lib/plans/local-phone";
+import { formatPhoneToInternational } from "@/lib/validations/common";
 import { arboxTermsProblem } from "@/lib/plans/arbox-terms";
 import { israelToday } from "@/lib/utils/tasks";
 import { arboxPlanSchema, type ArboxPlanInput } from "@/lib/validations/plans-admin";
@@ -60,7 +60,7 @@ export async function recordArboxPlanAction(input: ArboxPlanInput): Promise<Arbo
   const { product, trainee } = sale;
   if (!canManageBranches(staff!.role, managed, [product.branch_id])) return { error: BRANCH_MANAGER_REQUIRED };
 
-  const loginPhone = toE164(trainee.phone);
+  const loginPhone = formatPhoneToInternational(trainee.phone);
   const result = await recordArboxPlan(db, {
     product,
     trainee: {
@@ -69,7 +69,7 @@ export async function recordArboxPlanAction(input: ArboxPlanInput): Promise<Arbo
       name: trainee.full_name ?? "מתאמן",
       birthdate: trainee.birthdate,
       parentName: trainee.guardian_name ?? "הורה",
-      parentPhone: trainee.guardian_phone ? toE164(trainee.guardian_phone) : loginPhone,
+      parentPhone: trainee.guardian_phone ? formatPhoneToInternational(trainee.guardian_phone) : loginPhone,
     },
     terms: {
       startsOn: data.startsOn,

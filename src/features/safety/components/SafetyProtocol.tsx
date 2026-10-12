@@ -1,7 +1,7 @@
 import { Phone, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EMERGENCY_NUMBERS, SAFETY_SECTIONS } from "../../../../content/safety-protocol";
-import { toLocalPhone as localPhone } from "@/lib/plans/local-phone";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import type { Branch } from "@/types/branches";
 
 
@@ -51,7 +51,7 @@ export function SafetyProtocol({ branches }: { branches: Branch[] }) {
                     dir="ltr"
                     className="font-mono text-sm underline"
                   >
-                    {localPhone(branch.manager_phone!)}
+                    {formatPhoneToLocal(branch.manager_phone!)}
                   </a>
                 </li>
               ))}

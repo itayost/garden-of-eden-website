@@ -7,8 +7,7 @@ import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import type { PlanProduct } from "@/types/plans";
-import { toE164 } from "@/lib/plans/local-phone";
-import { phoneVariants } from "@/lib/plans/phone-variants";
+import { formatPhoneToInternational } from "@/lib/validations/common";
 import { pricingRefusal } from "./discount-permission";
 import { findRecentDuplicate } from "./manual-payment";
 
@@ -47,13 +46,13 @@ async function introPackRefusal(
  * health details the agreement carries.
  */
 export function saleParties(trainee: SaleTrainee) {
-  const loginPhone = toE164(trainee.phone);
+  const loginPhone = formatPhoneToInternational(trainee.phone);
   return {
     loginPhone,
     child: { name: trainee.full_name ?? "מתאמן", birthdate: trainee.birthdate ?? null },
     parent: {
       name: trainee.guardian_name ?? "הורה",
-      phone: trainee.guardian_phone ? toE164(trainee.guardian_phone) : loginPhone,
+      phone: trainee.guardian_phone ? formatPhoneToInternational(trainee.guardian_phone) : loginPhone,
       email: null,
     },
     health: {
@@ -153,7 +152,7 @@ export async function checkNewTraineeSale(
     db
       .from("profiles")
       .select("id, role, birthdate")
-      .in("phone", phoneVariants(input.loginPhone))
+      .eq("phone", formatPhoneToInternational(input.loginPhone))
       .is("deleted_at", null)
       .limit(1)
       .maybeSingle(),

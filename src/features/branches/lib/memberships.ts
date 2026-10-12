@@ -2,8 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { isValidUUID } from "@/lib/validations/common";
-import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import { isValidUUID, normalizePhoneIL } from "@/lib/validations/common";
 import { isInBranchScope, type BranchScope } from "@/lib/branches/branch-scope";
 import type { Branch, BranchOption } from "@/types/branches";
 import { toBranchOption } from "@/types/branches";
@@ -127,7 +126,7 @@ export async function visibleTraineePhones(
 
   return new Set(
     (data ?? [])
-      .map((row) => normalizePhone(row.phone))
+      .map((row) => normalizePhoneIL(row.phone))
       .filter((phone): phone is string => phone !== null),
   );
 }

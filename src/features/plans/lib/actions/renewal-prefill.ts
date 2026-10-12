@@ -6,7 +6,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyRenewalToken } from "@/lib/plans/renewal-token";
 import { resolveRenewalSubject } from "../renewal-subject";
 import type { EnrollmentInput } from "@/lib/validations/enrollment";
-import { toLocalPhone } from "@/lib/plans/local-phone";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import { isActiveTrainee, renewalLocks, usableAccount, type RenewalLocks } from "@/lib/plans/bound-renewal";
 import { alreadyRenewedUntil } from "@/lib/plans/plan-queue";
 import { israelToday } from "@/lib/utils/tasks";
@@ -80,15 +80,15 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
   const usable = usableAccount({ fullName: profile.full_name, birthdate: profile.birthdate, phone: profile.phone });
   const prefill: Partial<EnrollmentInput> = {
     parentName: agreement?.parent_name ?? profile.guardian_name ?? "",
-    payerPhone: toLocalPhone(agreement?.parent_phone ?? profile.guardian_phone),
-    loginPhone: toLocalPhone(usable.phone),
+    payerPhone: formatPhoneToLocal(agreement?.parent_phone ?? profile.guardian_phone),
+    loginPhone: formatPhoneToLocal(usable.phone),
     email: agreement?.parent_email ?? "",
     // The account wins over the last agreement: the purchase lands on it.
     childName: usable.fullName ?? agreement?.child_name ?? "",
     childBirthdate: usable.birthdate ?? agreement?.child_birthdate ?? "",
     medicalNotes: agreement?.medical_notes ?? "",
     emergencyContactName: agreement?.emergency_contact_name ?? "",
-    emergencyContactPhone: toLocalPhone(agreement?.emergency_contact_phone),
+    emergencyContactPhone: formatPhoneToLocal(agreement?.emergency_contact_phone),
   };
 
   const queue = queues.get(profileId)?.queue;

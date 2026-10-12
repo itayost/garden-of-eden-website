@@ -61,7 +61,7 @@ import {
   type RetentionEntry,
   type RetentionReportData,
 } from "../src/lib/arbox/retention";
-import { normalizePhone } from "../src/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "../src/lib/validations/common";
 import { ARBOX_MAX_PAGES, ARBOX_PAGE_LIMIT } from "../src/lib/arbox/constants";
 
 const ALL_MONTHS = ["2026-03-01", "2026-04-01", "2026-05-01", "2026-06-01"];
@@ -121,7 +121,7 @@ function earliestEndDate(data: RetentionReportData): string {
 /** Which fallback of entryIdentity (uid > phone > name) actually matched. */
 function identityScheme(entry: RetentionEntry): "uid" | "phone" | "name" {
   if (entry.user_id != null) return "uid";
-  if (normalizePhone(entry.phone)) return "phone";
+  if (normalizePhoneIL(entry.phone)) return "phone";
   return "name";
 }
 

@@ -5,8 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isActiveTrainee } from "@/lib/plans/bound-renewal";
-import { toE164 } from "@/lib/plans/local-phone";
-import { isValidPhoneIL } from "@/lib/validations/common";
+import { formatPhoneToInternational, isValidPhoneIL } from "@/lib/validations/common";
 import { sendPurchaseRequest } from "@/lib/whatsapp/plan-templates";
 import { buildRenewalUrl, buildTraineePurchaseUrl } from "../renewal-link";
 import { loadPlanQueues } from "../queries";
@@ -41,7 +40,7 @@ export async function requestPurchaseLinkAction(): Promise<PurchaseRequestResult
   waitUntil(limit.pending);
   if (limit.rateLimited) return { error: "כבר נשלחו להורה בקשות היום. אפשר לנסות שוב מחר." };
 
-  const parentPhone = toE164(profile.guardian_phone);
+  const parentPhone = formatPhoneToInternational(profile.guardian_phone);
   const childName = profile.full_name ?? "";
   // A renewal names the Plan (its product preselected, the order records it);
   // a trainee with no Plan gets the link bound to them.

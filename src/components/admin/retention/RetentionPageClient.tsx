@@ -28,7 +28,7 @@ import {
 import { createChurnedCustomer } from "@/lib/actions/admin-churned-customers";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { getAttendanceMonthKeys } from "@/lib/arbox/retention";
-import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "@/lib/validations/common";
 import type {
   RetentionEntry,
   RetentionReportData,
@@ -101,7 +101,7 @@ export function RetentionPageClient({
   const inScope = useCallback(
     (entry: RetentionEntry) => {
       if (visibleSet === null) return true;
-      const phone = normalizePhone(entry.phone);
+      const phone = normalizePhoneIL(entry.phone);
       return phone !== null && visibleSet.has(phone);
     },
     [visibleSet],

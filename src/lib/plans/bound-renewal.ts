@@ -1,6 +1,5 @@
-import { isValidPhoneIL } from "@/lib/validations/common";
+import { formatPhoneToInternational, isValidPhoneIL } from "@/lib/validations/common";
 import { childBirthdateField, childNameField } from "@/lib/validations/enrollment";
-import { toE164 } from "./local-phone";
 
 /** The renewed Trainee's account, as stored. */
 export interface BoundAccount {
@@ -45,7 +44,7 @@ export function usableAccount(account: BoundAccount): UsableAccount {
   return {
     fullName: name.success ? name.data : null,
     birthdate: birthdate.success ? birthdate.data : null,
-    phone: readable && account.phone ? toE164(account.phone) : null,
+    phone: readable && account.phone ? formatPhoneToInternational(account.phone) : null,
     unreadablePhone: Boolean(account.phone?.trim()) && !readable,
   };
 }
@@ -77,7 +76,7 @@ export function bindRenewal(usable: UsableAccount, input: BoundInput): BoundResu
       error: "לא הצלחנו לאמת את מספר הטלפון של החשבון. כתבו לנו בוואטסאפ ונשלים את החידוש יחד.",
     };
   }
-  if (usable.phone !== null && usable.phone !== toE164(input.loginPhone)) {
+  if (usable.phone !== null && usable.phone !== formatPhoneToInternational(input.loginPhone)) {
     return {
       ok: false,
       error: "הקישור הזה הוא לחידוש עבור חשבון קיים, ומספר הטלפון להתחברות שלו לא ניתן לשינוי כאן.",

@@ -25,7 +25,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { loadEnvLocal, getAdminClient } from "./import-utils";
 import { fetchAllArboxUsers, type ArboxUser } from "../src/lib/arbox/client";
-import { normalizePhone } from "../src/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "../src/lib/validations/common";
 import { isLeadPhone } from "../src/types/leads";
 
 const APPLY = process.argv.includes("--apply");
@@ -121,7 +121,7 @@ async function main(): Promise<void> {
 
   const arboxByPhone = new Map<string, ArboxUser>();
   for (const u of arboxUsers) {
-    const key = normalizePhone(u.phone);
+    const key = normalizePhoneIL(u.phone);
     if (key && u.full_name && u.full_name.trim()) arboxByPhone.set(key, u);
   }
 
@@ -153,14 +153,14 @@ async function main(): Promise<void> {
   const phoneOwners = new Map<string, { id: string; full_name: string | null }>();
   for (const p of activePhones) {
     if (targetIds.has(p.id)) continue; // skip the batch itself
-    const key = normalizePhone(p.phone);
+    const key = normalizePhoneIL(p.phone);
     if (key) phoneOwners.set(key, { id: p.id, full_name: p.full_name });
   }
 
   // Detect intra-batch duplicates: 972 numbers normalizing to the same key.
   const keyCount = new Map<string, number>();
   for (const t of targets) {
-    const key = normalizePhone(t.phone);
+    const key = normalizePhoneIL(t.phone);
     if (key) keyCount.set(key, (keyCount.get(key) ?? 0) + 1);
   }
 
@@ -186,7 +186,7 @@ async function main(): Promise<void> {
 
   for (const row of targets) {
     const updates: { full_name?: string; phone?: string; arbox_user_id?: number } = {};
-    const key = normalizePhone(row.phone);
+    const key = normalizePhoneIL(row.phone);
 
     // --- Collision checks (skip both writes when colliding) ---
     if (key && keyCount.get(key)! > 1) {
@@ -217,7 +217,7 @@ async function main(): Promise<void> {
     }
 
     // --- Phone normalization ---
-    const desiredPhone = normalizePhone(row.phone);
+    const desiredPhone = normalizePhoneIL(row.phone);
     if (!desiredPhone) {
       badPhone.push(row);
     } else if (desiredPhone !== row.phone) {

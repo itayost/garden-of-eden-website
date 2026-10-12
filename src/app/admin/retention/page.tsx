@@ -9,7 +9,7 @@ import { listChurnedCustomers } from "@/lib/actions/admin-churned-customers";
 import { listTrainersForAssignmentAction } from "@/lib/actions/admin-trainers-list";
 import { RetentionPageClient } from "@/components/admin/retention/RetentionPageClient";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "@/lib/validations/common";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { scopedProfileIds } from "@/features/branches/lib/memberships";
 import {
@@ -66,17 +66,18 @@ export default async function RetentionPage() {
   if ("error" in scopeResult) redirect("/dashboard");
   const scope = scopeResult.data.scope;
   const scopedIds = await scopedProfileIds(adminClient, scope);
+  const scopedIdSet = scopedIds === null ? null : new Set(scopedIds);
   const visiblePhones =
-    scopedIds === null
+    scopedIdSet === null
       ? null
       : (traineeRows ?? [])
-          .filter((row) => scopedIds.includes(row.id))
-          .map((row) => normalizePhone(row.phone))
+          .filter((row) => scopedIdSet.has(row.id))
+          .map((row) => normalizePhoneIL(row.phone))
           .filter((phone): phone is string => phone !== null);
 
   const traineePositions: Record<string, string | null> = {};
   for (const row of traineeRows ?? []) {
-    const normalized = normalizePhone(row.phone);
+    const normalized = normalizePhoneIL(row.phone);
     if (normalized) {
       traineePositions[normalized] = row.position ?? null;
     }

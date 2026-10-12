@@ -72,12 +72,12 @@ export function LeadDataTable({
   );
 
   const filteredData = useMemo(() => {
+    const s = globalFilter.toLowerCase();
+    // Phones are stored as 972xxxxxxxxx; match a digits-only fragment of the
+    // typed number (e.g. "050-1234567" -> "501234567") against the stored value.
+    const phoneFragment = leadPhoneSearchFragment(globalFilter);
     return data.filter((lead) => {
       if (globalFilter) {
-        const s = globalFilter.toLowerCase();
-        // Phones are stored as 972xxxxxxxxx; match a digits-only fragment of the
-        // typed number (e.g. "050-1234567" -> "501234567") against the stored value.
-        const phoneFragment = leadPhoneSearchFragment(globalFilter);
         const matchesPhone = phoneFragment
           ? (lead.phone ?? "").includes(phoneFragment)
           : (lead.phone ?? "").includes(globalFilter);

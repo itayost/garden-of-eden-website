@@ -20,6 +20,7 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
+import { normalizePhoneIL } from "../src/lib/validations/common";
 
 // Load .env.local manually
 const envPath = resolve(process.cwd(), ".env.local");
@@ -55,18 +56,6 @@ type ArboxBirthdayEntry = {
   name: string;
   birthday: string | null;
 };
-
-// ── Phone normalization (same as src/lib/arbox/normalize-phone.ts) ──
-
-function normalizePhone(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const cleaned = raw.replace(/(?!^\+)\D/g, "");
-  if (cleaned.startsWith("+972") && cleaned.length === 13) return cleaned;
-  if (cleaned.startsWith("972") && cleaned.length === 12) return `+${cleaned}`;
-  if (cleaned.startsWith("0") && cleaned.length === 10)
-    return `+972${cleaned.slice(1)}`;
-  return null;
-}
 
 function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
@@ -171,7 +160,7 @@ async function main() {
   const arboxByName = new Map<string, ArboxUser>();
 
   for (const user of arboxUsers) {
-    const phone = normalizePhone(user.phone);
+    const phone = normalizePhoneIL(user.phone);
     if (phone) arboxByPhone.set(phone, user);
 
     const name = normalizeName(user.full_name || "");
@@ -214,7 +203,7 @@ async function main() {
 
   for (const profile of profiles) {
     // Try to find the current Arbox user for this profile
-    const profilePhone = normalizePhone(profile.phone);
+    const profilePhone = normalizePhoneIL(profile.phone);
     let arboxMatch: ArboxUser | undefined;
     let matchMethod = "";
 

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/utils/iso-date";
-import { toLocalPhone } from "@/lib/plans/local-phone";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import { arboxTermsFromProduct, type ArboxTermsDraft } from "@/lib/plans/arbox-terms";
 import {
   getStaffPaymentContextAction,
@@ -353,7 +353,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                       {method === "card" ? "שלח להורה את הקישור לתשלום בוואטסאפ" : "שלח אישור וקישור לחתימה בוואטסאפ"}
                       {context.parentPhone && (
                         <span className="block text-xs font-normal text-muted-foreground" dir="ltr">
-                          {toLocalPhone(context.parentPhone)}
+                          {formatPhoneToLocal(context.parentPhone)}
                         </span>
                       )}
                     </Label>

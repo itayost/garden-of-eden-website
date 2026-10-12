@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   isValidUUID,
   isValidPhoneIL,
-  isValidMobilePhoneIL,
+  normalizePhoneIL,
   formatPhoneToInternational,
   formatPhoneToLocal,
   isValidDateString,
@@ -53,18 +53,6 @@ describe("isValidUUID", () => {
   });
 });
 
-describe("isValidMobilePhoneIL", () => {
-  it("accepts local, E.164, and bare mobile spellings", () => {
-    expect(isValidMobilePhoneIL("0501234567")).toBe(true);
-    expect(isValidMobilePhoneIL("+972501234567")).toBe(true);
-    expect(isValidMobilePhoneIL("972501234567")).toBe(true);
-  });
-
-  it("rejects landlines", () => {
-    expect(isValidMobilePhoneIL("0312345678")).toBe(false);
-  });
-});
-
 describe("isValidPhoneIL", () => {
   it("returns true for valid 05X format", () => {
     expect(isValidPhoneIL("0501234567")).toBe(true);
@@ -112,6 +100,48 @@ describe("isValidPhoneIL", () => {
 
   it("returns false for empty string", () => {
     expect(isValidPhoneIL("")).toBe(false);
+  });
+});
+
+describe("normalizePhoneIL", () => {
+  it("converts 05x local format to E.164", () => {
+    expect(normalizePhoneIL("0521234567")).toBe("+972521234567");
+  });
+
+  it("strips dashes from local format", () => {
+    expect(normalizePhoneIL("052-123-4567")).toBe("+972521234567");
+  });
+
+  it("strips spaces from local format", () => {
+    expect(normalizePhoneIL("052 123 4567")).toBe("+972521234567");
+  });
+
+  it("keeps already-normalized E.164 unchanged", () => {
+    expect(normalizePhoneIL("+972521234567")).toBe("+972521234567");
+  });
+
+  it("adds + to 972-prefixed number missing it", () => {
+    expect(normalizePhoneIL("972521234567")).toBe("+972521234567");
+  });
+
+  it("returns null for null input", () => {
+    expect(normalizePhoneIL(null)).toBeNull();
+  });
+
+  it("returns null for empty string", () => {
+    expect(normalizePhoneIL("")).toBeNull();
+  });
+
+  it("returns null for non-Israeli number", () => {
+    expect(normalizePhoneIL("12025551234")).toBeNull();
+  });
+
+  it("returns null for truncated +972 number", () => {
+    expect(normalizePhoneIL("+972123")).toBeNull();
+  });
+
+  it("returns null for over-length +972 number", () => {
+    expect(normalizePhoneIL("+9725212345678")).toBeNull();
   });
 });
 
