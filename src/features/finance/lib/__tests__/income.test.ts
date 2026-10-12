@@ -145,6 +145,19 @@ describe("Arbox", () => {
   });
 });
 
+describe("Arbox refunds", () => {
+  test("a refund paid back through Arbox stays out of the app totals and the refund list", () => {
+    const sale = order({ paidAt: "2026-10-12T09:00:00Z", amountIls: 450 });
+    const back = refund({ method: "arbox", amountIls: 310 });
+    const r = report([sale], [back]);
+    expect(r.received).toBe(450);
+    expect(r.refunds).toBe(0);
+    expect(r.net).toBe(450);
+    expect(r.refundRows).toEqual([]);
+    expect(r.days[0]).toMatchObject({ refunds: 0, net: 450 });
+  });
+});
+
 describe("methods, installments and free", () => {
   const rows = [
     order({ id: "cash", method: "cash", amountIls: 450 }),
@@ -217,6 +230,16 @@ describe("cash-up per staff member", () => {
     const noa = report(rows, refunds).staff.find((s) => s.staff.id === NOA.id);
     expect(noa?.inHand).toBe(380);
     expect(noa?.linksSent).toEqual([{ orderId: "n2", childName: "דניאל מזרחי", amountIls: 1200 }]);
+  });
+  test("an Arbox repair is not part of anyone's cash-up", () => {
+    const repair = order({ id: "ar", method: "arbox", receivedBy: EDEN, amountIls: 1329, arboxPurchasedOn: DAY });
+    const staff = report([repair, rows[0]]).staff;
+    expect(staff.map((s) => s.staff.id)).toEqual([YOAV.id]);
+  });
+  test("a cash refund by someone with no payments in range still gets a row, in the red", () => {
+    const staff = report([], [refund({ method: "cash", amountIls: 520, createdBy: NOA })]).staff;
+    expect(staff).toHaveLength(1);
+    expect(staff[0]).toMatchObject({ staff: NOA, cashRefundsOut: 520, inHand: -520 });
   });
   test("a refund by transfer does not touch anyone's cash", () => {
     const staff = report(rows, [refund({ method: "transfer", createdBy: EDEN })]).staff;

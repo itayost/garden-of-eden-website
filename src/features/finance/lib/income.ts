@@ -204,7 +204,10 @@ export function buildIncomeReport({ from, to, stripFrom, orders, refunds }: Inco
   const allPayments: IncomePayment[] = counted
     .filter((o) => o.method !== "arbox")
     .map((o) => ({ ...o, day: israelDateStr(o.paidAt), collector: collectorOf(o), incomeMethod: incomeMethodOf(o) }));
-  const allRefunds: IncomeRefund[] = refunds.map((r) => ({ ...r, day: israelDateStr(r.createdAt) }));
+  // A refund paid back through Arbox is Arbox money, so it stays out of the app totals like the sale did.
+  const allRefunds: IncomeRefund[] = refunds
+    .filter((r) => r.method !== "arbox")
+    .map((r) => ({ ...r, day: israelDateStr(r.createdAt) }));
 
   const payments = allPayments.filter((p) => inRange(p.day)).sort((a, b) => a.paidAt.localeCompare(b.paidAt));
   const refundRows = allRefunds.filter((r) => inRange(r.day)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
