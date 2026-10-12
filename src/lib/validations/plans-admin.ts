@@ -27,8 +27,21 @@ const optionalText = (max: number) =>
     .transform((v) => (v === "" ? null : v));
 
 /** What staff may record by hand. Card payments only ever come from the card page. */
-export const manualPaymentMethodSchema = z.enum(["cash", "transfer", "bit", "free"]);
+export const manualPaymentMethodSchema = z.enum(["cash", "transfer", "bit", "check", "free"]);
 export type ManualPaymentMethod = z.infer<typeof manualPaymentMethodSchema>;
+
+/**
+ * A cheque's bank, branch and account; the number travels in reference.
+ * Shape only: recordManualPayment checks them through chequeDetails().
+ */
+const chequeSchema = z
+  .object({
+    bank: z.string().max(100),
+    branch: z.string().max(100),
+    account: z.string().max(100),
+  })
+  .nullable()
+  .default(null);
 
 const singleLine = /^[^\r\n\t]+$/;
 
@@ -85,6 +98,7 @@ export const newTraineeSchema = z.object({
   parentName: optionalText(100),
   paymentMethod: manualPaymentMethodSchema,
   reference: optionalText(60),
+  cheque: chequeSchema,
   startsOn: isoDate,
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
@@ -104,6 +118,7 @@ export const staffPaymentSchema = z.object({
   productId: uuid,
   paymentMethod: manualPaymentMethodSchema,
   reference: optionalText(60),
+  cheque: chequeSchema,
   startsOn: isoDate.nullable().default(null),
   sendWhatsApp: z.boolean(),
   discount: discountSchema,
@@ -209,7 +224,7 @@ export const healthSchema = z.object({
 export type HealthInput = z.input<typeof healthSchema>;
 
 /** How the money went back. arbox: refunded in Arbox; none: nothing was paid. */
-export const refundMethodSchema = z.enum(["card", "cash", "transfer", "bit", "arbox", "none"]);
+export const refundMethodSchema = z.enum(["card", "cash", "transfer", "bit", "check", "arbox", "none"]);
 export type RefundMethod = z.infer<typeof refundMethodSchema>;
 
 /** What the confirmation showed (readToken() in src/lib/plans/read-guard.ts). */

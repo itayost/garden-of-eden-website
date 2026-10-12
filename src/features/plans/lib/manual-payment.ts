@@ -9,6 +9,8 @@ import { agreementLink, notifyOrderFulfilled } from "@/features/enrollment/lib/n
 import { insertUnsignedAgreement } from "./unsigned-agreement";
 import type { Discount } from "@/lib/plans/discount";
 import { orderPlanName, type ManualCardTerms } from "@/lib/plans/manual-card";
+import { chequeDetails, type ChequeBankDraft } from "@/lib/plans/cheque";
+import type { ManualPaymentMethod } from "@/lib/validations/plans-admin";
 import { staffOrderColumns } from "./staff-order";
 import {
   PAYMENT_METHOD_LABELS_HE,
@@ -33,8 +35,11 @@ export interface ManualPaymentInput {
     emergencyContactPhone: string | null;
   };
   /** free: given without charging (amount 0, no receipt), with freeReason. */
-  paymentMethod: "cash" | "transfer" | "bit" | "free";
+  paymentMethod: ManualPaymentMethod;
+  /** אסמכתא for a transfer or Bit; the cheque number for a cheque. */
   reference: string | null;
+  /** A cheque's bank, branch and account; ignored for any other method. */
+  cheque: ChequeBankDraft | null;
   /** Null lets fulfillment chain after a running plan (existing trainee). */
   startsOn: string | null;
   sendWhatsApp: boolean;
@@ -96,7 +101,11 @@ export async function recordManualPayment(
 ): Promise<ManualPaymentResult | { ok: false; error: string }> {
   const { product } = input;
   // Cash and a free Plan have no reference; a leftover from a switched method must not stick.
-  const reference = input.paymentMethod === "cash" || input.paymentMethod === "free" ? null : input.reference;
+  const typedReference = input.paymentMethod === "cash" || input.paymentMethod === "free" ? null : input.reference;
+  // Morning will not receipt a cheque without every detail, so it is refused before anything is written.
+  const cheque = chequeDetails(input.paymentMethod, typedReference, input.cheque);
+  if (!cheque.ok) return { ok: false, error: cheque.problem };
+  const reference = cheque.details?.number ?? typedReference;
   // The reason counts only for a free Plan; a leftover from a switched method is dropped.
   const freeReason = input.paymentMethod === "free" ? input.freeReason : null;
   if (input.paymentMethod === "free" && !freeReason) return { ok: false, error: "נדרשת סיבה למסלול ללא תשלום" };
@@ -118,6 +127,9 @@ export async function recordManualPayment(
       payment_provider: "manual",
       payment_method: input.paymentMethod,
       reference,
+      cheque_bank: cheque.details?.bank ?? null,
+      cheque_branch: cheque.details?.branch ?? null,
+      cheque_account: cheque.details?.account ?? null,
       received_by: input.actor.id,
     })
     .select("*")

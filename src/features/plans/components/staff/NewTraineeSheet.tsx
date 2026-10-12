@@ -20,7 +20,8 @@ import { FreeReasonField, freeReasonReady } from "./FreeReasonField";
 import { useDiscount } from "./useDiscount";
 import { DuplicatePrompt } from "./DuplicatePrompt";
 import { PaymentLinkResult, type SheetDone } from "./PaymentLinkResult";
-import { handMethods, PaymentMethodPicker } from "./PaymentMethodPicker";
+import { EMPTY_CHEQUE, handMethods, PaymentMethodPicker } from "./PaymentMethodPicker";
+import type { ChequeBankDraft } from "@/lib/plans/cheque";
 import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
 
@@ -43,6 +44,8 @@ interface FormState {
   parentName: string;
   paymentMethod: SheetMethod;
   reference: string;
+  /** A cheque's bank, branch and account (method check). */
+  cheque: ChequeBankDraft;
   startsOn: string;
   sendWhatsApp: boolean;
   /** Why the Plan is given without charging (method free). */
@@ -58,6 +61,7 @@ const emptyForm = (): FormState => ({
   parentName: "",
   paymentMethod: "cash",
   reference: "",
+  cheque: EMPTY_CHEQUE,
   startsOn: israelToday(),
   sendWhatsApp: true,
   freeReason: "",
@@ -98,6 +102,7 @@ export function NewTraineeSheet({ products, morningConfigured, cardLinksOpen, is
     ...people(),
     paymentMethod,
     reference: form.reference,
+    cheque: paymentMethod === "check" ? form.cheque : null,
     startsOn: form.startsOn,
     freeReason: free ? form.freeReason : null,
     confirmDuplicate,
@@ -210,6 +215,8 @@ export function NewTraineeSheet({ products, morningConfigured, cardLinksOpen, is
                     setDuplicate(null);
                   }}
                   onReferenceChange={(r) => set("reference", r)}
+                  cheque={form.cheque}
+                  onChequeChange={(c) => set("cheque", c)}
                   disabled={pending}
                 />
                 {free && (

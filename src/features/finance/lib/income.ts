@@ -12,7 +12,7 @@ import type { OrderStatus, PaymentMethod } from "@/types/plans";
 
 /** A sale counts on the day it was paid even if it was later voided or refunded. */
 export const COUNTED_STATUSES: readonly OrderStatus[] = ["paid", "refunded", "voided"];
-export const INCOME_METHODS = ["cash", "card", "bit", "transfer", "free"] as const;
+export const INCOME_METHODS = ["cash", "card", "bit", "transfer", "check", "free"] as const;
 export type IncomeMethod = (typeof INCOME_METHODS)[number];
 
 export interface StaffRef {
@@ -23,7 +23,7 @@ export interface StaffRef {
 /** A staff payment whose staff member was deleted (received_by is ON DELETE SET NULL). */
 export const UNKNOWN_STAFF: StaffRef = { id: "unknown", name: "לא ידוע" };
 
-const HAND_METHODS: readonly PaymentMethod[] = ["cash", "bit", "transfer", "free"];
+const HAND_METHODS: readonly PaymentMethod[] = ["cash", "bit", "transfer", "check", "free"];
 
 export interface IncomeOrderRow {
   id: string;
@@ -109,9 +109,11 @@ export interface StaffCashUp {
   cash: number;
   bit: number;
   transfer: number;
+  /** Cheques they took: paper they still have to hand in. */
+  check: number;
   /** Cash refunds this person recorded and paid out. */
   cashRefundsOut: number;
-  /** cash + bit + transfer - cashRefundsOut: what they should account for. */
+  /** cash + bit + transfer + check - cashRefundsOut: what they should account for. */
   inHand: number;
   /** Card links they sent that were paid: listed, never added. */
   linksSent: { childName: string; amountIls: number }[];
@@ -174,6 +176,7 @@ function staffCashUp(payments: readonly IncomePayment[], refunds: readonly Incom
       const cash = by("cash");
       const bit = by("bit");
       const transfer = by("transfer");
+      const check = by("check");
       const cashRefundsOut = sum(
         refunds.filter((r) => r.method === "cash" && r.createdBy.id === staff.id).map((r) => r.amountIls),
       );
@@ -182,8 +185,9 @@ function staffCashUp(payments: readonly IncomePayment[], refunds: readonly Incom
         cash,
         bit,
         transfer,
+        check,
         cashRefundsOut,
-        inHand: sum([cash, bit, transfer, -cashRefundsOut]),
+        inHand: sum([cash, bit, transfer, check, -cashRefundsOut]),
         linksSent: links.map((p) => ({ childName: p.childName, amountIls: p.amountIls })),
         freeGiven: own.filter((p) => p.incomeMethod === "free").length,
       };

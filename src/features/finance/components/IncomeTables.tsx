@@ -14,6 +14,7 @@ const REFUND_METHOD_LABEL: Record<RefundMethod, string> = {
   cash: "מזומן",
   transfer: "העברה",
   bit: "ביט",
+  check: "צ׳ק",
   arbox: "Arbox",
   none: "ללא",
 };

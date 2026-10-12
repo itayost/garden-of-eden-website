@@ -32,12 +32,13 @@ export interface PlanProduct {
  * Arbox, recorded here only to create the plan; the rest are taken by staff.
  */
 /** free: registered without charging (amount 0, with a reason). */
-export type PaymentMethod = "cash" | "transfer" | "bit" | "card" | "arbox" | "free";
+export type PaymentMethod = "cash" | "transfer" | "bit" | "check" | "card" | "arbox" | "free";
 
 export const PAYMENT_METHOD_LABELS_HE: Record<PaymentMethod, string> = {
   cash: "מזומן",
   transfer: "העברה בנקאית",
   bit: "ביט",
+  check: "צ׳ק",
   card: "כרטיס אשראי",
   arbox: "Arbox",
   free: "ללא תשלום",
@@ -76,8 +77,12 @@ export interface Order {
   installments: number;
   provider_response: unknown | null;
   payment_method: PaymentMethod | null;
-  /** אסמכתא for transfers and Bit. */
+  /** אסמכתא for transfers and Bit; the cheque number for a cheque. */
   reference: string | null;
+  /** A cheque's bank, branch and account, all set for method check; null otherwise. */
+  cheque_bank: string | null;
+  cheque_branch: string | null;
+  cheque_account: string | null;
   /** The staff member who took a manual payment. */
   received_by: string | null;
   /** The staff member who sent this order as a Payment link; null otherwise. */

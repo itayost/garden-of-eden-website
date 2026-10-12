@@ -1,9 +1,10 @@
 "use client";
 
-import { Banknote, CreditCard, Dumbbell, Gift, Landmark, Smartphone } from "lucide-react";
+import { Banknote, CreditCard, Dumbbell, Gift, Landmark, ScrollText, Smartphone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { CHEQUE_LIMITS, type ChequeBankDraft } from "@/lib/plans/cheque";
 import type { ManualPaymentMethod } from "@/lib/validations/plans-admin";
 import { PAYMENT_METHOD_LABELS_HE } from "@/types/plans";
 
@@ -15,13 +16,16 @@ const ICONS: Record<PickerMethod, typeof Banknote> = {
   cash: Banknote,
   transfer: Landmark,
   bit: Smartphone,
+  check: ScrollText,
   card: CreditCard,
   arbox: Dumbbell,
   free: Gift,
 };
 
 /** The hand-taken methods every staff sheet offers. */
-const MANUAL_METHODS: readonly ManualPaymentMethod[] = ["cash", "transfer", "bit", "free"];
+const MANUAL_METHODS: readonly ManualPaymentMethod[] = ["cash", "transfer", "bit", "check", "free"];
+
+export const EMPTY_CHEQUE: ChequeBankDraft = { bank: "", branch: "", account: "" };
 
 /** The hand-taken methods, and a Payment link once online card payments are open. */
 export const handMethods = (cardLinksOpen: boolean): (ManualPaymentMethod | "card")[] =>
@@ -31,6 +35,7 @@ export const handMethods = (cardLinksOpen: boolean): (ManualPaymentMethod | "car
 const REFERENCE_COPY: Partial<Record<PickerMethod, { label: string; placeholder: string }>> = {
   transfer: { label: "אסמכתא (לא חובה)", placeholder: "4 ספרות אחרונות של האסמכתא" },
   bit: { label: "אסמכתא (לא חובה)", placeholder: "4 ספרות אחרונות של האסמכתא" },
+  check: { label: "מספר הצ׳ק", placeholder: "כפי שמודפס על הצ׳ק" },
   arbox: { label: "מספר המנוי או הקבלה ב-Arbox (לא חובה)", placeholder: "לדוגמה 18554133" },
 };
 
@@ -39,7 +44,10 @@ interface PaymentMethodPickerProps<M extends PickerMethod> {
   reference: string;
   onMethodChange: (method: M) => void;
   onReferenceChange: (reference: string) => void;
-  /** The methods to offer, in order. Defaults to cash, transfer, and Bit. */
+  /** A cheque's bank, branch and account, shown while צ׳ק is chosen. */
+  cheque: ChequeBankDraft;
+  onChequeChange: (cheque: ChequeBankDraft) => void;
+  /** The methods to offer, in order. Defaults to the hand-taken methods. */
   methods?: readonly M[];
   disabled?: boolean;
 }
@@ -50,6 +58,8 @@ export function PaymentMethodPicker<M extends PickerMethod>({
   reference,
   onMethodChange,
   onReferenceChange,
+  cheque,
+  onChequeChange,
   methods = MANUAL_METHODS as readonly M[],
   disabled,
 }: PaymentMethodPickerProps<M>) {
@@ -75,7 +85,8 @@ export function PaymentMethodPicker<M extends PickerMethod>({
                 disabled={disabled}
                 onClick={() => {
                   onMethodChange(value);
-                  if (!REFERENCE_COPY[value]) onReferenceChange("");
+                  // A transfer's אסמכתא must never become a cheque number, or the reverse.
+                  if (!REFERENCE_COPY[value] || (value === "check") !== (method === "check")) onReferenceChange("");
                 }}
                 className={cn(
                   "flex h-16 flex-col items-center justify-center gap-1 rounded-xl border text-sm font-medium transition-colors",
@@ -102,11 +113,50 @@ export function PaymentMethodPicker<M extends PickerMethod>({
             inputMode="numeric"
             dir="ltr"
             className="h-12 rounded-xl text-base text-right"
-            maxLength={60}
+            maxLength={method === "check" ? CHEQUE_LIMITS.number : 60}
             disabled={disabled}
           />
         </div>
       )}
+      {method === "check" && <ChequeFields value={cheque} onChange={onChequeChange} disabled={disabled} />}
+    </div>
+  );
+}
+
+const CHEQUE_FIELDS: { key: keyof ChequeBankDraft; label: string; placeholder: string; numeric: boolean; maxLength: number }[] = [
+  { key: "bank", label: "בנק", placeholder: "לדוגמה הפועלים", numeric: false, maxLength: CHEQUE_LIMITS.bank },
+  { key: "branch", label: "סניף", placeholder: "מספר הסניף", numeric: true, maxLength: CHEQUE_LIMITS.branch },
+  { key: "account", label: "חשבון", placeholder: "מספר החשבון", numeric: true, maxLength: CHEQUE_LIMITS.account },
+];
+
+/** Morning's receipt for a cheque needs all of these; every one is printed on the cheque. */
+function ChequeFields({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: ChequeBankDraft;
+  onChange: (cheque: ChequeBankDraft) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {CHEQUE_FIELDS.map((field) => (
+        <div key={field.key} className={cn("space-y-1", field.key === "bank" && "col-span-3")}>
+          <Label htmlFor={`cheque-${field.key}`}>{field.label}</Label>
+          <Input
+            id={`cheque-${field.key}`}
+            value={value[field.key]}
+            onChange={(e) => onChange({ ...value, [field.key]: e.target.value })}
+            placeholder={field.placeholder}
+            inputMode={field.numeric ? "numeric" : "text"}
+            dir={field.numeric ? "ltr" : "rtl"}
+            className={cn("h-12 rounded-xl text-base", field.numeric && "text-end")}
+            maxLength={field.maxLength}
+            disabled={disabled}
+          />
+        </div>
+      ))}
     </div>
   );
 }
