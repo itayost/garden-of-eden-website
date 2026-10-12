@@ -101,11 +101,11 @@ export function ScheduleClient({ view }: { view: TraineeScheduleView }) {
                   <div className="font-bold">
                     {hebrewWeekday(b.date)} {shortDate(b.date)} · {b.time}
                   </div>
-                  <div className="text-muted-foreground">
-                    {b.trainerName}
-                    {b.location ? ` · ${b.location}` : ""}
-                    {b.byStaff ? " · נקבע על ידי הצוות" : ""}
-                  </div>
+                  {(b.location || b.byStaff) && (
+                    <div className="text-muted-foreground">
+                      {[b.location, b.byStaff ? "נקבע על ידי הצוות" : null].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
                 </div>
                 {!b.byStaff && b.cancelState !== "closed" && (
                   <Button variant="outline" size="sm" onClick={() => setToCancel(b)} disabled={pending}>
@@ -166,7 +166,6 @@ export function ScheduleClient({ view }: { view: TraineeScheduleView }) {
                       {slot.label && <span className="font-normal text-muted-foreground">· {slot.label}</span>}
                     </div>
                     <div className="mt-0.5 flex flex-wrap gap-x-3 text-muted-foreground">
-                      <span>{slot.trainerName}</span>
                       {slot.location && (
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
@@ -204,7 +203,7 @@ export function ScheduleClient({ view }: { view: TraineeScheduleView }) {
           <DialogHeader className="px-4 pt-4 pb-3 text-start sm:px-6 sm:pt-6">
             <DialogTitle>להירשם לאימון?</DialogTitle>
             <DialogDescription>
-              {toBook && `${hebrewWeekday(toBook.date)} ${shortDate(toBook.date)} בשעה ${toBook.time} עם ${toBook.trainerName}`}
+              {toBook && `${hebrewWeekday(toBook.date)} ${shortDate(toBook.date)} בשעה ${toBook.time}`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
