@@ -1,4 +1,3 @@
-import { trainerNames } from "@/lib/utils/trainer-color";
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -26,7 +25,6 @@ export async function loadNextBooking(userId: string): Promise<{ canBook: boolea
       slotId: r.slot_id,
       date: r.schedule_date,
       time: r.start_time.slice(0, 5),
-      trainerName: trainerNames(r.trainers ?? []) || "הצוות",
       location: r.location_he,
       cancelState: cancelState(r.schedule_date, r.start_time, now),
       byStaff: r.source === "staff",

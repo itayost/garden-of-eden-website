@@ -1,4 +1,3 @@
-import { trainerNames } from "@/lib/utils/trainer-color";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -14,7 +13,6 @@ interface ReminderRow {
   slot: {
     schedule_date: string;
     start_time: string;
-    trainers: { trainer_name: string; order_index: number }[] | null;
     location_he: string | null;
     branch_id: string | null;
   } | null;
@@ -31,7 +29,7 @@ export async function sendBookingReminders(
 ): Promise<{ sent: number; failed: number }> {
   const tomorrow = addDays(today, 1);
   const { data } = (await typedFrom(db, "daily_schedule_slot_trainees")
-    .select("id, trainee_id, trainee_name, slot:daily_schedule_slots!inner(schedule_date, start_time, location_he, branch_id, trainers:daily_schedule_slot_trainers(trainer_name, order_index))")
+    .select("id, trainee_id, trainee_name, slot:daily_schedule_slots!inner(schedule_date, start_time, location_he, branch_id)")
     .eq("source", "self")
     .is("cancelled_at", null)
     .is("reminded_at", null)
@@ -65,7 +63,9 @@ export async function sendBookingReminders(
     const result = await sendBookingReminder(formatPhoneToInternational(phone), {
       traineeName: row.trainee_name,
       time: slot.start_time.slice(0, 5),
-      trainerName: trainerNames(slot.trainers ?? []) || "הצוות",
+      // Trainees are not told who coaches; the approved template still has
+      // the slot ("אימון עם {{3}}"), so it names the academy.
+      trainerName: "צוות האקדמיה",
       place: slot.location_he ?? branchName.get(slot.branch_id ?? "") ?? "המגרש",
     });
     if (!result.success) {
