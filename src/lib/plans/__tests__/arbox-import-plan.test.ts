@@ -158,6 +158,7 @@ describe("new plan", () => {
           profileId: "prof-1",
           amountIls: 1250,
           reference: "Arbox כרטיסייה 28.9",
+          purchasedOn: "2026-09-28",
           childName: "יון דגן",
           childBirthdate: "2015-01-01",
           parentName: "הורה",
@@ -174,6 +175,12 @@ describe("new plan", () => {
         },
       },
     ]);
+  });
+
+  test("the order carries the Arbox purchase day, not the import day", () => {
+    const { actions } = run({ purchases: [cardPurchase({ purchaseDate: "2026-09-20" })] });
+
+    expect(actions[0].order.purchasedOn).toBe("2026-09-20");
   });
 
   test("a card bought earlier may start today, never before", () => {

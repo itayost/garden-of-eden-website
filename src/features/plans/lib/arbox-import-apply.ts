@@ -30,6 +30,7 @@ async function insertOrder(db: Db, branchId: string, o: ImportOrderDraft): Promi
       payment_method: "arbox",
       provider_transaction_id: o.key,
       reference: o.reference,
+      arbox_purchased_on: o.purchasedOn,
       received_by: null,
       amount_ils: o.amountIls,
       parent_name: o.parentName,

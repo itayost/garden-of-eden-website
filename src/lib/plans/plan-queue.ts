@@ -363,6 +363,11 @@ type ReminderStamps = Pick<
   paidInArbox: boolean;
 };
 
+/** The last Plan in the queue that actually runs: one queued past its own end never does. */
+export function queueTail<P extends QueuePlan>(queue: PlanQueue<P>): PlanInQueue<P> | null {
+  return queue.plans.filter((e) => e.startsOn <= e.endsOn).at(-1) ?? null;
+}
+
 /**
  * The renewal reminder due for a queue, if any, and the Plan whose stamp
  * records it: always the one at the end of the queue, so a queued renewal
@@ -371,8 +376,7 @@ type ReminderStamps = Pick<
 export function dueReminder<P extends QueuePlan & ReminderStamps>(
   queue: PlanQueue<P>,
 ): { milestone: ReminderMilestone; plan: P } | null {
-  // The last Plan that runs: one queued past its own end never does.
-  const tail = queue.plans.filter((e) => e.startsOn <= e.endsOn).at(-1);
+  const tail = queueTail(queue);
   if (!tail) return null;
   // A Freeze pauses the reminders; the moved end brings them back afterwards.
   if (queue.frozen) return null;

@@ -2049,6 +2049,7 @@ export type Database = {
         Row: {
           amount_ils: number
           approval_number: string | null
+          arbox_purchased_on: string | null
           branch_id: string
           card_brand: string | null
           card_last4: string | null
@@ -2091,6 +2092,7 @@ export type Database = {
         Insert: {
           amount_ils: number
           approval_number?: string | null
+          arbox_purchased_on?: string | null
           branch_id: string
           card_brand?: string | null
           card_last4?: string | null
@@ -2133,6 +2135,7 @@ export type Database = {
         Update: {
           amount_ils?: number
           approval_number?: string | null
+          arbox_purchased_on?: string | null
           branch_id?: string
           card_brand?: string | null
           card_last4?: string | null
