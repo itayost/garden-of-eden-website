@@ -26,6 +26,16 @@ function paymentFor(order: Order): ReceiptPayment {
       return { kind: "bit", reference: order.reference };
     case "cash":
       return { kind: "cash" };
+    // orders_cheque_details_check guarantees every detail on a cheque order.
+    case "check":
+      return {
+        kind: "check",
+        number: order.reference ?? "",
+        bank: order.cheque_bank ?? "",
+        branch: order.cheque_branch ?? "",
+        account: order.cheque_account ?? "",
+      };
+    // Only a card is left: the card page, or a legacy Morning order with no method.
     default:
       return {
         kind: "card",

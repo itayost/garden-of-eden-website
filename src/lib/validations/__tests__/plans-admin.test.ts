@@ -36,6 +36,13 @@ describe("staffPaymentSchema", () => {
     expect(staffPaymentSchema.safeParse({ ...base, freeReason: "א" }).success).toBe(false);
   });
 
+  it("accepts a cheque with its bank details, and no details for any other method", () => {
+    const base = { traineeId: UUID, productId: UUID, reference: "1002", sendWhatsApp: true };
+    const cheque = { bank: "הפועלים", branch: "532", account: "123456" };
+    expect(staffPaymentSchema.parse({ ...base, paymentMethod: "check", cheque }).cheque).toEqual(cheque);
+    expect(staffPaymentSchema.parse({ ...base, paymentMethod: "cash" }).cheque).toBeNull();
+  });
+
   it("refuses arbox: an Arbox plan has its own action with its own terms", () => {
     const result = staffPaymentSchema.safeParse({
       traineeId: UUID,

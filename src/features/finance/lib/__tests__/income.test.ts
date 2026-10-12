@@ -247,6 +247,21 @@ describe("cash-up per staff member", () => {
     expect(staff).toHaveLength(1);
     expect(staff[0]).toMatchObject({ staff: NOA, cashRefundsOut: 520, inHand: -520 });
   });
+  test("a cheque is in the hand of whoever took it, like cash", () => {
+    const cheque = order({ id: "y4", method: "check", amountIls: 600, receivedBy: YOAV, reference: "1002" });
+    const yoav = report([...rows, cheque], refunds).staff.find((s) => s.staff.id === YOAV.id);
+    expect(yoav).toMatchObject({ cash: 970, bit: 450, check: 600, inHand: 2020 });
+  });
+  test("a cheque with no one recorded stays a staff payment, never online", () => {
+    expect(collectorOf({ receivedBy: null, paymentLinkBy: null, method: "check" })).toEqual({ kind: "staff", staff: UNKNOWN_STAFF });
+  });
+  test("cheques have their own row in the per-method totals", () => {
+    const cheque = order({ id: "c1", method: "check", amountIls: 600, receivedBy: YOAV });
+    expect(report([rows[0], cheque]).byMethod).toEqual([
+      { method: "cash", total: 450, count: 1 },
+      { method: "check", total: 600, count: 1 },
+    ]);
+  });
   test("a refund by transfer does not touch anyone's cash", () => {
     const staff = report(rows, [refund({ method: "transfer", createdBy: EDEN })]).staff;
     expect(staff.find((s) => s.staff.id === EDEN.id)?.cashRefundsOut).toBe(0);

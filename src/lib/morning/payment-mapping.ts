@@ -1,18 +1,21 @@
 import type { CardBrand } from "@/lib/payments/card";
+import type { ChequeDetails } from "@/lib/plans/cheque";
 
 /**
  * How one payment is described to Morning's POST /documents. Pure, so the
  * type codes can be tested and corrected in one place if the sandbox
- * disagrees: 1 cash, 3 credit card, 4 bank transfer, 10 payment app
- * (appType 1 = Bit).
+ * disagrees: 1 cash, 2 cheque, 3 credit card, 4 bank transfer, 10 payment
+ * app (appType 1 = Bit). A cheque must carry its number, bank, branch and
+ * account.
  */
 export type ReceiptPayment =
   | { kind: "card"; brand: CardBrand; last4: string; installments: number }
   | { kind: "cash" }
   | { kind: "transfer"; reference: string | null }
-  | { kind: "bit"; reference: string | null };
+  | { kind: "bit"; reference: string | null }
+  | ({ kind: "check" } & ChequeDetails);
 
-const MORNING_PAYMENT_TYPE = { cash: 1, card: 3, transfer: 4, app: 10 } as const;
+const MORNING_PAYMENT_TYPE = { cash: 1, cheque: 2, card: 3, transfer: 4, app: 10 } as const;
 const MORNING_APP_TYPE_BIT = 1;
 
 /** Morning's card type codes. */
@@ -58,6 +61,15 @@ export function morningPaymentObject(
       return { ...base, type: MORNING_PAYMENT_TYPE.transfer };
     case "bit":
       return { ...base, type: MORNING_PAYMENT_TYPE.app, appType: MORNING_APP_TYPE_BIT };
+    case "check":
+      return {
+        ...base,
+        type: MORNING_PAYMENT_TYPE.cheque,
+        chequeNum: payment.number,
+        bankName: payment.bank,
+        bankBranch: payment.branch,
+        bankAccount: payment.account,
+      };
   }
 }
 

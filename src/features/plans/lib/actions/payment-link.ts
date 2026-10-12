@@ -17,7 +17,7 @@ import { checkNewTraineeSale, checkTraineeSale, saleParties } from "../trainee-s
 
 export type { PaymentLinkResult } from "../open-payment-link";
 
-const CARD_CLOSED_MESSAGE = "תשלום באשראי באתר עוד לא פתוח. אפשר לרשום מזומן, העברה או ביט.";
+const CARD_CLOSED_MESSAGE = "תשלום באשראי באתר עוד לא פתוח. אפשר לרשום מזומן, העברה, ביט או צ׳ק.";
 
 /**
  * A Payment link: a pending card order bound to this Trainee at a fixed

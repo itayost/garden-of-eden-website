@@ -45,5 +45,6 @@ export const INCOME_METHOD_LABEL: Record<IncomeMethod, string> = {
   card: "אשראי",
   bit: "ביט",
   transfer: "העברה",
+  check: "צ׳ק",
   free: "ללא תשלום",
 };

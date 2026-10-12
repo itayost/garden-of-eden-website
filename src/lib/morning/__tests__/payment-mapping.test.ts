@@ -29,6 +29,26 @@ describe("morningPaymentObject", () => {
     expect(morningPaymentObject({ kind: "transfer", reference: "9988" }, 850, DATE)).toEqual({ price: 850, currency: "ILS", date: DATE, type: 4 });
     expect(morningPaymentObject({ kind: "bit", reference: null }, 360, DATE)).toEqual({ price: 360, currency: "ILS", date: DATE, type: 10, appType: 1 });
   });
+
+  // Morning refuses a cheque (type 2) without its number, bank, branch and account.
+  it("describes a cheque with every detail Morning requires", () => {
+    expect(
+      morningPaymentObject(
+        { kind: "check", number: "1002", bank: "הפועלים", branch: "532", account: "123456" },
+        850,
+        DATE,
+      ),
+    ).toEqual({
+      price: 850,
+      currency: "ILS",
+      date: DATE,
+      type: 2,
+      chequeNum: "1002",
+      bankName: "הפועלים",
+      bankBranch: "532",
+      bankAccount: "123456",
+    });
+  });
 });
 
 describe("receiptRemarks", () => {
@@ -36,5 +56,7 @@ describe("receiptRemarks", () => {
     expect(receiptRemarks({ kind: "transfer", reference: "9988" })).toBe("אסמכתא: 9988");
     expect(receiptRemarks({ kind: "bit", reference: null })).toBeUndefined();
     expect(receiptRemarks({ kind: "cash" })).toBeUndefined();
+    // A cheque's details travel on the payment row itself.
+    expect(receiptRemarks({ kind: "check", number: "1002", bank: "לאומי", branch: "800", account: "55" })).toBeUndefined();
   });
 });

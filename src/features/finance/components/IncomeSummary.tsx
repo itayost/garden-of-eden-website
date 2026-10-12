@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeftRight, Banknote, CreditCard, Gift, Smartphone, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, Banknote, CreditCard, Gift, ScrollText, Smartphone, type LucideIcon } from "lucide-react";
 import { formatIls } from "@/lib/utils/money";
 import { INCOME_METHOD_LABEL, shortDay } from "../lib/format";
 import type { IncomeMethod, IncomeReport } from "../lib/income";
@@ -11,6 +11,7 @@ const METHOD_ICON: Record<IncomeMethod, LucideIcon> = {
   card: CreditCard,
   bit: Smartphone,
   transfer: ArrowLeftRight,
+  check: ScrollText,
   free: Gift,
 };
 
@@ -129,7 +130,7 @@ export function IncomeSummary({
         </ul>
       </SummarySection>
 
-      <SummarySection title="קופה לפי איש צוות" meta="מזומן, ביט והעברה" openOnPhone>
+      <SummarySection title="קופה לפי איש צוות" meta="מזומן, ביט, העברה וצ׳ק" openOnPhone>
         {report.staff.length === 0 ? (
           <p className="text-sm text-muted-foreground">אף איש צוות לא גבה כסף בטווח</p>
         ) : (
@@ -148,6 +149,7 @@ export function IncomeSummary({
                     s.cash > 0 && `${INCOME_METHOD_LABEL.cash} ${formatIls(s.cash)}`,
                     s.bit > 0 && `${INCOME_METHOD_LABEL.bit} ${formatIls(s.bit)}`,
                     s.transfer > 0 && `${INCOME_METHOD_LABEL.transfer} ${formatIls(s.transfer)}`,
+                    s.check > 0 && `${INCOME_METHOD_LABEL.check} ${formatIls(s.check)}`,
                     s.freeGiven > 0 && `${s.freeGiven} ללא תשלום`,
                   ]
                     .filter(Boolean)

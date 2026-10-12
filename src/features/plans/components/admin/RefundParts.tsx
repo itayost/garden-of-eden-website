@@ -15,6 +15,7 @@ export const REFUND_METHOD_LABELS: Record<RefundMethod, string> = {
   cash: "מזומן",
   transfer: "העברה בנקאית",
   bit: "ביט",
+  check: "צ׳ק",
   arbox: "הוחזר ב-Arbox",
   none: "לא הוחזר כסף",
 };

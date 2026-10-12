@@ -30,7 +30,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { readManualCard, type ManualCardDraft } from "@/lib/plans/manual-card";
 import { useDiscount } from "./useDiscount";
 import { DuplicatePrompt } from "./DuplicatePrompt";
-import { handMethods, PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
+import { EMPTY_CHEQUE, handMethods, PaymentMethodPicker, type PickerMethod } from "./PaymentMethodPicker";
+import type { ChequeBankDraft } from "@/lib/plans/cheque";
 import { PaymentResult } from "./PaymentResult";
 import { ProductPicker } from "./ProductPicker";
 
@@ -66,6 +67,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
   // Only while Arbox is chosen; re-filled from the product whenever it changes.
   const [arboxTerms, setArboxTerms] = useState<ArboxTermsDraft | null>(null);
   const [reference, setReference] = useState("");
+  const [cheque, setCheque] = useState<ChequeBankDraft>(EMPTY_CHEQUE);
   // Only offered when nothing is current or queued; otherwise the queue decides.
   const [startsOn, setStartsOn] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
@@ -200,6 +202,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
         manualCard: manual?.terms ?? null,
         paymentMethod: method,
         reference,
+        cheque: method === "check" ? cheque : null,
         startsOn: canChooseStart ? startsOn : null,
         sendWhatsApp,
         discount: discount.discount,
@@ -231,6 +234,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
     setArboxTerms(null);
     discount.reset();
     setReference("");
+    setCheque(EMPTY_CHEQUE);
     setContext(null);
     setLoadError(null);
   };
@@ -305,6 +309,8 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
                 reference={reference}
                 onMethodChange={chooseMethod}
                 onReferenceChange={setReference}
+                cheque={cheque}
+                onChequeChange={setCheque}
                 disabled={pending}
               />
               {method === "arbox" && arboxTerms && selectedProduct ? (

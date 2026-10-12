@@ -163,7 +163,7 @@ export async function getStaffPaymentContextAction(
   };
 }
 
-/** A cash, transfer, or Bit payment for a trainee who already has an account. */
+/** A cash, transfer, Bit or cheque payment for a trainee who already has an account. */
 export async function recordTraineePaymentAction(input: StaffPaymentInput): Promise<StaffPaymentOutcome> {
   const { error: authError, user, profile: staff } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
@@ -210,6 +210,7 @@ export async function recordTraineePaymentAction(input: StaffPaymentInput): Prom
     health: parties.health,
     paymentMethod: data.paymentMethod,
     reference: data.reference,
+    cheque: data.cheque,
     startsOn: data.startsOn,
     sendWhatsApp: data.sendWhatsApp,
     discount: data.discount,
@@ -264,6 +265,7 @@ export async function createTraineeWithPaymentAction(input: NewTraineeInput): Pr
     health: { medicalNotes: null, emergencyContactName: null, emergencyContactPhone: null },
     paymentMethod: data.paymentMethod,
     reference: data.reference,
+    cheque: data.cheque,
     startsOn: data.startsOn,
     sendWhatsApp: data.sendWhatsApp,
     discount: data.discount,
