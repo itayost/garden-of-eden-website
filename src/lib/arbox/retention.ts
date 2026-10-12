@@ -1,4 +1,4 @@
-import { normalizePhone } from "./normalize-phone";
+import { normalizePhoneIL } from "@/lib/validations/common";
 import { ARBOX_BASE_URL, ARBOX_PAGE_LIMIT, ARBOX_MAX_PAGES } from "./constants";
 
 // -------------------------------------------------------
@@ -239,7 +239,7 @@ export function buildBookingIndex(bookings: readonly BookingEntry[]): BookingInd
       byUserId.set(b.user_id, monthMap);
     }
 
-    const phone = normalizePhone(b.phone);
+    const phone = normalizePhoneIL(b.phone);
     if (phone) {
       const monthMap = byPhone.get(phone) ?? new Map<string, number>();
       monthMap.set(monthKey, (monthMap.get(monthKey) ?? 0) + 1);
@@ -262,7 +262,7 @@ export function lookupAttendance(
   index: BookingIndex,
   monthKeys: readonly string[],
 ): readonly (number | null)[] {
-  const normalizedPhone = normalizePhone(memberPhone);
+  const normalizedPhone = normalizePhoneIL(memberPhone);
   const normalizedName = normalizeName(memberName);
 
   // Find the best matching month map (priority: user_id > phone > name)
@@ -349,7 +349,7 @@ export function getAttendanceMonthRanges(
  */
 export function entryIdentity(entry: RetentionEntry): string {
   if (entry.user_id != null) return `uid:${entry.user_id}`;
-  const phone = normalizePhone(entry.phone);
+  const phone = normalizePhoneIL(entry.phone);
   if (phone) return `phone:${phone}`;
   return `name:${normalizeName(entry.name)}|${entry.end_date}`;
 }

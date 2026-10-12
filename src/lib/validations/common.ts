@@ -10,8 +10,12 @@
  */
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Parse a recognizable Israeli phone spelling into canonical E.164. */
-function normalizePhoneValue(phone: string): string | null {
+/**
+ * Parse a recognizable Israeli phone spelling (+972..., 972..., 05...) into
+ * canonical E.164 (+972XXXXXXXXX). Returns null for anything else.
+ */
+export function normalizePhoneIL(phone: string | null | undefined): string | null {
+  if (!phone) return null;
   const trimmed = phone.trim();
   if (!/^\+?[\d\s().-]+$/.test(trimmed)) return null;
 
@@ -40,17 +44,7 @@ export function isValidUUID(id: string | null | undefined): id is string {
  * @returns true if valid Israeli phone format
  */
 export function isValidPhoneIL(phone: string | null | undefined): phone is string {
-  if (!phone) return false;
-  return normalizePhoneValue(phone) !== null;
-}
-
-/** Validate an Israeli mobile number across supported input spellings. */
-export function isValidMobilePhoneIL(
-  phone: string | null | undefined,
-): phone is string {
-  if (!phone) return false;
-  const normalized = normalizePhoneValue(phone);
-  return normalized !== null && /^\+9725\d{8}$/.test(normalized);
+  return normalizePhoneIL(phone) !== null;
 }
 
 /**
@@ -59,7 +53,7 @@ export function isValidMobilePhoneIL(
  * @returns Phone in +972 format
  */
 export function formatPhoneToInternational(phone: string): string {
-  return normalizePhoneValue(phone) ?? phone.trim();
+  return normalizePhoneIL(phone) ?? phone.trim();
 }
 
 /**
@@ -91,7 +85,6 @@ export function isValidDateRange(from: string, to: string): boolean {
  * @returns Phone in 0XX format for display
  */
 export function formatPhoneToLocal(phone: string | null | undefined): string {
-  if (!phone) return "";
-  const international = normalizePhoneValue(phone);
-  return international ? `0${international.slice(4)}` : phone.trim();
+  const international = normalizePhoneIL(phone);
+  return international ? `0${international.slice(4)}` : (phone ?? "").trim();
 }

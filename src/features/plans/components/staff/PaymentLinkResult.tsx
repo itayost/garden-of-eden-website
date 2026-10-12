@@ -2,7 +2,7 @@
 
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toLocalPhone } from "@/lib/plans/local-phone";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import type { PaymentLinkResult as LinkResult } from "../../lib/actions/payment-link";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { copy, Line } from "./PaymentResult";
@@ -29,7 +29,7 @@ export function PaymentLinkResult({ result, onClose }: { result: LinkResult; onC
           <Line ok={true}>
             <div className="font-medium">הקישור נשלח בוואטסאפ</div>
             <div className="text-muted-foreground" dir="ltr">
-              {toLocalPhone(whatsapp.sentTo)}
+              {formatPhoneToLocal(whatsapp.sentTo)}
             </div>
           </Line>
         ) : whatsapp.skipped ? (

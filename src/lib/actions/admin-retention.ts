@@ -7,7 +7,7 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { visibleTraineePhones } from "@/features/branches/lib/memberships";
-import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "@/lib/validations/common";
 import type { RetentionEntry, RetentionReportData } from "@/lib/arbox/retention";
 import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
 
@@ -27,7 +27,7 @@ function scopeReport(
 ): RetentionReportData {
   if (visible === null) return report;
   const keep = (entry: RetentionEntry) => {
-    const phone = normalizePhone(entry.phone);
+    const phone = normalizePhoneIL(entry.phone);
     return phone !== null && visible.has(phone);
   };
   return {
@@ -42,7 +42,7 @@ async function assertPhoneInScope(traineePhone: string): Promise<string | null> 
   const visible = await callerVisiblePhones();
   if (visible instanceof Set || visible === null) {
     if (visible === null) return null;
-    const phone = normalizePhone(traineePhone);
+    const phone = normalizePhoneIL(traineePhone);
     return phone !== null && visible.has(phone) ? null : "הלקוח אינו בסניף שלך";
   }
   return visible.error;

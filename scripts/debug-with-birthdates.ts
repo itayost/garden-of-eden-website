@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
+import { normalizePhoneIL } from "../src/lib/validations/common";
 
 const envPath = resolve(process.cwd(), ".env.local");
 const envContent = readFileSync(envPath, "utf-8");
@@ -17,15 +18,6 @@ for (const line of envContent.split("\n")) {
 const BASE_URL = "https://arboxserver.arboxapp.com/api/public/v3";
 const apiKey = process.env.ARBOX_API_KEY as string;
 
-function normalizePhone(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const cleaned = raw.replace(/(?!^\+)\D/g, "");
-  if (cleaned.startsWith("+972") && cleaned.length === 13) return cleaned;
-  if (cleaned.startsWith("972") && cleaned.length === 12) return "+" + cleaned;
-  if (cleaned.startsWith("0") && cleaned.length === 10) return "+972" + cleaned.slice(1);
-  return null;
-}
-
 async function main() {
   const all: Record<string, unknown>[] = [];
   let page = 1;
@@ -40,7 +32,7 @@ async function main() {
 
   const byPhone = new Map<string, Record<string, unknown>>();
   for (const u of all) {
-    const p = normalizePhone(u.phone as string);
+    const p = normalizePhoneIL(u.phone as string);
     if (p) byPhone.set(p, u);
   }
 
@@ -59,7 +51,7 @@ async function main() {
 
   console.log("Trainees WITH birthdates - do they have age in Arbox?");
   for (const p of withBD ?? []) {
-    const phone = normalizePhone(p.phone);
+    const phone = normalizePhoneIL(p.phone);
     const match = phone ? byPhone.get(phone) : undefined;
     console.log(`  ${p.full_name}: birthdate=${p.birthdate}, arbox_age=${match?.age ?? "NO MATCH"}`);
   }
@@ -75,7 +67,7 @@ async function main() {
   let noAge = 0;
   let noArboxMatch = 0;
   for (const p of allWithBD ?? []) {
-    const phone = normalizePhone(p.phone);
+    const phone = normalizePhoneIL(p.phone);
     const match = phone ? byPhone.get(phone) : undefined;
     if (!match) { noArboxMatch++; continue; }
     if (match.age !== null && (match.age as number) > 0) hasAge++;

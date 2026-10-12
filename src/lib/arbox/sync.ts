@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAllArboxUsers, fetchArboxBirthdays, type ArboxUser } from "./client";
-import { normalizePhone } from "./normalize-phone";
+import { normalizePhoneIL } from "@/lib/validations/common";
 import { arboxBranchFor } from "@/lib/branches/arbox-branch-match";
 import {
   loadAllBranches,
@@ -70,7 +70,7 @@ async function processArboxUser(
   arboxUser: ArboxUser,
   branches: readonly Branch[],
 ): Promise<"created" | "updated" | "skipped" | "error"> {
-  const phone = normalizePhone(arboxUser.phone);
+  const phone = normalizePhoneIL(arboxUser.phone);
 
   // Match by arbox_user_id (re-run safety) or phone (WhatsApp OTP users)
   const orClause = phone

@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { addDays } from "@/lib/utils/iso-date";
 import { sendBookingReminder } from "@/lib/whatsapp/plan-templates";
-import { toE164 } from "@/lib/plans/local-phone";
+import { formatPhoneToInternational } from "@/lib/validations/common";
 
 interface ReminderRow {
   id: string;
@@ -62,7 +62,7 @@ export async function sendBookingReminders(
     const phone = phoneById.get(row.trainee_id!);
     if (!phone) continue;
     const slot = row.slot!;
-    const result = await sendBookingReminder(toE164(phone), {
+    const result = await sendBookingReminder(formatPhoneToInternational(phone), {
       traineeName: row.trainee_name,
       time: slot.start_time.slice(0, 5),
       trainerName: trainerNames(slot.trainers ?? []) || "הצוות",

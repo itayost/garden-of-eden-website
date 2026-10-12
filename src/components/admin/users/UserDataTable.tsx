@@ -82,17 +82,16 @@ export function UserDataTable({
 
   // Memoized filtered data based on all criteria
   const filteredData = useMemo(() => {
+    const searchLower = globalFilter.toLowerCase();
+    const searchPhone = formatPhoneToLocal(globalFilter);
     return data.filter((user) => {
       // Hide deleted by default (unless showDeleted is true)
       if (!showDeleted && user.deleted_at) return false;
 
       // Global search (matches name or phone)
       if (globalFilter) {
-        const searchLower = globalFilter.toLowerCase();
         const matchesName = user.full_name?.toLowerCase().includes(searchLower);
-        const matchesPhone = formatPhoneToLocal(user.phone).includes(
-          formatPhoneToLocal(globalFilter),
-        );
+        const matchesPhone = formatPhoneToLocal(user.phone).includes(searchPhone);
         if (!matchesName && !matchesPhone) return false;
       }
 

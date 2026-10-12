@@ -1,6 +1,6 @@
 "use server";
 
-import { phoneVariants } from "@/lib/plans/phone-variants";
+import { formatPhoneToInternational } from "@/lib/validations/common";
 import { planTokenSecret } from "@/lib/plans/token-secret";
 import { headers } from "next/headers";
 import { waitUntil } from "@vercel/functions";
@@ -86,7 +86,7 @@ async function resolvePurchaser(
     const { data: other } = await db
       .from("profiles")
       .select("id")
-      .in("phone", phoneVariants(bound.loginPhone))
+      .eq("phone", formatPhoneToInternational(bound.loginPhone))
       .neq("id", account.id)
       .eq("role", "trainee")
       .is("deleted_at", null)
@@ -144,7 +144,7 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
     db
       .from("profiles")
       .select("role")
-      .in("phone", phoneVariants(purchaser.loginPhone))
+      .eq("phone", formatPhoneToInternational(purchaser.loginPhone))
       .is("deleted_at", null)
       .limit(1)
       .maybeSingle(),

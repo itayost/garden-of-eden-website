@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
+import { normalizePhoneIL } from "../src/lib/validations/common";
 
 const envPath = resolve(process.cwd(), ".env.local");
 const envContent = readFileSync(envPath, "utf-8");
@@ -17,15 +18,6 @@ for (const line of envContent.split("\n")) {
 const BASE_URL = "https://arboxserver.arboxapp.com/api/public/v3";
 const apiKey = process.env.ARBOX_API_KEY as string;
 
-function normalizePhone(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const cleaned = raw.replace(/(?!^\+)\D/g, "");
-  if (cleaned.startsWith("+972") && cleaned.length === 13) return cleaned;
-  if (cleaned.startsWith("972") && cleaned.length === 12) return "+" + cleaned;
-  if (cleaned.startsWith("0") && cleaned.length === 10) return "+972" + cleaned.slice(1);
-  return null;
-}
-
 async function main() {
   const all: Record<string, unknown>[] = [];
   let page = 1;
@@ -40,7 +32,7 @@ async function main() {
 
   const byPhone = new Map<string, Record<string, unknown>>();
   for (const u of all) {
-    const p = normalizePhone(u.phone as string);
+    const p = normalizePhoneIL(u.phone as string);
     if (p) byPhone.set(p, u);
   }
 
@@ -57,7 +49,7 @@ async function main() {
 
   let first = true;
   for (const profile of profiles ?? []) {
-    const phone = normalizePhone(profile.phone);
+    const phone = normalizePhoneIL(profile.phone);
     if (!phone) continue;
     const match = byPhone.get(phone);
     if (!match) continue;

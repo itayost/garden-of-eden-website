@@ -6,7 +6,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import * as fs from "fs";
-import { normalizePhone } from "../src/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "../src/lib/validations/common";
 
 // ── ENV ──────────────────────────────────────────────
 const envContent = fs.readFileSync(".env.local", "utf-8");
@@ -100,10 +100,10 @@ async function main() {
   if (missingAuthPhone.length > 0) {
     console.log("\n--- Fixing missing auth phones ---");
     for (const p of missingAuthPhone) {
-      // normalizePhone validates digits and length and returns null for
+      // normalizePhoneIL validates digits and length and returns null for
       // anything unrecognizable - never write a made-up E.164 value as a
       // confirmed OTP phone.
-      const normalizedPhone = normalizePhone(p.phone);
+      const normalizedPhone = normalizePhoneIL(p.phone);
       if (!normalizedPhone) {
         console.log(`  ${p.full_name} | profile: "${p.phone}" | SKIP: not a valid Israeli phone`);
         skippedUnparseable++;

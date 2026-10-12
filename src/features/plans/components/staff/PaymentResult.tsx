@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Copy, FileText, MessageCircle, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { shortDate } from "@/lib/utils/iso-date";
-import { toLocalPhone } from "@/lib/plans/local-phone";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import type { ManualPaymentResult } from "../../lib/manual-payment";
 import { issueInvoiceAction } from "../../lib/actions/admin-orders";
 import { resendAgreementLinkAction } from "../../lib/actions/staff-payment";
@@ -127,7 +127,7 @@ export function PaymentResult({
           <Line ok={true}>
             <div className="font-medium">הודעה עם קישור לחתימה נשלחה בוואטסאפ</div>
             <div className="text-muted-foreground" dir="ltr">
-              {toLocalPhone(whatsapp.sentTo)}
+              {formatPhoneToLocal(whatsapp.sentTo)}
             </div>
           </Line>
         ) : (

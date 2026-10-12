@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toLocalPhone as local } from "@/lib/plans/local-phone";
+import { formatPhoneToLocal } from "@/lib/validations/common";
 import { updateTraineeHealthAction, type TraineeHealth } from "../lib/actions/trainee-health";
 
 
@@ -19,7 +19,7 @@ export function HealthCard({ traineeId, health }: { traineeId: string; health: T
   const [pending, startTransition] = useTransition();
   const [medical, setMedical] = useState(health.medicalNotes ?? "");
   const [name, setName] = useState(health.emergencyContactName ?? "");
-  const [phone, setPhone] = useState(local(health.emergencyContactPhone));
+  const [phone, setPhone] = useState(formatPhoneToLocal(health.emergencyContactPhone));
 
   const save = () =>
     startTransition(async () => {
@@ -84,7 +84,7 @@ export function HealthCard({ traineeId, health }: { traineeId: string; health: T
               {health.emergencyContactPhone ? (
                 <a href={`tel:${health.emergencyContactPhone}`} className="inline-flex items-center gap-1 font-medium underline">
                   <Phone className="h-3 w-3" />
-                  {health.emergencyContactName} · {local(health.emergencyContactPhone)}
+                  {health.emergencyContactName} · {formatPhoneToLocal(health.emergencyContactPhone)}
                 </a>
               ) : (
                 <div>לא צוין</div>
@@ -95,7 +95,7 @@ export function HealthCard({ traineeId, health }: { traineeId: string; health: T
                 <div className="text-muted-foreground">הורה משלם</div>
                 <a href={`tel:${health.guardianPhone}`} className="inline-flex items-center gap-1 underline">
                   <Phone className="h-3 w-3" />
-                  {health.guardianName} · {local(health.guardianPhone)}
+                  {health.guardianName} · {formatPhoneToLocal(health.guardianPhone)}
                 </a>
               </div>
             )}

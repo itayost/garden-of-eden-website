@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getSafeRedirectUrl } from "@/lib/utils/redirect";
-import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "@/lib/validations/common";
 import { getOtpErrorMessage } from "@/lib/auth/otp-error-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ function LoginForm() {
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const e164Phone = normalizePhone(phone);
+    const e164Phone = normalizePhoneIL(phone);
 
     if (!e164Phone) {
       setError("נא להזין מספר נייד ישראלי תקין (למשל 0501234567)");

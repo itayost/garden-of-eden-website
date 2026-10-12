@@ -6,7 +6,7 @@
  */
 
 import { loadEnvLocal, getAdminClient } from "./import-utils";
-import { normalizePhone } from "../src/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "../src/lib/validations/common";
 
 function bucket(phone: string | null): string {
   if (!phone) return "(null)";
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
   const intraKey = new Map<string, number>();
   for (const p of all) {
     if (!p.phone || p.phone.startsWith("+972")) continue; // already canonical or null
-    const key = normalizePhone(p.phone);
+    const key = normalizePhoneIL(p.phone);
     if (!key) {
       unparseable++;
       continue;

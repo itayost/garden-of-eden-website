@@ -28,7 +28,7 @@ import {
 import { buildChurnedKey } from "@/lib/utils/churned-key";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 import { Clock } from "lucide-react";
-import { normalizePhone } from "@/lib/arbox/normalize-phone";
+import { normalizePhoneIL } from "@/lib/validations/common";
 import {
   positionFilterOptions,
   matchesPositionFilter,
@@ -101,7 +101,7 @@ export function RetentionTable({
         if (search && !e.name.toLowerCase().includes(search.toLowerCase())) {
           return false;
         }
-        const normalizedPhone = normalizePhone(e.phone);
+        const normalizedPhone = normalizePhoneIL(e.phone);
         const entryPosition =
           normalizedPhone ? (traineePositions[normalizedPhone] ?? null) : null;
         if (!matchesPositionFilter(entryPosition, position)) return false;

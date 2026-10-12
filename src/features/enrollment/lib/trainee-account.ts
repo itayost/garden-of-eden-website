@@ -2,14 +2,13 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadBranchIdsByProfile, replaceProfileBranches } from "@/features/branches/lib/memberships";
-import { phoneVariants } from "@/lib/plans/phone-variants";
 
-/** The profile whose auth phone is this login phone, in any stored spelling. */
+/** The profile whose phone is this E.164 login phone (profiles.phone is always E.164). */
 export async function findProfileByPhone(db: SupabaseClient, e164: string): Promise<string | null> {
   const { data } = await db
     .from("profiles")
     .select("id")
-    .in("phone", phoneVariants(e164))
+    .eq("phone", e164)
     .is("deleted_at", null)
     .limit(1)
     .maybeSingle();
