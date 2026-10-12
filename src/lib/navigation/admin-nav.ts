@@ -9,6 +9,7 @@ import {
   Dumbbell,
   FileText,
   GraduationCap,
+  Hourglass,
   LayoutDashboard,
   ListChecks,
   MapPin,
@@ -20,6 +21,7 @@ import {
   UserPlus,
   Utensils,
   Video,
+  Wallet,
 } from "lucide-react";
 import { derivePageTitles, type NavItem, type NavSection } from "@/lib/navigation/types";
 
@@ -62,11 +64,18 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    label: "דוחות כספיים",
+    items: [
+      { href: "/admin/finance", label: "הכנסות", icon: Wallet, exact: true, adminOnly: true },
+      { href: "/admin/finance/ending-soon", label: "מסתיימים בקרוב", icon: Hourglass, adminOnly: true },
+      { href: "/admin/orders", label: "הזמנות", icon: Receipt, adminOnly: true },
+    ],
+  },
+  {
     label: "שיווק ולקוחות",
     items: [
       { href: "/admin/leads", label: "לידים", icon: UserPlus },
       { href: "/admin/retention", label: "שימור לקוחות", icon: RefreshCw },
-      { href: "/admin/orders", label: "הזמנות", icon: Receipt, adminOnly: true },
     ],
   },
   {
