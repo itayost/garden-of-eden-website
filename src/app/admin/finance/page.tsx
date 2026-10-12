@@ -64,7 +64,11 @@ export default async function FinanceIncomePage({ searchParams }: PageProps) {
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
-          <IncomeSummary report={result.data} dayHref={dayHref} />
+          <IncomeSummary
+            report={result.data}
+            dayHref={dayHref}
+            isToday={range.from === range.to && range.to === israelToday()}
+          />
           <div className="min-w-0 space-y-2">
             <IncomeLedger report={result.data} />
             <p className="text-xs text-muted-foreground">

@@ -33,3 +33,7 @@ export function rangeLabel(range: ReportRange): string {
   if (range.from === range.to) return longDay(range.from);
   return `${dayMonth(range.from)} עד ${dayMonth(range.to)}.${range.to.slice(0, 4)}`;
 }
+
+/** A receipt link is rendered only when it is https; anything else is dropped. */
+export const safeReceiptUrl = (url: string | null): string | null =>
+  url !== null && url.startsWith("https://") ? url : null;

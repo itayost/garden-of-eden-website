@@ -135,7 +135,7 @@ export interface IncomeReport {
   staff: StaffCashUp[];
   payments: IncomePayment[];
   refundRows: IncomeRefund[];
-  arbox: { entries: ArboxEntry[]; total: number; unknownCount: number };
+  arbox: { entries: ArboxEntry[]; total: number; unknownCount: number; undoneCount: number };
 }
 
 export interface IncomeInput {
@@ -262,8 +262,9 @@ export function buildIncomeReport({ from, to, stripFrom, orders, refunds }: Inco
     refundRows,
     arbox: {
       entries: arboxEntries,
-      total: sum(arboxEntries.filter((e) => !e.unknownAmount).map((e) => e.amountIls)),
+      total: sum(arboxEntries.filter((e) => e.status === "paid" && !e.unknownAmount).map((e) => e.amountIls)),
       unknownCount: arboxEntries.filter((e) => e.unknownAmount).length,
+      undoneCount: arboxEntries.filter((e) => e.status !== "paid").length,
     },
   };
 }

@@ -20,7 +20,15 @@ const Money = ({ amount, className }: { amount: number; className?: string }) =>
   </span>
 );
 
-export function IncomeSummary({ report, dayHref }: { report: IncomeReport; dayHref: (day: string) => string }) {
+export function IncomeSummary({
+  report,
+  dayHref,
+  isToday,
+}: {
+  report: IncomeReport;
+  dayHref: (day: string) => string;
+  isToday: boolean;
+}) {
   const maxMethod = Math.max(1, ...report.byMethod.map((m) => m.total));
   const branchTotal = report.byBranch.reduce((total, b) => total + b.total, 0);
 
@@ -47,7 +55,7 @@ export function IncomeSummary({ report, dayHref }: { report: IncomeReport; dayHr
       </nav>
 
       <div className="border-b px-4 py-5">
-        <p className="text-sm text-muted-foreground">{report.from === report.to ? "נטו היום" : "נטו בטווח"}</p>
+        <p className="text-sm text-muted-foreground">{report.from !== report.to ? "נטו בטווח" : isToday ? "נטו היום" : "נטו ביום"}</p>
         <Money amount={report.net} className="block text-4xl font-black leading-tight" />
         <p className="mt-1 text-sm">
           התקבל <Money amount={report.received} className="font-semibold" /> · הוחזר{" "}
@@ -58,6 +66,7 @@ export function IncomeSummary({ report, dayHref }: { report: IncomeReport; dayHr
             נמכר ב-Arbox: <Money amount={report.arbox.total} className="font-semibold text-foreground" /> (
             {report.arbox.entries.length} רכישות)
             {report.arbox.unknownCount > 0 && ` · ${report.arbox.unknownCount} ללא סכום`}
+            {report.arbox.undoneCount > 0 && ` · ${report.arbox.undoneCount} בוטלו או הוחזרו`}
           </p>
         )}
       </div>

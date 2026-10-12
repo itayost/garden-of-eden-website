@@ -127,6 +127,15 @@ describe("Arbox", () => {
     expect(r.arbox.total).toBe(1329);
     expect(r.arbox.entries.map((e) => e.id)).toEqual(["ax"]);
   });
+  test("voided and refunded sales are listed but leave the Arbox total", () => {
+    const paid = order({ id: "a1", method: "arbox", receivedBy: null, amountIls: 1000, arboxPurchasedOn: DAY });
+    const voided = order({ id: "a2", method: "arbox", receivedBy: null, amountIls: 500, status: "voided", arboxPurchasedOn: DAY });
+    const refunded = order({ id: "a3", method: "arbox", receivedBy: null, amountIls: 300, status: "refunded", arboxPurchasedOn: DAY });
+    const r = report([paid, voided, refunded]);
+    expect(r.arbox.entries.map((e) => e.id).sort()).toEqual(["a1", "a2", "a3"]);
+    expect(r.arbox.total).toBe(1000);
+    expect(r.arbox.undoneCount).toBe(2);
+  });
   test("is dated by its purchase day even when imported later", () => {
     const arbox = order({ method: "arbox", receivedBy: null, paidAt: "2026-10-14T01:00:00Z", arboxPurchasedOn: DAY });
     expect(report([arbox]).arbox.entries).toHaveLength(1);
@@ -269,7 +278,7 @@ describe("an empty day", () => {
     expect(r).toMatchObject({ received: 0, refunds: 0, net: 0, paymentCount: 0, freeCount: 0, installmentsIls: 0 });
     expect(r.byMethod).toEqual([]);
     expect(r.staff).toEqual([]);
-    expect(r.arbox).toEqual({ entries: [], total: 0, unknownCount: 0 });
+    expect(r.arbox).toEqual({ entries: [], total: 0, unknownCount: 0, undoneCount: 0 });
     expect(r.days).toEqual([{ day: DAY, received: 0, refunds: 0, net: 0, count: 0 }]);
   });
 });

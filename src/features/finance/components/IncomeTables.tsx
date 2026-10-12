@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatIls } from "@/lib/utils/money";
 import { israelDateStr } from "@/lib/utils/israel-time";
-import { shortDay, timeOf } from "../lib/format";
+import { safeReceiptUrl, shortDay, timeOf } from "../lib/format";
 import type { ArboxEntry, IncomePayment, IncomeRefund } from "../lib/income";
 
 const METHOD_LABEL = { cash: "מזומן", card: "אשראי", bit: "ביט", transfer: "העברה", free: "ללא תשלום" } as const;
@@ -82,8 +82,8 @@ export function PaymentsTable({ payments, multiDay }: { payments: IncomePayment[
                 </TableCell>
                 <TableCell>{takenBy(p)}</TableCell>
                 <TableCell>
-                  {p.receiptUrl ? (
-                    <a href={p.receiptUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline" aria-label={`קבלה של ${p.childName}`}>
+                  {safeReceiptUrl(p.receiptUrl) ? (
+                    <a href={safeReceiptUrl(p.receiptUrl) ?? undefined} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline" aria-label={`קבלה של ${p.childName}`}>
                       <FileText className="h-4 w-4" aria-hidden />
                     </a>
                   ) : (
@@ -164,21 +164,30 @@ export function ArboxTable({ entries }: { entries: ArboxEntry[] }) {
         נרכשו ושולמו ב-Arbox ונקלטו הלילה. הן לא נספרות בהכנסות; התאריך הוא יום הרכישה ב-Arbox.
       </p>
       <ul className="divide-y">
-        {entries.map((e) => (
+        {entries.map((e) => {
+          const undone = e.status !== "paid";
+          const importedOn = israelDateStr(e.paidAt);
+          return (
           <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-3">
             <div>
               <div className="font-medium">{e.childName}</div>
               <div className="text-xs text-muted-foreground">
                 {e.planName} · נרכש {shortDay(e.day)}
+                {importedOn !== e.day && ` · נקלט ${shortDay(importedOn).split(" ")[1]}`}
               </div>
             </div>
-            {e.unknownAmount ? (
-              <Badge variant="outline">סכום לא ידוע</Badge>
-            ) : (
-              <Money amount={e.amountIls} className="font-semibold" />
-            )}
+            <div className="shrink-0 text-end">
+              {e.unknownAmount ? (
+                <Badge variant="outline">סכום לא ידוע</Badge>
+              ) : (
+                <Money amount={e.amountIls} className={`font-semibold ${undone ? "line-through decoration-muted-foreground" : ""}`} />
+              )}
+              {e.status === "voided" && <Badge variant="destructive" className="ms-2">בוטל</Badge>}
+              {e.status === "refunded" && <Badge variant="outline" className="ms-2">הוחזר</Badge>}
+            </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );
