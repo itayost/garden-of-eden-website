@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowLeftRight, Banknote, CreditCard, Gift, Smartphone, type LucideIcon } from "lucide-react";
 import { formatIls } from "@/lib/utils/money";
-import { cn } from "@/lib/utils";
 import { INCOME_METHOD_LABEL, shortDay } from "../lib/format";
 import type { IncomeMethod, IncomeReport } from "../lib/income";
 import { Money } from "./Money";
@@ -25,29 +24,14 @@ export function IncomeSummary({
   isToday: boolean;
 }) {
   const maxMethod = Math.max(1, ...report.byMethod.map((m) => m.total));
+  // A range lists its days with any money in or out, newest first; a single day needs no list.
+  const activeDays =
+    report.from === report.to
+      ? []
+      : report.days.filter((d) => d.count > 0 || d.refunds > 0).toReversed();
 
   return (
     <aside aria-label="סיכום" className="rounded-xl border bg-card lg:sticky lg:top-4">
-      <nav aria-label="ימים" className="flex gap-1.5 overflow-x-auto border-b p-3">
-        {report.days.map((d) => {
-          const selected = d.day >= report.from && d.day <= report.to;
-          return (
-            <Link
-              key={d.day}
-              href={dayHref(d.day)}
-              aria-current={selected && report.from === report.to ? "date" : undefined}
-              className={cn(
-                "min-w-16 shrink-0 rounded-lg bg-muted px-2 py-1.5 text-center text-xs text-muted-foreground transition-colors hover:bg-secondary",
-                selected && "bg-secondary text-foreground ring-1 ring-primary/40",
-              )}
-            >
-              <span className="block">{shortDay(d.day)}</span>
-              <Money amount={d.net} className="block font-bold text-foreground" />
-            </Link>
-          );
-        })}
-      </nav>
-
       <div className="border-b px-4 py-5">
         <p className="text-sm text-muted-foreground">{report.from !== report.to ? "נטו בטווח" : isToday ? "נטו היום" : "נטו ביום"}</p>
         <Money amount={report.net} className="block text-4xl font-black leading-tight" />
@@ -64,6 +48,27 @@ export function IncomeSummary({
           </p>
         )}
       </div>
+
+      {activeDays.length > 0 && (
+        <SummarySection title="לפי ימים" meta={`${activeDays.length} ימים עם תנועה`}>
+          <ul className="divide-y text-sm">
+            {activeDays.map((d) => (
+              <li key={d.day}>
+                <Link
+                  href={dayHref(d.day)}
+                  className="flex items-center justify-between gap-3 rounded-md px-1 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  <span>
+                    {shortDay(d.day)}
+                    <span className="ms-2 text-xs text-muted-foreground tabular-nums">{d.count} תשלומים</span>
+                  </span>
+                  <Money amount={d.net} className="font-semibold" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </SummarySection>
+      )}
 
       <SummarySection title="לפי אמצעי תשלום" meta={`${report.byMethod.length} אמצעים`}>
         {report.byMethod.length === 0 ? (

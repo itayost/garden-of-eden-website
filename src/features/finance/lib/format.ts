@@ -25,7 +25,7 @@ export const timeOf = (iso: string): string => TIME.format(new Date(iso));
 /** "יום שני, 12 באוקטובר 2026". */
 export const longDay = (day: string): string => LONG_DAY.format(asDate(day));
 
-/** "ב׳ 12.10", for the day strip and multi-day rows. */
+/** "ב׳ 12.10", for the per-day list and multi-day rows. */
 export const shortDay = (day: string): string =>
   `${WEEKDAY_LETTER[asDate(day).getUTCDay()]} ${shortDate(day)}`;
 

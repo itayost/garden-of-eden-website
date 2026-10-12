@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { parseBranchParam, parseRange, stripWindow } from "../range";
+import { parseBranchParam, parseRange } from "../range";
 
 const TODAY = "2026-10-12";
 
@@ -45,19 +45,6 @@ describe("parseRange", () => {
   });
   test("an unknown preset is today", () => {
     expect(parseRange({ range: "year" }, TODAY).preset).toBe("day");
-  });
-});
-
-describe("stripWindow", () => {
-  test("a past day sits in the middle of a seven-day strip, so later days are reachable", () => {
-    expect(stripWindow({ from: "2026-10-05", to: "2026-10-05" }, TODAY)).toEqual({ from: "2026-10-02", to: "2026-10-08" });
-  });
-  test("the strip never runs past today: today is the last tile", () => {
-    expect(stripWindow({ from: TODAY, to: TODAY }, TODAY)).toEqual({ from: "2026-10-06", to: TODAY });
-    expect(stripWindow({ from: "2026-10-10", to: "2026-10-10" }, TODAY)).toEqual({ from: "2026-10-06", to: TODAY });
-  });
-  test("a range of seven days or more is its own strip", () => {
-    expect(stripWindow({ from: "2026-10-01", to: TODAY }, TODAY)).toEqual({ from: "2026-10-01", to: TODAY });
   });
 });
 

@@ -137,10 +137,6 @@ export interface IncomeReport {
 export interface IncomeInput {
   from: string;
   to: string;
-  /** First day of the day strip; on or before `from`. */
-  stripFrom: string;
-  /** Last day of the day strip; on or after `to`. Its later days only feed the strip. */
-  stripTo: string;
   orders: readonly IncomeOrderRow[];
   refunds: readonly IncomeRefundRow[];
 }
@@ -195,7 +191,7 @@ function staffCashUp(payments: readonly IncomePayment[], refunds: readonly Incom
     .sort((a, b) => b.inHand - a.inHand);
 }
 
-export function buildIncomeReport({ from, to, stripFrom, stripTo, orders, refunds }: IncomeInput): IncomeReport {
+export function buildIncomeReport({ from, to, orders, refunds }: IncomeInput): IncomeReport {
   const inRange = (day: string) => day >= from && day <= to;
   const counted = orders.filter((o) => COUNTED_STATUSES.includes(o.status));
 
@@ -236,7 +232,7 @@ export function buildIncomeReport({ from, to, stripFrom, stripTo, orders, refund
     })
     .sort((a, b) => b.total - a.total);
 
-  const days = dayList(stripFrom, stripTo).map((day) => {
+  const days = dayList(from, to).map((day) => {
     const dayPayments = allPayments.filter((p) => p.day === day);
     const dayReceived = sum(dayPayments.map((p) => p.amountIls));
     const dayRefunds = sum(allRefunds.filter((r) => r.day === day).map((r) => r.amountIls));

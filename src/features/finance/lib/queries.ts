@@ -25,7 +25,7 @@ import {
   UNKNOWN_STAFF,
 } from "./income";
 import { splitEnding, type EndingInput, type EndingSplit } from "./ending-soon";
-import { stripWindow, type ReportRange } from "./range";
+import type { ReportRange } from "./range";
 
 export type FinanceResult<T> = { success: true; data: T } | { success: false; error: string };
 
@@ -187,10 +187,9 @@ export async function loadIncomeReport(
 
   try {
     const db = createAdminClient();
-    const strip = stripWindow(range, israelToday());
     // One day wider on each side: the pure report assigns Israel days.
-    const fromIso = `${addDays(strip.from, -1)}T00:00:00Z`;
-    const toIso = `${addDays(strip.to, 2)}T00:00:00Z`;
+    const fromIso = `${addDays(range.from, -1)}T00:00:00Z`;
+    const toIso = `${addDays(range.to, 2)}T00:00:00Z`;
 
     const [byPaidAt, arboxByDay, refunds] = await Promise.all([
       fetchAllPages<OrderSelectRow>((lo, hi) =>
@@ -230,8 +229,6 @@ export async function loadIncomeReport(
       data: buildIncomeReport({
         from: range.from,
         to: range.to,
-        stripFrom: strip.from,
-        stripTo: strip.to,
         orders: uniqueOrders.map(toOrderRow),
         refunds: refundRows,
       }),

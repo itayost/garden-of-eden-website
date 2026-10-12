@@ -58,9 +58,7 @@ const report = (
   refunds: IncomeRefundRow[] = [],
   from = DAY,
   to = DAY,
-  stripFrom = from,
-  stripTo = to,
-) => buildIncomeReport({ from, to, stripFrom, stripTo, orders, refunds });
+) => buildIncomeReport({ from, to, orders, refunds });
 
 describe("Israel days", () => {
   test("23:30 in Israel stays on its day; 00:30 belongs to the next, in summer", () => {
@@ -256,31 +254,19 @@ describe("cash-up per staff member", () => {
 });
 
 describe("days", () => {
-  test("every day in the strip, with totals only from that day", () => {
+  test("one row per day of the range, each with only its own totals", () => {
     const rows = [
       order({ id: "a", paidAt: "2026-10-11T09:00:00Z", amountIls: 100 }),
       order({ id: "b", paidAt: "2026-10-12T09:00:00Z", amountIls: 450 }),
+      order({ id: "outside", paidAt: "2026-10-09T09:00:00Z", amountIls: 999 }),
     ];
-    const r = report(rows, [refund()], DAY, DAY, "2026-10-10");
+    const r = report(rows, [refund()], "2026-10-10", DAY);
     expect(r.days).toEqual([
       { day: "2026-10-10", received: 0, refunds: 0, net: 0, count: 0 },
       { day: "2026-10-11", received: 100, refunds: 0, net: 100, count: 1 },
       { day: "2026-10-12", received: 450, refunds: 310, net: 140, count: 1 },
     ]);
-    expect(r.received).toBe(450);
-  });
-});
-
-describe("strip days after the range", () => {
-  test("a later strip day shows its own net without touching the range totals", () => {
-    const later = order({ id: "later", paidAt: "2026-10-13T09:00:00Z", amountIls: 300 });
-    const r = report([order(), later], [], DAY, DAY, DAY, "2026-10-13");
-    expect(r.days.map((d) => [d.day, d.net])).toEqual([
-      [DAY, 450],
-      ["2026-10-13", 300],
-    ]);
-    expect(r.received).toBe(450);
-    expect(r.payments.map((p) => p.id)).toEqual(["o-1"]);
+    expect(r.received).toBe(550);
   });
 });
 
