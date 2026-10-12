@@ -9,6 +9,7 @@ import { BranchUrlFilter } from "@/features/branches/components/BranchUrlFilter"
 import { listPlansAction } from "@/features/plans/lib/actions/admin-plans";
 import { PlansTable } from "@/features/plans/components/admin/PlansTable";
 import { NewTraineeSheet } from "@/features/plans/components/staff/NewTraineeSheet";
+import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
 import { listSellableProductsAction } from "@/features/plans/lib/actions/staff-payment";
 import { Button } from "@/components/ui/button";
 import { isValidUUID } from "@/lib/validations/common";
@@ -67,7 +68,7 @@ export default async function AdminPlansPage({ searchParams }: PageProps) {
             </Button>
           )}
           {products.length > 0 && (
-            <NewTraineeSheet products={products} morningConfigured={isMorningConfigured()} isAdmin={isAdmin} />
+            <NewTraineeSheet products={products} morningConfigured={isMorningConfigured()} cardLinksOpen={onlinePaymentsOpen()} isAdmin={isAdmin} />
           )}
         </div>
       </div>

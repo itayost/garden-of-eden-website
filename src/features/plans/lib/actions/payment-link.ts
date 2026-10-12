@@ -3,27 +3,21 @@
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { typedFrom } from "@/lib/supabase/helpers";
 import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
-import { israelToday } from "@/lib/utils/tasks";
-import { sendPaymentLink } from "@/lib/whatsapp/plan-templates";
-import { paymentLinkSchema, type PaymentLinkInput } from "@/lib/validations/plans-admin";
-import { agreementLink } from "@/features/enrollment/lib/notify";
-import { PAYMENT_METHOD_LABELS_HE } from "@/types/plans";
+import {
+  newTraineeLinkSchema,
+  paymentLinkSchema,
+  type NewTraineeLinkInput,
+  type PaymentLinkInput,
+} from "@/lib/validations/plans-admin";
 import { pricingRefusal } from "../discount-permission";
-import { revalidateStaffSurfaces } from "../revalidate-staff";
-import { checkTraineeSale, saleParties } from "../trainee-sale";
-import { insertUnsignedAgreement } from "../unsigned-agreement";
-import { staffOrderColumns } from "../staff-order";
-import { orderPlanName } from "@/lib/plans/manual-card";
+import { openTraineeAccount } from "@/features/enrollment/lib/trainee-account";
+import { openPaymentLink, type PaymentLinkResult } from "../open-payment-link";
+import { checkNewTraineeSale, checkTraineeSale, saleParties } from "../trainee-sale";
 
-export interface PaymentLinkResult {
-  ok: true;
-  orderId: string;
-  /** The parent's link: the agreement to sign, then the card page. */
-  url: string;
-  whatsapp: { sentTo: string | null; error: string | null; skipped: boolean };
-}
+export type { PaymentLinkResult } from "../open-payment-link";
+
+const CARD_CLOSED_MESSAGE = "תשלום באשראי באתר עוד לא פתוח. אפשר לרשום מזומן, העברה או ביט.";
 
 /**
  * A Payment link: a pending card order bound to this Trainee at a fixed
@@ -37,7 +31,7 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   const parsed = paymentLinkSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
   const data = parsed.data;
-  if (!onlinePaymentsOpen()) return { error: "תשלום באשראי באתר עוד לא פתוח. אפשר לרשום מזומן, העברה או ביט." };
+  if (!onlinePaymentsOpen()) return { error: CARD_CLOSED_MESSAGE };
 
   const db = createAdminClient();
   // Both must pass. A link is not a sale yet, so a repeat is only a second
@@ -59,90 +53,72 @@ export async function createPaymentLinkAction(input: PaymentLinkInput): Promise<
   const discountError = await pricingRefusal(product.branch_id, data.discount !== null || data.manualCard !== null);
   if (discountError) return { error: discountError };
   const { loginPhone, child, parent, health } = saleParties(trainee);
-  const priced = staffOrderColumns(product, { ...data, freeReason: null }, user!.id, { profileId: data.traineeId, loginPhone, child, parent });
-  if (!priced.ok) return { error: priced.problem };
-  const amount = priced.paid;
-  const planName = orderPlanName(product.name_he, priced.columns);
-
-  const { data: order, error: orderError } = (await typedFrom(db, "orders")
-    .insert({
-      ...priced.columns,
-      status: "pending",
-      payment_provider: "isracard",
-      // Marks the order as a Payment link and names its seller once paid.
-      payment_link_by: user!.id,
-    })
-    .select("id")
-    .single()) as { data: { id: string } | null; error: { message: string } | null };
-  if (orderError || !order) {
-    console.error("[payment-link] order insert failed:", orderError?.message);
-    return { error: "שגיאה ביצירת ההזמנה" };
-  }
-
-  const agreement = await insertUnsignedAgreement(db, {
-    orderId: order.id,
+  return openPaymentLink(db, {
+    product,
     profileId: data.traineeId,
-    parent,
+    loginPhone,
     child,
+    parent,
     health,
-    planName,
-    priceIls: amount,
-    startsOn: israelToday(),
-    paymentLabel: PAYMENT_METHOD_LABELS_HE.card,
+    sendWhatsApp: data.sendWhatsApp,
+    discount: data.discount,
+    manualCard: data.manualCard,
+    actor: { id: user!.id, name: staff?.full_name ?? null },
   });
-  if (!agreement) {
-    await typedFrom(db, "orders").update({ status: "failed" }).eq("id", order.id);
-    return { error: "שגיאה בשמירת ההסכם" };
+}
+
+/**
+ * A Payment link for a new trainee at the field. The account and the branch
+ * are opened now, so staff find the child on the users list and can put them
+ * on a roster before the parent pays; the Plan comes only when the card is
+ * charged. A phone that already belongs to a trainee binds the link to that
+ * account.
+ */
+export async function createNewTraineePaymentLinkAction(
+  input: NewTraineeLinkInput,
+): Promise<PaymentLinkResult | { error: string }> {
+  const { error: authError, user, profile: staff } = await verifyAdminOrTrainer();
+  if (authError) return { error: authError };
+  const parsed = newTraineeLinkSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "קלט לא תקין" };
+  const data = parsed.data;
+  if (!onlinePaymentsOpen()) return { error: CARD_CLOSED_MESSAGE };
+
+  const db = createAdminClient();
+  const sale = await checkNewTraineeSale(db, {
+    productId: data.productId,
+    loginPhone: data.loginPhone,
+    setsPrice: data.discount !== null,
+  });
+  if (!("ok" in sale)) return sale;
+  const { product, owner } = sale;
+  const parent = { name: data.parentName ?? "הורה", phone: data.payerPhone, email: null };
+
+  let profileId = owner?.id ?? null;
+  if (!profileId) {
+    try {
+      profileId = await openTraineeAccount(db, {
+        loginPhone: data.loginPhone,
+        childName: data.childName,
+        parent,
+        branchId: product.branch_id,
+      });
+    } catch (error) {
+      console.error("[payment-link] new trainee account failed:", error instanceof Error ? error.message : error);
+      return { error: "שגיאה בפתיחת החשבון למתאמן" };
+    }
   }
-  const url = agreementLink(agreement.id);
 
-  // The newest link is the only one the parent can pay: older unpaid links
-  // for this child close, so two messages can never mean two charges.
-  // One being charged right now (charging) is left to finish.
-  const { error: supersedeError } = await typedFrom(db, "orders")
-    .update({ status: "failed", fulfillment_error: "replaced by a newer Payment link" })
-    .eq("profile_id", data.traineeId)
-    .not("payment_link_by", "is", null)
-    .in("status", ["pending", "expired"])
-    .neq("id", order.id);
-  if (supersedeError) console.error("[payment-link] closing older links failed:", supersedeError.message);
-
-  // The log and the message do not wait on each other.
-  const [, sent] = await Promise.all([
-    db.from("activity_logs").insert({
-      user_id: data.traineeId,
-      action: "payment_link_created",
-      actor_id: user!.id,
-      actor_name: staff?.full_name ?? "צוות",
-      metadata: {
-        orderId: order.id,
-        productId: product.id,
-        amountIls: amount,
-        ...(data.discount ? { listPriceIls: priced.listPrice } : {}),
-        ...(data.manualCard ? { manualCard: data.manualCard } : {}),
-      },
-    }),
-    data.sendWhatsApp
-      ? sendPaymentLink(parent.phone, {
-          parentName: parent.name,
-          childName: child.name,
-          planName,
-          amount: `₪${amount.toLocaleString("he-IL")}`,
-          url,
-        })
-      : null,
-  ]);
-  const whatsapp: PaymentLinkResult["whatsapp"] = !sent
-    ? { sentTo: null, error: null, skipped: true }
-    : sent.success
-      ? { sentTo: parent.phone, error: null, skipped: false }
-      : {
-          sentTo: null,
-          // An unset template means Meta has not approved it yet: say so in Hebrew.
-          error: sent.error?.includes("not configured") ? "תבנית הוואטסאפ לקישור עוד לא אושרה" : "השליחה נכשלה",
-          skipped: false,
-        };
-
-  revalidateStaffSurfaces(data.traineeId);
-  return { ok: true, orderId: order.id, url, whatsapp };
+  return openPaymentLink(db, {
+    product,
+    profileId,
+    loginPhone: data.loginPhone,
+    child: { name: data.childName, birthdate: owner?.birthdate ?? null },
+    parent,
+    health: { medicalNotes: null, emergencyContactName: null, emergencyContactPhone: null },
+    sendWhatsApp: data.sendWhatsApp,
+    discount: data.discount,
+    manualCard: null,
+    actor: { id: user!.id, name: staff?.full_name ?? null },
+  });
 }

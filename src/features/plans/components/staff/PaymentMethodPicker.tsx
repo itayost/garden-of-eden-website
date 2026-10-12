@@ -20,7 +20,12 @@ const ICONS: Record<PickerMethod, typeof Banknote> = {
   free: Gift,
 };
 
+/** The hand-taken methods every staff sheet offers. */
 const MANUAL_METHODS: readonly ManualPaymentMethod[] = ["cash", "transfer", "bit", "free"];
+
+/** The hand-taken methods, and a Payment link once online card payments are open. */
+export const handMethods = (cardLinksOpen: boolean): (ManualPaymentMethod | "card")[] =>
+  cardLinksOpen ? [...MANUAL_METHODS, "card"] : [...MANUAL_METHODS];
 
 /** Methods with a reference to type; cash and a card the parent pays from the link have none. */
 const REFERENCE_COPY: Partial<Record<PickerMethod, { label: string; placeholder: string }>> = {

@@ -2,11 +2,14 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
+import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import type { PlanProduct } from "@/types/plans";
 import { toE164 } from "@/lib/plans/local-phone";
+import { phoneVariants } from "@/lib/plans/phone-variants";
+import { pricingRefusal } from "./discount-permission";
 import { findRecentDuplicate } from "./manual-payment";
 
 export interface SaleTrainee {
@@ -21,7 +24,7 @@ export interface SaleTrainee {
 }
 
 /** The intro pack is sold once per trainee: the refusal, or null. */
-export async function introPackRefusal(
+async function introPackRefusal(
   db: SupabaseClient,
   profileId: string,
   product: Pick<PlanProduct, "id" | "once_per_trainee">,
@@ -119,5 +122,60 @@ export async function checkTraineeSale(
     ok: true,
     product: { ...product, price_ils: Number(product.price_ils) },
     trainee: { ...trainee, phone: trainee.phone },
+  };
+}
+
+/** The trainee account already on a new trainee's login phone, if any. */
+interface NewTraineeOwner {
+  id: string;
+  birthdate: string | null;
+}
+
+/**
+ * Every rule a new-trainee sale must pass, whether paid by hand or by a
+ * Payment link: a live catalog product in a branch the caller may write, a
+ * price only an Admin or the branch's manager may lower, and a login phone
+ * that is no staff account. An existing trainee on that phone is reused, so
+ * it must be in the caller's scope and the intro pack stays once only. The
+ * caller has already checked auth.
+ */
+export async function checkNewTraineeSale(
+  db: SupabaseClient,
+  input: { productId: string; loginPhone: string; setsPrice: boolean },
+): Promise<{ ok: true; product: PlanProduct; owner: NewTraineeOwner | null } | { error: string }> {
+  // The product and the phone's account do not depend on each other.
+  const [{ data: product }, { data: owner }] = await Promise.all([
+    typedFrom(db, "plan_products")
+      .select("*")
+      .eq("id", input.productId)
+      .eq("is_active", true)
+      .maybeSingle() as unknown as Promise<{ data: PlanProduct | null }>,
+    db
+      .from("profiles")
+      .select("id, role, birthdate")
+      .in("phone", phoneVariants(input.loginPhone))
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  // A new trainee is sold from the catalog; a manual Card is for an existing one.
+  if (!product || product.staff_terms) return { error: "המסלול לא נמצא או אינו פעיל" };
+  const branchError = await assertBranchWritable(product.branch_id);
+  if (branchError.error) return { error: branchError.error };
+  if (owner && owner.role !== "trainee") return { error: "מספר הטלפון שייך לחשבון צוות" };
+  const discountError = await pricingRefusal(product.branch_id, input.setsPrice);
+  if (discountError) return { error: discountError };
+  if (owner) {
+    const scopeError = await assertTraineeInScope(owner.id);
+    if (scopeError) return { error: scopeError };
+    // An existing phone is a sale to that trainee: the intro pack is still once only.
+    const introRefusal = await introPackRefusal(db, owner.id, product);
+    if (introRefusal) return { error: introRefusal };
+  }
+
+  return {
+    ok: true,
+    product: { ...product, price_ils: Number(product.price_ils) },
+    owner: owner ? { id: owner.id, birthdate: owner.birthdate ?? null } : null,
   };
 }
