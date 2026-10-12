@@ -8,10 +8,12 @@ import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
 import { isValidUUID } from "@/lib/validations/common";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listProfileIdsInBranches } from "@/features/branches/lib/memberships";
+import { birthYearOf } from "@/lib/schedule/roster-name";
+import type { TraineeOption } from "@/types/schedule";
 
 interface SlotFormOptions {
   trainers: TrainerOption[];
-  trainees: TrainerOption[];
+  trainees: TraineeOption[];
 }
 
 type OptionsResult =
@@ -26,7 +28,8 @@ type OptionsResult =
  * only their own row and active trainer rows, and profile_branches lets them
  * read only their own memberships, so under a trainer session the user client
  * would return an empty trainee list. Safe because verifyAdminOrTrainer()
- * gates above and the projection is (id, full_name).
+ * gates above and the projection is (id, full_name), plus a trainee's
+ * birthdate and A mark so the roster picker can show "יונתן 08 A".
  */
 export const getSlotFormOptionsAction = cache(
   async (branchId: string): Promise<OptionsResult> => {
@@ -53,7 +56,7 @@ export const getSlotFormOptionsAction = cache(
         .order("full_name", { ascending: true }),
       supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, birthdate, plays_up")
         .in("id", memberIds)
         .eq("role", "trainee")
         .eq("is_active", true)
@@ -73,7 +76,12 @@ export const getSlotFormOptionsAction = cache(
       success: true,
       data: {
         trainers: (trainersResult.data as TrainerOption[]) ?? [],
-        trainees: (traineesResult.data as TrainerOption[]) ?? [],
+        trainees: (traineesResult.data ?? []).map((t) => ({
+          id: t.id,
+          full_name: t.full_name,
+          birth_year: birthYearOf(t.birthdate),
+          plays_up: t.plays_up,
+        })),
       },
     };
   },

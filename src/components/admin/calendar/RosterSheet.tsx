@@ -32,7 +32,6 @@ import { TraineeSearch } from "@/components/admin/schedule/TraineeSearch";
 import { useCurrentBranch } from "@/features/branches/components/BranchContext";
 import { HealthSheet } from "@/features/plans/components/HealthSheet";
 import { PlanSheet } from "@/features/plans/components/staff/PlanSheet";
-import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import {
   addSlotTraineeAction,
   deleteSlotAction,
@@ -45,17 +44,18 @@ import type { RosterSession } from "@/lib/schedule/roster-exercise";
 import { cn } from "@/lib/utils";
 import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { StaffPlanBadge } from "@/types/plans";
-import type { ScheduleSlot, SlotTrainee } from "@/types/schedule";
+import type { ScheduleSlot, SlotTrainee, TraineeOption } from "@/types/schedule";
 import { rosterRemovalMode } from "@/lib/schedule/roster-entry";
 import { israelMinutesOfDay } from "@/lib/utils/israel-time";
 import { israelToday } from "@/lib/utils/tasks";
 import { PastSlotPanel } from "./PastSlotPanel";
+import { rosterName } from "@/lib/schedule/roster-name";
 
 interface RosterSheetProps {
   /** The slot on screen, looked up from fresh page data; null closes the sheet. */
   slot: ScheduleSlot | null;
   onClose: () => void;
-  trainees: TrainerOption[];
+  trainees: TraineeOption[];
   planBadges: Record<string, StaffPlanBadge>;
   /** Admins may edit plans from the plan sheet. */
   isAdmin: boolean;
@@ -395,7 +395,7 @@ export function RosterSheet({
                 <div className="flex flex-wrap gap-1.5">
                   {lateCancels.map((entry) => (
                     <span key={entry.id} className="rounded-full border border-dashed px-2 py-0.5 text-xs text-muted-foreground line-through">
-                      {entry.trainee_name}
+                      {rosterName(entry)}
                     </span>
                   ))}
                 </div>

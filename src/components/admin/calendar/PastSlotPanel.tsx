@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { callOffSlotAction, clearCalledOffAction } from "@/lib/actions/daily-schedule-called-off";
 import type { ScheduleSlot } from "@/types/schedule";
+import { rosterName } from "@/lib/schedule/roster-name";
 
 interface PastSlotPanelProps {
   slot: ScheduleSlot;
@@ -109,7 +110,7 @@ export function PastSlotPanel({ slot, started, canManage }: PastSlotPanelProps) 
           <ul className="space-y-1 text-xs text-muted-foreground">
             {removed.map((entry) => (
               <li key={entry.id}>
-                <span className="line-through">{entry.trainee_name}</span>
+                <span className="line-through">{rosterName(entry)}</span>
                 {` · ${entry.removed_reason ?? ""}`}
                 {entry.removed_by_name ? ` · ${entry.removed_by_name}` : ""}
               </li>

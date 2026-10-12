@@ -5,7 +5,9 @@ import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
+import { shortBirthYear } from "@/lib/schedule/roster-name";
+import type { TraineeOption } from "@/types/schedule";
+import { PlaysUpMark } from "./PlaysUpMark";
 import { cn } from "@/lib/utils";
 
 const MAX_SUGGESTIONS = 6;
@@ -13,10 +15,10 @@ const MAX_SUGGESTIONS = 6;
 interface TraineeSearchProps {
   /** Prefix for element ids; the input is `${idPrefix}-search` for a Label. */
   idPrefix: string;
-  options: TrainerOption[];
+  options: TraineeOption[];
   /** Linked trainees already on the roster, never suggested again. */
   excludeIds: ReadonlySet<string>;
-  onPickLinked: (trainee: TrainerOption) => void;
+  onPickLinked: (trainee: TraineeOption) => void;
   /** A typed name with no account. The parent decides whether it is a duplicate. */
   onPickFreeText: (name: string) => void;
   disabled?: boolean;
@@ -53,7 +55,7 @@ export function TraineeSearch({
     setHighlighted(-1);
   };
 
-  const pickLinked = (trainee: TrainerOption) => {
+  const pickLinked = (trainee: TraineeOption) => {
     onPickLinked(trainee);
     reset();
   };
@@ -136,7 +138,11 @@ export function TraineeSearch({
               <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-forest/10 text-[11px] font-bold text-forest">
                 {(trainee.full_name ?? "?").slice(0, 1)}
               </span>
-              {trainee.full_name ?? "ללא שם"}
+              <span className="truncate">{trainee.full_name ?? "ללא שם"}</span>
+              {shortBirthYear(trainee.birth_year) && (
+                <span className="shrink-0 tabular-nums text-muted-foreground">{shortBirthYear(trainee.birth_year)}</span>
+              )}
+              {trainee.plays_up && <PlaysUpMark />}
             </button>
           ))}
         </div>

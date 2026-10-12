@@ -25,7 +25,7 @@ import { createSlotAction, updateSlotAction } from "@/lib/actions/daily-schedule
 import { TrainerCheckboxGroup } from "@/components/admin/schedule/TrainerCheckboxGroup";
 import { trainersAtTime } from "@/lib/utils/weekly-schedule";
 import { MAX_TRAINEES_PER_SLOT } from "@/lib/validations/schedule";
-import type { ScheduleSlot } from "@/types/schedule";
+import type { ScheduleSlot, TraineeOption } from "@/types/schedule";
 import type { OnDuty } from "@/types/weekly-schedule";
 
 /** The academy's operating hours, from the real daily schedule. */
@@ -68,7 +68,7 @@ interface SlotFormDialogProps {
   /** Null = create mode. Parent remounts via key so state initializes fresh. */
   slot: ScheduleSlot | null;
   trainers: TrainerOption[];
-  trainees: TrainerOption[];
+  trainees: TraineeOption[];
   /** Who the weekly schedule puts on this day; feeds the trainer suggestion. */
   onDuty: OnDuty | null;
   /** A new slot starts open to self-booking. Editing keeps what the slot says. */

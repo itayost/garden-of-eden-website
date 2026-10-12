@@ -48,6 +48,13 @@ export interface SlotTrainee {
    */
   trainee_id: string | null;
   trainee_name: string;
+  /**
+   * Not a column: the calendar's week loader reads it off the profile, for
+   * "יונתן 08". Absent elsewhere, null for free-text names or no birthdate.
+   */
+  birth_year?: number | null;
+  /** Not a column either: the profile's A mark, cleared to train with an older birth year. */
+  plays_up?: boolean;
   order_index: number;
   /** staff typed the name on the board; self = the trainee booked it. */
   source: "staff" | "self";
@@ -140,4 +147,15 @@ export interface SlotWorkout {
   exercises: SlotWorkoutExercise[];
   /** Active, linked roster members: how many would receive a save. */
   rosterCount: number;
+}
+
+/**
+ * A trainee in the roster pick-lists. The birth year and A mark are read by
+ * the calendar's options loader; other pick-lists leave them out.
+ */
+export interface TraineeOption {
+  id: string;
+  full_name: string | null;
+  birth_year?: number | null;
+  plays_up?: boolean;
 }

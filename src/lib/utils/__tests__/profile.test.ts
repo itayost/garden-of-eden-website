@@ -32,6 +32,7 @@ function createProfile(overrides: Partial<Profile> = {}): Profile {
     access_override: null,
     age_group_override: null,
     age_group_override_until: null,
+    plays_up: false,
     arbox_access_synced_at: null,
     branches_set_by_admin_at: null,
     guardian_name: null,

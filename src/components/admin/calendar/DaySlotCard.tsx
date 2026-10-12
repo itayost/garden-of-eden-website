@@ -8,6 +8,8 @@ import { rosterLabel } from "@/lib/utils/roster-label";
 import { firstTrainerId, trainerColor, trainerNames } from "@/lib/utils/trainer-color";
 import type { DaySessionStatus } from "@/lib/schedule/day-session-status";
 import type { ScheduleSlot } from "@/types/schedule";
+import { rosterName, shortBirthYear } from "@/lib/schedule/roster-name";
+import { PlaysUpMark } from "@/components/admin/schedule/PlaysUpMark";
 
 /** The chip per name: what a trainer still owes this trainee, at a glance. */
 const CHIP = {
@@ -99,7 +101,7 @@ export function DaySlotCard({
                   key={entry.id}
                   className="inline-flex min-h-9 items-center rounded-full border border-dashed bg-background/60 px-2.5 text-xs text-muted-foreground"
                 >
-                  {entry.trainee_name}
+                  {rosterName(entry)}
                 </li>
               );
             }
@@ -124,7 +126,12 @@ export function DaySlotCard({
                   {entry.source === "self" && (
                     <CalendarCheck className="h-3 w-3 shrink-0 opacity-70" aria-label="נרשם בעצמו" />
                   )}
+                  {/* The year sits outside the truncation, so a long name never hides it. */}
                   <span className="max-w-[10rem] truncate">{entry.trainee_name}</span>
+                  {shortBirthYear(entry.birth_year) && (
+                    <span className="shrink-0 tabular-nums opacity-80">{shortBirthYear(entry.birth_year)}</span>
+                  )}
+                  {entry.plays_up && <PlaysUpMark />}
                   {statusesLoaded && status?.status === "built" && status.exerciseCount > 0 && (
                     <span className="tabular-nums opacity-80">{status.exerciseCount}</span>
                   )}

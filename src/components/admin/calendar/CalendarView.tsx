@@ -24,7 +24,7 @@ import { addDays, shortDate } from "@/lib/utils/iso-date";
 import type { DaySessionStatuses } from "@/lib/schedule/day-session-status";
 import { isBuildableDay, weekRangeLabel, type Week, type WeekDay } from "@/lib/utils/schedule-week";
 import type { StaffPlanBadge } from "@/types/plans";
-import type { ScheduleSlot } from "@/types/schedule";
+import type { ScheduleSlot, TraineeOption } from "@/types/schedule";
 import { CalendarDayList } from "./CalendarDayList";
 import { CalendarTabs } from "./CalendarTabs";
 import { DateStrip } from "./DateStrip";
@@ -40,7 +40,7 @@ interface CalendarViewProps {
   /** Admin, or Branch manager of the branch on screen: may Call off a past Slot. */
   canManageBranch: boolean;
   trainers: TrainerOption[];
-  trainees: TrainerOption[];
+  trainees: TraineeOption[];
   planBadges: Record<string, StaffPlanBadge>;
   /** date -> trainee id -> session status, for the name chips in the day list. */
   sessionStatuses: DaySessionStatuses;
