@@ -68,6 +68,8 @@ export interface ImportOrderDraft {
   readonly profileId: string;
   readonly amountIls: number;
   readonly reference: string;
+  /** The day the purchase was made in Arbox; the order's paid_at is the import night. */
+  readonly purchasedOn: string;
   readonly childName: string;
   readonly childBirthdate: string | null;
   readonly parentName: string;
@@ -160,6 +162,7 @@ function orderDraft(p: ArboxPurchase, trainee: ImportTrainee, productId: string)
     profileId: trainee.profileId,
     amountIls: p.paid !== null && p.paid > 0 ? p.paid : 1,
     reference: `Arbox ${p.itemName} ${shortDate(p.purchaseDate)}`.slice(0, REFERENCE_MAX),
+    purchasedOn: p.purchaseDate,
     childName: trainee.name,
     childBirthdate: trainee.birthdate,
     parentName: trainee.guardianName ?? "הורה",
