@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { matchesBranchFilter } from "@/lib/admin/branch-filter";
 import { formatPhoneToLocal } from "@/lib/validations/common";
 import type { ProfileWithBranches, BranchOption } from "@/types/branches";
+import { CalendarGuestResults } from "@/features/training-history/components/CalendarGuestResults";
 
 function getInitials(name: string | null): string {
   if (!name) return "?";
@@ -301,6 +302,8 @@ export function UserDataTable({
 
       {/* Pagination */}
       <UserTablePagination table={table} />
+
+      <CalendarGuestResults query={globalFilter} />
     </div>
   );
 }
