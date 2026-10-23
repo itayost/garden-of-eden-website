@@ -20,6 +20,8 @@ import { TrainerAssignmentSelect } from "@/components/admin/leads/TrainerAssignm
 import { formatRelativeTime } from "@/lib/utils/date";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import type { RetentionEntry } from "@/lib/arbox/retention";
+import type { RetentionViewEntry } from "@/lib/arbox/retention-branches";
+import { Badge } from "@/components/ui/badge";
 import type { RetentionNote } from "@/lib/actions/admin-retention";
 import {
   NOTE_COLOR_BG,
@@ -52,8 +54,18 @@ function getNoteKey(entry: RetentionEntry): string {
   return entry.phone ?? `no-phone:${entry.name.trim().toLowerCase()}`;
 }
 
+/** A month's count for one branch: 0 is shown, null (not assigned, nothing there) is a dash. */
+function formatCount(count: number | null | undefined): string | number {
+  return count ?? "\u2014";
+}
+
+const BRANCH_COLUMNS = [
+  { key: "haifa", label: "חיפה" },
+  { key: "kiryat", label: "קריות" },
+] as const;
+
 interface RetentionTableProps {
-  entries: readonly RetentionEntry[];
+  entries: readonly RetentionViewEntry[];
   monthKeys: readonly string[];
   notes: ReadonlyMap<string, RetentionNote>;
   onSaveNote: (
@@ -137,10 +149,10 @@ export function RetentionTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">שם לקוח</TableHead>
-                <TableHead className="text-right">תאריך סיום</TableHead>
+                <TableHead rowSpan={2} className="text-right">שם לקוח</TableHead>
+                <TableHead rowSpan={2} className="text-right">תאריך סיום</TableHead>
                 {monthKeys.map((mk, i) => (
-                  <TableHead key={mk} className="text-center">
+                  <TableHead key={mk} colSpan={BRANCH_COLUMNS.length} className="text-center border-s">
                     <span className="inline-flex items-center gap-1">
                       {getMonthName(mk)}
                       {i === 0 && (
@@ -149,11 +161,23 @@ export function RetentionTable({
                     </span>
                   </TableHead>
                 ))}
-                <TableHead className="text-right">הערות</TableHead>
-                <TableHead className="text-right">מאמן משוייך</TableHead>
-                <TableHead className="text-right">תאריך עדכון אחרון</TableHead>
+                <TableHead rowSpan={2} className="text-right">הערות</TableHead>
+                <TableHead rowSpan={2} className="text-right">מאמן משוייך</TableHead>
+                <TableHead rowSpan={2} className="text-right">תאריך עדכון אחרון</TableHead>
                 {onMoveToChurned && (
-                  <TableHead className="text-right">פעולות</TableHead>
+                  <TableHead rowSpan={2} className="text-right">פעולות</TableHead>
+                )}
+              </TableRow>
+              <TableRow>
+                {monthKeys.flatMap((mk) =>
+                  BRANCH_COLUMNS.map((branch, bi) => (
+                    <TableHead
+                      key={`${mk}-${branch.key}`}
+                      className={`h-8 text-center text-xs font-normal ${bi === 0 ? "border-s" : ""}`}
+                    >
+                      {branch.label}
+                    </TableHead>
+                  )),
                 )}
               </TableRow>
             </TableHeader>
@@ -167,19 +191,27 @@ export function RetentionTable({
 
                 return (
                   <TableRow key={`${entry.user_id ?? entry.name}-${i}`}>
-                    <TableCell className="font-medium">{entry.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {entry.name}
+                        {entry.source === "calendar" && (
+                          <Badge variant="secondary" className="text-[10px]" title="מסלול בקריית אתא מהיומן, לא מ-Arbox">
+                            יומן
+                          </Badge>
+                        )}
+                      </span>
+                    </TableCell>
                     <TableCell>{formatDate(entry.end_date)}</TableCell>
-                    {monthKeys.map((mk, mi) => (
-                      <TableCell
-                        key={mk}
-                        className={`text-center ${mi === 0 ? "bg-muted/30" : ""}`}
-                      >
-                        {mi < entry.attendance.length &&
-                        entry.attendance[mi] != null
-                          ? entry.attendance[mi]
-                          : "\u2014"}
-                      </TableCell>
-                    ))}
+                    {monthKeys.flatMap((mk, mi) =>
+                      BRANCH_COLUMNS.map((branch, bi) => (
+                        <TableCell
+                          key={`${mk}-${branch.key}`}
+                          className={`text-center tabular-nums ${mi === 0 ? "bg-muted/30" : ""} ${bi === 0 ? "border-s" : ""}`}
+                        >
+                          {formatCount(entry.branch_attendance[branch.key][mi])}
+                        </TableCell>
+                      )),
+                    )}
                     <TableCell className={NOTE_COLOR_BG[existingColor]}>
                       <RetentionNoteCell
                         note={existingNote}

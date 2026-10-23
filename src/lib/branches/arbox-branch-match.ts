@@ -27,8 +27,8 @@ export function matchArboxBranch(
 
 /** Staff tag קריית אתא clients in Arbox by writing "קריות" into the name. */
 const KIRYAT_ATA_NAME_TAG = "קריות";
-const KIRYAT_ATA_BRANCH = "קריית אתא";
-const HAIFA_BRANCH = "חיפה";
+export const KIRYAT_ATA_BRANCH = "קריית אתא";
+export const HAIFA_BRANCH = "חיפה";
 
 /**
  * The branch the staff's naming convention points to: "קריות" anywhere in

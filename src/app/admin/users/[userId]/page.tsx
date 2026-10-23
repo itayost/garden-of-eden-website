@@ -36,6 +36,7 @@ import { getTraineeHealthAction } from "@/features/plans/lib/actions/trainee-hea
 import { UserPlanCard } from "@/features/plans/components/UserPlanCard";
 import { canManageBranches } from "@/lib/branches/branch-scope";
 import { HealthCard } from "@/features/plans/components/HealthCard";
+import { TrainingHistoryCard } from "@/features/training-history/components/TrainingHistoryCard";
 
 interface UserEditPageProps {
   params: Promise<{ userId: string }>;
@@ -237,6 +238,8 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               traineeId={userId}
             />
           )}
+
+          {userToEdit.role === "trainee" && <TrainingHistoryCard traineeId={userId} />}
 
           {health && <HealthCard traineeId={userId} health={health} />}
 
