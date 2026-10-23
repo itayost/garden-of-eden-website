@@ -29,10 +29,8 @@ import { createChurnedCustomer } from "@/lib/actions/admin-churned-customers";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { getAttendanceMonthKeys } from "@/lib/arbox/retention";
 import { normalizePhoneIL } from "@/lib/validations/common";
-import type {
-  RetentionEntry,
-  RetentionReportData,
-} from "@/lib/arbox/retention";
+import type { RetentionEntry } from "@/lib/arbox/retention";
+import type { RetentionViewData } from "@/lib/arbox/retention-branches";
 import type {
   RetentionReportMonth,
   RetentionNote,
@@ -74,7 +72,7 @@ interface RetentionPageClientProps {
   months: readonly RetentionReportMonth[];
   initialMonth: string;
   currentMonth: string;
-  initialData: RetentionReportData | null;
+  initialData: RetentionViewData | null;
   initialNotes: ReadonlyMap<string, RetentionNote>;
   initialChurned: readonly ChurnedCustomer[];
   traineePositions: Readonly<Record<string, string | null>>;
@@ -109,7 +107,7 @@ export function RetentionPageClient({
   const [allMonths, setAllMonths] =
     useState<readonly RetentionReportMonth[]>(initialMonths);
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
-  const [data, setData] = useState<RetentionReportData | null>(initialData);
+  const [data, setData] = useState<RetentionViewData | null>(initialData);
   const [notes, setNotes] =
     useState<ReadonlyMap<string, RetentionNote>>(initialNotes);
   const [churned, setChurned] =

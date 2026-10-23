@@ -8,7 +8,9 @@ import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { visibleTraineePhones } from "@/features/branches/lib/memberships";
 import { normalizePhoneIL } from "@/lib/validations/common";
-import type { RetentionEntry, RetentionReportData } from "@/lib/arbox/retention";
+import type { RetentionReportData } from "@/lib/arbox/retention";
+import type { RetentionViewData, RetentionViewEntry } from "@/lib/arbox/retention-branches";
+import { loadRetentionView } from "@/lib/arbox/retention-branches-load";
 import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
 
 /**
@@ -22,11 +24,11 @@ async function callerVisiblePhones(): Promise<Set<string> | null | { error: stri
 }
 
 function scopeReport(
-  report: RetentionReportData,
+  report: RetentionViewData,
   visible: Set<string> | null,
-): RetentionReportData {
+): RetentionViewData {
   if (visible === null) return report;
-  const keep = (entry: RetentionEntry) => {
+  const keep = (entry: RetentionViewEntry) => {
     const phone = normalizePhoneIL(entry.phone);
     return phone !== null && visible.has(phone);
   };
@@ -53,6 +55,10 @@ import {
   NOTE_COLORS,
   type NoteColor,
 } from "@/lib/validations/churned-customers";
+
+const reportMonthSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-01$/, "פורמט חודש לא תקין");
 
 export interface RetentionNote {
   readonly note: string;
@@ -83,9 +89,10 @@ export async function getRetentionReportMonths(): Promise<
 
 export async function getRetentionReport(
   reportMonth: string,
-): Promise<RetentionReportData | null> {
+): Promise<RetentionViewData | null> {
   const { error } = await verifyAdminOrTrainer();
   if (error) return null;
+  if (!reportMonthSchema.safeParse(reportMonth).success) return null;
 
   const supabase = await createClient();
   const { data } = await typedFrom(supabase, "retention_reports")
@@ -98,7 +105,8 @@ export async function getRetentionReport(
   const visible = await callerVisiblePhones();
   if (!(visible instanceof Set) && visible !== null) return null;
 
-  return scopeReport(data.data as unknown as RetentionReportData, visible);
+  const view = await loadRetentionView(data.data as unknown as RetentionReportData, reportMonth);
+  return scopeReport(view, visible);
 }
 
 export async function getRetentionNotes(
@@ -275,13 +283,9 @@ export async function setRetentionTrainer(
   return { error: null };
 }
 
-const reportMonthSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-01$/, "פורמט חודש לא תקין");
-
 export interface RefreshRetentionReportResult {
   readonly error: string | null;
-  readonly data: RetentionReportData | null;
+  readonly data: RetentionViewData | null;
   readonly refreshedAt: string | null;
 }
 
@@ -325,7 +329,8 @@ export async function refreshRetentionReport(
     if (!(visible instanceof Set) && visible !== null) {
       return { error: visible.error, data: null, refreshedAt: null };
     }
-    return { error: null, data: scopeReport(data, visible), refreshedAt };
+    const view = await loadRetentionView(data, parsed.data);
+    return { error: null, data: scopeReport(view, visible), refreshedAt };
   } catch (err) {
     console.error("[RetentionRefresh] Failed:", err);
     const message = err instanceof Error ? err.message : "";
