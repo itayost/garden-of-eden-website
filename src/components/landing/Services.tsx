@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { m } from "framer-motion";
 import {
   ArrowLeft,
   Brain,
@@ -11,6 +10,7 @@ import {
   Footprints,
   HeartPulse,
   Infinity as InfinityIcon,
+  MessageCircle,
   Phone,
   Ticket,
   Users,
@@ -25,9 +25,12 @@ const PHONE_DISPLAY = "052-5779446";
 type Plan = {
   icon: LucideIcon;
   name: string;
-  description?: string;
+  description: string;
   price: string;
-  period?: string;
+  period: string;
+  /** A derived per-session price, shown only where it is exact. */
+  perSession?: string;
+  cta: string;
   whatsappMessage: string;
   features: string[];
   /** The gold card on the poster. */
@@ -42,6 +45,7 @@ const plans: Plan[] = [
     description: "מנוי חודשי",
     price: "1,450",
     period: "לחודש",
+    cta: "שליחת הודעה על המסלול",
     whatsappMessage: "היי, אשמח לשמוע פרטים נוספים על מסלול 2 אימונים בשבוע. תודה!",
     features: ["כדורגל", "כוח ואתלטיקה", "מעטפת תזונתית", "מנטלית וטקטית"],
   },
@@ -51,6 +55,7 @@ const plans: Plan[] = [
     description: "מנוי חודשי",
     price: "850",
     period: "לחודש",
+    cta: "שליחת הודעה על המסלול",
     whatsappMessage: "היי, אשמח לשמוע פרטים נוספים על מסלול אימון אחד בשבוע. תודה!",
     features: ["כדורגל", "כוח ואתלטיקה", "מעטפת תזונתית", "מנטלית וטקטית"],
   },
@@ -59,16 +64,10 @@ const plans: Plan[] = [
     name: "מסלול היכרות",
     description: "2 אימונים",
     price: "200",
+    period: "להכיר את השיטה לפני שמצטרפים",
+    cta: "קביעת אימון היכרות",
     whatsappMessage: "היי, אשמח לקבוע מסלול היכרות (2 אימונים). תודה!",
     features: ["2 אימונים", "היכרות עם השיטה ועם המאמנים"],
-  },
-  {
-    icon: Ticket,
-    name: "כרטיסיית 10 אימונים",
-    price: "2,100",
-    period: "10 אימונים",
-    whatsappMessage: "היי, אשמח לשמוע פרטים נוספים על כרטיסיית 10 אימונים. תודה!",
-    features: ["הגבלת זמן רחבה"],
   },
   {
     icon: InfinityIcon,
@@ -76,82 +75,104 @@ const plans: Plan[] = [
     description: "מנוי חודשי",
     price: "1,650",
     period: "לחודש",
+    cta: "שליחת הודעה על המסלול",
     whatsappMessage: "היי, אשמח לשמוע פרטים נוספים על המסלול ללא הגבלה. תודה!",
     features: ["אימונים ללא הגבלה", "כדורגל", "כוח ואתלטיקה", "מעטפת תזונתית ומנטלית"],
     highlighted: true,
+  },
+  {
+    icon: Ticket,
+    name: "כרטיסיית 10 אימונים",
+    description: "מנצלים בקצב שלכם",
+    price: "2,100",
+    period: "10 אימונים",
+    perSession: "₪210 לאימון",
+    cta: "שליחת הודעה על המסלול",
+    whatsappMessage: "היי, אשמח לשמוע פרטים נוספים על כרטיסיית 10 אימונים. תודה!",
+    features: ["הגבלת זמן רחבה"],
   },
 ];
 
 const disciplines = ["כדורגל", "כושר", "אתלטיות", "פיתוח אישי"];
 
-const pillars: { icon: LucideIcon; label: string }[] = [
-  { icon: HeartPulse, label: "בריאות ואנרגיה" },
-  { icon: Users, label: "אווירה טובה וחברים" },
-  { icon: Brain, label: "מנטלי ופיתוח אישי" },
-  { icon: Zap, label: "מהירות ואתלטיות" },
-  { icon: Volleyball, label: "כדורגל וטכניקה" },
-  { icon: Dumbbell, label: "כושר וכוח" },
+const pillars: { icon: LucideIcon; lines: [string, string] }[] = [
+  { icon: HeartPulse, lines: ["בריאות", "ואנרגיה"] },
+  { icon: Users, lines: ["אווירה טובה", "וחברים"] },
+  { icon: Brain, lines: ["מנטלי", "ופיתוח אישי"] },
+  { icon: Zap, lines: ["מהירות", "ואתלטיות"] },
+  { icon: Volleyball, lines: ["כדורגל", "וטכניקה"] },
+  { icon: Dumbbell, lines: ["כושר", "וכוח"] },
 ];
+
+/** The poster's palette: a night pitch, a neon green, and gold for the unlimited plan. */
+const NEON = "#7df25c";
+
+const accents = {
+  neon: {
+    border: "border-[#7df25c]",
+    text: "text-[#7df25c]",
+    tick: "bg-[#7df25c]",
+    glow: "shadow-[0_24px_48px_-24px_rgba(0,0,0,0.9),0_0_30px_-4px_rgba(125,242,92,0.32)]",
+    badgeGlow: "shadow-[0_10px_26px_-8px_rgba(125,242,92,0.32),0_0_22px_rgba(125,242,92,0.32)]",
+    surface: "bg-[linear-gradient(180deg,rgba(10,22,12,0.92),rgba(4,8,5,0.94))]",
+    pill: "border-[#7df25c]/45",
+    button: "border-[#7df25c]/60 text-[#7df25c] hover:bg-[#7df25c] focus-visible:outline-[#7df25c]",
+  },
+  gold: {
+    border: "border-[#ffd84a]",
+    text: "text-[#ffd84a]",
+    tick: "bg-[#ffd84a]",
+    glow: "shadow-[0_24px_48px_-24px_rgba(0,0,0,0.9),0_0_34px_-2px_rgba(255,216,74,0.3)]",
+    badgeGlow: "shadow-[0_10px_26px_-8px_rgba(255,216,74,0.3),0_0_22px_rgba(255,216,74,0.3)]",
+    surface: "bg-[linear-gradient(180deg,rgba(28,24,6,0.9),rgba(6,6,3,0.95))]",
+    pill: "border-[#ffd84a]/45",
+    button: "border-[#ffd84a]/60 text-[#ffd84a] hover:bg-[#ffd84a] focus-visible:outline-[#ffd84a]",
+  },
+};
 
 function buildWhatsAppUrl(message: string): string {
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
 }
 
-function PlanCard({ plan, index }: { plan: Plan; index: number }) {
+function PlanCard({ plan }: { plan: Plan }) {
   const Icon = plan.icon;
-  const accent = plan.highlighted
-    ? {
-        border: "border-yellow-300",
-        glow: "shadow-[0_0_28px_rgba(253,224,71,0.35)]",
-        text: "text-yellow-300",
-        check: "bg-yellow-300",
-        button: "border-yellow-300/60 hover:bg-yellow-300 text-yellow-300",
-      }
-    : {
-        border: "border-green-400",
-        glow: "shadow-[0_0_28px_rgba(74,222,128,0.3)]",
-        text: "text-green-400",
-        check: "bg-green-400",
-        button: "border-green-400/60 hover:bg-green-400 text-green-400",
-      };
-
+  const accent = plan.highlighted ? accents.gold : accents.neon;
   return (
-    <m.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.1 }}
-      className="relative w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] pt-9"
-    >
-      {/* Icon badge sitting on the top border */}
+    <article className="floodlight group relative w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] pt-[38px]">
       <div
-        className={`absolute top-0 inset-x-0 mx-auto z-10 w-[72px] h-[72px] rounded-full bg-black border-2 ${accent.border} ${accent.glow} flex items-center justify-center`}
+        className={`absolute top-0 inset-x-0 mx-auto z-10 w-[76px] h-[76px] rounded-full bg-[#040805] border-2 ${accent.border} ${accent.badgeGlow} flex items-center justify-center`}
       >
-        <Icon className={`w-8 h-8 ${accent.text}`} aria-hidden="true" />
+        <Icon className={`w-[34px] h-[34px] ${accent.text}`} aria-hidden="true" />
       </div>
 
       <div
-        className={`h-full rounded-2xl border-2 ${accent.border} ${accent.glow} bg-black/75 backdrop-blur-sm px-6 pt-12 pb-6 flex flex-col text-center`}
+        className={`h-full flex flex-col text-center rounded-[20px] border-2 ${accent.border} ${accent.surface} ${accent.glow} px-7 pt-14 pb-6 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1.5`}
       >
-        <h3 className="text-2xl font-black text-white">{plan.name}</h3>
-        {plan.description && <p className="text-white/80 mt-1">{plan.description}</p>}
+        <h3 className="text-[1.75rem] font-black leading-tight text-balance">{plan.name}</h3>
+        <p className="text-lg text-[#c9d8c6] mt-1">{plan.description}</p>
 
-        <div className="mt-3">
-          <span className={`text-5xl font-black tracking-tight ${accent.text}`}>₪{plan.price}</span>
-          {plan.period && <p className="text-white/80 mt-1">{plan.period}</p>}
-        </div>
+        <p className={`flex justify-center items-baseline gap-1.5 mt-2.5 font-black leading-none ${accent.text}`}>
+          <span className="text-6xl md:text-[4.25rem] tracking-[-0.03em] tabular-nums">{plan.price}</span>
+          <span className="text-[2.5rem]">₪</span>
+        </p>
+        <p className="text-lg text-[#c9d8c6] mt-1.5">{plan.period}</p>
+        {plan.perSession && (
+          <div>
+            <span className={`inline-block mt-2 rounded-full border ${accent.pill} ${accent.text} px-3 py-0.5 text-[0.95rem]`}>
+              {plan.perSession}
+            </span>
+          </div>
+        )}
 
-        <div className="h-px bg-white/60 my-5" />
+        <div className="h-px bg-[#f6fbf4]/55 mt-[22px] mb-[18px]" />
 
-        <ul className="space-y-2 text-start">
+        <ul className="grid gap-2.5 text-start">
           {plan.features.map((feature) => (
-            <li key={feature} className="flex items-center gap-3 text-white">
-              <span
-                className={`w-5 h-5 rounded-full ${accent.check} flex items-center justify-center flex-shrink-0`}
-              >
-                <Check className="w-3.5 h-3.5 text-black" strokeWidth={3} aria-hidden="true" />
+            <li key={feature} className="flex items-center gap-3 text-lg">
+              <span className={`flex-none w-[22px] h-[22px] rounded-full ${accent.tick} text-[#040805] flex items-center justify-center`}>
+                <Check className="w-3.5 h-3.5" strokeWidth={3.2} aria-hidden="true" />
               </span>
-              <span>{feature}</span>
+              {feature}
             </li>
           ))}
         </ul>
@@ -161,116 +182,135 @@ function PlanCard({ plan, index }: { plan: Plan; index: number }) {
             href={buildWhatsAppUrl(plan.whatsappMessage)}
             target="_blank"
             rel="noopener noreferrer"
-            className={`w-full py-2.5 rounded-full border font-semibold transition-colors duration-300 hover:text-black flex items-center justify-center gap-2 ${accent.button}`}
+            className={`flex items-center justify-center gap-2.5 min-h-12 rounded-full border-[1.5px] font-bold text-[1.05rem] hover:text-[#040805] transition-colors duration-300 focus-visible:outline-3 focus-visible:outline-offset-4 ${accent.button}`}
           >
-            לפרטים בוואטסאפ
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            <MessageCircle className="w-[18px] h-[18px]" aria-hidden="true" />
+            {plan.cta}
           </a>
         </div>
       </div>
-    </m.div>
+    </article>
   );
 }
 
 export function Services() {
   return (
-    <section id="services" className="relative overflow-hidden bg-black py-20">
+    <section
+      id="services"
+      aria-labelledby="services-title"
+      className="relative isolate overflow-hidden bg-[#040805] text-[#f6fbf4] px-4 pt-16 pb-14 md:pt-[88px] md:pb-[72px] selection:bg-[#7df25c] selection:text-[#040805]"
+    >
       {/* Pitch backdrop */}
       <Image
         src="/landing/hero.webp"
         alt=""
         fill
         sizes="100vw"
-        className="object-cover opacity-25"
+        className="-z-20 object-cover object-[center_30%] opacity-[0.28] saturate-[0.6] contrast-[1.1]"
         aria-hidden="true"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-black/70 to-[#04140a]" aria-hidden="true" />
+      <div
+        className="absolute inset-0 -z-10 bg-[radial-gradient(120%_70%_at_50%_0%,rgba(4,8,5,0.35)_0%,#040805_70%),linear-gradient(to_bottom,transparent_55%,#0b1a0e_100%)]"
+        aria-hidden="true"
+      />
+      {/* Halfway line and center circle behind the cards */}
+      <svg
+        className="absolute inset-x-0 top-[380px] h-[760px] w-full -z-10 opacity-[0.16] pointer-events-none"
+        viewBox="0 0 1200 760"
+        preserveAspectRatio="xMidYMid slice"
+        fill="none"
+        stroke={NEON}
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <line x1="0" y1="380" x2="1200" y2="380" />
+        <circle cx="600" cy="380" r="170" />
+        <circle cx="600" cy="380" r="5" fill={NEON} />
+      </svg>
 
-      <div className="relative container mx-auto px-6">
-        {/* Header */}
-        <m.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-14"
-        >
-          <span className="inline-block -skew-x-6 bg-green-400 px-6 py-1.5 mb-5 shadow-[0_0_24px_rgba(74,222,128,0.5)]">
-            <span className="block skew-x-6 text-xl md:text-2xl font-black text-black">סניף חיפה</span>
+      <div className="max-w-[1120px] mx-auto">
+        <header className="grid justify-items-center gap-[18px] text-center">
+          <Image
+            src="/landing/logo-light.png"
+            alt="גארדן אוף EDEN"
+            loading="eager"
+            width={108}
+            height={121}
+            className="drop-shadow-[0_6px_18px_rgba(125,242,92,0.25)]"
+          />
+          <span className="inline-block -skew-x-[10deg] bg-[#7df25c] px-[26px] py-1.5 shadow-[0_8px_24px_-6px_rgba(125,242,92,0.32)]">
+            <span className="block skew-x-[10deg] text-2xl font-black leading-tight text-[#040805]">סניף חיפה</span>
           </span>
-          <h2 className="font-black leading-none">
-            <span className="block text-5xl md:text-7xl text-white">מסלולי אימונים</span>
-            <span className="block text-5xl md:text-7xl text-green-400 drop-shadow-[0_0_18px_rgba(74,222,128,0.5)]">
+          <h2 id="services-title" className="font-black leading-[0.92] tracking-[-0.02em]">
+            <span className="block text-5xl sm:text-7xl lg:text-[5.75rem]">מסלולי אימונים</span>
+            <span className="block text-[3.25rem] sm:text-[4.75rem] lg:text-8xl text-[#7df25c] [text-shadow:0_6px_28px_rgba(125,242,92,0.45)]">
               נבחרים
             </span>
           </h2>
-          <div className="flex items-center justify-center gap-3 md:gap-4 mt-6 text-white text-lg md:text-2xl">
-            <span className="hidden sm:block h-0.5 w-12 md:w-24 bg-green-400" aria-hidden="true" />
+          <div className="flex flex-wrap items-center justify-center gap-3.5 text-lg md:text-2xl">
+            <span className="hidden sm:block w-[72px] h-0.5 bg-[#7df25c]" aria-hidden="true" />
             {disciplines.map((item, i) => (
-              <span key={item} className="flex items-center gap-3 md:gap-4">
-                {i > 0 && <span className="w-px h-6 bg-green-400" aria-hidden="true" />}
+              <span key={item} className="flex items-center gap-3.5">
+                {i > 0 && <span className="w-0.5 h-[22px] bg-[#7df25c]" aria-hidden="true" />}
                 {item}
               </span>
             ))}
-            <span className="hidden sm:block h-0.5 w-12 md:w-24 bg-green-400" aria-hidden="true" />
+            <span className="hidden sm:block w-[72px] h-0.5 bg-[#7df25c]" aria-hidden="true" />
           </div>
-        </m.div>
+        </header>
 
-        {/* Pricing cards */}
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-8 max-w-6xl mx-auto">
-          {plans.map((plan, index) => (
-            <PlanCard key={plan.name} plan={plan} index={index} />
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-11 md:gap-y-14 mt-[52px] md:mt-[72px]">
+          {plans.map((plan) => (
+            <PlanCard key={plan.name} plan={plan} />
           ))}
         </div>
 
-        {/* Pillars */}
-        <m.ul
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="grid grid-cols-3 md:grid-cols-6 gap-y-8 max-w-5xl mx-auto mt-16"
-        >
-          {pillars.map(({ icon: Icon, label }) => (
+        <ul className="grid grid-cols-3 md:grid-cols-6 gap-y-7 max-w-[1000px] mx-auto mt-[76px]">
+          {pillars.map(({ icon: Icon, lines }, i) => (
             <li
-              key={label}
-              className="flex flex-col items-center gap-2 px-2 text-center md:border-s md:first:border-s-0 border-white/30"
+              key={lines[0]}
+              className={`flex flex-col items-center gap-2.5 px-2.5 py-1 text-center font-bold text-base md:text-lg leading-tight border-[#f6fbf4]/30 ${
+                i === 0 ? "" : i === 3 ? "md:border-s" : "border-s"
+              }`}
             >
-              <Icon className="w-10 h-10 text-green-400" aria-hidden="true" />
-              <span className="text-white font-semibold leading-tight">{label}</span>
+              <Icon className="w-[38px] h-[38px] md:w-11 md:h-11 text-[#7df25c]" strokeWidth={1.75} aria-hidden="true" />
+              <span>
+                {lines[0]}
+                <br />
+                {lines[1]}
+              </span>
             </li>
           ))}
-        </m.ul>
+        </ul>
 
-        {/* Contact bar */}
-        <m.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="max-w-4xl mx-auto mt-14 rounded-full bg-green-400 shadow-[0_0_32px_rgba(74,222,128,0.45)] flex flex-col sm:flex-row items-stretch overflow-hidden text-black"
-        >
+        <div className="flex flex-col sm:flex-row items-stretch max-w-[920px] mx-auto mt-[60px] rounded-[28px] sm:rounded-full overflow-hidden bg-[#7df25c] text-[#040805] shadow-[0_18px_40px_-16px_rgba(125,242,92,0.32),0_0_36px_-6px_rgba(125,242,92,0.32)]">
           <a
             href={`tel:+${WHATSAPP_PHONE}`}
-            className="flex-1 flex items-center justify-center gap-3 px-6 py-3 font-black text-2xl md:text-3xl hover:bg-green-300 transition-colors"
+            className="flex-1 flex items-center justify-center gap-3.5 px-6 py-3 font-black text-[1.75rem] md:text-[2rem] tracking-[-0.01em] hover:bg-[#95f77a] transition-colors focus-visible:outline-3 focus-visible:-outline-offset-4 focus-visible:outline-[#040805]"
           >
-            <span className="w-11 h-11 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-              <Phone className="w-5 h-5 text-white" aria-hidden="true" />
+            <span className="w-[46px] h-[46px] rounded-full bg-[#040805] flex items-center justify-center flex-none">
+              <Phone className="w-[22px] h-[22px] text-[#f6fbf4]" aria-hidden="true" />
             </span>
             <span dir="ltr">{PHONE_DISPLAY}</span>
           </a>
-          <span className="hidden sm:block w-0.5 my-3 bg-black" aria-hidden="true" />
+          <span className="h-0.5 mx-6 sm:h-auto sm:w-0.5 sm:mx-0 sm:my-3.5 bg-[#040805]" aria-hidden="true" />
           <a
             href={buildWhatsAppUrl("היי, אשמח להירשם ולשמוע פרטים נוספים על מסלולי האימונים בחיפה. תודה!")}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 flex items-center justify-center gap-3 px-6 py-3 font-black text-xl md:text-2xl hover:bg-green-300 transition-colors"
+            className="flex-1 flex items-center justify-center gap-3.5 px-6 py-3 font-black text-[1.3rem] md:text-[1.6rem] hover:bg-[#95f77a] transition-colors focus-visible:outline-3 focus-visible:-outline-offset-4 focus-visible:outline-[#040805]"
           >
             להרשמה ולפרטים נוספים
-            <span className="w-11 h-11 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-              <ArrowLeft className="w-5 h-5 text-white" aria-hidden="true" />
+            <span className="w-[46px] h-[46px] rounded-full bg-[#040805] flex items-center justify-center flex-none">
+              <ArrowLeft className="w-[22px] h-[22px] text-[#f6fbf4]" aria-hidden="true" />
             </span>
           </a>
-        </m.div>
+        </div>
 
-        <p className="text-center text-white/60 text-sm mt-8">* כל האימונים משולבים עם כדור</p>
+        <p className="text-center mt-[26px] text-[1.05rem] text-[#c9d8c6]">
+          <b className="text-[#f6fbf4]">סניף חיפה</b> · רחוב המלך שלמה 57, חיפה
+        </p>
+        <p className="text-center mt-2 text-sm text-[#c9d8c6]/75">* כל האימונים משולבים עם כדור</p>
       </div>
     </section>
   );
