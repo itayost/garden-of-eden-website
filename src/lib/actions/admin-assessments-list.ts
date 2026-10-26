@@ -8,7 +8,7 @@ import type { Profile } from "@/types/database";
 import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { byFullName, readInChunks } from "@/lib/supabase/in-chunks";
+import { byFullName, readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { resolveAgeGroup } from "@/lib/age-group-override";
 
@@ -29,13 +29,16 @@ async function getUserIdsWithSection(
   const section = ASSESSMENT_SECTIONS.find((s) => s.key === sectionKey);
   if (!section) return [];
   const orPredicate = section.fields.map((f) => `${f}.not.is.null`).join(",");
-  const { data } = await supabase
-    .from("player_assessments")
-    .select("user_id")
-    .is("deleted_at", null)
-    .or(orPredicate);
-  if (!data) return [];
-  return Array.from(new Set(data.map((r) => r.user_id as string)));
+  // Every assessment in the academy can match: read it a page at a time.
+  const { data } = await readAllPages(() =>
+    supabase
+      .from("player_assessments")
+      .select("user_id")
+      .is("deleted_at", null)
+      .or(orPredicate)
+      .order("id"),
+  );
+  return Array.from(new Set(data.map((r) => r.user_id)));
 }
 
 export interface AssessmentsPaginatedResult {

@@ -2,11 +2,11 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { readInChunks } from "@/lib/supabase/in-chunks";
+import { readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
 import { dueReminder } from "@/lib/plans/plan-queue";
 import { REMINDED_COLUMN, reminderReason } from "@/lib/plans/reminder-copy";
 import { sendPlanReminder } from "@/lib/whatsapp/plan-templates";
-import type { EnrollmentAgreement, TraineePlan } from "@/types/plans";
+import type { EnrollmentAgreement } from "@/types/plans";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import { loadPlanQueues } from "./queries";
 import { buildRenewalUrl } from "./renewal-link";
@@ -117,18 +117,16 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   result.signReminders = signReminders.sent;
   result.failed += signReminders.failed;
 
-  const { data: activePlans, error } = (await typedFrom(db, "trainee_plans")
-    .select("profile_id")
-    .eq("status", "active")) as {
-    data: Pick<TraineePlan, "profile_id">[] | null;
-    error: { message: string } | null;
-  };
+  // A page at a time: past 1000 active Plans the rest would get no reminder.
+  const { data: activePlans, error } = await readAllPages(() =>
+    db.from("trainee_plans").select("profile_id").eq("status", "active").order("id"),
+  );
   if (error) {
     console.error("[plan-reminders] load plans failed:", error);
     return result;
   }
 
-  const profileIds = Array.from(new Set((activePlans ?? []).map((p) => p.profile_id)));
+  const profileIds = Array.from(new Set(activePlans.map((p) => p.profile_id)));
   const queues = await loadPlanQueues(db, profileIds, today);
 
   if (profileIds.length === 0) return result;

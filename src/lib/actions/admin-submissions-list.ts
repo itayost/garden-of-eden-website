@@ -75,7 +75,10 @@ const visibleUserIdsFor = cache(
 
 interface FormList {
   table: "pre_workout_forms" | "post_workout_forms" | "nutrition_forms" | "mental_questionnaires";
-  /** The trainee embed, aliased `profile`: the position filter reads it. */
+  /**
+   * The trainee embed, aliased `profile`: the position filter reads it, so it
+   * must be `!inner` for the filter to drop forms rather than null the embed.
+   */
   profile: string;
   /** Any other embed the tab shows. */
   extra?: string;
@@ -169,7 +172,7 @@ export async function getPostWorkoutPaginated(
   return formsPage<PostWorkoutWithTrainer>(
     {
       table: "post_workout_forms",
-      profile: "profile:profiles!post_workout_forms_user_id_fkey(position)",
+      profile: "profile:profiles!post_workout_forms_user_id_fkey!inner(position)",
       extra: "trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)",
       searchable: true,
     },
@@ -183,7 +186,7 @@ export async function getNutritionPaginated(
   return formsPage<NutritionFormWithProfile>(
     {
       table: "nutrition_forms",
-      profile: "profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate, position)",
+      profile: "profile:profiles!nutrition_forms_user_id_fkey!inner(full_name, birthdate, position)",
       searchable: false,
     },
     params,
