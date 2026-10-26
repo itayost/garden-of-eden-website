@@ -7,6 +7,7 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
 import { isValidUUID } from "@/lib/validations/common";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { byFullName, readInChunks } from "@/lib/supabase/in-chunks";
 import { listProfileIdsInBranches } from "@/features/branches/lib/memberships";
 import { birthYearOf } from "@/lib/schedule/roster-name";
 import type { TraineeOption } from "@/types/schedule";
@@ -45,43 +46,36 @@ export const getSlotFormOptionsAction = cache(
       return { success: true, data: { trainers: [], trainees: [] } };
     }
 
-    const [trainersResult, traineesResult] = await Promise.all([
+    // A branch has more members than one request URL holds: a slice per
+    // request, then split by role and put back in name order.
+    const { data, error } = await readInChunks(memberIds, "id", () =>
       supabase
         .from("profiles")
-        .select("id, full_name")
-        .in("id", memberIds)
-        .in("role", ["trainer", "admin"])
+        .select("id, full_name, role, birthdate, plays_up")
         .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("full_name", { ascending: true }),
-      supabase
-        .from("profiles")
-        .select("id, full_name, birthdate, plays_up")
-        .in("id", memberIds)
-        .eq("role", "trainee")
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("full_name", { ascending: true }),
-    ]);
+        .is("deleted_at", null),
+    );
 
-    if (trainersResult.error || traineesResult.error) {
-      console.error(
-        "Get slot form options error:",
-        trainersResult.error ?? traineesResult.error,
-      );
+    if (error) {
+      console.error("Get slot form options error:", error);
       return { error: "שגיאה בטעינת רשימות המאמנים והמתאמנים" };
     }
 
+    const members = [...data].sort(byFullName);
     return {
       success: true,
       data: {
-        trainers: (trainersResult.data as TrainerOption[]) ?? [],
-        trainees: (traineesResult.data ?? []).map((t) => ({
-          id: t.id,
-          full_name: t.full_name,
-          birth_year: birthYearOf(t.birthdate),
-          plays_up: t.plays_up,
-        })),
+        trainers: members
+          .filter((p) => p.role === "trainer" || p.role === "admin")
+          .map((p): TrainerOption => ({ id: p.id, full_name: p.full_name })),
+        trainees: members
+          .filter((p) => p.role === "trainee")
+          .map((t) => ({
+            id: t.id,
+            full_name: t.full_name,
+            birth_year: birthYearOf(t.birthdate),
+            plays_up: t.plays_up,
+          })),
       },
     };
   },

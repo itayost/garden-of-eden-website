@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { readInChunks } from "@/lib/supabase/in-chunks";
 import {
   planStart,
   resolvePlanQueue,
@@ -49,26 +50,25 @@ export async function loadStoredPlans(
   profileIds: readonly string[],
 ): Promise<Map<string, StoredPlan[]>> {
   const result = new Map<string, StoredPlan[]>();
-  if (profileIds.length === 0) return result;
-  const { data, error } = (await typedFrom(db, "trainee_plans")
-    .select(
-      `*, product:plan_products(name_he, kind), order:orders!trainee_plans_order_id_fkey(payment_method, terms_sessions_total, terms_duration_days), ${PLAN_FREEZES_EMBED}`,
-    )
-    .in("profile_id", [...profileIds])) as {
-    data:
-      | (TraineePlan & {
-          product: ProductBits | null;
-          order: Pick<Order, "payment_method" | "terms_sessions_total" | "terms_duration_days"> | null;
-          plan_freezes: PlanFreezeRow[] | null;
-        })[]
-      | null;
-    error: { message: string } | null;
-  };
+  // A staff list asks for every trainee at once: a slice of ids per request.
+  const { data, error } = await readInChunks<
+    TraineePlan & {
+      product: ProductBits | null;
+      order: Pick<Order, "payment_method" | "terms_sessions_total" | "terms_duration_days"> | null;
+      plan_freezes: PlanFreezeRow[] | null;
+    }
+  >(profileIds, "profile_id", () =>
+    typedFrom(db, "trainee_plans")
+      .select(
+        `*, product:plan_products(name_he, kind), order:orders!trainee_plans_order_id_fkey(payment_method, terms_sessions_total, terms_duration_days), ${PLAN_FREEZES_EMBED}`,
+      )
+      .order("id"),
+  );
   if (error) {
     console.error("loadStoredPlans error:", error);
     return result;
   }
-  for (const { order, product, ...row } of data ?? []) {
+  for (const { order, product, ...row } of data) {
     // Every screen names the Plan from here: a manual Card by the terms its
     // order was sold on (an Adjustment changes the Plan's terms, not the sale).
     const named = product && order ? { ...product, name_he: orderPlanName(product.name_he, order) } : product;
@@ -86,49 +86,41 @@ interface RosterRow {
   slot: { schedule_date: string; start_time: string; branch_id: string | null; called_off_at: string | null } | null;
 }
 
-const PAGE = 1000;
-
 /**
- * Roster rows of these Trainees, grouped by Trainee, page by page: PostgREST
- * caps a response at 1000 rows, and a silently truncated roster would
- * undercount every queue.
+ * Roster rows of these Trainees, grouped by Trainee, a slice of Trainees per
+ * request and page by page: PostgREST caps a response at 1000 rows, and a
+ * silently truncated roster would undercount every queue.
  */
 export async function loadQueueRows(
   db: SupabaseClient,
   profileIds: readonly string[],
 ): Promise<Map<string, QueueRow[]>> {
   const result = new Map<string, QueueRow[]>();
-  if (profileIds.length === 0) return result;
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = (await typedFrom(db, "daily_schedule_slot_trainees")
+  const { data, error } = await readInChunks<RosterRow>(profileIds, "trainee_id", () =>
+    typedFrom(db, "daily_schedule_slot_trainees")
       .select(
         "id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, called_off_at)",
       )
-      .in("trainee_id", [...profileIds])
-      .order("id")
-      .range(from, from + PAGE - 1)) as {
-      data: RosterRow[] | null;
-      error: { message: string } | null;
-    };
-    if (error) {
-      console.error("loadQueueRows error:", error);
-      return result;
-    }
-    for (const row of data ?? []) {
-      if (!row.slot) continue;
-      const queueRow: QueueRow = {
-        id: row.id,
-        schedule_date: row.slot.schedule_date,
-        start_time: row.slot.start_time,
-        branch_id: row.slot.branch_id,
-        cancelled_at: row.cancelled_at,
-        late_cancel: row.late_cancel,
-        called_off: row.slot.called_off_at !== null,
-      };
-      result.set(row.trainee_id, [...(result.get(row.trainee_id) ?? []), queueRow]);
-    }
-    if ((data ?? []).length < PAGE) return result;
+      .order("id"),
+  );
+  if (error) {
+    console.error("loadQueueRows error:", error);
+    return result;
   }
+  for (const row of data) {
+    if (!row.slot) continue;
+    const queueRow: QueueRow = {
+      id: row.id,
+      schedule_date: row.slot.schedule_date,
+      start_time: row.slot.start_time,
+      branch_id: row.slot.branch_id,
+      cancelled_at: row.cancelled_at,
+      late_cancel: row.late_cancel,
+      called_off: row.slot.called_off_at !== null,
+    };
+    result.set(row.trainee_id, [...(result.get(row.trainee_id) ?? []), queueRow]);
+  }
+  return result;
 }
 
 /** The screen view of one resolved queue; null when there is nothing to show. */

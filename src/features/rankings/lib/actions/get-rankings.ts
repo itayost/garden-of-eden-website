@@ -15,6 +15,7 @@ import type {
 import { RANKING_CATEGORIES } from "../config/categories";
 import { ALL_BRANCHES } from "../config/branches";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readInChunks } from "@/lib/supabase/in-chunks";
 import { listProfileIdsInBranches } from "@/features/branches/lib/memberships";
 import { isValidUUID } from "@/lib/validations/common";
 import {
@@ -83,16 +84,17 @@ export async function getRankingsData(
   // Trainees cannot read each other's profiles under RLS (medical and parent
   // details live on the same row), so the ranked set is read with the service
   // role, past the login gate above, and only these ranking columns leave it.
-  let profilesQuery = createAdminClient()
-    .from("profiles")
-    .select("id, full_name, birthdate, age_group_override, age_group_override_until")
-    .eq("role", "trainee")
-    // RLS used to hide soft-deleted trainees; the service role does not.
-    .is("deleted_at", null);
-  if (memberIds !== null) {
-    profilesQuery = profilesQuery.in("id", memberIds);
-  }
-  const { data: profiles, error: profilesError } = (await profilesQuery) as {
+  // A branch has more members than one request URL holds: a slice per request.
+  const admin = createAdminClient();
+  const { data: profiles, error: profilesError } = (await readInChunks(memberIds, "id", () =>
+    admin
+      .from("profiles")
+      .select("id, full_name, birthdate, age_group_override, age_group_override_until")
+      .eq("role", "trainee")
+      // RLS used to hide soft-deleted trainees; the service role does not.
+      .is("deleted_at", null)
+      .order("id"),
+  )) as {
     data: ({ id: string; full_name: string | null } & AgeGroupProfile)[] | null;
     error: Error | null;
   };
@@ -132,11 +134,9 @@ export async function getRankingsData(
   }
 
   // Fetch all assessments for filtered users
-  const { data: assessments, error: assessmentsError } = (await supabase
-    .from("player_assessments")
-    .select("*")
-    .in("user_id", filteredUserIds)
-    .is("deleted_at", null)) as {
+  const { data: assessments, error: assessmentsError } = (await readInChunks(filteredUserIds, "user_id", () =>
+    supabase.from("player_assessments").select("*").is("deleted_at", null).order("id"),
+  )) as unknown as {
     data: PlayerAssessment[] | null;
     error: Error | null;
   };

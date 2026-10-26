@@ -1,8 +1,10 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { newestFirst, readInChunks } from "@/lib/supabase/in-chunks";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared/verify-admin";
 import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
@@ -57,183 +59,148 @@ export interface SubmissionQueryParams {
   branchId?: string;
 }
 
-/** User ids the caller may see for these params, or null for no restriction. */
-async function visibleUserIdsFor(
-  supabase: ReturnType<typeof createAdminClient>,
-  branchId: string | undefined,
-): Promise<{ ids: string[] | null } | { blocked: true }> {
-  const scopeResult = await getBranchScopeAction();
-  if ("error" in scopeResult) return { blocked: true };
-  const ids = await visibleProfileIds(supabase, scopeResult.data.scope, branchId);
-  if (ids !== null && ids.length === 0) return { blocked: true };
-  return { ids };
+/**
+ * User ids the caller may see for these params, or null for no restriction.
+ * Cached per request: the submissions page loads every tab at once.
+ */
+const visibleUserIdsFor = cache(
+  async (branchId: string | undefined): Promise<{ ids: string[] | null } | { blocked: true }> => {
+    const scopeResult = await getBranchScopeAction();
+    if ("error" in scopeResult) return { blocked: true };
+    const ids = await visibleProfileIds(createAdminClient(), scopeResult.data.scope, branchId);
+    if (ids !== null && ids.length === 0) return { blocked: true };
+    return { ids };
+  },
+);
+
+interface FormList {
+  table: "pre_workout_forms" | "post_workout_forms" | "nutrition_forms" | "mental_questionnaires";
+  /** The trainee embed, aliased `profile`: the position filter reads it. */
+  profile: string;
+  /** Any other embed the tab shows. */
+  extra?: string;
+  /** The form stores the trainee's name, so the search box matches it. */
+  searchable: boolean;
+}
+
+/**
+ * One page of a form list, newest first. Unrestricted (an admin), the
+ * database pages it. A trainer's scope is more trainee ids than one request
+ * URL holds, so the ids and times of the matching forms are read a slice of
+ * trainees at a time, ordered here, and only the page is fetched whole.
+ */
+async function formsPage<T>(list: FormList, params: SubmissionQueryParams): Promise<PaginatedResult<T>> {
+  const { error } = await verifyAdminOrTrainer();
+  if (error) return { items: [], total: 0 };
+
+  const supabase = createAdminClient();
+  const from = params.page * params.pageSize;
+
+  const visible = await visibleUserIdsFor(params.branchId);
+  if ("blocked" in visible) return { items: [], total: 0 };
+
+  const filtered = (columns: string, options?: { count: "exact" }) => {
+    let query = typedFrom(supabase, list.table).select(columns, options);
+    if (list.searchable && params.search) {
+      query = query.ilike("full_name", `%${params.search}%`);
+    }
+    if (params.startDate) {
+      query = query.gte("submitted_at", params.startDate);
+    }
+    if (params.endDate) {
+      query = query.lte("submitted_at", params.endDate + "T23:59:59");
+    }
+    return applyPositionFilter(query, "profile.position", params.position);
+  };
+
+  const columns = ["*", list.extra, list.profile].filter(Boolean).join(", ");
+
+  if (visible.ids === null) {
+    const { data, count } = (await filtered(columns, { count: "exact" })
+      .order("submitted_at", { ascending: false })
+      .range(from, from + params.pageSize - 1)) as { data: T[] | null; count: number | null };
+    return { items: data || [], total: count || 0 };
+  }
+
+  const { data: keys, error: keysError } = await readInChunks<{ id: string; submitted_at: string | null }>(
+    visible.ids,
+    "user_id",
+    () => filtered(`id, submitted_at, ${list.profile}`).order("id"),
+  );
+  if (keysError) {
+    console.error(`${list.table} page error:`, keysError);
+    return { items: [], total: 0 };
+  }
+
+  const pageIds = [...keys]
+    .sort(newestFirst("submitted_at"))
+    .slice(from, from + params.pageSize)
+    .map((key) => key.id);
+  if (pageIds.length === 0) return { items: [], total: keys.length };
+
+  const { data, error: pageError } = (await filtered(columns).in("id", pageIds)) as {
+    data: (T & { id: string })[] | null;
+    error: { message: string } | null;
+  };
+  if (pageError) {
+    console.error(`${list.table} page error:`, pageError);
+    return { items: [], total: 0 };
+  }
+  const byId = new Map((data ?? []).map((row) => [row.id, row]));
+  return { items: pageIds.flatMap((id) => byId.get(id) ?? []), total: keys.length };
 }
 
 export async function getPreWorkoutPaginated(
   params: SubmissionQueryParams
 ): Promise<PaginatedResult<PreWorkoutForm>> {
-  const { error } = await verifyAdminOrTrainer();
-  if (error) return { items: [], total: 0 };
-
-  const supabase = createAdminClient();
-  const from = params.page * params.pageSize;
-
-  const visible = await visibleUserIdsFor(supabase, params.branchId);
-  if ("blocked" in visible) return { items: [], total: 0 };
-
-  let query = supabase
-    .from("pre_workout_forms")
-    .select("*, profile:profiles!inner(position)", { count: "exact" })
-    .order("submitted_at", { ascending: false });
-
-  if (params.search) {
-    query = query.ilike("full_name", `%${params.search}%`);
-  }
-  if (params.startDate) {
-    query = query.gte("submitted_at", params.startDate);
-  }
-  if (params.endDate) {
-    query = query.lte("submitted_at", params.endDate + "T23:59:59");
-  }
-  query = applyPositionFilter(query, "profile.position", params.position);
-  if (visible.ids !== null) {
-    query = query.in("user_id", visible.ids);
-  }
-
-  const { data, count } = (await query.range(
-    from,
-    from + params.pageSize - 1
-  )) as unknown as {
-    data: PreWorkoutForm[] | null;
-    count: number | null;
-  };
-
-  return { items: data || [], total: count || 0 };
+  return formsPage<PreWorkoutForm>(
+    {
+      table: "pre_workout_forms",
+      profile: "profile:profiles!inner(position)",
+      searchable: true,
+    },
+    params,
+  );
 }
 
 export async function getPostWorkoutPaginated(
   params: SubmissionQueryParams
 ): Promise<PaginatedResult<PostWorkoutWithTrainer>> {
-  const { error } = await verifyAdminOrTrainer();
-  if (error) return { items: [], total: 0 };
-
-  const supabase = createAdminClient();
-  const from = params.page * params.pageSize;
-
-  const visible = await visibleUserIdsFor(supabase, params.branchId);
-  if ("blocked" in visible) return { items: [], total: 0 };
-
-  let query = supabase
-    .from("post_workout_forms")
-    .select(
-      "*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name), profile:profiles!post_workout_forms_user_id_fkey(position)",
-      { count: "exact" },
-    )
-    .order("submitted_at", { ascending: false });
-
-  if (params.search) {
-    query = query.ilike("full_name", `%${params.search}%`);
-  }
-  if (params.startDate) {
-    query = query.gte("submitted_at", params.startDate);
-  }
-  if (params.endDate) {
-    query = query.lte("submitted_at", params.endDate + "T23:59:59");
-  }
-  query = applyPositionFilter(query, "profile.position", params.position);
-  if (visible.ids !== null) {
-    query = query.in("user_id", visible.ids);
-  }
-
-  const { data, count } = (await query.range(
-    from,
-    from + params.pageSize - 1
-  )) as unknown as {
-    data: PostWorkoutWithTrainer[] | null;
-    count: number | null;
-  };
-
-  return { items: data || [], total: count || 0 };
+  return formsPage<PostWorkoutWithTrainer>(
+    {
+      table: "post_workout_forms",
+      profile: "profile:profiles!post_workout_forms_user_id_fkey(position)",
+      extra: "trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)",
+      searchable: true,
+    },
+    params,
+  );
 }
 
 export async function getNutritionPaginated(
   params: SubmissionQueryParams
 ): Promise<PaginatedResult<NutritionFormWithProfile>> {
-  const { error } = await verifyAdminOrTrainer();
-  if (error) return { items: [], total: 0 };
-
-  const supabase = createAdminClient();
-  const from = params.page * params.pageSize;
-
-  const visible = await visibleUserIdsFor(supabase, params.branchId);
-  if ("blocked" in visible) return { items: [], total: 0 };
-
-  let query = supabase
-    .from("nutrition_forms")
-    .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate, position)", { count: "exact" })
-    .order("submitted_at", { ascending: false });
-
-  if (params.startDate) {
-    query = query.gte("submitted_at", params.startDate);
-  }
-  if (params.endDate) {
-    query = query.lte("submitted_at", params.endDate + "T23:59:59");
-  }
-  query = applyPositionFilter(query, "profile.position", params.position);
-  if (visible.ids !== null) {
-    query = query.in("user_id", visible.ids);
-  }
-
-  const { data, count } = (await query.range(
-    from,
-    from + params.pageSize - 1
-  )) as unknown as {
-    data: NutritionFormWithProfile[] | null;
-    count: number | null;
-  };
-
-  return { items: data || [], total: count || 0 };
+  return formsPage<NutritionFormWithProfile>(
+    {
+      table: "nutrition_forms",
+      profile: "profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate, position)",
+      searchable: false,
+    },
+    params,
+  );
 }
 
 export async function getMentalPaginated(
   params: SubmissionQueryParams
 ): Promise<PaginatedResult<MentalQuestionnaireWithProfile>> {
-  const { error } = await verifyAdminOrTrainer();
-  if (error) return { items: [], total: 0 };
-
-  const supabase = createAdminClient();
-  const from = params.page * params.pageSize;
-
-  const visible = await visibleUserIdsFor(supabase, params.branchId);
-  if ("blocked" in visible) return { items: [], total: 0 };
-
-  let query = typedFrom(supabase, "mental_questionnaires")
-    .select("*, profile:profiles!inner(position)", { count: "exact" })
-    .order("submitted_at", { ascending: false });
-
-  if (params.search) {
-    query = query.ilike("full_name", `%${params.search}%`);
-  }
-  if (params.startDate) {
-    query = query.gte("submitted_at", params.startDate);
-  }
-  if (params.endDate) {
-    query = query.lte("submitted_at", params.endDate + "T23:59:59");
-  }
-  query = applyPositionFilter(query, "profile.position", params.position);
-  if (visible.ids !== null) {
-    query = query.in("user_id", visible.ids);
-  }
-
-  const { data, count } = (await query.range(
-    from,
-    from + params.pageSize - 1
-  )) as unknown as {
-    data: MentalQuestionnaireWithProfile[] | null;
-    count: number | null;
-  };
-
-  return { items: data || [], total: count || 0 };
+  return formsPage<MentalQuestionnaireWithProfile>(
+    {
+      table: "mental_questionnaires",
+      profile: "profile:profiles!inner(position)",
+      searchable: true,
+    },
+    params,
+  );
 }
 
 export async function getShiftReportsPaginated(

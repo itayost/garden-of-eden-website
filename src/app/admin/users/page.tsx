@@ -9,6 +9,7 @@ import { UserExportButton } from "@/components/admin/users/UserExportButton";
 import { ArboxSyncButton } from "@/components/admin/users/ArboxSyncButton";
 import type { Profile } from "@/types/database";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { newestFirst, readInChunks } from "@/lib/supabase/in-chunks";
 import {
   branchNamesFor,
   loadAllBranches,
@@ -74,25 +75,19 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   if ("error" in scopeResult) redirect("/dashboard");
   const scopedIds = isAdmin ? null : await scopedProfileIds(adminClient, scopeResult.data.scope);
 
-  let query = supabase.from("profiles").select("*");
-  if (!isAdmin) {
-    query = query.eq("role", "trainee");
-  }
-  if (scopedIds !== null && scopedIds.length > 0) {
-    query = query.in("id", scopedIds);
-  }
-  // An empty scope is a real answer (the trainer's branches have no members);
-  // skip the query rather than send `.in("id", [])`.
-  const { data: users, error } =
-    scopedIds !== null && scopedIds.length === 0
-      ? { data: [], error: null }
-      : await query.order("created_at", { ascending: false });
+  // A trainer's scope is every member of their branches, more ids than one
+  // request URL holds: read a slice at a time. An empty scope is a real
+  // answer and sends no request.
+  const { data: users, error } = await readInChunks(scopedIds, "id", () => {
+    const query = supabase.from("profiles").select("*").order("id");
+    return isAdmin ? query : query.eq("role", "trainee");
+  });
 
   if (error) {
     console.error("Failed to fetch users:", error);
   }
 
-  const typedUsers = (users || []) as Profile[];
+  const typedUsers = [...(users as Profile[])].sort(newestFirst("created_at"));
 
   // Memberships through the service role: the page is gated above, and a
   // trainer cannot read other users' profile_branches rows through RLS.

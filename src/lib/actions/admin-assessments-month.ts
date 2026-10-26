@@ -10,6 +10,7 @@ import type { PlayerAssessment, AssessmentMonthStatus, SectionCompleteness } fro
 import type { Profile } from "@/types/database";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { byFullName, readInChunks } from "@/lib/supabase/in-chunks";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { resolveAgeGroup } from "@/lib/age-group-override";
 
@@ -78,26 +79,15 @@ export async function getAssessmentsByMonth(
       .toISOString()
       .split('T')[0];
 
-    // Fetch all trainees (no pagination — ~75 records)
-    let profileQuery = supabase
-      .from("profiles")
-      .select("*")
-      .eq("role", "trainee")
-      .is("deleted_at", null)
-      .order("full_name");
+    // Every trainee, paginated below. A trainer's scope is more ids than one
+    // request URL holds, so it is read a slice at a time.
+    const { data: profileRows } = await readInChunks(visibleIds, "id", () => {
+      const query = supabase.from("profiles").select("*").eq("role", "trainee").is("deleted_at", null).order("id");
+      return params.search ? query.ilike("full_name", `%${params.search}%`) : query;
+    });
+    const allProfiles = [...(profileRows as Profile[])].sort(byFullName);
 
-    if (params.search) {
-      profileQuery = profileQuery.ilike("full_name", `%${params.search}%`);
-    }
-    if (visibleIds !== null) {
-      profileQuery = profileQuery.in("id", visibleIds);
-    }
-
-    const { data: allProfiles } = (await profileQuery) as unknown as {
-      data: Profile[] | null;
-    };
-
-    if (!allProfiles || allProfiles.length === 0) return empty;
+    if (allProfiles.length === 0) return empty;
 
     // Age-group filtering in JS (same pattern as getAssessmentsPaginated)
     const filteredProfiles = params.ageGroupId
@@ -108,20 +98,21 @@ export async function getAssessmentsByMonth(
 
     // Fetch all assessments in the date range for these trainees
     const profileIds = filteredProfiles.map((p) => p.id);
-    const { data: assessments } = (await supabase
-      .from("player_assessments")
-      .select("*")
-      .gte("assessment_date", firstDay)
-      .lte("assessment_date", lastDay)
-      .is("deleted_at", null)
-      .in("user_id", profileIds)
-      .order("assessment_date", { ascending: false })) as unknown as {
-      data: PlayerAssessment[] | null;
-    };
+    const { data: assessments } = (await readInChunks(profileIds, "user_id", () =>
+      supabase
+        .from("player_assessments")
+        .select("*")
+        .gte("assessment_date", firstDay)
+        .lte("assessment_date", lastDay)
+        .is("deleted_at", null)
+        .order("assessment_date", { ascending: false })
+        .order("id"),
+    )) as unknown as { data: PlayerAssessment[] };
 
-    // Index most-recent assessment per user (already ordered desc)
+    // Index most-recent assessment per user (each slice is ordered desc, and
+    // a user's rows all sit in one slice)
     const latestByUser: Record<string, PlayerAssessment> = {};
-    (assessments ?? []).forEach((a) => {
+    assessments.forEach((a) => {
       if (!latestByUser[a.user_id]) {
         latestByUser[a.user_id] = a;
       }

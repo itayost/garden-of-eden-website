@@ -1,12 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { typedFrom } from "@/lib/supabase/helpers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Brain, FileText, Salad, ClipboardCheck } from "lucide-react";
-import type { PreWorkoutForm, PostWorkoutForm, TrainerShiftReport } from "@/types/database";
-import type {
-  MentalQuestionnaireWithProfile,
-  NutritionFormWithProfile,
+import {
+  getMentalPaginated,
+  getNutritionPaginated,
+  getPostWorkoutPaginated,
+  getPreWorkoutPaginated,
+  getShiftReportsPaginated,
 } from "@/lib/actions/admin-submissions-list";
 import {
   PreWorkoutContent,
@@ -16,12 +16,8 @@ import {
 } from "@/components/admin/submissions/SubmissionsContent";
 import { ShiftReportContent } from "@/components/admin/submissions/ShiftReportContent";
 import { getBranchScopeAction } from "@/lib/actions/shared";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
 import { BranchUrlFilter } from "@/features/branches/components/BranchUrlFilter";
-
-type PostWorkoutWithTrainer = PostWorkoutForm & { trainer: { full_name: string } | null };
 
 const PAGE_SIZE = 20;
 
@@ -31,60 +27,30 @@ interface AdminSubmissionsPageProps {
 
 export default async function AdminSubmissionsPage({ searchParams }: AdminSubmissionsPageProps) {
   const { tab, branch } = await searchParams;
-  const supabase = await createClient();
 
   // Trainers see forms from their branches only (none without a branch).
   // Admins get a branch filter that narrows the same way.
   const scopeResult = await getBranchScopeAction();
   // A failed scope read must not widen a trainer's view to the whole academy.
   if ("error" in scopeResult) redirect("/dashboard");
-  const scope = scopeResult.data.scope;
-  const showBranchFilter = scope.kind === "all";
-  const visibleIds = await visibleProfileIds(createAdminClient(), scope, branch);
+  const showBranchFilter = scopeResult.data.scope.kind === "all";
   const branches = showBranchFilter ? await listActiveBranchOptionsAction() : [];
-  // PostgREST rejects `in.()`; an empty visible set means "nothing", so the
-  // filter uses an id that cannot match instead of an empty list.
-  const NO_MATCH = "00000000-0000-4000-8000-000000000000";
-  const narrow = <T,>(q: T): T =>
-    visibleIds === null
-      ? q
-      : (q as { in: (c: string, v: string[]) => T }).in(
-          "user_id",
-          visibleIds.length === 0 ? [NO_MATCH] : visibleIds,
-        );
 
-  // Fetch page 0 for each tab + exact counts (much less data than .limit(200))
+  // Page 0 of each tab and its count, through the same reads the tabs page
+  // with, scope and branch filter included.
+  const firstPage = { page: 0, pageSize: PAGE_SIZE, branchId: branch };
   const [
-    { data: preWorkout, count: preWorkoutCount },
-    { data: postWorkout, count: postWorkoutCount },
-    { data: nutrition, count: nutritionCount },
-    { data: shiftReports, count: shiftReportsCount },
-    { data: mental, count: mentalCount },
+    { items: preWorkout, total: preWorkoutCount },
+    { items: postWorkout, total: postWorkoutCount },
+    { items: nutrition, total: nutritionCount },
+    { items: shiftReports, total: shiftReportsCount },
+    { items: mental, total: mentalCount },
   ] = await Promise.all([
-    narrow(supabase.from("pre_workout_forms").select("*", { count: "exact" }))
-      .order("submitted_at", { ascending: false })
-      .range(0, PAGE_SIZE - 1) as unknown as { data: PreWorkoutForm[] | null; count: number | null },
-    narrow(
-      supabase
-        .from("post_workout_forms")
-        .select("*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)", { count: "exact" }),
-    )
-      .order("submitted_at", { ascending: false })
-      .range(0, PAGE_SIZE - 1) as unknown as { data: PostWorkoutWithTrainer[] | null; count: number | null },
-    narrow(
-      supabase
-        .from("nutrition_forms")
-        .select("*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate)", { count: "exact" }),
-    )
-      .order("submitted_at", { ascending: false })
-      .range(0, PAGE_SIZE - 1) as unknown as { data: NutritionFormWithProfile[] | null; count: number | null },
-    typedFrom(supabase, "trainer_shift_reports")
-      .select("*", { count: "exact" })
-      .order("report_date", { ascending: false })
-      .range(0, PAGE_SIZE - 1) as unknown as { data: TrainerShiftReport[] | null; count: number | null },
-    narrow(typedFrom(supabase, "mental_questionnaires").select("*", { count: "exact" }))
-      .order("submitted_at", { ascending: false })
-      .range(0, PAGE_SIZE - 1) as unknown as { data: MentalQuestionnaireWithProfile[] | null; count: number | null },
+    getPreWorkoutPaginated(firstPage),
+    getPostWorkoutPaginated(firstPage),
+    getNutritionPaginated(firstPage),
+    getShiftReportsPaginated(firstPage),
+    getMentalPaginated(firstPage),
   ]);
 
   const defaultTab = tab || "pre-workout";

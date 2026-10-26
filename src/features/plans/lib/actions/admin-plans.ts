@@ -5,6 +5,7 @@ import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { readInChunks } from "@/lib/supabase/in-chunks";
 import { isValidUUID } from "@/lib/validations/common";
 import { israelToday } from "@/lib/utils/tasks";
 import {
@@ -54,11 +55,12 @@ export async function listPlansAction(filter: {
   const visible = await visibleProfileIds(db, scopeResult.data.scope, branchId);
   if (visible !== null && visible.length === 0) return [];
 
-  let query = typedFrom(db, "trainee_plans").select("profile_id, branch_id");
-  if (branchId) query = query.eq("branch_id", branchId);
-  if (visible !== null) query = query.in("profile_id", visible);
-  const { data: rows } = (await query) as { data: { profile_id: string }[] | null };
-  const profileIds = Array.from(new Set((rows ?? []).map((r) => r.profile_id)));
+  // A trainer's scope is more ids than one request URL holds: a slice per request.
+  const { data: rows } = await readInChunks<{ profile_id: string }>(visible, "profile_id", () => {
+    const query = typedFrom(db, "trainee_plans").select("profile_id, branch_id").order("id");
+    return branchId ? query.eq("branch_id", branchId) : query;
+  });
+  const profileIds = Array.from(new Set(rows.map((r) => r.profile_id)));
   const all = await loadAdminRows(db, profileIds);
   return all
     .filter((row) => !filter.status || row.status === filter.status)
@@ -84,9 +86,11 @@ async function loadAdminRows(
   if (profileIds.length === 0) return [];
   const [plans, { data: profiles }] = await Promise.all([
     loadPlanQueues(db, profileIds, israelToday()),
-    db.from("profiles").select("id, full_name, guardian_name, guardian_phone").in("id", profileIds),
+    readInChunks(profileIds, "id", () =>
+      db.from("profiles").select("id, full_name, guardian_name, guardian_phone"),
+    ),
   ]);
-  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
 
   const orderIds = [...plans.values()]
     .map((p) => p.plan.order_id)
@@ -95,14 +99,12 @@ async function loadAdminRows(
     agreements: Pick<EnrollmentAgreement, "id" | "signed_at">[] | null;
     receiver: { full_name: string | null } | null;
   };
-  const { data: orders } = (orderIds.length
-    ? await typedFrom(db, "orders")
-        .select(
-          "id, morning_document_url, received_by, agreements:enrollment_agreements(id, signed_at), receiver:profiles!orders_received_by_fkey(full_name)",
-        )
-        .in("id", orderIds)
-    : { data: [] }) as { data: OrderBits[] | null };
-  const byOrder = new Map((orders ?? []).map((o) => [o.id, o]));
+  const { data: orders } = await readInChunks<OrderBits>(orderIds, "id", () =>
+    typedFrom(db, "orders").select(
+      "id, morning_document_url, received_by, agreements:enrollment_agreements(id, signed_at), receiver:profiles!orders_received_by_fkey(full_name)",
+    ),
+  );
+  const byOrder = new Map(orders.map((o) => [o.id, o]));
 
   return [...plans.entries()]
     .map(([profileId, view]) => {

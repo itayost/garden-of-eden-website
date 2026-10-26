@@ -16,6 +16,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { readInChunks } from "@/lib/supabase/in-chunks";
 import { isValidDateString, isValidUUID } from "@/lib/validations/common";
 import {
   SESSION_SELECT_WITH_EXERCISES,
@@ -132,21 +133,22 @@ export async function getSessionSummariesAction(
   if (scoped.ids !== null && scoped.ids.length === 0) return { success: true, data: {} };
 
   const supabase = await createClient();
-  const summariesQuery = typedFrom(supabase, "training_sessions")
-    .select(
-      "id, trainee_id, slot_id, completed_at, slot_workout_synced_at, exercises:training_session_exercises(id)",
-    )
-    .eq("session_date", date);
-  const { data, error } = await (scoped.ids === null
-    ? summariesQuery
-    : summariesQuery.in("trainee_id", scoped.ids));
+  // A trainer's scope is more ids than one request URL holds: a slice per request.
+  const { data, error } = await readInChunks(scoped.ids, "trainee_id", () =>
+    typedFrom(supabase, "training_sessions")
+      .select(
+        "id, trainee_id, slot_id, completed_at, slot_workout_synced_at, exercises:training_session_exercises(id)",
+      )
+      .eq("session_date", date)
+      .order("id"),
+  );
 
   if (error) {
     console.error("Get session summaries error:", error);
     return { error: "שגיאה בטעינת סטטוס האימונים" };
   }
 
-  const rows = (data ?? []) as {
+  const rows = data as {
     id: string;
     trainee_id: string;
     slot_id: string | null;
@@ -270,19 +272,21 @@ export async function getWeekSessionStatusesAction(
   if (visibleIds !== null && visibleIds.length === 0) return { success: true, data: {} };
 
   const supabase = await createClient();
-  const query = typedFrom(supabase, "training_sessions")
-    .select("trainee_id, session_date, slot_id, completed_at, exercises:training_session_exercises(id)")
-    .gte("session_date", startDate)
-    .lte("session_date", endDate);
-
-  const { data, error } = await (visibleIds === null ? query : query.in("trainee_id", visibleIds));
+  // A trainer's scope is more ids than one request URL holds: a slice per request.
+  const { data, error } = await readInChunks(visibleIds, "trainee_id", () =>
+    typedFrom(supabase, "training_sessions")
+      .select("trainee_id, session_date, slot_id, completed_at, exercises:training_session_exercises(id)")
+      .gte("session_date", startDate)
+      .lte("session_date", endDate)
+      .order("id"),
+  );
 
   if (error) {
     console.error("Get week session statuses error:", error);
     return { error: "שגיאה בטעינת סטטוס האימונים" };
   }
 
-  return { success: true, data: toDaySessionStatuses((data ?? []) as SessionStatusRow[]) };
+  return { success: true, data: toDaySessionStatuses(data as SessionStatusRow[]) };
 }
 
 /**
