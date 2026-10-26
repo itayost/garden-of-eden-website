@@ -8,7 +8,7 @@ import type { Profile } from "@/types/database";
 import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { byFullName, countInChunks, readInChunks } from "@/lib/supabase/in-chunks";
+import { byFullName, readInChunks } from "@/lib/supabase/in-chunks";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { resolveAgeGroup } from "@/lib/age-group-override";
 
@@ -147,12 +147,8 @@ async function loadProfilePage(
     return { profiles: data ?? [], total: count ?? 0 };
   }
 
-  const { data } = (
-    allowedIds === null
-      ? await profileQuery().order("full_name")
-      : await readInChunks(allowedIds, (slice) => profileQuery().in("id", slice))
-  ) as unknown as { data: Profile[] | null };
-  const matched = (data ?? [])
+  const { data } = await readInChunks(allowedIds, "id", () => profileQuery().order("id"));
+  const matched = (data as Profile[])
     .filter((p) => !params.ageGroupId || resolveAgeGroup(p)?.id === params.ageGroupId)
     .sort(byFullName);
   return { profiles: matched.slice(from, from + params.pageSize), total: matched.length };
@@ -167,38 +163,19 @@ function intersectIds(a: string[] | null, b: string[] | null): string[] | null {
 }
 
 /**
- * How many assessments the caller may see and how many trainees they cover.
- * A trainer's scope is read a slice of ids at a time.
+ * How many assessments the caller may see and how many trainees they cover,
+ * from one read of their user ids. A trainer's scope is read a slice of ids
+ * at a time.
  */
 async function assessmentTotals(
   supabase: Awaited<ReturnType<typeof createClient>>,
   visibleIds: string[] | null,
 ): Promise<{ totalAssessments: number; traineesWithAssessments: number }> {
-  const totalQuery = () =>
-    supabase
-      .from("player_assessments")
-      .select("*", { count: "exact", head: true })
-      .is("deleted_at", null);
-  const usersQuery = () =>
-    supabase
-      .from("player_assessments")
-      .select("user_id")
-      .is("deleted_at", null);
-
-  if (visibleIds === null) {
-    const [{ count }, { data }] = await Promise.all([totalQuery(), usersQuery()]);
-    return {
-      totalAssessments: count ?? 0,
-      traineesWithAssessments: new Set(data?.map((a) => a.user_id)).size,
-    };
-  }
-
-  const [{ count }, { data }] = await Promise.all([
-    countInChunks(visibleIds, (slice) => totalQuery().in("user_id", slice)),
-    readInChunks(visibleIds, (slice) => usersQuery().in("user_id", slice).order("id")),
-  ]);
+  const { data } = await readInChunks(visibleIds, "user_id", () =>
+    supabase.from("player_assessments").select("user_id").is("deleted_at", null).order("id"),
+  );
   return {
-    totalAssessments: count,
+    totalAssessments: data.length,
     traineesWithAssessments: new Set(data.map((a) => a.user_id)).size,
   };
 }

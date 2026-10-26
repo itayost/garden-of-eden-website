@@ -132,8 +132,8 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   const queues = await loadPlanQueues(db, profileIds, today);
 
   if (profileIds.length === 0) return result;
-  const { data: profiles } = await readInChunks(profileIds, (slice) =>
-    db.from("profiles").select("id, full_name, guardian_name, guardian_phone").in("id", slice),
+  const { data: profiles } = await readInChunks(profileIds, "id", () =>
+    db.from("profiles").select("id, full_name, guardian_name, guardian_phone"),
   );
   const profileById = new Map(profiles.map((p) => [p.id, p]));
 

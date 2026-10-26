@@ -80,23 +80,14 @@ export async function getAssessmentsByMonth(
       .split('T')[0];
 
     // Every trainee, paginated below. A trainer's scope is more ids than one
-    // request URL holds, so it is read a slice at a time and put back in
-    // name order.
-    const profileQuery = () => {
-      const query = supabase.from("profiles").select("*").eq("role", "trainee").is("deleted_at", null);
+    // request URL holds, so it is read a slice at a time.
+    const { data: profileRows } = await readInChunks(visibleIds, "id", () => {
+      const query = supabase.from("profiles").select("*").eq("role", "trainee").is("deleted_at", null).order("id");
       return params.search ? query.ilike("full_name", `%${params.search}%`) : query;
-    };
+    });
+    const allProfiles = [...(profileRows as Profile[])].sort(byFullName);
 
-    const { data: allProfiles } = (
-      visibleIds === null
-        ? await profileQuery().order("full_name")
-        : await readInChunks(visibleIds, (slice) => profileQuery().in("id", slice)).then(({ data, error }) => ({
-            data: [...data].sort(byFullName),
-            error,
-          }))
-    ) as unknown as { data: Profile[] | null };
-
-    if (!allProfiles || allProfiles.length === 0) return empty;
+    if (allProfiles.length === 0) return empty;
 
     // Age-group filtering in JS (same pattern as getAssessmentsPaginated)
     const filteredProfiles = params.ageGroupId
@@ -107,18 +98,16 @@ export async function getAssessmentsByMonth(
 
     // Fetch all assessments in the date range for these trainees
     const profileIds = filteredProfiles.map((p) => p.id);
-    const { data: assessmentRows } = await readInChunks(profileIds, (slice) =>
+    const { data: assessments } = (await readInChunks(profileIds, "user_id", () =>
       supabase
         .from("player_assessments")
         .select("*")
         .gte("assessment_date", firstDay)
         .lte("assessment_date", lastDay)
         .is("deleted_at", null)
-        .in("user_id", slice)
         .order("assessment_date", { ascending: false })
         .order("id"),
-    );
-    const assessments = assessmentRows as unknown as PlayerAssessment[];
+    )) as unknown as { data: PlayerAssessment[] };
 
     // Index most-recent assessment per user (each slice is ordered desc, and
     // a user's rows all sit in one slice)

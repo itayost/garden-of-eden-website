@@ -20,6 +20,7 @@ import {
 import type { QueueRow } from "@/lib/plans/plan-queue";
 import { PLAN_FREEZES_EMBED, toQueuePlan, type PlanFreezeRow } from "@/lib/plans/queue-plan-row";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
 import { applyOne, healLeftoverOrders, type Db, type Outcome } from "./arbox-import-apply";
 import { israelToday } from "@/lib/utils/tasks";
 import type { PlanKind } from "@/types/plans";
@@ -45,20 +46,26 @@ async function loadBranchId(db: Db): Promise<string> {
 }
 
 async function loadTrainees(db: Db, branchId: string): Promise<ImportTrainee[]> {
-  const { data: links, error: linkError } = await db.from("profile_branches").select("profile_id").eq("branch_id", branchId);
+  // A branch has more members than one request URL holds: read them page by
+  // page, then their profiles a slice of ids per request.
+  const { data: links, error: linkError } = await readAllPages(() =>
+    db.from("profile_branches").select("profile_id").eq("branch_id", branchId).order("profile_id"),
+  );
   if (linkError) throw new Error(`[arbox-import] branch members: ${linkError.message}`);
-  const ids = (links ?? []).map((l) => l.profile_id);
-  if (ids.length === 0) return [];
 
-  const { data, error } = await db
-    .from("profiles")
-    .select("id, full_name, birthdate, phone, guardian_name, arbox_user_id")
-    .in("id", ids)
-    .eq("role", "trainee")
-    .is("deleted_at", null)
-    .not("arbox_user_id", "is", null);
+  const { data, error } = await readInChunks(
+    links.map((l) => l.profile_id),
+    "id",
+    () =>
+      db
+        .from("profiles")
+        .select("id, full_name, birthdate, phone, guardian_name, arbox_user_id")
+        .eq("role", "trainee")
+        .is("deleted_at", null)
+        .not("arbox_user_id", "is", null),
+  );
   if (error) throw new Error(`[arbox-import] trainees: ${error.message}`);
-  return (data ?? []).map((p) => ({
+  return data.map((p) => ({
     profileId: p.id,
     arboxUserId: Number(p.arbox_user_id),
     name: p.full_name ?? "מתאמן",
@@ -67,8 +74,6 @@ async function loadTrainees(db: Db, branchId: string): Promise<ImportTrainee[]> 
     guardianName: p.guardian_name,
   }));
 }
-
-const PAGE = 1000;
 
 interface RosterRow {
   readonly id: string;
@@ -84,25 +89,20 @@ interface RosterRow {
 }
 
 /**
- * Roster rows from `since` on, page by page: PostgREST caps a response at
- * 1000 rows, and a silently truncated roster would undercount usage.
+ * Roster rows from `since` on, a slice of Trainees per request and page by
+ * page: PostgREST caps a response at 1000 rows, and a silently truncated
+ * roster would undercount usage.
  */
 async function loadRosterRows(db: Db, profileIds: readonly string[], since: string): Promise<RosterRow[]> {
-  const pages: RosterRow[][] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await db
+  const { data, error } = await readInChunks(profileIds, "trainee_id", () =>
+    db
       .from("daily_schedule_slot_trainees")
       .select("id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, called_off_at)")
-      .in("trainee_id", [...profileIds])
       .gte("slot.schedule_date", since)
-      .order("id")
-      .range(from, from + PAGE - 1);
-    if (error) throw new Error(`[arbox-import] rosters: ${error.message}`);
-    const rows = (data ?? []) as unknown as RosterRow[];
-    pages.push(rows);
-    if (rows.length < PAGE) break;
-  }
-  return pages.flat();
+      .order("id"),
+  );
+  if (error) throw new Error(`[arbox-import] rosters: ${error.message}`);
+  return data as unknown as RosterRow[];
 }
 
 interface StoredSide {
@@ -113,12 +113,14 @@ interface StoredSide {
 /** Every Plan of these Trainees in the queue's shape, and the roster rows the queue charges. */
 async function loadPlans(db: Db, profileIds: readonly string[]): Promise<StoredSide> {
   if (profileIds.length === 0) return { plans: [], rows: new Map() };
-  const { data, error } = await db
-    .from("trainee_plans")
-    .select(
-      `id, profile_id, branch_id, starts_on, ends_on, sessions_total, not_before, duration_days, fixed_ends_on, ended_on, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id), ${PLAN_FREEZES_EMBED}`,
-    )
-    .in("profile_id", [...profileIds]);
+  const { data, error } = await readInChunks(profileIds, "profile_id", () =>
+    db
+      .from("trainee_plans")
+      .select(
+        `id, profile_id, branch_id, starts_on, ends_on, sessions_total, not_before, duration_days, fixed_ends_on, ended_on, status, created_at, product:plan_products(kind), order:orders!trainee_plans_order_id_fkey(payment_method, provider_transaction_id), ${PLAN_FREEZES_EMBED}`,
+      )
+      .order("id"),
+  );
   if (error) throw new Error(`[arbox-import] plans: ${error.message}`);
   type Row = {
     id: string; profile_id: string; branch_id: string; starts_on: string; ends_on: string; sessions_total: number | null;
@@ -128,7 +130,7 @@ async function loadPlans(db: Db, profileIds: readonly string[]): Promise<StoredS
     plan_freezes: PlanFreezeRow[] | null;
     order: { payment_method: string | null; provider_transaction_id: string | null } | null;
   };
-  const stored = (data ?? []) as unknown as Row[];
+  const stored = data as unknown as Row[];
   const plans: ImportPlanRow[] = stored.map((r) => ({
     ...toQueuePlan({
       ...r,
@@ -163,23 +165,13 @@ async function loadPlans(db: Db, profileIds: readonly string[]): Promise<StoredS
   return { plans, rows };
 }
 
-const KEY_CHUNK = 200;
-
 /** Only the keys of today's Arbox purchases: bounded, unlike all imports ever. */
 async function loadImportedKeys(db: Db, keys: readonly string[]): Promise<Set<string>> {
-  const chunks = Array.from({ length: Math.ceil(keys.length / KEY_CHUNK) }, (_, i) => keys.slice(i * KEY_CHUNK, (i + 1) * KEY_CHUNK));
-  const found = await Promise.all(
-    chunks.map(async (chunk) => {
-      const { data, error } = await db
-        .from("orders")
-        .select("provider_transaction_id")
-        .eq("payment_provider", "manual")
-        .in("provider_transaction_id", chunk);
-      if (error) throw new Error(`[arbox-import] imported keys: ${error.message}`);
-      return (data ?? []).map((o) => o.provider_transaction_id).filter((k): k is string => k !== null);
-    }),
+  const { data, error } = await readInChunks(keys, "provider_transaction_id", () =>
+    db.from("orders").select("provider_transaction_id").eq("payment_provider", "manual"),
   );
-  return new Set(found.flat());
+  if (error) throw new Error(`[arbox-import] imported keys: ${error.message}`);
+  return new Set(data.map((o) => o.provider_transaction_id).filter((k): k is string => k !== null));
 }
 
 async function loadProducts(db: Db, branchId: string): Promise<ImportProducts> {

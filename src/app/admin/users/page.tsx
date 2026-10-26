@@ -76,20 +76,18 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   const scopedIds = isAdmin ? null : await scopedProfileIds(adminClient, scopeResult.data.scope);
 
   // A trainer's scope is every member of their branches, more ids than one
-  // request URL holds: read a slice at a time, then put back newest first.
-  // An empty scope is a real answer and sends no request.
-  const { data: users, error } =
-    scopedIds === null
-      ? await supabase.from("profiles").select("*").order("created_at", { ascending: false })
-      : await readInChunks(scopedIds, (slice) =>
-          supabase.from("profiles").select("*").eq("role", "trainee").in("id", slice),
-        ).then(({ data, error }) => ({ data: [...data].sort(newestFirst("created_at")), error }));
+  // request URL holds: read a slice at a time. An empty scope is a real
+  // answer and sends no request.
+  const { data: users, error } = await readInChunks(scopedIds, "id", () => {
+    const query = supabase.from("profiles").select("*").order("id");
+    return isAdmin ? query : query.eq("role", "trainee");
+  });
 
   if (error) {
     console.error("Failed to fetch users:", error);
   }
 
-  const typedUsers = (users || []) as Profile[];
+  const typedUsers = [...(users as Profile[])].sort(newestFirst("created_at"));
 
   // Memberships through the service role: the page is gated above, and a
   // trainer cannot read other users' profile_branches rows through RLS.

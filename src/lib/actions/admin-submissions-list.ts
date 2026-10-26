@@ -75,10 +75,10 @@ const visibleUserIdsFor = cache(
 
 interface FormList {
   table: "pre_workout_forms" | "post_workout_forms" | "nutrition_forms" | "mental_questionnaires";
-  /** The row the tab shows. */
-  columns: string;
-  /** The trainee embed the position filter reads, as `columns` has it. */
-  profileEmbed: string;
+  /** The trainee embed, aliased `profile`: the position filter reads it. */
+  profile: string;
+  /** Any other embed the tab shows. */
+  extra?: string;
   /** The form stores the trainee's name, so the search box matches it. */
   searchable: boolean;
 }
@@ -113,8 +113,10 @@ async function formsPage<T>(list: FormList, params: SubmissionQueryParams): Prom
     return applyPositionFilter(query, "profile.position", params.position);
   };
 
+  const columns = ["*", list.extra, list.profile].filter(Boolean).join(", ");
+
   if (visible.ids === null) {
-    const { data, count } = (await filtered(list.columns, { count: "exact" })
+    const { data, count } = (await filtered(columns, { count: "exact" })
       .order("submitted_at", { ascending: false })
       .range(from, from + params.pageSize - 1)) as { data: T[] | null; count: number | null };
     return { items: data || [], total: count || 0 };
@@ -122,7 +124,8 @@ async function formsPage<T>(list: FormList, params: SubmissionQueryParams): Prom
 
   const { data: keys, error: keysError } = await readInChunks<{ id: string; submitted_at: string | null }>(
     visible.ids,
-    (slice) => filtered(`id, submitted_at, ${list.profileEmbed}`).in("user_id", slice).order("id"),
+    "user_id",
+    () => filtered(`id, submitted_at, ${list.profile}`).order("id"),
   );
   if (keysError) {
     console.error(`${list.table} page error:`, keysError);
@@ -135,7 +138,7 @@ async function formsPage<T>(list: FormList, params: SubmissionQueryParams): Prom
     .map((key) => key.id);
   if (pageIds.length === 0) return { items: [], total: keys.length };
 
-  const { data, error: pageError } = (await filtered(list.columns).in("id", pageIds)) as {
+  const { data, error: pageError } = (await filtered(columns).in("id", pageIds)) as {
     data: (T & { id: string })[] | null;
     error: { message: string } | null;
   };
@@ -153,8 +156,7 @@ export async function getPreWorkoutPaginated(
   return formsPage<PreWorkoutForm>(
     {
       table: "pre_workout_forms",
-      columns: "*, profile:profiles!inner(position)",
-      profileEmbed: "profile:profiles!inner(position)",
+      profile: "profile:profiles!inner(position)",
       searchable: true,
     },
     params,
@@ -167,9 +169,8 @@ export async function getPostWorkoutPaginated(
   return formsPage<PostWorkoutWithTrainer>(
     {
       table: "post_workout_forms",
-      columns:
-        "*, trainer:profiles!post_workout_forms_trainer_id_fkey(full_name), profile:profiles!post_workout_forms_user_id_fkey(position)",
-      profileEmbed: "profile:profiles!post_workout_forms_user_id_fkey(position)",
+      profile: "profile:profiles!post_workout_forms_user_id_fkey(position)",
+      extra: "trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)",
       searchable: true,
     },
     params,
@@ -182,8 +183,7 @@ export async function getNutritionPaginated(
   return formsPage<NutritionFormWithProfile>(
     {
       table: "nutrition_forms",
-      columns: "*, profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate, position)",
-      profileEmbed: "profile:profiles!nutrition_forms_user_id_fkey(position)",
+      profile: "profile:profiles!nutrition_forms_user_id_fkey(full_name, birthdate, position)",
       searchable: false,
     },
     params,
@@ -196,8 +196,7 @@ export async function getMentalPaginated(
   return formsPage<MentalQuestionnaireWithProfile>(
     {
       table: "mental_questionnaires",
-      columns: "*, profile:profiles!inner(position)",
-      profileEmbed: "profile:profiles!inner(position)",
+      profile: "profile:profiles!inner(position)",
       searchable: true,
     },
     params,

@@ -20,7 +20,9 @@ type RangeRead<Row> = {
   range(from: number, to: number): PromiseLike<{ data: Row[] | null; error: ReadError | null }>;
 };
 
-type CountRead = PromiseLike<{ count: number | null; error: ReadError | null }>;
+type NarrowableRead<Row> = RangeRead<Row> & {
+  in(column: string, values: readonly string[]): RangeRead<Row>;
+};
 
 /** Splits a list into slices of at most `size`. */
 export function chunk<T>(items: readonly T[], size: number = ID_CHUNK): T[][] {
@@ -30,44 +32,40 @@ export function chunk<T>(items: readonly T[], size: number = ID_CHUNK): T[][] {
 }
 
 /**
- * Every row a query returns for these ids, one slice of ids per request and
- * page by page within a slice. `query` builds the read for one slice; when a
- * slice can match more than 1000 rows it must order by a unique column so the
- * pages do not overlap. Rows come back slice by slice, not in query order:
- * a caller that shows them in order sorts the joined list.
+ * Every row of a read, page by page. A read that can pass 1000 rows must
+ * order by a unique column so the pages do not overlap.
  */
-export async function readInChunks<Row>(
-  ids: readonly string[],
-  query: (slice: string[]) => RangeRead<Row>,
+export async function readAllPages<Row>(
+  query: () => RangeRead<Row>,
 ): Promise<{ data: Row[]; error: ReadError | null }> {
-  const slices = await Promise.all(chunk(ids).map((slice) => readAllPages(slice, query)));
-  const failed = slices.find((result) => result.error !== null);
-  if (failed) return { data: [], error: failed.error };
-  return { data: slices.flatMap((result) => result.data), error: null };
-}
-
-async function readAllPages<Row>(
-  slice: string[],
-  query: (slice: string[]) => RangeRead<Row>,
-): Promise<{ data: Row[]; error: ReadError | null }> {
-  for (let from = 0, rows: Row[] = []; ; from += PAGE) {
-    const { data, error } = await query(slice).range(from, from + PAGE - 1);
+  let rows: Row[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await query().range(from, from + PAGE - 1);
     if (error) return { data: [], error };
-    const next = rows.concat(data ?? []);
-    if ((data ?? []).length < PAGE) return { data: next, error: null };
-    rows = next;
+    const page = data ?? [];
+    rows = [...rows, ...page];
+    if (page.length < PAGE) return { data: rows, error: null };
   }
 }
 
-/** The total of an exact count over these ids, one slice of ids per request. */
-export async function countInChunks(
-  ids: readonly string[],
-  query: (slice: string[]) => CountRead,
-): Promise<{ count: number; error: ReadError | null }> {
-  const slices = await Promise.all(chunk(ids).map((slice) => query(slice)));
+/**
+ * Every row of a read narrowed to `ids` on `column`, one slice of ids per
+ * request and page by page within a slice. Null ids reads it unnarrowed.
+ * Rows come back slice by slice, not in query order: a caller that shows
+ * them in order sorts the joined list.
+ */
+export async function readInChunks<Row>(
+  ids: readonly string[] | null,
+  column: string,
+  query: () => NarrowableRead<Row>,
+): Promise<{ data: Row[]; error: ReadError | null }> {
+  if (ids === null) return readAllPages(query);
+  const slices = await Promise.all(
+    chunk(ids).map((slice) => readAllPages(() => query().in(column, slice))),
+  );
   const failed = slices.find((result) => result.error !== null);
-  if (failed) return { count: 0, error: failed.error };
-  return { count: slices.reduce((sum, result) => sum + (result.count ?? 0), 0), error: null };
+  if (failed) return { data: [], error: failed.error };
+  return { data: slices.flatMap((result) => result.data), error: null };
 }
 
 // The database collates with ICU en-US; the same collator puts merged slices

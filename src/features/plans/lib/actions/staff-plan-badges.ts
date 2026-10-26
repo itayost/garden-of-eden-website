@@ -23,7 +23,7 @@ export const loadPlanStatusesForStaff = cache(
     const [plans, { data: profiles }] = await Promise.all([
       loadPlanQueues(db, profileIds, israelToday()),
       // The users list passes every trainee: a slice of ids per request.
-      readInChunks(profileIds, (slice) => db.from("profiles").select("id, medical_notes").in("id", slice)),
+      readInChunks(profileIds, "id", () => db.from("profiles").select("id, medical_notes")),
     ]);
     const medical = new Set(profiles.filter((p) => p.medical_notes).map((p) => p.id));
 

@@ -84,18 +84,17 @@ export async function getRankingsData(
   // Trainees cannot read each other's profiles under RLS (medical and parent
   // details live on the same row), so the ranked set is read with the service
   // role, past the login gate above, and only these ranking columns leave it.
+  // A branch has more members than one request URL holds: a slice per request.
   const admin = createAdminClient();
-  const profilesQuery = () =>
+  const { data: profiles, error: profilesError } = (await readInChunks(memberIds, "id", () =>
     admin
       .from("profiles")
       .select("id, full_name, birthdate, age_group_override, age_group_override_until")
       .eq("role", "trainee")
       // RLS used to hide soft-deleted trainees; the service role does not.
-      .is("deleted_at", null);
-  // A branch has more members than one request URL holds: a slice per request.
-  const { data: profiles, error: profilesError } = (memberIds === null
-    ? await profilesQuery()
-    : await readInChunks(memberIds, (slice) => profilesQuery().in("id", slice))) as {
+      .is("deleted_at", null)
+      .order("id"),
+  )) as {
     data: ({ id: string; full_name: string | null } & AgeGroupProfile)[] | null;
     error: Error | null;
   };
@@ -135,13 +134,8 @@ export async function getRankingsData(
   }
 
   // Fetch all assessments for filtered users
-  const { data: assessments, error: assessmentsError } = (await readInChunks(filteredUserIds, (slice) =>
-    supabase
-      .from("player_assessments")
-      .select("*")
-      .in("user_id", slice)
-      .is("deleted_at", null)
-      .order("id"),
+  const { data: assessments, error: assessmentsError } = (await readInChunks(filteredUserIds, "user_id", () =>
+    supabase.from("player_assessments").select("*").is("deleted_at", null).order("id"),
   )) as unknown as {
     data: PlayerAssessment[] | null;
     error: Error | null;

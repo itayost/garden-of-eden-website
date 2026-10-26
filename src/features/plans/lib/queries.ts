@@ -50,7 +50,6 @@ export async function loadStoredPlans(
   profileIds: readonly string[],
 ): Promise<Map<string, StoredPlan[]>> {
   const result = new Map<string, StoredPlan[]>();
-  if (profileIds.length === 0) return result;
   // A staff list asks for every trainee at once: a slice of ids per request.
   const { data, error } = await readInChunks<
     TraineePlan & {
@@ -58,12 +57,11 @@ export async function loadStoredPlans(
       order: Pick<Order, "payment_method" | "terms_sessions_total" | "terms_duration_days"> | null;
       plan_freezes: PlanFreezeRow[] | null;
     }
-  >(profileIds, (slice) =>
+  >(profileIds, "profile_id", () =>
     typedFrom(db, "trainee_plans")
       .select(
         `*, product:plan_products(name_he, kind), order:orders!trainee_plans_order_id_fkey(payment_method, terms_sessions_total, terms_duration_days), ${PLAN_FREEZES_EMBED}`,
       )
-      .in("profile_id", slice)
       .order("id"),
   );
   if (error) {
@@ -98,12 +96,11 @@ export async function loadQueueRows(
   profileIds: readonly string[],
 ): Promise<Map<string, QueueRow[]>> {
   const result = new Map<string, QueueRow[]>();
-  const { data, error } = await readInChunks<RosterRow>(profileIds, (slice) =>
+  const { data, error } = await readInChunks<RosterRow>(profileIds, "trainee_id", () =>
     typedFrom(db, "daily_schedule_slot_trainees")
       .select(
         "id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, called_off_at)",
       )
-      .in("trainee_id", slice)
       .order("id"),
   );
   if (error) {

@@ -4,6 +4,7 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyAdmin } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
 import { addDays } from "@/lib/utils/iso-date";
 import { israelToday } from "@/lib/utils/tasks";
 import { orderPlanName } from "@/lib/plans/manual-card";
@@ -155,29 +156,6 @@ const countedOrders = (db: SupabaseClient, branchId: string | null) => {
   return (branchId ? base.eq("branch_id", branchId) : base).in("status", [...COUNTED_STATUSES]);
 };
 
-const PAGE = 1000;
-const ID_CHUNK = 200;
-
-type PageResult = { data: unknown[] | null; error: { message: string } | null };
-
-/** Reads every row of a query, a page at a time (PostgREST caps one response at 1000). */
-async function fetchAllPages<T>(
-  page: (from: number, to: number) => PromiseLike<PageResult>,
-): Promise<{ data: T[]; error: { message: string } | null }> {
-  for (let from = 0, rows: T[] = []; ; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1);
-    if (error) return { data: [], error };
-    const next = rows.concat((data ?? []) as T[]);
-    if ((data ?? []).length < PAGE) return { data: next, error: null };
-    rows = next;
-  }
-}
-
-/** Splits an id list so no `.in()` puts too many ids in the request URL. */
-function chunk<T>(items: readonly T[], size: number): T[][] {
-  return Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
-}
-
 export async function loadIncomeReport(
   range: ReportRange,
   branchId: string | null,
@@ -192,25 +170,17 @@ export async function loadIncomeReport(
     const toIso = `${addDays(range.to, 2)}T00:00:00Z`;
 
     const [byPaidAt, arboxByDay, refunds] = await Promise.all([
-      fetchAllPages<OrderSelectRow>((lo, hi) =>
-        countedOrders(db, branchId).gte("paid_at", fromIso).lt("paid_at", toIso).order("id").range(lo, hi),
-      ),
+      readAllPages(() => countedOrders(db, branchId).gte("paid_at", fromIso).lt("paid_at", toIso).order("id")),
       // An Arbox purchase can be imported days after it happened.
-      fetchAllPages<OrderSelectRow>((lo, hi) =>
+      readAllPages(() =>
         countedOrders(db, branchId)
           .eq("payment_method", "arbox")
           .gte("arbox_purchased_on", range.from)
           .lte("arbox_purchased_on", range.to)
-          .order("id")
-          .range(lo, hi),
+          .order("id"),
       ),
-      fetchAllPages<RefundSelectRow>((lo, hi) =>
-        db.from("plan_refunds")
-          .select(REFUND_SELECT)
-          .gte("created_at", fromIso)
-          .lt("created_at", toIso)
-          .order("id")
-          .range(lo, hi),
+      readAllPages(() =>
+        db.from("plan_refunds").select(REFUND_SELECT).gte("created_at", fromIso).lt("created_at", toIso).order("id"),
       ),
     ]);
     if (byPaidAt.error || arboxByDay.error || refunds.error) {
@@ -218,9 +188,9 @@ export async function loadIncomeReport(
       return { success: false, error: LOAD_FAILED };
     }
 
-    const orderRows = [...byPaidAt.data, ...arboxByDay.data];
+    const orderRows = [...byPaidAt.data, ...arboxByDay.data] as unknown as OrderSelectRow[];
     const uniqueOrders = [...new Map(orderRows.map((o) => [o.id, o])).values()].filter((o) => o.paid_at !== null);
-    const refundRows = refunds.data
+    const refundRows = (refunds.data as unknown as RefundSelectRow[])
       .map(toRefundRow)
       .filter((r) => !branchId || r.branchId === branchId);
 
@@ -270,21 +240,6 @@ function toEndingInput(profileId: string, view: PlanQueueView, linkWaiting: bool
   };
 }
 
-/** Plan queues for every id chunk, merged. */
-async function loadQueuesInChunks(
-  db: SupabaseClient,
-  idChunks: readonly (readonly string[])[],
-  today: string,
-): Promise<Map<string, PlanQueueView>> {
-  const maps = await Promise.all(idChunks.map((part) => loadPlanQueues(db, part, today)));
-  const merged = new Map(maps.flatMap((m) => [...m]));
-  // loadPlanQueues swallows read errors into an empty result, so this only
-  // detects a total failure: ids went in and nothing came out. A partial
-  // failure (one chunk missing) is a known follow-up in the shared loaders.
-  if (idChunks.length > 0 && merged.size === 0) throw new Error("plan queues read failed");
-  return merged;
-}
-
 /**
  * Every Trainee with a sold Plan, as ending-soon inputs. No auth check:
  * callers gate. Cached per request, so the page and the menu badge share one read.
@@ -292,46 +247,33 @@ async function loadQueuesInChunks(
 export const loadEndingInputs = cache(async (branchId: string | null): Promise<EndingRow[]> => {
   const db = createAdminClient();
   // A deleted trainee is no longer anyone to call: filtered here, not after the queues load.
-  const { data: planRows, error: planError } = await fetchAllPages<{ profile_id: string }>((lo, hi) => {
+  const { data: planRows, error: planError } = await readAllPages(() => {
     const base = db
       .from("trainee_plans")
       .select("profile_id, profile:profiles!trainee_plans_profile_id_fkey!inner(deleted_at)")
       .is("profile.deleted_at", null)
       .neq("status", "voided");
-    return (branchId ? base.eq("branch_id", branchId) : base).order("id").range(lo, hi);
+    return (branchId ? base.eq("branch_id", branchId) : base).order("id");
   });
   if (planError) throw new Error(`trainee_plans read failed: ${planError.message}`);
   const ids = [...new Set(planRows.map((r) => r.profile_id))];
   if (ids.length === 0) return [];
 
-  const today = israelToday();
-  const idChunks = chunk(ids, ID_CHUNK);
-  const [queues, profileChunks, linkChunks, allBranches] = await Promise.all([
-    loadQueuesInChunks(db, idChunks, today),
-    Promise.all(
-      idChunks.map((part) =>
-        db.from("profiles").select("id, full_name, guardian_name, guardian_phone, phone").in("id", part),
-      ),
-    ),
-    Promise.all(
-      idChunks.map((part) =>
-        db.from("orders").select("profile_id").in("status", [...AWAITING_CARD_STATUSES]).not("payment_link_by", "is", null).in("profile_id", part),
-      ),
+  const [queues, profileRead, linkRead, allBranches] = await Promise.all([
+    loadPlanQueues(db, ids, israelToday()),
+    readInChunks(ids, "id", () => db.from("profiles").select("id, full_name, guardian_name, guardian_phone, phone")),
+    readInChunks(ids, "profile_id", () =>
+      db.from("orders").select("profile_id").in("status", [...AWAITING_CARD_STATUSES]).not("payment_link_by", "is", null),
     ),
     loadAllBranches(db),
   ]);
-  const failed = [...profileChunks, ...linkChunks].find((r) => r.error)?.error;
+  // loadPlanQueues swallows read errors into an empty result, so a failed
+  // plan read shows as ids going in and nothing coming out.
+  if (queues.size === 0) throw new Error("plan queues read failed");
+  const failed = profileRead.error ?? linkRead.error;
   if (failed) throw new Error(`ending-soon read failed: ${failed.message}`);
-  const profiles = profileChunks.flatMap((r) => r.data ?? []) as {
-    id: string;
-    full_name: string | null;
-    guardian_name: string | null;
-    guardian_phone: string | null;
-    phone: string | null;
-  }[];
-  const links = linkChunks.flatMap((r) => r.data ?? []) as { profile_id: string | null }[];
-  const profileById = new Map(profiles.map((p) => [p.id, p]));
-  const waiting = new Set(links.map((l) => l.profile_id));
+  const profileById = new Map(profileRead.data.map((p) => [p.id, p]));
+  const waiting = new Set(linkRead.data.map((l) => l.profile_id));
   const branchName = new Map(allBranches.map((b) => [b.id, b.name_he]));
 
   return [...queues].map(([profileId, view]): EndingRow => {

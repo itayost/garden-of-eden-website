@@ -133,23 +133,22 @@ export async function getSessionSummariesAction(
   if (scoped.ids !== null && scoped.ids.length === 0) return { success: true, data: {} };
 
   const supabase = await createClient();
-  const summariesQuery = () =>
+  // A trainer's scope is more ids than one request URL holds: a slice per request.
+  const { data, error } = await readInChunks(scoped.ids, "trainee_id", () =>
     typedFrom(supabase, "training_sessions")
       .select(
         "id, trainee_id, slot_id, completed_at, slot_workout_synced_at, exercises:training_session_exercises(id)",
       )
-      .eq("session_date", date);
-  // A trainer's scope is more ids than one request URL holds: a slice per request.
-  const { data, error } = scoped.ids === null
-    ? await summariesQuery()
-    : await readInChunks(scoped.ids, (slice) => summariesQuery().in("trainee_id", slice).order("id"));
+      .eq("session_date", date)
+      .order("id"),
+  );
 
   if (error) {
     console.error("Get session summaries error:", error);
     return { error: "שגיאה בטעינת סטטוס האימונים" };
   }
 
-  const rows = (data ?? []) as {
+  const rows = data as {
     id: string;
     trainee_id: string;
     slot_id: string | null;
@@ -273,23 +272,21 @@ export async function getWeekSessionStatusesAction(
   if (visibleIds !== null && visibleIds.length === 0) return { success: true, data: {} };
 
   const supabase = await createClient();
-  const query = () =>
+  // A trainer's scope is more ids than one request URL holds: a slice per request.
+  const { data, error } = await readInChunks(visibleIds, "trainee_id", () =>
     typedFrom(supabase, "training_sessions")
       .select("trainee_id, session_date, slot_id, completed_at, exercises:training_session_exercises(id)")
       .gte("session_date", startDate)
-      .lte("session_date", endDate);
-
-  // A trainer's scope is more ids than one request URL holds: a slice per request.
-  const { data, error } = visibleIds === null
-    ? await query()
-    : await readInChunks(visibleIds, (slice) => query().in("trainee_id", slice).order("id"));
+      .lte("session_date", endDate)
+      .order("id"),
+  );
 
   if (error) {
     console.error("Get week session statuses error:", error);
     return { error: "שגיאה בטעינת סטטוס האימונים" };
   }
 
-  return { success: true, data: toDaySessionStatuses((data ?? []) as SessionStatusRow[]) };
+  return { success: true, data: toDaySessionStatuses(data as SessionStatusRow[]) };
 }
 
 /**

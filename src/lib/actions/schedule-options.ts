@@ -47,46 +47,35 @@ export const getSlotFormOptionsAction = cache(
     }
 
     // A branch has more members than one request URL holds: a slice per
-    // request, put back in name order.
-    const [trainersResult, traineesResult] = await Promise.all([
-      readInChunks(memberIds, (slice) =>
-        supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", slice)
-          .in("role", ["trainer", "admin"])
-          .eq("is_active", true)
-          .is("deleted_at", null),
-      ),
-      readInChunks(memberIds, (slice) =>
-        supabase
-          .from("profiles")
-          .select("id, full_name, birthdate, plays_up")
-          .in("id", slice)
-          .eq("role", "trainee")
-          .eq("is_active", true)
-          .is("deleted_at", null),
-      ),
-    ]);
+    // request, then split by role and put back in name order.
+    const { data, error } = await readInChunks(memberIds, "id", () =>
+      supabase
+        .from("profiles")
+        .select("id, full_name, role, birthdate, plays_up")
+        .eq("is_active", true)
+        .is("deleted_at", null),
+    );
 
-    if (trainersResult.error || traineesResult.error) {
-      console.error(
-        "Get slot form options error:",
-        trainersResult.error ?? traineesResult.error,
-      );
+    if (error) {
+      console.error("Get slot form options error:", error);
       return { error: "שגיאה בטעינת רשימות המאמנים והמתאמנים" };
     }
 
+    const members = [...data].sort(byFullName);
     return {
       success: true,
       data: {
-        trainers: [...trainersResult.data].sort(byFullName) as TrainerOption[],
-        trainees: [...traineesResult.data].sort(byFullName).map((t) => ({
-          id: t.id,
-          full_name: t.full_name,
-          birth_year: birthYearOf(t.birthdate),
-          plays_up: t.plays_up,
-        })),
+        trainers: members
+          .filter((p) => p.role === "trainer" || p.role === "admin")
+          .map((p): TrainerOption => ({ id: p.id, full_name: p.full_name })),
+        trainees: members
+          .filter((p) => p.role === "trainee")
+          .map((t) => ({
+            id: t.id,
+            full_name: t.full_name,
+            birth_year: birthYearOf(t.birthdate),
+            plays_up: t.plays_up,
+          })),
       },
     };
   },

@@ -29,13 +29,11 @@ export async function loadBranchIdsByProfile(
   profileIds: readonly string[],
 ): Promise<Map<string, string[]>> {
   const result = new Map<string, string[]>();
-  if (profileIds.length === 0) return result;
 
   // The users list asks for every user at once: a slice of ids per request.
-  const { data, error } = await readInChunks<MembershipRow>(profileIds, (slice) =>
+  const { data, error } = await readInChunks<MembershipRow>(profileIds, "profile_id", () =>
     typedFrom(db, "profile_branches")
       .select("profile_id, branch_id")
-      .in("profile_id", slice)
       .order("profile_id")
       .order("branch_id"),
   );
@@ -62,10 +60,9 @@ export async function listProfileIdsInBranches(
 ): Promise<string[]> {
   if (branchIds.length === 0) return [];
 
-  const { data, error } = await readInChunks<{ profile_id: string }>(branchIds, (slice) =>
+  const { data, error } = await readInChunks<{ profile_id: string }>(branchIds, "branch_id", () =>
     typedFrom(db, "profile_branches")
       .select("profile_id")
-      .in("branch_id", slice)
       .order("profile_id")
       .order("branch_id"),
   );
@@ -118,10 +115,8 @@ export async function visibleTraineePhones(
 ): Promise<Set<string> | null> {
   const ids = await scopedProfileIds(db, scope);
   if (ids === null) return null;
-  if (ids.length === 0) return new Set();
-
-  const { data, error } = await readInChunks(ids, (slice) =>
-    db.from("profiles").select("phone").in("id", slice).not("phone", "is", null),
+  const { data, error } = await readInChunks<{ phone: string | null }>(ids, "id", () =>
+    typedFrom(db, "profiles").select("phone").not("phone", "is", null),
   );
 
   if (error) {
