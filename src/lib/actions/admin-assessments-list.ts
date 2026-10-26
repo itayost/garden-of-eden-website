@@ -29,14 +29,8 @@ async function getUserIdsWithSection(
   const section = ASSESSMENT_SECTIONS.find((s) => s.key === sectionKey);
   if (!section) return [];
   const orPredicate = section.fields.map((f) => `${f}.not.is.null`).join(",");
-  // Every assessment in the academy can match: read it a page at a time.
   const { data } = await readAllPages(() =>
-    supabase
-      .from("player_assessments")
-      .select("user_id")
-      .is("deleted_at", null)
-      .or(orPredicate)
-      .order("id"),
+    supabase.from("player_assessments").select("user_id").is("deleted_at", null).or(orPredicate).order("id"),
   );
   return Array.from(new Set(data.map((r) => r.user_id)));
 }

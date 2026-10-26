@@ -117,7 +117,8 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   result.signReminders = signReminders.sent;
   result.failed += signReminders.failed;
 
-  // A page at a time: past 1000 active Plans the rest would get no reminder.
+  // Page by page: PostgREST stops at 1000 rows, and a trainee past it would
+  // never be reminded.
   const { data: activePlans, error } = await readAllPages(() =>
     db.from("trainee_plans").select("profile_id").eq("status", "active").order("id"),
   );
