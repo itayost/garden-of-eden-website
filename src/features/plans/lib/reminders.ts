@@ -6,7 +6,7 @@ import { readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
 import { dueReminder } from "@/lib/plans/plan-queue";
 import { REMINDED_COLUMN, reminderReason } from "@/lib/plans/reminder-copy";
 import { sendPlanReminder } from "@/lib/whatsapp/plan-templates";
-import type { EnrollmentAgreement, TraineePlan } from "@/types/plans";
+import type { EnrollmentAgreement } from "@/types/plans";
 import { notifyOrderFulfilled } from "@/features/enrollment/lib/notify";
 import { loadPlanQueues } from "./queries";
 import { buildRenewalUrl } from "./renewal-link";
@@ -119,8 +119,8 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
 
   // Page by page: PostgREST stops at 1000 rows, and a trainee past it would
   // never be reminded.
-  const { data: activePlans, error } = await readAllPages<Pick<TraineePlan, "profile_id">>(() =>
-    typedFrom(db, "trainee_plans").select("profile_id").eq("status", "active").order("id"),
+  const { data: activePlans, error } = await readAllPages(() =>
+    db.from("trainee_plans").select("profile_id").eq("status", "active").order("id"),
   );
   if (error) {
     console.error("[plan-reminders] load plans failed:", error);

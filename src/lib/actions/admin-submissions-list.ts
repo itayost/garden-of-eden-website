@@ -75,7 +75,10 @@ const visibleUserIdsFor = cache(
 
 interface FormList {
   table: "pre_workout_forms" | "post_workout_forms" | "nutrition_forms" | "mental_questionnaires";
-  /** The trainee embed, aliased `profile`: the position filter reads it. */
+  /**
+   * The trainee embed, aliased `profile`: the position filter reads it, so it
+   * must be `!inner` for the filter to drop forms rather than null the embed.
+   */
   profile: string;
   /** Any other embed the tab shows. */
   extra?: string;
