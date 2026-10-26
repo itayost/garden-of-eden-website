@@ -16,6 +16,8 @@ export interface HeroProps {
   ctaLabel?: string;
   /** External (WhatsApp) by default; an internal path renders a Link. */
   ctaHref?: string;
+  /** Background photo; the Haifa page keeps the default. */
+  imageSrc?: string;
 }
 
 export function Hero({
@@ -26,6 +28,7 @@ export function Hero({
   subtitle = "הצטרפו לקהילה שלנו היום וגלו את הפוטנציאל המלא שלכם עם מאמנים מומחים, ציוד מתקדם ותוכניות מנוי גמישות",
   ctaLabel = "הצטרפו עכשיו",
   ctaHref = "https://wa.me/972525779446",
+  imageSrc = "/landing/hero-balance.webp",
 }: HeroProps = {}) {
   const internalCta = ctaHref.startsWith("/");
   const anchorCta = ctaHref.startsWith("#");
@@ -46,7 +49,7 @@ export function Hero({
         {/* Background Image */}
         <div className="absolute inset-0 bg-ink">
           <Image
-            src="/landing/hero-balance.webp"
+            src={imageSrc}
             alt=""
             fill
             priority

@@ -17,6 +17,16 @@ export const KIRYAT_ATA_LANDING = {
       "אימוני כדורגל מקצועיים בקבוצות קטנות, עם מעטפת מנטלית ותזונתית. נרשמים ומשלמים כאן באתר, ומתחילים.",
     ctaLabel: "הצטרפו עכשיו",
     ctaHref: "#services",
+    imageSrc: "/landing/kiryat-ata/agility-drill.webp",
+  },
+  /** Branch photos (issue #148), in the order of the About feature cards. */
+  about: {
+    featureImages: [
+      { src: "/landing/kiryat-ata/body-composition.webp", position: "center 20%" },
+      { src: "/landing/kiryat-ata/facility.webp", position: "center 55%" },
+      { src: "/landing/kiryat-ata/group.webp", position: "center 35%" },
+    ],
+    videoPoster: "/landing/kiryat-ata/match.webp",
   },
   services: {
     subtitle: "בוחרים מסלול, ממלאים את הסכם ההרשמה ומשלמים באתר. החשבונית מגיעה למייל.",

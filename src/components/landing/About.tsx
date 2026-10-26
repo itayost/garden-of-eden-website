@@ -49,7 +49,20 @@ const features = [
   },
 ];
 
-export function About() {
+/** A feature card's photo; position is the CSS object-position of the crop. */
+export interface AboutFeatureImage {
+  src: string;
+  position?: string;
+}
+
+export interface AboutProps {
+  /** One photo per feature card, in order; the Haifa page keeps the defaults. */
+  featureImages?: readonly AboutFeatureImage[];
+  /** Still shown on the video card until the video plays. */
+  videoPoster?: string;
+}
+
+export function About({ featureImages, videoPoster = "/landing/athletic.webp" }: AboutProps = {}) {
   const [activeCategory, setActiveCategory] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
@@ -91,7 +104,7 @@ export function About() {
                   loop
                   playsInline
                   preload="none"
-                  poster="/landing/athletic.webp"
+                  poster={videoPoster}
                 >
                   <source src="/landing/promo-video-720.mp4" type="video/mp4" />
                 </video>
@@ -187,11 +200,12 @@ export function About() {
                   className="aspect-[4/3] rounded-3xl p-6 flex flex-col justify-end relative overflow-hidden group text-right"
                 >
                   <Image
-                    src={feature.image}
+                    src={featureImages?.[index]?.src ?? feature.image}
                     alt=""
                     fill
                     sizes="(min-width: 768px) 33vw, 100vw"
                     className="object-cover"
+                    style={{ objectPosition: featureImages?.[index]?.position ?? "center" }}
                   />
                   {/* Dark overlay for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />

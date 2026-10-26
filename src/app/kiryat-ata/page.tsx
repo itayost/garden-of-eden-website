@@ -32,7 +32,7 @@ export const revalidate = 3600;
  */
 export default async function KiryatAtaPage() {
   const products = await loadKiryatAtaCatalog();
-  const { hero, location, faqOverrides, faqOmit } = KIRYAT_ATA_LANDING;
+  const { hero, about, location, faqOverrides, faqOmit } = KIRYAT_ATA_LANDING;
 
   return (
     <MotionProvider>
@@ -54,8 +54,9 @@ export default async function KiryatAtaPage() {
           subtitle={hero.subtitle}
           ctaLabel={hero.ctaLabel}
           ctaHref={hero.ctaHref}
+          imageSrc={hero.imageSrc}
         />
-        <About />
+        <About featureImages={about.featureImages} videoPoster={about.videoPoster} />
         <KiryatAtaServices products={products} />
         <Staff />
         <Testimonials />
