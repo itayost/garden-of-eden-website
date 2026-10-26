@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { readInChunks } from "@/lib/supabase/in-chunks";
 import { isValidUUID, normalizePhoneIL } from "@/lib/validations/common";
 import { isInBranchScope, type BranchScope } from "@/lib/branches/branch-scope";
 import type { Branch, BranchOption } from "@/types/branches";
@@ -30,45 +31,51 @@ export async function loadBranchIdsByProfile(
   const result = new Map<string, string[]>();
   if (profileIds.length === 0) return result;
 
-  const { data, error } = (await typedFrom(db, "profile_branches")
-    .select("profile_id, branch_id")
-    .in("profile_id", [...profileIds])) as {
-    data: MembershipRow[] | null;
-    error: { message: string } | null;
-  };
+  // The users list asks for every user at once: a slice of ids per request.
+  const { data, error } = await readInChunks<MembershipRow>(profileIds, (slice) =>
+    typedFrom(db, "profile_branches")
+      .select("profile_id, branch_id")
+      .in("profile_id", slice)
+      .order("profile_id")
+      .order("branch_id"),
+  );
 
   if (error) {
     console.error("loadBranchIdsByProfile error:", error);
     return result;
   }
 
-  for (const row of data ?? []) {
+  for (const row of data) {
     const existing = result.get(row.profile_id) ?? [];
     result.set(row.profile_id, [...existing, row.branch_id]);
   }
   return result;
 }
 
-/** Profile ids that belong to at least one of the given branches. */
+/**
+ * Profile ids that belong to at least one of the given branches, page by
+ * page: a scope is every member, and PostgREST stops at 1000 rows.
+ */
 export async function listProfileIdsInBranches(
   db: SupabaseClient,
   branchIds: readonly string[],
 ): Promise<string[]> {
   if (branchIds.length === 0) return [];
 
-  const { data, error } = (await typedFrom(db, "profile_branches")
-    .select("profile_id")
-    .in("branch_id", [...branchIds])) as {
-    data: { profile_id: string }[] | null;
-    error: { message: string } | null;
-  };
+  const { data, error } = await readInChunks<{ profile_id: string }>(branchIds, (slice) =>
+    typedFrom(db, "profile_branches")
+      .select("profile_id")
+      .in("branch_id", slice)
+      .order("profile_id")
+      .order("branch_id"),
+  );
 
   if (error) {
     console.error("listProfileIdsInBranches error:", error);
     return [];
   }
 
-  return Array.from(new Set((data ?? []).map((row) => row.profile_id)));
+  return Array.from(new Set(data.map((row) => row.profile_id)));
 }
 
 /**
@@ -113,11 +120,9 @@ export async function visibleTraineePhones(
   if (ids === null) return null;
   if (ids.length === 0) return new Set();
 
-  const { data, error } = await db
-    .from("profiles")
-    .select("phone")
-    .in("id", ids)
-    .not("phone", "is", null);
+  const { data, error } = await readInChunks(ids, (slice) =>
+    db.from("profiles").select("phone").in("id", slice).not("phone", "is", null),
+  );
 
   if (error) {
     console.error("visibleTraineePhones error:", error);
@@ -125,7 +130,7 @@ export async function visibleTraineePhones(
   }
 
   return new Set(
-    (data ?? [])
+    data
       .map((row) => normalizePhoneIL(row.phone))
       .filter((phone): phone is string => phone !== null),
   );

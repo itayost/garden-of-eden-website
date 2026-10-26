@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { readInChunks } from "@/lib/supabase/in-chunks";
 import { dueReminder } from "@/lib/plans/plan-queue";
 import { REMINDED_COLUMN, reminderReason } from "@/lib/plans/reminder-copy";
 import { sendPlanReminder } from "@/lib/whatsapp/plan-templates";
@@ -131,11 +132,10 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   const queues = await loadPlanQueues(db, profileIds, today);
 
   if (profileIds.length === 0) return result;
-  const { data: profiles } = await db
-    .from("profiles")
-    .select("id, full_name, guardian_name, guardian_phone")
-    .in("id", profileIds);
-  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const { data: profiles } = await readInChunks(profileIds, (slice) =>
+    db.from("profiles").select("id, full_name, guardian_name, guardian_phone").in("id", slice),
+  );
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
 
   for (const [profileId, { queue }] of queues) {
     const due = dueReminder(queue);

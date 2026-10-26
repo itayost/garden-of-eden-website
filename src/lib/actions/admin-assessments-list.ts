@@ -8,6 +8,7 @@ import type { Profile } from "@/types/database";
 import { applyPositionFilter } from "@/lib/admin/apply-position-filter";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { byFullName, countInChunks, readInChunks } from "@/lib/supabase/in-chunks";
 import { visibleProfileIds } from "@/features/branches/lib/memberships";
 import { resolveAgeGroup } from "@/lib/age-group-override";
 
@@ -69,122 +70,21 @@ export async function getAssessmentsPaginated(
   if (visibleIds !== null && visibleIds.length === 0) return empty;
 
   const supabase = await createClient();
-  const from = params.page * params.pageSize;
 
-  // Run independent reads in parallel: test-section user_ids (when set), total
-  // assessment count, and the user_id list for the trainees-with-assessments tally.
-  // testMatchedIds blocks the profile query, so we want it on the same wave as
-  // the counts rather than serialized after them.
-  const totalQuery = supabase
-    .from("player_assessments")
-    .select("*", { count: "exact", head: true })
-    .is("deleted_at", null);
-  const usersQuery = supabase
-    .from("player_assessments")
-    .select("user_id")
-    .is("deleted_at", null);
-
-  const [testMatchedIds, totalAssessmentsCount, traineesWithAssessmentsData] =
-    await Promise.all([
-      params.test ? getUserIdsWithSection(supabase, params.test) : Promise.resolve(null),
-      visibleIds === null ? totalQuery : totalQuery.in("user_id", visibleIds),
-      visibleIds === null ? usersQuery : usersQuery.in("user_id", visibleIds),
-    ]);
+  // Run independent reads in parallel: test-section user_ids (when set) and
+  // the assessment totals. testMatchedIds blocks the profile query, so we want
+  // it on the same wave as the counts rather than serialized after them.
+  const [testMatchedIds, totals] = await Promise.all([
+    params.test ? getUserIdsWithSection(supabase, params.test) : Promise.resolve(null),
+    assessmentTotals(supabase, visibleIds),
+  ]);
 
   if (testMatchedIds && testMatchedIds.length === 0) return empty;
-  const totalAssessments = totalAssessmentsCount.count ?? 0;
-  const uniqueUsersWithAssessments = new Set(
-    traineesWithAssessmentsData.data?.map((a) => a.user_id),
-  );
+  const allowedIds = intersectIds(visibleIds, testMatchedIds);
+  if (allowedIds !== null && allowedIds.length === 0) return empty;
 
-  // Build profile query with filters
-  let profileQuery = supabase
-    .from("profiles")
-    .select("*", { count: "exact" })
-    .eq("role", "trainee")
-    .is("deleted_at", null)
-    .order("full_name");
-
-  if (params.search) {
-    profileQuery = profileQuery.ilike("full_name", `%${params.search}%`);
-  }
-
-  profileQuery = applyPositionFilter(profileQuery, "position", params.position);
-  if (visibleIds !== null) {
-    profileQuery = profileQuery.in("id", visibleIds);
-  }
-
-  if (testMatchedIds) {
-    profileQuery = profileQuery.in("id", testMatchedIds);
-  }
-
-  // If age group filter is set, we need to fetch all profiles, filter, then paginate manually
-  if (params.ageGroupId) {
-    let ageGroupQuery = supabase
-      .from("profiles")
-      .select("*", { count: "exact" })
-      .eq("role", "trainee")
-      .is("deleted_at", null)
-      .order("full_name")
-      .ilike("full_name", params.search ? `%${params.search}%` : "%");
-
-    ageGroupQuery = applyPositionFilter(ageGroupQuery, "position", params.position);
-    if (visibleIds !== null) {
-      ageGroupQuery = ageGroupQuery.in("id", visibleIds);
-    }
-
-    if (testMatchedIds) {
-      ageGroupQuery = ageGroupQuery.in("id", testMatchedIds);
-    }
-
-    const { data: allProfiles } = (await ageGroupQuery) as unknown as {
-      data: Profile[] | null;
-      count: number | null;
-    };
-
-    if (!allProfiles || allProfiles.length === 0)
-      return { ...empty, total: 0 };
-
-    const filtered = allProfiles.filter(
-      (p) => resolveAgeGroup(p)?.id === params.ageGroupId
-    );
-
-    const paginatedProfiles = filtered.slice(from, from + params.pageSize);
-    const profileIds = paginatedProfiles.map((p) => p.id);
-
-    // Fetch assessments for visible profiles
-    const { data: assessments } = (await supabase
-      .from("player_assessments")
-      .select("*")
-      .is("deleted_at", null)
-      .in("user_id", profileIds)
-      .order("assessment_date", {
-        ascending: false,
-      })) as unknown as { data: PlayerAssessment[] | null };
-
-    const assessmentsByUser: Record<string, PlayerAssessment[]> = {};
-    assessments?.forEach((a) => {
-      if (!assessmentsByUser[a.user_id]) assessmentsByUser[a.user_id] = [];
-      assessmentsByUser[a.user_id].push(a);
-    });
-
-    return {
-      profiles: paginatedProfiles,
-      assessmentsByUser,
-      total: filtered.length,
-      totalAssessments,
-      traineesWithAssessments: uniqueUsersWithAssessments.size,
-    };
-  }
-
-  // No age group filter — use simple range pagination
-  const { data: profiles, count: totalCount } = (await profileQuery.range(
-    from,
-    from + params.pageSize - 1
-  )) as unknown as { data: Profile[] | null; count: number | null };
-
-  if (!profiles || profiles.length === 0)
-    return { ...empty, total: totalCount || 0 };
+  const { profiles, total } = await loadProfilePage(supabase, params, allowedIds);
+  if (profiles.length === 0) return { ...empty, total };
 
   const profileIds = profiles.map((p) => p.id);
 
@@ -207,8 +107,98 @@ export async function getAssessmentsPaginated(
   return {
     profiles,
     assessmentsByUser,
-    total: totalCount || 0,
-    totalAssessments,
-    traineesWithAssessments: uniqueUsersWithAssessments.size,
+    total,
+    ...totals,
+  };
+}
+
+/**
+ * One page of trainees by name. Unrestricted and without an age group, the
+ * database pages it. Otherwise it is filtered and paged here: an age group is
+ * worked out in JS, and a trainer's scope is more ids than one request URL
+ * holds, so it is read a slice at a time.
+ */
+async function loadProfilePage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  params: AssessmentQueryParams,
+  allowedIds: string[] | null,
+): Promise<{ profiles: Profile[]; total: number }> {
+  const from = params.page * params.pageSize;
+  const profileQuery = (options?: { count: "exact" }) => {
+    const query = supabase
+      .from("profiles")
+      .select("*", options)
+      .eq("role", "trainee")
+      .is("deleted_at", null);
+    return applyPositionFilter(
+      params.search ? query.ilike("full_name", `%${params.search}%`) : query,
+      "position",
+      params.position,
+    );
+  };
+
+  if (allowedIds === null && !params.ageGroupId) {
+    const { data, count } = (await profileQuery({ count: "exact" })
+      .order("full_name")
+      .range(from, from + params.pageSize - 1)) as unknown as {
+      data: Profile[] | null;
+      count: number | null;
+    };
+    return { profiles: data ?? [], total: count ?? 0 };
+  }
+
+  const { data } = (
+    allowedIds === null
+      ? await profileQuery().order("full_name")
+      : await readInChunks(allowedIds, (slice) => profileQuery().in("id", slice))
+  ) as unknown as { data: Profile[] | null };
+  const matched = (data ?? [])
+    .filter((p) => !params.ageGroupId || resolveAgeGroup(p)?.id === params.ageGroupId)
+    .sort(byFullName);
+  return { profiles: matched.slice(from, from + params.pageSize), total: matched.length };
+}
+
+/** Ids in both lists; a null list allows any id. */
+function intersectIds(a: string[] | null, b: string[] | null): string[] | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  const inB = new Set(b);
+  return a.filter((id) => inB.has(id));
+}
+
+/**
+ * How many assessments the caller may see and how many trainees they cover.
+ * A trainer's scope is read a slice of ids at a time.
+ */
+async function assessmentTotals(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  visibleIds: string[] | null,
+): Promise<{ totalAssessments: number; traineesWithAssessments: number }> {
+  const totalQuery = () =>
+    supabase
+      .from("player_assessments")
+      .select("*", { count: "exact", head: true })
+      .is("deleted_at", null);
+  const usersQuery = () =>
+    supabase
+      .from("player_assessments")
+      .select("user_id")
+      .is("deleted_at", null);
+
+  if (visibleIds === null) {
+    const [{ count }, { data }] = await Promise.all([totalQuery(), usersQuery()]);
+    return {
+      totalAssessments: count ?? 0,
+      traineesWithAssessments: new Set(data?.map((a) => a.user_id)).size,
+    };
+  }
+
+  const [{ count }, { data }] = await Promise.all([
+    countInChunks(visibleIds, (slice) => totalQuery().in("user_id", slice)),
+    readInChunks(visibleIds, (slice) => usersQuery().in("user_id", slice).order("id")),
+  ]);
+  return {
+    totalAssessments: count,
+    traineesWithAssessments: new Set(data.map((a) => a.user_id)).size,
   };
 }

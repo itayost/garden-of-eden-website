@@ -7,6 +7,7 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertBranchReadable } from "@/lib/actions/shared/assert-branch";
 import { isValidUUID } from "@/lib/validations/common";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { byFullName, readInChunks } from "@/lib/supabase/in-chunks";
 import { listProfileIdsInBranches } from "@/features/branches/lib/memberships";
 import { birthYearOf } from "@/lib/schedule/roster-name";
 import type { TraineeOption } from "@/types/schedule";
@@ -45,23 +46,27 @@ export const getSlotFormOptionsAction = cache(
       return { success: true, data: { trainers: [], trainees: [] } };
     }
 
+    // A branch has more members than one request URL holds: a slice per
+    // request, put back in name order.
     const [trainersResult, traineesResult] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", memberIds)
-        .in("role", ["trainer", "admin"])
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("full_name", { ascending: true }),
-      supabase
-        .from("profiles")
-        .select("id, full_name, birthdate, plays_up")
-        .in("id", memberIds)
-        .eq("role", "trainee")
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("full_name", { ascending: true }),
+      readInChunks(memberIds, (slice) =>
+        supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", slice)
+          .in("role", ["trainer", "admin"])
+          .eq("is_active", true)
+          .is("deleted_at", null),
+      ),
+      readInChunks(memberIds, (slice) =>
+        supabase
+          .from("profiles")
+          .select("id, full_name, birthdate, plays_up")
+          .in("id", slice)
+          .eq("role", "trainee")
+          .eq("is_active", true)
+          .is("deleted_at", null),
+      ),
     ]);
 
     if (trainersResult.error || traineesResult.error) {
@@ -75,8 +80,8 @@ export const getSlotFormOptionsAction = cache(
     return {
       success: true,
       data: {
-        trainers: (trainersResult.data as TrainerOption[]) ?? [],
-        trainees: (traineesResult.data ?? []).map((t) => ({
+        trainers: [...trainersResult.data].sort(byFullName) as TrainerOption[],
+        trainees: [...traineesResult.data].sort(byFullName).map((t) => ({
           id: t.id,
           full_name: t.full_name,
           birth_year: birthYearOf(t.birthdate),

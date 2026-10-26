@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readInChunks } from "@/lib/supabase/in-chunks";
 import { israelToday } from "@/lib/utils/tasks";
 import type { StaffPlanBadge } from "@/types/plans";
 import { loadPlanQueues } from "../queries";
@@ -21,9 +22,10 @@ export const loadPlanStatusesForStaff = cache(
     const db = createAdminClient();
     const [plans, { data: profiles }] = await Promise.all([
       loadPlanQueues(db, profileIds, israelToday()),
-      db.from("profiles").select("id, medical_notes").in("id", [...profileIds]),
+      // The users list passes every trainee: a slice of ids per request.
+      readInChunks(profileIds, (slice) => db.from("profiles").select("id, medical_notes").in("id", slice)),
     ]);
-    const medical = new Set((profiles ?? []).filter((p) => p.medical_notes).map((p) => p.id));
+    const medical = new Set(profiles.filter((p) => p.medical_notes).map((p) => p.id));
 
     const result: Record<string, StaffPlanBadge> = {};
     for (const [profileId, { status, sessionsLeft, endsOn }] of plans) {
