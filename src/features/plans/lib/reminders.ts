@@ -2,7 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { readInChunks } from "@/lib/supabase/in-chunks";
+import { readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
 import { dueReminder } from "@/lib/plans/plan-queue";
 import { REMINDED_COLUMN, reminderReason } from "@/lib/plans/reminder-copy";
 import { sendPlanReminder } from "@/lib/whatsapp/plan-templates";
@@ -117,18 +117,17 @@ export async function runPlanReminders(today: string): Promise<ReminderRunResult
   result.signReminders = signReminders.sent;
   result.failed += signReminders.failed;
 
-  const { data: activePlans, error } = (await typedFrom(db, "trainee_plans")
-    .select("profile_id")
-    .eq("status", "active")) as {
-    data: Pick<TraineePlan, "profile_id">[] | null;
-    error: { message: string } | null;
-  };
+  // Page by page: PostgREST stops at 1000 rows, and a trainee past it would
+  // never be reminded.
+  const { data: activePlans, error } = await readAllPages<Pick<TraineePlan, "profile_id">>(() =>
+    typedFrom(db, "trainee_plans").select("profile_id").eq("status", "active").order("id"),
+  );
   if (error) {
     console.error("[plan-reminders] load plans failed:", error);
     return result;
   }
 
-  const profileIds = Array.from(new Set((activePlans ?? []).map((p) => p.profile_id)));
+  const profileIds = Array.from(new Set(activePlans.map((p) => p.profile_id)));
   const queues = await loadPlanQueues(db, profileIds, today);
 
   if (profileIds.length === 0) return result;
