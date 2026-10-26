@@ -19,7 +19,6 @@ export const KIRYAT_ATA_LANDING = {
     ctaHref: "#services",
   },
   services: {
-    title: "מסלולי האימונים בקריית אתא",
     subtitle: "בוחרים מסלול, ממלאים את הסכם ההרשמה ומשלמים באתר. החשבונית מגיעה למייל.",
     highlightedSlug: "monthly",
   },
@@ -69,6 +68,9 @@ export function featuresFor(product: PlanProduct): readonly string[] {
 }
 
 export function periodFor(product: PlanProduct): string {
+  if (product.kind === "addon" && product.sessions_total !== null) {
+    return product.sessions_total === 1 ? "מפגש אחד" : `${product.sessions_total} מפגשים`;
+  }
   if (product.kind === "subscription" || product.kind === "addon") {
     return product.duration_days === 30 ? "לחודש" : weeksLabel(product.duration_days);
   }

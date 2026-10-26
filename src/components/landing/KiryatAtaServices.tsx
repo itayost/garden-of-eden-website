@@ -1,131 +1,79 @@
-"use client";
-
 import Link from "next/link";
-import { m } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
-import type { PlanProduct } from "@/types/plans";
+import { Brain, CalendarDays, Ticket, Trophy, Users, type LucideIcon } from "lucide-react";
+import type { PlanKind, PlanProduct } from "@/types/plans";
 import { featuresFor, KIRYAT_ATA_LANDING, periodFor } from "../../../content/landing-kiryat-ata";
+import { PosterPlanCard, type PosterPlan } from "./poster/PosterPlanCard";
+import { PosterSection } from "./poster/PosterSection";
+
+const KIND_ICONS: Record<PlanKind, LucideIcon> = {
+  subscription: Users,
+  session_card: Ticket,
+  term: Trophy,
+  addon: Brain,
+};
+
+const KIND_LABELS: Record<PlanKind, string> = {
+  subscription: "מנוי חודשי",
+  session_card: "כרטיסייה",
+  term: "מסלול תקופתי",
+  addon: "תוספת למסלול",
+};
+
+function toPosterPlan(product: PlanProduct, highlightedSlug: string): PosterPlan {
+  return {
+    icon: product.once_per_trainee ? CalendarDays : KIND_ICONS[product.kind],
+    name: product.name_he,
+    description: product.blurb_he ?? KIND_LABELS[product.kind],
+    price: product.price_ils.toLocaleString("he-IL"),
+    period: periodFor(product),
+    features: featuresFor(product),
+    highlighted: product.slug === highlightedSlug,
+    cta: { kind: "join", label: "הצטרפו", href: `/join?product=${product.id}` },
+  };
+}
 
 /**
- * The קריית אתא price cards, fed by plan_products so the landing page, the
- * catalog CMS, and /join never disagree on a price. Every card leads to the
- * signup and payment page with that product preselected.
+ * The קריית אתא price cards in the Haifa poster's look, fed by plan_products
+ * so the landing page, the catalog CMS, and /join never disagree on a price.
+ * Every card leads to the signup and payment page with that product preselected.
  */
 export function KiryatAtaServices({ products }: { products: PlanProduct[] }) {
-  const { title, subtitle, highlightedSlug } = KIRYAT_ATA_LANDING.services;
+  const { services, location, branchName } = KIRYAT_ATA_LANDING;
 
   return (
-    <section id="services" className="py-20 bg-paper">
-      <div className="container mx-auto px-6">
-        <m.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <span className="text-sm text-black/60 mb-2 block">{KIRYAT_ATA_LANDING.hero.eyebrow}</span>
-          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4">{title}</h2>
-          <p className="text-black/60 max-w-md mx-auto">{subtitle}</p>
-        </m.div>
-
-        {products.length === 0 ? (
-          <p className="text-center text-black/60">
-            המחירון יתפרסם בקרוב. בינתיים אפשר לכתוב לנו בוואטסאפ.
-          </p>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {products.map((product, index) => {
-              const highlighted = product.slug === highlightedSlug;
-              return (
-                <m.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="relative"
-                >
-                  {highlighted && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-lime text-black text-xs font-medium">
-                        <span className="w-1.5 h-1.5 rounded-full bg-black" />
-                        הכי פופולרי
-                      </span>
-                    </div>
-                  )}
-                  {product.once_per_trainee && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white text-xs font-medium">
-                        לשחקן חדש
-                      </span>
-                    </div>
-                  )}
-
-                  <m.div
-                    whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                    className={`rounded-3xl p-8 h-full flex flex-col transition-all duration-300 ${
-                      highlighted
-                        ? "bg-white border-2 border-brand-lime shadow-lg"
-                        : "bg-white border border-black/10 hover:border-black/20 hover:shadow-md"
-                    }`}
-                  >
-                    <h3 className="text-xl font-bold text-black mb-2">{product.name_he}</h3>
-                    <p className="text-black/60 text-sm mb-6">{product.blurb_he ?? periodFor(product)}</p>
-
-                    <div className="mb-6">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold text-black">
-                          ₪{product.price_ils.toLocaleString("he-IL")}
-                        </span>
-                      </div>
-                      <span className="text-black/60 text-sm">{periodFor(product)}</span>
-                    </div>
-
-                    <ul className="space-y-3 mb-4">
-                      {featuresFor(product).map((feature) => (
-                        <li key={feature} className="flex items-start gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-brand-lime mt-2 flex-shrink-0" />
-                          <span className="text-black/70 text-sm">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <div className="mt-auto pt-4">
-                      <Link
-                        href={`/join?product=${product.id}`}
-                        className={`w-full py-3 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                          highlighted
-                            ? "bg-brand-lime hover:bg-brand-lime-hover text-black"
-                            : "bg-black hover:bg-black/80 text-white"
-                        }`}
-                      >
-                        הצטרפו
-                        <ArrowLeft className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </m.div>
-                </m.div>
-              );
-            })}
-          </div>
-        )}
-
-        <m.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-center text-black/60 text-sm mt-8 space-y-1"
-        >
+    <PosterSection
+      branchLabel={`סניף ${branchName}`}
+      address={location.address}
+      phoneE164={location.whatsapp}
+      phoneDisplay={location.phoneDisplay}
+      secondaryAction={{
+        label: "שאלה בוואטסאפ",
+        href: `https://wa.me/${location.whatsapp}?text=${encodeURIComponent(
+          "היי, יש לי שאלה על מסלולי האימונים בקריית אתא. תודה!",
+        )}`,
+        external: true,
+      }}
+      intro={services.subtitle}
+      notes={
+        <>
           <p>* המחירים בשקלים חדשים וכוללים מע&quot;מ. התשלום בכרטיס אשראי בעמוד תשלום מאובטח.</p>
           <p>
             * ביטול והחזר לפי{" "}
-            <Link href="/cancellation-policy" className="underline">
+            <Link href="/cancellation-policy" className="underline underline-offset-4 hover:text-[#f6fbf4]">
               מדיניות ביטול העסקה
             </Link>
             .
           </p>
-        </m.div>
-      </div>
-    </section>
+        </>
+      }
+    >
+      {products.length === 0 ? (
+        <p className="text-center text-lg text-[#c9d8c6]">המחירון יתפרסם בקרוב. בינתיים אפשר לכתוב לנו בוואטסאפ.</p>
+      ) : (
+        products.map((product) => (
+          <PosterPlanCard key={product.id} plan={toPosterPlan(product, services.highlightedSlug)} />
+        ))
+      )}
+    </PosterSection>
   );
 }
