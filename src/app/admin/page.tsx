@@ -66,7 +66,7 @@ export default async function AdminDashboardPage() {
       .limit(5),
     supabase
       .from("post_workout_forms")
-      .select("*, profiles(full_name), trainer:profiles!post_workout_forms_trainer_id_fkey(full_name)")
+      .select("*")
       .order("submitted_at", { ascending: false })
       .limit(5),
   ]);
