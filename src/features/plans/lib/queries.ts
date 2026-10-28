@@ -16,6 +16,7 @@ import {
 } from "@/lib/plans/plan-queue";
 import { PLAN_FREEZES_EMBED, toQueuePlan, type PlanFreezeRow } from "@/lib/plans/queue-plan-row";
 import { orderPlanName } from "@/lib/plans/manual-card";
+import { arboxCardName } from "@/lib/plans/arbox-card-name";
 import type { Order, PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
 
 type ProductBits = Pick<PlanProduct, "name_he" | "kind">;
@@ -44,6 +45,16 @@ export interface PlanQueueView {
 
 const FALLBACK_PRODUCT: ProductBits = { name_he: "מסלול", kind: "subscription" };
 
+function planName(
+  product: ProductBits & Pick<PlanProduct, "sessions_total">,
+  order: Pick<Order, "payment_method" | "terms_sessions_total" | "terms_duration_days">,
+  planSessions: number | null,
+): string {
+  return order.payment_method === "arbox"
+    ? arboxCardName(product, planSessions)
+    : orderPlanName(product.name_he, order);
+}
+
 /** Every Plan of these Trainees with its product, grouped by Trainee. */
 export async function loadStoredPlans(
   db: SupabaseClient,
@@ -53,14 +64,14 @@ export async function loadStoredPlans(
   // A staff list asks for every trainee at once: a slice of ids per request.
   const { data, error } = await readInChunks<
     TraineePlan & {
-      product: ProductBits | null;
+      product: (ProductBits & Pick<PlanProduct, "sessions_total">) | null;
       order: Pick<Order, "payment_method" | "terms_sessions_total" | "terms_duration_days"> | null;
       plan_freezes: PlanFreezeRow[] | null;
     }
   >(profileIds, "profile_id", () =>
     typedFrom(db, "trainee_plans")
       .select(
-        `*, product:plan_products(name_he, kind), order:orders!trainee_plans_order_id_fkey(payment_method, terms_sessions_total, terms_duration_days), ${PLAN_FREEZES_EMBED}`,
+        `*, product:plan_products(name_he, kind, sessions_total), order:orders!trainee_plans_order_id_fkey(payment_method, terms_sessions_total, terms_duration_days), ${PLAN_FREEZES_EMBED}`,
       )
       .order("id"),
   );
@@ -70,8 +81,9 @@ export async function loadStoredPlans(
   }
   for (const { order, product, ...row } of data) {
     // Every screen names the Plan from here: a manual Card by the terms its
-    // order was sold on (an Adjustment changes the Plan's terms, not the sale).
-    const named = product && order ? { ...product, name_he: orderPlanName(product.name_he, order) } : product;
+    // order was sold on (an Adjustment changes the Plan's terms, not the sale),
+    // an Arbox Card by its own sessions.
+    const named = product && order ? { name_he: planName(product, order, row.sessions_total), kind: product.kind } : product;
     const stored: StoredPlan = { ...toQueuePlan({ ...row, product: named }), paidInArbox: order?.payment_method === "arbox" };
     result.set(row.profile_id, [...(result.get(row.profile_id) ?? []), stored]);
   }
