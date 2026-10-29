@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { changeKind, emptyQuestion, moveItem, newDraft, previewSurvey } from "../draft";
+import { changeKind, emptyQuestion, keepsOptions, moveItem, newDraft, previewSurvey } from "../draft";
 import type { DraftQuestion, SurveyDraft } from "../types";
 
 describe("moveItem", () => {
@@ -41,6 +41,22 @@ describe("emptyQuestion", () => {
 
   test("each call returns its own options array", () => {
     expect(emptyQuestion("single_choice").options).not.toBe(emptyQuestion("single_choice").options);
+  });
+});
+
+describe("keepsOptions", () => {
+  test("the options stay between the two choice kinds, and a kind to itself", () => {
+    expect(keepsOptions("single_choice", "multi_choice")).toBe(true);
+    expect(keepsOptions("multi_choice", "single_choice")).toBe(true);
+    expect(keepsOptions("single_choice", "single_choice")).toBe(true);
+  });
+
+  test("they do not carry over to or from a kind without options", () => {
+    expect(keepsOptions("single_choice", "rating")).toBe(false);
+    expect(keepsOptions("multi_choice", "text")).toBe(false);
+    expect(keepsOptions("rating", "single_choice")).toBe(false);
+    expect(keepsOptions("text", "multi_choice")).toBe(false);
+    expect(keepsOptions("rating", "text")).toBe(false);
   });
 });
 

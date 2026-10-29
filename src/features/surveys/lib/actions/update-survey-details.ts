@@ -1,18 +1,11 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { israelToday } from "@/lib/utils/tasks";
 import { surveyDetailsSchema, type SurveyDetailsInput } from "@/lib/validations/surveys";
 import { hebrewIssueMessage } from "../issue-message";
 import { closeDateChangeProblem, withBlankClosesOn } from "../staff-input";
 import { STAFF_MESSAGES } from "../staff-messages";
-import {
-  loadEditableSurvey,
-  requireSurveyStaff,
-  revalidateSurveyPages,
-  writeFailed,
-  type ActionOutcome,
-} from "./staff-access";
+import { finishGuardedUpdate, loadForEdit, type ActionOutcome } from "./staff-access";
 
 /**
  * Changes the title, intro and close date, which stay editable after the
@@ -25,13 +18,10 @@ export async function updateSurveyDetailsAction(
   surveyId: string,
   details: SurveyDetailsInput,
 ): Promise<ActionOutcome> {
-  const staff = await requireSurveyStaff();
-  if ("error" in staff) return staff;
-
-  const db = createAdminClient();
-  const survey = await loadEditableSurvey(db, staff.viewer, surveyId);
-  if ("error" in survey) return survey;
-  const { record } = survey;
+  const edit = await loadForEdit(surveyId);
+  if ("error" in edit) return edit;
+  const { db } = edit;
+  const { record } = edit.survey;
   if (record.closedAt !== null) return { error: STAFF_MESSAGES.closedNoEdit };
 
   const parsed = surveyDetailsSchema.safeParse(withBlankClosesOn(details));
@@ -42,15 +32,11 @@ export async function updateSurveyDetailsAction(
   const dateProblem = closeDateChangeProblem(record.opensOn, record.closesOn, data.closesOn, israelToday());
   if (dateProblem !== null) return { error: dateProblem };
 
-  const { data: updated, error } = await db
+  const result = await db
     .from("surveys")
     .update({ title: data.title, intro: data.intro, closes_on: data.closesOn })
     .eq("id", record.id)
     .is("closed_at", null)
     .select("id");
-  if (error) return writeFailed("details update", error.message);
-  if ((updated ?? []).length === 0) return { error: STAFF_MESSAGES.changedMeanwhile };
-
-  revalidateSurveyPages(record.id);
-  return { success: true };
+  return finishGuardedUpdate("details update", record.id, result);
 }

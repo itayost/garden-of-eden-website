@@ -4,7 +4,7 @@
  * are added, removed and moved (an index would hand a row's state to its
  * neighbour). The keys never reach the server; toSurveyDraft() drops them.
  */
-import { changeKind, emptyQuestion, isChoiceKind } from "./draft";
+import { changeKind, emptyQuestion, keepsOptions } from "./draft";
 import type { DraftQuestion, QuestionKind, SurveyDraft } from "./types";
 
 export interface EditorOption {
@@ -76,10 +76,9 @@ export function withKind(
   makeKey: MakeKey = randomKey,
 ): EditorQuestion {
   const next = changeKind(toDraftQuestion(question), kind);
-  const keepsOptions = isChoiceKind(question.kind) && isChoiceKind(kind);
   return {
     ...next,
     key: question.key,
-    options: keepsOptions ? question.options : keyedOptions(next.options, makeKey),
+    options: keepsOptions(question.kind, kind) ? question.options : keyedOptions(next.options, makeKey),
   };
 }

@@ -1,5 +1,5 @@
-import { publishSurveyAction, unpublishSurveyAction } from "../../lib/actions/publish-survey";
 import { saveSurveyDraftAction } from "../../lib/actions/save-survey";
+import type { ActionOutcome } from "../../lib/actions/staff-access";
 import type { SurveyDraft } from "../../lib/types";
 import { REQUEST_FAILED, splitProblems } from "./builder-messages";
 
@@ -18,20 +18,18 @@ export async function saveDraft(surveyId: string | null, draft: SurveyDraft): Pr
 /** The reasons a request was refused, or null when it went through. */
 export type Refusal = string[] | null;
 
-export async function publishSaved(surveyId: string): Promise<Refusal> {
+/**
+ * Sends a request that answers success or a refusal. A request that throws
+ * reads as `failedMessage`, so a lost connection is told like any other failure.
+ */
+export async function refusalOf(
+  call: () => Promise<ActionOutcome>,
+  failedMessage: string,
+): Promise<Refusal> {
   try {
-    const result = await publishSurveyAction(surveyId);
+    const result = await call();
     return "error" in result ? splitProblems(result.error) : null;
   } catch {
-    return [REQUEST_FAILED.publish];
-  }
-}
-
-export async function unpublishSaved(surveyId: string): Promise<Refusal> {
-  try {
-    const result = await unpublishSurveyAction(surveyId);
-    return "error" in result ? splitProblems(result.error) : null;
-  } catch {
-    return [REQUEST_FAILED.unpublish];
+    return [failedMessage];
   }
 }

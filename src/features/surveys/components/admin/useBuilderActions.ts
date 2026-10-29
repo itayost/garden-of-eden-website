@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { publishSurveyAction, unpublishSurveyAction } from "../../lib/actions/publish-survey";
 import { publishProblem } from "../../lib/publish";
 import { PROBLEM_SEPARATOR } from "../../lib/staff-input";
 import type { SurveyDraft } from "../../lib/types";
-import { publishSaved, saveDraft, unpublishSaved } from "./builder-requests";
+import { REQUEST_FAILED } from "./builder-messages";
+import { refusalOf, saveDraft } from "./builder-requests";
 
 export type BuilderPending = "save" | "publish" | "unpublish";
 
@@ -46,11 +48,8 @@ function useBuilderRun() {
 
 type BuilderRun = ReturnType<typeof useBuilderRun>;
 
-/** The Survey the builder is working on: its id once it has been saved. */
-interface SavedSurvey {
-  id: string | null;
-  remember: (id: string) => void;
-}
+/** The id of the Survey the builder is working on, null until it has been saved: a state pair. */
+type SavedIdState = readonly [string | null, (id: string) => void];
 
 /**
  * Saves the draft. The first save of a new Survey moves to its edit page with
@@ -58,15 +57,16 @@ interface SavedSurvey {
  * back from the server, and later saves go to the same Survey. A save of an
  * existing Survey refreshes the page, so the state badge follows the dates.
  */
-function useSaveAction(run: BuilderRun, saved: SavedSurvey, draft: SurveyDraft, published: boolean) {
+function useSaveAction(run: BuilderRun, savedState: SavedIdState, draft: SurveyDraft, published: boolean) {
   const router = useRouter();
+  const [savedId, remember] = savedState;
   return async () => {
     if (run.pending !== null) return;
-    const isNew = saved.id === null;
+    const isNew = savedId === null;
     run.begin("save");
-    const outcome = await saveDraft(saved.id, draft);
+    const outcome = await saveDraft(savedId, draft);
     if ("errors" in outcome) return run.fail(outcome.errors);
-    saved.remember(outcome.surveyId);
+    remember(outcome.surveyId);
     run.finish();
     toast.success(published ? "השינויים נשמרו" : "הטיוטה נשמרה");
     if (isNew) router.replace(editHref(outcome.surveyId));
@@ -85,21 +85,22 @@ function useSaveAction(run: BuilderRun, saved: SavedSurvey, draft: SurveyDraft, 
  */
 function usePublishAction(
   run: BuilderRun,
-  saved: SavedSurvey,
+  savedState: SavedIdState,
   options: { draft: SurveyDraft; today: string; onAttempt: () => void },
 ) {
   const router = useRouter();
+  const [savedId, remember] = savedState;
   return async () => {
     if (run.pending !== null) return;
     options.onAttempt();
     const problems = publishProblem(options.draft, options.today);
     if (problems.length > 0) return run.show(problems);
-    const isNew = saved.id === null;
+    const isNew = savedId === null;
     run.begin("publish");
-    const outcome = await saveDraft(saved.id, options.draft);
+    const outcome = await saveDraft(savedId, options.draft);
     if ("errors" in outcome) return run.fail(outcome.errors);
-    saved.remember(outcome.surveyId);
-    const refusal = await publishSaved(outcome.surveyId);
+    remember(outcome.surveyId);
+    const refusal = await refusalOf(() => publishSurveyAction(outcome.surveyId), REQUEST_FAILED.publish);
     if (refusal !== null) {
       run.fail(refusal);
       if (isNew) {
@@ -119,7 +120,7 @@ function useBackToDraftAction(run: BuilderRun, savedId: string | null) {
   return async () => {
     if (run.pending !== null || savedId === null) return;
     run.begin("unpublish");
-    const refusal = await unpublishSaved(savedId);
+    const refusal = await refusalOf(() => unpublishSurveyAction(savedId), REQUEST_FAILED.unpublish);
     if (refusal !== null) return run.fail(refusal);
     run.finish();
     toast.success("הסקר חזר לטיוטה");
@@ -133,12 +134,12 @@ function useBackToDraftAction(run: BuilderRun, savedId: string | null) {
  */
 export function useBuilderActions({ surveyId, published, draft, today }: BuilderActionsOptions) {
   const run = useBuilderRun();
-  const [savedId, setSavedId] = useState(surveyId);
+  const savedState = useState(surveyId);
+  const [savedId] = savedState;
   const [attempted, setAttempted] = useState(false);
-  const saved: SavedSurvey = { id: savedId, remember: setSavedId };
 
-  const save = useSaveAction(run, saved, draft, published);
-  const publish = usePublishAction(run, saved, { draft, today, onAttempt: () => setAttempted(true) });
+  const save = useSaveAction(run, savedState, draft, published);
+  const publish = usePublishAction(run, savedState, { draft, today, onAttempt: () => setAttempted(true) });
   const backToDraft = useBackToDraftAction(run, savedId);
 
   return {

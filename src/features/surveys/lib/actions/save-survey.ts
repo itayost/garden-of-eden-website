@@ -6,6 +6,7 @@ import { surveyDraftSchema, type SurveyDraftInput } from "@/lib/validations/surv
 import { toQuestionsPayload } from "../draft-mapping";
 import { hebrewIssueMessage } from "../issue-message";
 import { canEditSurvey } from "../permissions";
+import type { Db } from "../queries";
 import { saveRefusal, withBlankClosesOn, type StoredSurveyState } from "../staff-input";
 import { saveErrorMessage, STAFF_MESSAGES } from "../staff-messages";
 import type { SurveyViewer } from "../types";
@@ -15,7 +16,6 @@ import {
   revalidateSurveyPages,
   writeFailed,
   type ActionFailure,
-  type Db,
 } from "./staff-access";
 
 export type SaveSurveyResult = { success: true; surveyId: string } | ActionFailure;

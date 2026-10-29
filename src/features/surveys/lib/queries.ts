@@ -29,7 +29,7 @@ import {
   type ResponseRow,
   type ViewRow,
 } from "./rows";
-import { surveyState } from "./state";
+import { isOpenToday, surveyState } from "./state";
 import type {
   OfferableSurvey,
   SurveyQuestion,
@@ -38,16 +38,18 @@ import type {
   SurveyViewer,
 } from "./types";
 
-type Db = ReturnType<typeof createAdminClient>;
+export type Db = ReturnType<typeof createAdminClient>;
 
 const SURVEY_WITH_BRANCHES = "*, survey_branches(branch_id)";
 
-const SURVEY_WITH_QUESTIONS =
-  "*, survey_branches(branch_id), survey_questions(id, position, kind, prompt, required, low_label, high_label, survey_question_options(id, position, label))";
+/** A Survey's Questions with their options embedded; `as const` keeps the literal type the client parses. */
+const QUESTION_SELECT =
+  "survey_questions(id, position, kind, prompt, required, low_label, high_label, survey_question_options(id, position, label))" as const;
+
+const SURVEY_WITH_QUESTIONS = `*, survey_branches(branch_id), ${QUESTION_SELECT}` as const;
 
 /** As SURVEY_WITH_QUESTIONS, with the branches joined so a read can filter on them. */
-const OFFERABLE_SURVEY =
-  "*, survey_branches!inner(branch_id), survey_questions(id, position, kind, prompt, required, low_label, high_label, survey_question_options(id, position, label))";
+const OFFERABLE_SURVEY = `*, survey_branches!inner(branch_id), ${QUESTION_SELECT}` as const;
 
 const CANDIDATE_COLUMNS =
   "id, full_name, role, is_active, deleted_at, birthdate, arbox_paid_training, arbox_bought_course, access_override";
@@ -351,9 +353,8 @@ export async function loadOfferableSurveys(
   return rows.flatMap((row) => {
     const record = toSurveyRecord(row);
     // closes_on is judged here too, with the rest of the open-today rule.
-    if (surveyState(record, today) !== "open" || answeredIds.has(record.id)) return [];
+    if (!isOpenToday(record, today) || answeredIds.has(record.id)) return [];
     if (!inSurveyAudience(candidate, record)) return [];
-    const offer = toOfferableSurvey(record, toQuestions(row.survey_questions));
-    return offer === null ? [] : [offer];
+    return [toOfferableSurvey(record, toQuestions(row.survey_questions))];
   });
 }

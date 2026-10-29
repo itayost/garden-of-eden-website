@@ -15,6 +15,17 @@ export function surveyState(
   return "open";
 }
 
+/**
+ * Whether the Survey is open today. An open Survey has been published, which
+ * the type says too, so a caller needs no separate check for a draft.
+ */
+export function isOpenToday<T extends Pick<SurveyRecord, "publishedAt" | "closedAt" | "opensOn" | "closesOn">>(
+  survey: T,
+  today: string,
+): survey is T & { publishedAt: string } {
+  return surveyState(survey, today) === "open";
+}
+
 /** A survey published after its open date opens today, not in the past. */
 export function publishedOpensOn(opensOn: string, today: string): string {
   return opensOn < today ? today : opensOn;

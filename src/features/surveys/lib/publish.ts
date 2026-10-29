@@ -1,3 +1,4 @@
+import { isChoiceKind } from "./draft";
 import { SHARED_MESSAGES } from "./messages";
 import { SURVEY_LIMITS, type DraftQuestion, type SurveyDraft } from "./types";
 
@@ -83,15 +84,11 @@ function labelProblems(question: DraftQuestion): string[] {
   return problemIf(tooLong, `תווית ארוכה מ-${SURVEY_LIMITS.labelMax} תווים`);
 }
 
-function isChoiceQuestion(question: DraftQuestion): boolean {
-  return question.kind === "single_choice" || question.kind === "multi_choice";
-}
-
 /** Problems with one Question, prefixed with its 1-based number. */
 function questionProblems(question: DraftQuestion, number: number): string[] {
   const problems = [
     ...questionTextProblems(question.text),
-    ...(isChoiceQuestion(question) ? optionProblems(question.options) : []),
+    ...(isChoiceKind(question.kind) ? optionProblems(question.options) : []),
     ...labelProblems(question),
   ];
   return problems.map((problem) => `שאלה ${number}: ${problem}`);

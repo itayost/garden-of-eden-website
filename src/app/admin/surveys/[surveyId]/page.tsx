@@ -13,7 +13,13 @@ import {
   canViewSurvey,
   visibleSurveyBranches,
 } from "@/features/surveys/lib/permissions";
-import { loadAudienceCandidates, loadReportRows, loadSurvey, type LoadedSurvey } from "@/features/surveys/lib/queries";
+import {
+  loadAudienceCandidates,
+  loadReportRows,
+  loadSurvey,
+  type Db,
+  type LoadedSurvey,
+} from "@/features/surveys/lib/queries";
 import { buildSurveyReport, type ReportFilters, type SurveyReport } from "@/features/surveys/lib/report";
 import { isNarrowed, parseReportFilters } from "@/features/surveys/lib/report-filters";
 import { clampPage, runDatesText, segmentCounts } from "@/features/surveys/lib/results-view";
@@ -34,7 +40,6 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-type Db = ReturnType<typeof createAdminClient>;
 type NamedBranch = { id: string; name: string };
 
 /** The Survey's own branches by name, in the order the branches are kept. */

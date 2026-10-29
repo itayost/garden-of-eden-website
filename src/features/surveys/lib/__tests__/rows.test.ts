@@ -135,7 +135,10 @@ describe("toQuestions", () => {
 });
 
 describe("toOfferableSurvey", () => {
-  const record = toSurveyRecord(surveyRow({ closes_on: "2026-11-01", intro: "שלום" }));
+  const record = {
+    ...toSurveyRecord(surveyRow({ closes_on: "2026-11-01", intro: "שלום" })),
+    publishedAt: "2026-10-01T08:00:00Z",
+  };
 
   test("carries what the popup shows", () => {
     const questions = toQuestions([questionRow()]);
@@ -148,12 +151,6 @@ describe("toOfferableSurvey", () => {
       publishedAt: "2026-10-01T08:00:00Z",
       questions,
     });
-  });
-
-  test("a draft is never offered", () => {
-    const draft = toSurveyRecord(surveyRow({ published_at: null }));
-
-    expect(toOfferableSurvey(draft, [])).toBeNull();
   });
 });
 

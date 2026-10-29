@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  isOpenToday,
   matchesListFilter,
   parseListFilter,
   publishedOpensOn,
@@ -42,6 +43,28 @@ describe("surveyState", () => {
 
   test("no close date stays open", () => {
     expect(surveyState({ ...base, closesOn: null }, TODAY)).toBe("open");
+  });
+});
+
+describe("isOpenToday", () => {
+  test("true only for an open Survey", () => {
+    expect(isOpenToday(base, TODAY)).toBe(true);
+    expect(isOpenToday({ ...base, closesOn: TODAY }, TODAY)).toBe(true);
+    expect(isOpenToday({ ...base, closesOn: null }, TODAY)).toBe(true);
+  });
+
+  test("false for a draft, a scheduled, an ended and a closed Survey", () => {
+    expect(isOpenToday({ ...base, publishedAt: null }, TODAY)).toBe(false);
+    expect(isOpenToday({ ...base, opensOn: "2026-11-01" }, TODAY)).toBe(false);
+    expect(isOpenToday({ ...base, closesOn: "2026-10-28" }, TODAY)).toBe(false);
+    expect(isOpenToday({ ...base, closedAt: "2026-10-29T09:00:00Z" }, TODAY)).toBe(false);
+  });
+
+  test("an open Survey is known to have a publish time (checked by the compiler)", () => {
+    const survey = { ...base, publishedAt: base.publishedAt as string | null };
+    if (!isOpenToday(survey, TODAY)) throw new Error("expected an open Survey");
+    const publishedAt: string = survey.publishedAt;
+    expect(publishedAt).toBe(base.publishedAt);
   });
 });
 

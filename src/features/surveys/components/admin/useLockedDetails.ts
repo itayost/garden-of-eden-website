@@ -24,7 +24,7 @@ async function sendDetails(surveyId: string, values: LockedValues): Promise<stri
     const result = await updateSurveyDetailsAction(surveyId, {
       title: values.title,
       intro: blankToNull(values.intro),
-      closesOn: values.closesOn === "" ? null : values.closesOn,
+      closesOn: blankToNull(values.closesOn),
     });
     return "error" in result ? result.error : null;
   } catch {
@@ -63,6 +63,6 @@ export function useLockedDetails(record: SurveyRecord, today: string) {
     router.refresh();
   };
 
-  const closesOn = values.closesOn === "" ? null : values.closesOn;
+  const closesOn = blankToNull(values.closesOn);
   return { values, edit, saving, errors, save, reopens: reopensEndedSurvey(record, closesOn, today) };
 }

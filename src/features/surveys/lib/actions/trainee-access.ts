@@ -14,9 +14,9 @@ import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import { inSurveyAudience } from "../audience";
 import { SHARED_MESSAGES } from "../messages";
-import { loadCandidate, loadSurvey, type LoadedSurvey } from "../queries";
+import { loadCandidate, loadSurvey, type Db, type LoadedSurvey } from "../queries";
 import { surveyState } from "../state";
-import type { ActionFailure, Db } from "./staff-access";
+import type { ActionFailure } from "./staff-access";
 
 export const TRAINEE_MESSAGES = {
   signIn: "נדרשת התחברות",

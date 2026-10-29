@@ -17,6 +17,11 @@ export function isChoiceKind(kind: QuestionKind): boolean {
   return kind === "single_choice" || kind === "multi_choice";
 }
 
+/** Whether switching a Question from one kind to another keeps its options: only between choice kinds. */
+export function keepsOptions(from: QuestionKind, to: QuestionKind): boolean {
+  return isChoiceKind(from) && isChoiceKind(to);
+}
+
 const blankOptions = (): string[] => Array.from({ length: BLANK_OPTIONS }, () => "");
 
 const inRange = (index: number, length: number): boolean =>
@@ -49,6 +54,11 @@ export function emptyQuestion(kind: QuestionKind): DraftQuestion {
   };
 }
 
+function optionsAfterKindChange(question: DraftQuestion, kind: QuestionKind): string[] {
+  if (!isChoiceKind(kind)) return [];
+  return keepsOptions(question.kind, kind) ? [...question.options] : blankOptions();
+}
+
 /**
  * The same Question as another kind. Options stay between the two choice
  * kinds and are cleared for a rating or text; a choice kind reached from
@@ -56,14 +66,12 @@ export function emptyQuestion(kind: QuestionKind): DraftQuestion {
  */
 export function changeKind(question: DraftQuestion, kind: QuestionKind): DraftQuestion {
   const isRating = kind === "rating";
-  const keepsOptions = isChoiceKind(kind) && isChoiceKind(question.kind);
-  const options = isChoiceKind(kind) ? (keepsOptions ? [...question.options] : blankOptions()) : [];
   return {
     ...question,
     kind,
     lowLabel: isRating ? question.lowLabel : null,
     highLabel: isRating ? question.highLabel : null,
-    options,
+    options: optionsAfterKindChange(question, kind),
   };
 }
 

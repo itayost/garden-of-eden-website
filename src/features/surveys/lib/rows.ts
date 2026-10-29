@@ -105,12 +105,11 @@ export function toQuestions(rows: readonly QuestionRow[]): SurveyQuestion[] {
   }));
 }
 
-/** A draft has no publish date and is never offered. */
+/** What a Trainee is offered of a published Survey; a draft is never offered. */
 export function toOfferableSurvey(
-  record: SurveyRecord,
+  record: SurveyRecord & { publishedAt: string },
   questions: SurveyQuestion[],
-): OfferableSurvey | null {
-  if (record.publishedAt === null) return null;
+): OfferableSurvey {
   return {
     id: record.id,
     title: record.title,

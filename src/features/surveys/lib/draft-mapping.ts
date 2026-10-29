@@ -1,3 +1,4 @@
+import { isChoiceKind } from "./draft";
 import type { DraftQuestion, QuestionKind, SurveyDraft, SurveyQuestion, SurveyRecord } from "./types";
 
 /** One Question in the shape save_survey_draft reads from its jsonb argument. */
@@ -10,8 +11,6 @@ export type QuestionPayload = {
   options: string[];
 };
 
-const isChoice = (kind: QuestionKind): boolean => kind === "single_choice" || kind === "multi_choice";
-
 /** The Questions a draft saves, in order. Only choice Questions carry options. */
 export function toQuestionsPayload(questions: readonly DraftQuestion[]): QuestionPayload[] {
   return questions.map((question) => ({
@@ -20,7 +19,7 @@ export function toQuestionsPayload(questions: readonly DraftQuestion[]): Questio
     required: question.required,
     low_label: question.lowLabel,
     high_label: question.highLabel,
-    options: isChoice(question.kind) ? question.options.map((option) => option.trim()) : [],
+    options: isChoiceKind(question.kind) ? question.options.map((option) => option.trim()) : [],
   }));
 }
 
