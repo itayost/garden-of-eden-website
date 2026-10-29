@@ -127,14 +127,32 @@ test("the branch filter narrows the lists and the per-branch rows too", () => {
   expect(rep.rows.map((x) => x.profileId)).toEqual(["p3"]);
 });
 
-test("search narrows the grid and the lists by name, not the question summaries", () => {
+test("search narrows the grid page, its count and the lists by name, not the question summaries", () => {
   const rep = build({ filters: { ...filters, search: "לוי" } });
   expect(rep.rows.map((x) => x.profileId)).toEqual(["p1"]);
-  expect(rep.allRows).toHaveLength(1);
   expect(rep.rowCount).toBe(1);
   expect(rep.seenNotAnswered).toEqual([]);
   expect(rep.questions[0]).toMatchObject({ answered: 3 });
   expect(rep.questions[3]).toMatchObject({ answered: 1 });
+});
+
+test("allRows, the CSV source, ignores the name search so an export is never cut short", () => {
+  const rep = build({ filters: { ...filters, search: "לוי" } });
+  expect(rep.allRows.map((x) => x.profileId)).toEqual(["p1", "p3", "p7"]);
+  expect(rep.rows.map((x) => x.profileId)).toEqual(["p1"]);
+  expect(rep.rowCount).toBe(1);
+});
+
+test("allRows keeps the branch, birth-year and visible-branch narrowing under a search", () => {
+  const byBranch = build({ filters: { ...filters, branchId: KA, search: "לוי" } });
+  expect(byBranch.allRows.map((x) => x.profileId)).toEqual(["p1", "p7"]);
+  expect(byBranch.rows.map((x) => x.profileId)).toEqual(["p1"]);
+  const byYear = build({ filters: { ...filters, birthYear: 2014, search: "אורי" } });
+  expect(byYear.allRows.map((x) => x.profileId)).toEqual(["p1", "p3"]);
+  expect(byYear.rows.map((x) => x.profileId)).toEqual(["p3"]);
+  const manager = build({ visibleBranchIds: [KA], filters: { ...filters, search: "אוחיון" } });
+  expect(manager.allRows.map((x) => x.profileId)).toEqual(["p1", "p7"]);
+  expect(manager.rows.map((x) => x.profileId)).toEqual(["p7"]);
 });
 
 test("person rows carry names, branches, year and the first-seen time", () => {

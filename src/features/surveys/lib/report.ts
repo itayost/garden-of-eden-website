@@ -11,7 +11,8 @@
  * - A responder is placed by the branches of their Response, everyone else by
  *   their current branches.
  * - The viewer's visible branches and the branch and birth-year filters narrow
- *   everything; the name search narrows only the grid and the lists.
+ *   everything; the name search narrows only the grid page, its count and the
+ *   two lists, never `allRows`, so an export is not cut short by it.
  */
 import {
   SURVEY_PAGE_SIZE,
@@ -93,10 +94,14 @@ export interface SurveyReport {
   totals: { audience: number; seen: number; answered: number; ratePct: number };
   byBranch: { branchId: string; name: string; seen: number; answered: number; ratePct: number }[];
   questions: QuestionSummary[];
-  /** Every grid row that matches the filters and the search, newest first. */
+  /**
+   * Every Response in scope (visible branches, branch and birth-year filters),
+   * newest first, whatever the name search says: the CSV export's source.
+   */
   allRows: GridRow[];
-  /** The current page of allRows. */
+  /** The current page of the Responses whose name matches the search. */
   rows: GridRow[];
+  /** How many Responses match the search, for the pager. */
   rowCount: number;
   seenNotAnswered: PersonRow[];
   unseen: PersonRow[];
@@ -185,9 +190,9 @@ function matchesFilters(m: Member, filters: ReportFilters): boolean {
   return inBranch && inYear;
 }
 
-function matchesName(m: Member, search: string): boolean {
+function matchesName(fullName: string, search: string): boolean {
   const term = search.trim().toLowerCase();
-  return term === "" || m.fullName.toLowerCase().includes(term);
+  return term === "" || fullName.toLowerCase().includes(term);
 }
 
 function rateOf(members: readonly Member[]): { seen: number; answered: number; ratePct: number } {
@@ -361,10 +366,10 @@ export function buildSurveyReport(input: SurveyReportInput): SurveyReport {
     inVisibleBranches(m, visibleBranchIds),
   );
   const scoped = visible.filter((m) => matchesFilters(m, filters));
-  const listed = scoped.filter((m) => matchesName(m, filters.search));
+  const listed = scoped.filter((m) => matchesName(m.fullName, filters.search));
   const responders = scoped.flatMap((m) => (m.response === null ? [] : [m.response]));
-  const listedResponders = listed.flatMap((m) => (m.response === null ? [] : [m.response]));
-  const allRows = gridRowsOf(listedResponders, questions, namesOf);
+  const allRows = gridRowsOf(responders, questions, namesOf);
+  const searchedRows = allRows.filter((row) => matchesName(row.fullName, filters.search));
   const start = (Math.max(1, filters.page) - 1) * SURVEY_PAGE_SIZE;
 
   return {
@@ -372,8 +377,8 @@ export function buildSurveyReport(input: SurveyReportInput): SurveyReport {
     byBranch: byBranchOf(scoped, branches, visibleBranchIds, filters),
     questions: questions.map((q) => summarizeQuestion(q, responders, namesOf)),
     allRows,
-    rows: allRows.slice(start, start + SURVEY_PAGE_SIZE),
-    rowCount: allRows.length,
+    rows: searchedRows.slice(start, start + SURVEY_PAGE_SIZE),
+    rowCount: searchedRows.length,
     seenNotAnswered: seenNotAnsweredOf(listed, namesOf),
     unseen: unseenOf(listed, namesOf),
     birthYears: birthYearsOf(visible),

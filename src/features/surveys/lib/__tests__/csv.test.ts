@@ -1,5 +1,7 @@
 import { expect, test } from "vitest";
 import { formatSentAt, surveyCsvRows } from "../csv";
+import type { CellAnswer, GridRow } from "../report";
+import type { SurveyQuestion } from "../types";
 import { KA, HA, build, person, questions } from "./fixtures";
 
 test("sent time in Israel time", () => {
@@ -60,4 +62,60 @@ test("two branches are joined and a missing birth year is empty", () => {
 
 test("no responses gives no rows", () => {
   expect(surveyCsvRows(questions, [])).toEqual([]);
+});
+
+// Formula injection: Trainees type free text and staff open the export in Excel.
+
+const gridRow = (over: Partial<GridRow>): GridRow => ({
+  profileId: "p1",
+  fullName: "דנה כהן",
+  branchNames: ["חיפה"],
+  birthYear: 2014,
+  submittedAt: "2026-10-28T15:42:00Z",
+  answers: {},
+  ...over,
+});
+
+const freeText: SurveyQuestion = { id: "t", kind: "text", text: "מה לשנות?", required: false, lowLabel: null, highLabel: null, options: [] };
+const choice: SurveyQuestion = { id: "c", kind: "multi_choice", text: "מה עוזר?", required: false, lowLabel: null, highLabel: null, options: [{ id: "a", label: "=cmd" }, { id: "b", label: "אחר" }] };
+const textCell = (text: string): CellAnswer => ({ optionLabels: [], rating: null, text });
+
+test.each(["=1+1", "@x", "-5 שאלות", "+972", "=1+1\nline2", "\tx", "\rx"])(
+  "free text %j that starts like a formula gets a leading quote",
+  (text) => {
+    const [row] = surveyCsvRows([freeText], [gridRow({ answers: { t: textCell(text) } })]);
+    expect(row["1. מה לשנות?"]).toBe(`'${text}`);
+  },
+);
+
+test("free text that does not start like a formula is left alone", () => {
+  const [row] = surveyCsvRows([freeText], [gridRow({ answers: { t: textCell("מה ש=1+1 ו-2") } })]);
+  expect(row["1. מה לשנות?"]).toBe("מה ש=1+1 ו-2");
+});
+
+test("a name, a branch name and a choice label get the same guard", () => {
+  const [row] = surveyCsvRows(
+    [choice],
+    [
+      gridRow({
+        fullName: "=HYPERLINK(1)",
+        branchNames: ["@חיפה", "קריית אתא"],
+        answers: { c: { optionLabels: ["=cmd", "אחר"], rating: null, text: null } },
+      }),
+    ],
+  );
+  expect(row["שם"]).toBe("'=HYPERLINK(1)");
+  expect(row["סניף"]).toBe("'@חיפה, קריית אתא");
+  expect(row["1. מה עוזר?"]).toBe("'=cmd, אחר");
+});
+
+test("the rating, the birth year and the sent time are not prefixed", () => {
+  const rating: SurveyQuestion = { id: "r", kind: "rating", text: "כמה?", required: true, lowLabel: null, highLabel: null, options: [] };
+  const [row] = surveyCsvRows(
+    [rating],
+    [gridRow({ answers: { r: { optionLabels: [], rating: 4, text: null } } })],
+  );
+  expect(row["1. כמה?"]).toBe("4");
+  expect(row["שנתון"]).toBe("2014");
+  expect(row["נשלח"]).toBe("28.10.2026 17:42");
 });

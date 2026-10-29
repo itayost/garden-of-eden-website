@@ -1,6 +1,7 @@
 /**
  * Survey results as CSV rows: one row per Response with Hebrew headers. Pure;
- * the export button joins the rows with Papa.unparse and adds the BOM.
+ * the export button joins the rows with Papa.unparse and adds the BOM. Every
+ * text cell built from data is already safe to open in Excel (see neutralise).
  */
 import type { GridRow, CellAnswer } from "./report";
 import type { SurveyQuestion } from "./types";
@@ -25,11 +26,23 @@ export function formatSentAt(iso: string): string {
   return `${parts.day}.${parts.month}.${parts.year} ${parts.hour}:${parts.minute}`;
 }
 
+/** A cell that starts with one of these is read by Excel as a formula. */
+const FORMULA_START = /^[=+\-@\t\r]/;
+
+/**
+ * Trainees type the free text and staff open the export in Excel, so a cell
+ * that could run as a formula gets a leading quote. Only the first character
+ * matters, which also covers multi-line text ("=1+1\nline 2").
+ */
+function neutralise(value: string): string {
+  return FORMULA_START.test(value) ? `'${value}` : value;
+}
+
 function cellText(cell: CellAnswer | undefined): string {
   if (cell === undefined) return "";
   if (cell.rating !== null) return String(cell.rating);
-  if (cell.text !== null) return cell.text;
-  return cell.optionLabels.join(", ");
+  if (cell.text !== null) return neutralise(cell.text);
+  return neutralise(cell.optionLabels.join(", "));
 }
 
 /**
@@ -42,8 +55,8 @@ export function surveyCsvRows(
   rows: readonly GridRow[],
 ): Record<string, string>[] {
   return rows.map((row) => ({
-    "שם": row.fullName,
-    "סניף": row.branchNames.join(", "),
+    "שם": neutralise(row.fullName),
+    "סניף": neutralise(row.branchNames.join(", ")),
     "שנתון": row.birthYear === null ? "" : String(row.birthYear),
     "נשלח": formatSentAt(row.submittedAt),
     ...Object.fromEntries(
