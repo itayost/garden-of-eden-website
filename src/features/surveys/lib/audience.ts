@@ -7,6 +7,9 @@
  * a survey goes to the trainees of its branches, by birth year only.
  */
 import type { AccessTier } from "@/lib/access/course-access";
+import { birthYearOf } from "@/lib/schedule/roster-name";
+
+export { birthYearOf } from "@/lib/schedule/roster-name";
 
 /** One profile as the audience loader sees it. */
 export interface AudienceCandidate {
@@ -18,14 +21,6 @@ export interface AudienceCandidate {
   birthdate: string | null;
   accessTier: AccessTier;
   branchIds: readonly string[];
-}
-
-const ISO_YEAR = /^(\d{4})-\d{2}-\d{2}/;
-
-/** The year part of an ISO birthdate ("2014-03-02" gives 2014), or null when unknown. */
-export function birthYearOf(birthdate: string | null): number | null {
-  const match = birthdate ? ISO_YEAR.exec(birthdate) : null;
-  return match ? Number(match[1]) : null;
 }
 
 /**
