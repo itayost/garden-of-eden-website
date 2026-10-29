@@ -120,7 +120,9 @@ export function SurveyBuilder({ surveyId, initial, state, branches, today }: Sur
         attempted={actions.attempted}
         onChange={change}
       />
-      {actions.savedId !== null && <DeleteSurveyButton surveyId={actions.savedId} />}
+      {actions.savedId !== null && (
+        <DeleteSurveyButton surveyId={actions.savedId} responseCount={0} label="מחיקת הסקר" />
+      )}
       <StickyActionBar>{buttons("bar")}</StickyActionBar>
       <BuilderPreview draft={draft} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>

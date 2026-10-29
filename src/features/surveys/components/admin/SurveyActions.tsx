@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CircleStop, Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
 
-import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import { Button } from "@/components/ui/button";
-import { closeSurveyAction } from "../../lib/actions/close-survey";
-import { deleteSurveyAction } from "../../lib/actions/delete-survey";
-import { deleteDescription } from "../../lib/results-view";
+import { CloseSurveyButton } from "./CloseSurveyButton";
+import { DeleteSurveyButton } from "./DeleteSurveyButton";
 import { SurveyCsvButton } from "./SurveyCsvButton";
 
 /** Four buttons fit one row on a phone only when they are smaller and go by their words alone. */
@@ -28,50 +26,6 @@ interface SurveyActionsProps {
   csvFileName: string;
 }
 
-function CloseButton({ surveyId }: { surveyId: string }) {
-  const router = useRouter();
-  return (
-    <DeleteConfirmDialog
-      title="לסגור את הסקר עכשיו?"
-      description="הסקר יפסיק לקבל תשובות, ואי אפשר לפתוח אותו שוב. התשובות שכבר נשלחו נשארות."
-      confirmLabel="סגירה"
-      loadingLabel="סוגר..."
-      successMessage="הסקר נסגר"
-      errorMessage="הסגירה נכשלה. נסו שוב."
-      onDelete={() => closeSurveyAction(surveyId)}
-      onSuccess={() => router.refresh()}
-      trigger={
-        <Button type="button" variant="outline" className={`${PHONE_SIZE} text-destructive hover:text-destructive`}>
-          <CircleStop aria-hidden="true" />
-          סגירה עכשיו
-        </Button>
-      }
-    />
-  );
-}
-
-function DeleteButton({ surveyId, responseCount }: { surveyId: string; responseCount: number }) {
-  const router = useRouter();
-  return (
-    <DeleteConfirmDialog
-      title="למחוק את הסקר?"
-      description={deleteDescription(responseCount)}
-      confirmLabel="מחיקה"
-      loadingLabel="מוחק..."
-      successMessage="הסקר נמחק"
-      errorMessage="המחיקה נכשלה. נסו שוב."
-      onDelete={() => deleteSurveyAction(surveyId)}
-      onSuccess={() => router.push("/admin/surveys")}
-      trigger={
-        <Button type="button" variant="ghost" className={`${PHONE_SIZE} text-destructive hover:text-destructive`}>
-          <Trash2 aria-hidden="true" />
-          מחיקה
-        </Button>
-      }
-    />
-  );
-}
-
 /** The buttons of the results page. The server refuses what the viewer may not do; this hides it. */
 export function SurveyActions({
   surveyId,
@@ -82,6 +36,7 @@ export function SurveyActions({
   csvRows,
   csvFileName,
 }: SurveyActionsProps) {
+  const router = useRouter();
   return (
     <div className="flex flex-wrap items-center gap-2">
       {canEdit && (
@@ -92,8 +47,12 @@ export function SurveyActions({
           </Link>
         </Button>
       )}
-      {canClose && <CloseButton surveyId={surveyId} />}
-      {canDelete && <DeleteButton surveyId={surveyId} responseCount={responseCount} />}
+      {canClose && (
+        <CloseSurveyButton surveyId={surveyId} className={PHONE_SIZE} onSuccess={() => router.refresh()} />
+      )}
+      {canDelete && (
+        <DeleteSurveyButton surveyId={surveyId} responseCount={responseCount} className={PHONE_SIZE} />
+      )}
       <SurveyCsvButton rows={csvRows} fileName={csvFileName} className={PHONE_SIZE} />
     </div>
   );

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { isValidElement } from "react";
+import { isValidElement, type ReactElement, type ReactNode } from "react";
 
 import type { OfferableSurvey } from "../../../lib/types";
+import { SurveyErrorBoundary } from "../SurveyErrorBoundary";
 import { SurveyPrompt } from "../SurveyPrompt";
 import { SurveyPromptLoader } from "../SurveyPromptLoader";
 
@@ -27,6 +28,18 @@ const survey = (id: string, closesOn: string | null): OfferableSurvey => ({
 
 const props = { userId: "user-1", firstName: "נועם" };
 
+type PromptProps = { survey: OfferableSurvey | null; firstName: string };
+
+/** The prompt the loader puts inside its error boundary. */
+function promptOf(result: unknown): ReactElement<PromptProps> {
+  if (!isValidElement<{ children: ReactNode }>(result)) throw new Error("expected an element");
+  expect(result.type).toBe(SurveyErrorBoundary);
+  const prompt = result.props.children;
+  if (!isValidElement<PromptProps>(prompt)) throw new Error("expected the prompt inside the boundary");
+  expect(prompt.type).toBe(SurveyPrompt);
+  return prompt;
+}
+
 beforeEach(() => {
   loadTraineeOffers.mockReset();
 });
@@ -40,12 +53,9 @@ describe("SurveyPromptLoader", () => {
 
   test("with nothing offerable it still renders the prompt, with no Survey, so the prompt stays mounted across refreshes", async () => {
     loadTraineeOffers.mockResolvedValue([]);
-    const result = await SurveyPromptLoader({ ...props, tourCompleted: true });
-    expect(isValidElement(result)).toBe(true);
-    if (!isValidElement<{ survey: OfferableSurvey | null; firstName: string }>(result)) return;
-    expect(result.type).toBe(SurveyPrompt);
-    expect(result.props.survey).toBeNull();
-    expect(result.props.firstName).toBe("נועם");
+    const prompt = promptOf(await SurveyPromptLoader({ ...props, tourCompleted: true }));
+    expect(prompt.props.survey).toBeNull();
+    expect(prompt.props.firstName).toBe("נועם");
   });
 
   test("hands the prompt the Survey that closes first", async () => {
@@ -54,8 +64,7 @@ describe("SurveyPromptLoader", () => {
       survey("sooner", "2026-11-05"),
       survey("open-ended", null),
     ]);
-    const result = await SurveyPromptLoader({ ...props, tourCompleted: true });
-    if (!isValidElement<{ survey: OfferableSurvey | null }>(result)) throw new Error("expected an element");
-    expect(result.props.survey?.id).toBe("sooner");
+    const prompt = promptOf(await SurveyPromptLoader({ ...props, tourCompleted: true }));
+    expect(prompt.props.survey?.id).toBe("sooner");
   });
 });

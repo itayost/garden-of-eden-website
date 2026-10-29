@@ -15,8 +15,9 @@ interface SurveyErrorBoundaryState {
  * app down with it: on an error it renders nothing and logs. The Survey is a
  * nicety on top of the dashboard, so the page carries on without it.
  *
- * Only render errors land here (including the server read behind the loader);
- * a failing click handler is the component's own to handle.
+ * Only render errors land here; a failing click handler is the component's
+ * own to handle. The server reads behind the prompt and the card answer with
+ * nothing to offer when they fail (loadTraineeOffers), so they never throw.
  */
 export class SurveyErrorBoundary extends Component<
   SurveyErrorBoundaryProps,

@@ -1,6 +1,7 @@
 import { israelToday } from "@/lib/utils/tasks";
 import { pickSurveyToOffer } from "../../lib/offer";
 import { loadTraineeOffers } from "../../lib/trainee-offers";
+import { SurveyErrorBoundary } from "./SurveyErrorBoundary";
 import { SurveyPrompt } from "./SurveyPrompt";
 
 interface SurveyPromptLoaderProps {
@@ -11,9 +12,10 @@ interface SurveyPromptLoaderProps {
 }
 
 /**
- * Picks the one Survey to offer and hands it to the client prompt. Mounted in
- * the Trainee layout inside its own Suspense, so the read never slows the page.
- * Renders nothing only while the tour is due.
+ * Picks the one Survey to offer and hands it to the client prompt, inside an
+ * error boundary so a prompt that fails to render never takes the app down.
+ * Mounted in the Trainee layout inside its own Suspense, so the read never
+ * slows the page. Renders nothing only while the tour is due.
  *
  * Once the tour is done it always renders the prompt, with a null Survey when
  * nothing is offerable. After a send the layout re-renders without the answered
@@ -29,5 +31,9 @@ export async function SurveyPromptLoader({
 }: SurveyPromptLoaderProps) {
   if (!tourCompleted) return null;
   const survey = pickSurveyToOffer(await loadTraineeOffers(userId, israelToday()));
-  return <SurveyPrompt survey={survey} firstName={firstName} />;
+  return (
+    <SurveyErrorBoundary>
+      <SurveyPrompt survey={survey} firstName={firstName} />
+    </SurveyErrorBoundary>
+  );
 }
