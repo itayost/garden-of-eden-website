@@ -242,3 +242,39 @@ test("the inputs are not changed", () => {
   build({ filters: { ...filters, search: "לוי" } });
   expect(JSON.stringify({ audience, seen, responses, branches, questions })).toBe(before);
 });
+
+test("a responder is placed by the branches of their Response, not the ones they have today", () => {
+  // p2 is in the Kiryat Ata Audience now, but answered while in Haifa.
+  const movedResponse: ReportResponse = {
+    ...person("p2", "מאיה גבאי", [HA], 2015),
+    submittedAt: "2026-10-28T10:00:00Z",
+    answers: [answer("q1", { rating: 3 }), answer("q2", { optionId: "o1" }), answer("q3", { optionId: "m1" })],
+  };
+  const moved = { responses: [movedResponse], seen: [], audience: [person("p2", "מאיה גבאי", [KA], 2015)] };
+
+  const kiryatAta = build({ ...moved, visibleBranchIds: [KA] });
+  expect(kiryatAta.totals).toEqual({ audience: 0, seen: 0, answered: 0, ratePct: 0 });
+  expect(kiryatAta.allRows).toEqual([]);
+  expect(kiryatAta.rowCount).toBe(0);
+  expect(kiryatAta.questions[0]).toMatchObject({ answered: 0 });
+
+  const haifa = build({ ...moved, visibleBranchIds: [HA] });
+  expect(haifa.totals).toEqual({ audience: 1, seen: 1, answered: 1, ratePct: 100 });
+  expect(haifa.rows.map((row) => row.profileId)).toEqual(["p2"]);
+  expect(haifa.questions[0]).toMatchObject({ answered: 1 });
+
+  expect(build({ ...moved, visibleBranchIds: null }).totals.answered).toBe(1);
+});
+
+test("a viewer who may see no branch sees nothing at all", () => {
+  const rep = build({ visibleBranchIds: [] });
+  expect(rep.totals).toEqual({ audience: 0, seen: 0, answered: 0, ratePct: 0 });
+  expect(rep.byBranch).toEqual([]);
+  expect(rep.allRows).toEqual([]);
+  expect(rep.rows).toEqual([]);
+  expect(rep.rowCount).toBe(0);
+  expect(rep.seenNotAnswered).toEqual([]);
+  expect(rep.unseen).toEqual([]);
+  expect(rep.birthYears).toEqual([]);
+  expect(rep.questions.map((question) => question.answered)).toEqual([0, 0, 0, 0]);
+});
