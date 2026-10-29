@@ -95,7 +95,6 @@ beforeEach(() => {
       totalAllYears: 250,
     },
   });
-  window.history.replaceState(null, "", "/admin/surveys/new");
 });
 
 afterEach(cleanup);
@@ -321,15 +320,39 @@ describe("SurveyBuilder: saving a draft", () => {
     expect(push).not.toHaveBeenCalled();
   });
 
-  test("the first save moves the address to the edit page, and the next save goes to the same Survey", async () => {
+  test("the first save replaces the page with the edit page, and the next save goes to the same Survey", async () => {
     renderBuilder({ initial: COMPLETE });
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("סקר חדש");
     headerButton("שמירה כטיוטה");
-    await waitFor(() => expect(window.location.pathname).toBe(`/admin/surveys/${SURVEY_ID}/edit`));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(`/admin/surveys/${SURVEY_ID}/edit`));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("עריכת סקר");
     headerButton("שמירה כטיוטה");
     await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
     expect(save).toHaveBeenLastCalledWith(SURVEY_ID, COMPLETE);
+    expect(replace).toHaveBeenCalledTimes(1);
+  });
+
+  test("the address is the router's to change: the history is never written to directly", async () => {
+    const replaceState = vi.spyOn(window.history, "replaceState");
+    renderBuilder({ initial: COMPLETE });
+    headerButton("שמירה כטיוטה");
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    expect(replaceState).not.toHaveBeenCalled();
+    replaceState.mockRestore();
+  });
+
+  test("saving a Survey that already exists stays on its page", async () => {
+    renderBuilder({ surveyId: SURVEY_ID, initial: COMPLETE });
+    headerButton("שמירה כטיוטה");
+    await waitFor(() => expect(save).toHaveBeenCalledWith(SURVEY_ID, COMPLETE));
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  test("a save that fails does not leave the page", async () => {
+    save.mockResolvedValue({ error: "השמירה נכשלה. נסו שוב." });
+    renderBuilder({ initial: COMPLETE });
+    headerButton("שמירה כטיוטה");
+    await screen.findByRole("alert");
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -375,6 +398,8 @@ describe("SurveyBuilder: publishing", () => {
     expect(save).toHaveBeenCalledWith(null, COMPLETE);
     expect(publish).toHaveBeenCalledWith(SURVEY_ID);
     expect(save.mock.invocationCallOrder[0]).toBeLessThan(publish.mock.invocationCallOrder[0]);
+    // The Survey's own page replaces this one; the edit page is never visited on the way.
+    expect(replace).not.toHaveBeenCalled();
   });
 
   test("a second press while it is going does nothing", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { closeDateProblem, saveRefusal, withBlankClosesOn } from "../staff-input";
+import { closeDateChangeProblem, closeDateProblem, saveRefusal, withBlankClosesOn } from "../staff-input";
 import { STAFF_MESSAGES } from "../staff-messages";
 import type { SurveyDraft } from "../types";
 
@@ -53,6 +53,34 @@ describe("closeDateProblem", () => {
 
   test("a date that is both before today and before the opening has passed", () => {
     expect(closeDateProblem("2026-11-05", "2026-10-20", today)).toBe("תאריך הסגירה כבר עבר");
+  });
+});
+
+describe("closeDateChangeProblem", () => {
+  const today = "2026-10-29";
+  const opensOn = "2026-10-01";
+
+  test("a past close date that was not changed is accepted, so a survey that ended by date can still be retitled", () => {
+    expect(closeDateChangeProblem(opensOn, "2026-10-20", "2026-10-20", today)).toBeNull();
+  });
+
+  test("a changed close date that is still in the past is refused", () => {
+    expect(closeDateChangeProblem(opensOn, "2026-10-20", "2026-10-25", today)).toBe("תאריך הסגירה כבר עבר");
+  });
+
+  test("a changed close date from today on is accepted", () => {
+    expect(closeDateChangeProblem(opensOn, "2026-10-20", "2026-11-12", today)).toBeNull();
+    expect(closeDateChangeProblem(opensOn, "2026-10-20", today, today)).toBeNull();
+  });
+
+  test("a changed close date before the opening day is refused", () => {
+    expect(closeDateChangeProblem("2026-11-05", null, "2026-11-04", today)).toBe("תאריך הסגירה לפני תאריך הפתיחה");
+  });
+
+  test("setting a date where there was none is checked, and clearing it is fine", () => {
+    expect(closeDateChangeProblem(opensOn, null, "2026-10-20", today)).toBe("תאריך הסגירה כבר עבר");
+    expect(closeDateChangeProblem(opensOn, "2026-10-20", null, today)).toBeNull();
+    expect(closeDateChangeProblem(opensOn, null, null, today)).toBeNull();
   });
 });
 

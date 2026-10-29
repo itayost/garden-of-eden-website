@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { israelToday } from "@/lib/utils/tasks";
 import { surveyDetailsSchema, type SurveyDetailsInput } from "@/lib/validations/surveys";
-import { closeDateProblem, withBlankClosesOn } from "../staff-input";
+import { closeDateChangeProblem, withBlankClosesOn } from "../staff-input";
 import { STAFF_MESSAGES } from "../staff-messages";
 import {
   loadEditableSurvey,
@@ -16,7 +16,9 @@ import {
 /**
  * Changes the title, intro and close date, which stay editable after the
  * first Response. Moving the close date later on a Survey that ended by date
- * opens it again until the new date. A Survey closed early stays closed.
+ * opens it again until the new date. A Survey closed early stays closed. The
+ * close date is only checked when it changes, so a Survey that ended by date
+ * can still be retitled.
  */
 export async function updateSurveyDetailsAction(
   surveyId: string,
@@ -34,7 +36,7 @@ export async function updateSurveyDetailsAction(
   const parsed = surveyDetailsSchema.safeParse(withBlankClosesOn(details));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? STAFF_MESSAGES.invalidInput };
   const data = parsed.data;
-  const dateProblem = closeDateProblem(record.opensOn, data.closesOn, israelToday());
+  const dateProblem = closeDateChangeProblem(record.opensOn, record.closesOn, data.closesOn, israelToday());
   if (dateProblem !== null) return { error: dateProblem };
 
   const { data: updated, error } = await db

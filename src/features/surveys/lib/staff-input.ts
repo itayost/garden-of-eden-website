@@ -29,6 +29,21 @@ export function closeDateProblem(opensOn: string, closesOn: string | null, today
   return null;
 }
 
+/**
+ * closeDateProblem for an edit of the details: the date is only judged when it
+ * differs from the stored one. A Survey that ended by date keeps its past close
+ * date, and its title or intro can still be changed without touching it.
+ */
+export function closeDateChangeProblem(
+  opensOn: string,
+  storedClosesOn: string | null,
+  closesOn: string | null,
+  today: string,
+): string | null {
+  if (closesOn === storedClosesOn) return null;
+  return closeDateProblem(opensOn, closesOn, today);
+}
+
 /** What a save needs to know about the Survey it would overwrite. */
 export interface StoredSurveyState {
   publishedAt: string | null;

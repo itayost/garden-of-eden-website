@@ -3,7 +3,6 @@
 import { useId } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +14,7 @@ import { SURVEY_LIMITS } from "../../lib/types";
 import { KIND_META, KIND_ORDER, toQuestionKind } from "./kind-meta";
 import { OptionListEditor } from "./OptionListEditor";
 import { RatingEndsEditor } from "./RatingEndsEditor";
+import { ToolButton } from "./ToolButton";
 
 interface QuestionEditorProps {
   question: EditorQuestion;
@@ -31,8 +31,6 @@ interface QuestionEditorProps {
   onRemove: () => void;
 }
 
-const TOOL = "text-muted-foreground";
-
 function QuestionTools({
   number,
   count,
@@ -41,38 +39,30 @@ function QuestionTools({
 }: Pick<QuestionEditorProps, "number" | "count" | "onMove" | "onRemove">) {
   return (
     <div className="flex lg:col-start-3 lg:row-start-1">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className={TOOL}
-        disabled={number === 1}
-        aria-label={`הזזת שאלה ${number} למעלה`}
-        onClick={() => onMove(-1)}
-      >
+      <ToolButton label={`הזזת שאלה ${number} למעלה`} disabled={number === 1} onClick={() => onMove(-1)}>
         <ArrowUp />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className={TOOL}
-        disabled={number === count}
-        aria-label={`הזזת שאלה ${number} למטה`}
-        onClick={() => onMove(1)}
-      >
+      </ToolButton>
+      <ToolButton label={`הזזת שאלה ${number} למטה`} disabled={number === count} onClick={() => onMove(1)}>
         <ArrowDown />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className="text-destructive hover:text-destructive"
-        aria-label={`מחיקת שאלה ${number}`}
-        onClick={onRemove}
-      >
+      </ToolButton>
+      <ToolButton destructive label={`מחיקת שאלה ${number}`} onClick={onRemove}>
         <Trash2 />
-      </Button>
+      </ToolButton>
+    </div>
+  );
+}
+
+/** "חובה לענות": whether a Trainee must answer before moving on. */
+function RequiredToggle({ question, onChange }: Pick<QuestionEditorProps, "question" | "onChange">) {
+  const id = useId();
+  return (
+    <div className="flex items-center gap-2 lg:col-span-3 lg:col-start-1 lg:row-start-3">
+      <Switch
+        id={id}
+        checked={question.required}
+        onCheckedChange={(required) => onChange({ ...question, required })}
+      />
+      <Label htmlFor={id}>חובה לענות</Label>
     </div>
   );
 }
@@ -190,9 +180,7 @@ export function QuestionEditor(props: QuestionEditorProps) {
   const { question, number, count, open, showProblems, autoFocusText, onToggle, onChange, onMove, onRemove } = props;
   // DOM ids come from useId, which agrees between the server render and the
   // client; the question's key is random per render pass and is only a React key.
-  const uid = useId();
-  const bodyId = `question-body-${uid}`;
-  const requiredId = `question-required-${uid}`;
+  const bodyId = `question-body-${useId()}`;
   const textBlank = showProblems && question.text.trim() === "";
 
   return (
@@ -225,14 +213,7 @@ export function QuestionEditor(props: QuestionEditorProps) {
           <div className="col-span-2 lg:col-span-3 lg:col-start-1 lg:row-start-2">
             <QuestionBody question={question} number={number} showProblems={showProblems} onChange={onChange} />
           </div>
-          <div className="flex items-center gap-2 lg:col-span-3 lg:col-start-1 lg:row-start-3">
-            <Switch
-              id={requiredId}
-              checked={question.required}
-              onCheckedChange={(required) => onChange({ ...question, required })}
-            />
-            <Label htmlFor={requiredId}>חובה לענות</Label>
-          </div>
+          <RequiredToggle question={question} onChange={onChange} />
           <QuestionTools number={number} count={count} onMove={onMove} onRemove={onRemove} />
         </div>
       </div>

@@ -39,6 +39,17 @@ function AddQuestionRow({ atLimit, onAdd }: { atLimit: boolean; onAdd: (kind: Qu
   );
 }
 
+function QuestionListHeader({ count }: { count: number }) {
+  return (
+    <div className="flex items-center justify-between border-b px-4 py-3.5 lg:px-[18px]">
+      <h2 id="questions-heading" className="text-[15px] font-bold">
+        שאלות <span className="font-normal text-muted-foreground">({count})</span>
+      </h2>
+      <span className="text-xs text-muted-foreground">עד {SURVEY_LIMITS.questionsMax} שאלות</span>
+    </div>
+  );
+}
+
 /**
  * The Questions in order, each with its own move and delete, and a row to add
  * one of each kind. On a phone only one Question is open at a time: adding
@@ -64,12 +75,7 @@ export function QuestionListEditor({ questions, showProblems, onChange }: Questi
 
   return (
     <section aria-labelledby="questions-heading" className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="flex items-center justify-between border-b px-4 py-3.5 lg:px-[18px]">
-        <h2 id="questions-heading" className="text-[15px] font-bold">
-          שאלות <span className="font-normal text-muted-foreground">({questions.length})</span>
-        </h2>
-        <span className="text-xs text-muted-foreground">עד {SURVEY_LIMITS.questionsMax} שאלות</span>
-      </div>
+      <QuestionListHeader count={questions.length} />
       {questions.length === 0 && (
         <p className="px-4 py-8 text-center text-sm text-muted-foreground">עוד אין שאלות</p>
       )}
