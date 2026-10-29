@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { israelToday } from "@/lib/utils/tasks";
 import { surveyDetailsSchema, type SurveyDetailsInput } from "@/lib/validations/surveys";
+import { hebrewIssueMessage } from "../issue-message";
 import { closeDateChangeProblem, withBlankClosesOn } from "../staff-input";
 import { STAFF_MESSAGES } from "../staff-messages";
 import {
@@ -34,7 +35,9 @@ export async function updateSurveyDetailsAction(
   if (record.closedAt !== null) return { error: STAFF_MESSAGES.closedNoEdit };
 
   const parsed = surveyDetailsSchema.safeParse(withBlankClosesOn(details));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? STAFF_MESSAGES.invalidInput };
+  if (!parsed.success) {
+    return { error: hebrewIssueMessage(parsed.error.issues, STAFF_MESSAGES.invalidInput) };
+  }
   const data = parsed.data;
   const dateProblem = closeDateChangeProblem(record.opensOn, record.closesOn, data.closesOn, israelToday());
   if (dateProblem !== null) return { error: dateProblem };

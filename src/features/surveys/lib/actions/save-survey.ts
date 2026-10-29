@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { israelToday } from "@/lib/utils/tasks";
 import { surveyDraftSchema, type SurveyDraftInput } from "@/lib/validations/surveys";
 import { toQuestionsPayload } from "../draft-mapping";
+import { hebrewIssueMessage } from "../issue-message";
 import { canEditSurvey } from "../permissions";
 import { saveRefusal, withBlankClosesOn, type StoredSurveyState } from "../staff-input";
 import { saveErrorMessage, STAFF_MESSAGES } from "../staff-messages";
@@ -72,7 +73,9 @@ export async function saveSurveyDraftAction(
   const { viewer } = staff;
 
   const parsed = surveyDraftSchema.safeParse(withBlankClosesOn(draft));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? STAFF_MESSAGES.invalidInput };
+  if (!parsed.success) {
+    return { error: hebrewIssueMessage(parsed.error.issues, STAFF_MESSAGES.invalidInput) };
+  }
   const data = parsed.data;
 
   // Before the Survey is read, so a manager who named no branch is told so.

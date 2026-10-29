@@ -9,6 +9,7 @@ import {
   submitErrorMessage,
   toAnswerRows,
 } from "../answers";
+import { hebrewIssueMessage } from "../issue-message";
 import type { ActionFailure, ActionOutcome } from "./staff-access";
 import { loadAnswerableSurvey, requireSignedIn, TRAINEE_MESSAGES } from "./trainee-access";
 
@@ -37,7 +38,7 @@ export async function submitSurveyResponseAction(
 
   const parsed = surveySubmitSchema.safeParse(input);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? TRAINEE_MESSAGES.invalidInput };
+    return { error: hebrewIssueMessage(parsed.error.issues, TRAINEE_MESSAGES.invalidInput) };
   }
   const { surveyId, answers } = parsed.data;
 
