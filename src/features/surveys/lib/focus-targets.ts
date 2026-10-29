@@ -1,8 +1,16 @@
 /**
- * Where keyboard focus goes after the builder moves or deletes a row. Pure:
- * it names the controls (by the id each one carries in `data-focus-id`) and
- * the component puts focus on the first that can take it.
+ * Where keyboard focus goes after the builder moves or deletes a row. Pure: it
+ * names the controls (by the id each one carries in `data-focus-id`) and the
+ * component puts focus on the first that can take it.
+ *
+ * Ids are built from a row's place in its list, never from its key: keys are
+ * random per render pass, so a key in the HTML would differ between the server
+ * and the browser and React would report a hydration mismatch. A place is the
+ * same on both, and after a move or a delete it is known without the key.
  */
+
+/** The lists that have rows with tools. A Question's options sit inside the Question's own row. */
+export type FocusRow = "question" | "option";
 
 /** The controls of a row that focus can come back to. */
 export type FocusPart = "up" | "down" | "remove" | "summary";
@@ -11,7 +19,9 @@ export type FocusPart = "up" | "down" | "remove" | "summary";
 export const ADD_QUESTION_FOCUS = "add-question";
 export const ADD_OPTION_FOCUS = "add-option";
 
-export const focusId = (key: string, part: FocusPart): string => `${key}:${part}`;
+/** `index` is the row's 0-based place. The kind keeps a Question's ids apart from its options'. */
+export const focusId = (row: FocusRow, index: number, part: FocusPart): string =>
+  `${row}-${index}:${part}`;
 
 /**
  * After a row moved one place (`direction`) to `newIndex` of `count` rows: the
@@ -19,29 +29,30 @@ export const focusId = (key: string, part: FocusPart): string => `${key}:${part}
  * is now disabled, the other one.
  */
 export function focusAfterMove(
-  key: string,
-  direction: -1 | 1,
+  row: FocusRow,
   newIndex: number,
+  direction: -1 | 1,
   count: number,
 ): string[] {
   const reachedEnd = direction === -1 ? newIndex === 0 : newIndex === count - 1;
   const pressed: FocusPart = direction === -1 ? "up" : "down";
   const other: FocusPart = direction === -1 ? "down" : "up";
-  return [focusId(key, reachedEnd ? other : pressed)];
+  return [focusId(row, newIndex, reachedEnd ? other : pressed)];
 }
 
 /**
- * After the row at `index` of `keys` is deleted: the row that takes its place
- * (its `nextParts`, in order of preference, since a folded row on a phone
- * cannot take focus on some of them), and the add control after those.
+ * After the row at `index` of `count` rows is deleted: the row that takes its
+ * place (it has the same index now), trying its `nextParts` in order since a
+ * folded row on a phone cannot take focus on some of them, and the add control
+ * after those. The last row has no successor, so it goes to the add control.
  */
 export function focusAfterRemove(
-  keys: readonly string[],
+  row: FocusRow,
   index: number,
+  count: number,
   nextParts: readonly FocusPart[],
   addControl: string,
 ): string[] {
-  const next = keys[index + 1];
-  if (next === undefined) return [addControl];
-  return [...nextParts.map((part) => focusId(next, part)), addControl];
+  if (index + 1 >= count) return [addControl];
+  return [...nextParts.map((part) => focusId(row, index, part)), addControl];
 }

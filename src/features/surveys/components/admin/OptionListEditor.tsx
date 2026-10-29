@@ -14,8 +14,6 @@ import { ToolButton } from "./ToolButton";
 import { useFocusRestore } from "./useFocusRestore";
 
 interface OptionToolsProps {
-  /** The option's key, which names its buttons for the focus restore. */
-  optionKey: string;
   /** The option's 1-based number and the Question it is in ("בשאלה 3"), so each button says what it moves. */
   number: number;
   where: string;
@@ -25,13 +23,14 @@ interface OptionToolsProps {
   onRemove: () => void;
 }
 
-function OptionTools({ optionKey, number, where, isFirst, isLast, onMove, onRemove }: OptionToolsProps) {
+function OptionTools({ number, where, isFirst, isLast, onMove, onRemove }: OptionToolsProps) {
+  const index = number - 1;
   return (
     <div className="flex">
       <ToolButton
         compact
         label={`הזזת תשובה ${number} למעלה ${where}`}
-        focusId={focusId(optionKey, "up")}
+        focusId={focusId("option", index, "up")}
         disabled={isFirst}
         onClick={() => onMove(-1)}
       >
@@ -40,7 +39,7 @@ function OptionTools({ optionKey, number, where, isFirst, isLast, onMove, onRemo
       <ToolButton
         compact
         label={`הזזת תשובה ${number} למטה ${where}`}
-        focusId={focusId(optionKey, "down")}
+        focusId={focusId("option", index, "down")}
         disabled={isLast}
         onClick={() => onMove(1)}
       >
@@ -49,7 +48,7 @@ function OptionTools({ optionKey, number, where, isFirst, isLast, onMove, onRemo
       <ToolButton
         compact
         label={`מחיקת תשובה ${number} ${where}`}
-        focusId={focusId(optionKey, "remove")}
+        focusId={focusId("option", index, "remove")}
         onClick={onRemove}
       >
         <X />
@@ -98,7 +97,6 @@ function OptionRow({ option, index, count, where, multi, blank, autoFocus, onEdi
         )}
       </div>
       <OptionTools
-        optionKey={option.key}
         number={number}
         where={where}
         isFirst={index === 0}
@@ -138,12 +136,11 @@ function useOptionList(options: readonly EditorOption[], onChange: (next: Editor
   const edit = (key: string, label: string) =>
     onChange(options.map((option) => (option.key === key ? { ...option, label } : option)));
   const move = (index: number, direction: -1 | 1) => {
-    restoreFocus(focusAfterMove(options[index].key, direction, index + direction, options.length));
+    restoreFocus(focusAfterMove("option", index + direction, direction, options.length));
     onChange(moveItem(options, index, index + direction));
   };
   const remove = (index: number) => {
-    const keys = options.map((option) => option.key);
-    restoreFocus(focusAfterRemove(keys, index, ["remove"], ADD_OPTION_FOCUS));
+    restoreFocus(focusAfterRemove("option", index, options.length, ["remove"], ADD_OPTION_FOCUS));
     onChange(options.filter((_, position) => position !== index));
   };
 

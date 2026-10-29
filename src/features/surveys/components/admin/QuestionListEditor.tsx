@@ -73,14 +73,13 @@ function useQuestionList(questions: readonly EditorQuestion[], onChange: (next: 
   const replace = (next: EditorQuestion) =>
     onChange(questions.map((question) => (question.key === next.key ? next : question)));
   const move = (index: number, direction: -1 | 1) => {
-    restoreFocus(focusAfterMove(questions[index].key, direction, index + direction, questions.length));
+    restoreFocus(focusAfterMove("question", index + direction, direction, questions.length));
     onChange(moveItem(questions, index, index + direction));
   };
   const remove = (index: number) => {
     if (openKey === questions[index].key) setOpenKey(null);
-    const keys = questions.map((question) => question.key);
     // A folded row on a phone cannot take focus on its delete button; its summary row can.
-    restoreFocus(focusAfterRemove(keys, index, ["remove", "summary"], ADD_QUESTION_FOCUS));
+    restoreFocus(focusAfterRemove("question", index, questions.length, ["remove", "summary"], ADD_QUESTION_FOCUS));
     onChange(questions.filter((_, position) => position !== index));
   };
   const toggle = (key: string) => setOpenKey(openKey === key ? null : key);

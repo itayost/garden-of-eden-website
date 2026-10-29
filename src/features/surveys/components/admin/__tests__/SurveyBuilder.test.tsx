@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { toast } from "sonner";
 
 import { emptyQuestion, newDraft } from "../../../lib/draft";
@@ -126,6 +127,32 @@ describe("SurveyBuilder: the publish checklist", () => {
     type("טקסט שאלה 1", "כמה פעמים?");
     type("תשובה 1 בשאלה 1", "פעם אחת");
     expect(checklist().getByText("שאלה 1: תשובה ריקה")).toBeTruthy();
+  });
+});
+
+describe("SurveyBuilder: server render", () => {
+  const withChoice: SurveyDraft = {
+    ...COMPLETE,
+    questions: [
+      { ...emptyQuestion("single_choice"), text: "כמה פעמים?", options: ["פעם אחת", "פעמיים"] },
+      { ...emptyQuestion("text"), text: "מה לשנות?" },
+    ],
+  };
+  const html = () =>
+    renderToString(
+      <SurveyBuilder surveyId={null} initial={withChoice} state="draft" branches={BRANCHES} today={TODAY} />,
+    );
+
+  // Every Question and option gets a random key per render pass. If one reached
+  // the HTML, the server and the browser would disagree and React would report
+  // a hydration mismatch, so two independent renders must come out identical.
+  test("two renders are identical, so nothing random reaches the HTML", () => {
+    expect(html()).toBe(html());
+  });
+
+  test("controls carry their focus ids by place, not by key", () => {
+    expect(html()).toContain('data-focus-id="question-0:up"');
+    expect(html()).toContain('data-focus-id="option-1:remove"');
   });
 });
 

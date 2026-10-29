@@ -39,17 +39,17 @@ interface QuestionEditorProps {
  * kind in the DOM and the tab order matches where it is drawn at lg.
  */
 function QuestionTools({
-  questionKey,
   number,
   count,
   onMove,
   onRemove,
-}: Pick<QuestionEditorProps, "number" | "count" | "onMove" | "onRemove"> & { questionKey: string }) {
+}: Pick<QuestionEditorProps, "number" | "count" | "onMove" | "onRemove">) {
+  const index = number - 1;
   return (
     <div className="col-start-2 row-start-4 flex lg:col-start-3 lg:row-start-1">
       <ToolButton
         label={`הזזת שאלה ${number} למעלה`}
-        focusId={focusId(questionKey, "up")}
+        focusId={focusId("question", index, "up")}
         disabled={number === 1}
         onClick={() => onMove(-1)}
       >
@@ -57,7 +57,7 @@ function QuestionTools({
       </ToolButton>
       <ToolButton
         label={`הזזת שאלה ${number} למטה`}
-        focusId={focusId(questionKey, "down")}
+        focusId={focusId("question", index, "down")}
         disabled={number === count}
         onClick={() => onMove(1)}
       >
@@ -66,7 +66,7 @@ function QuestionTools({
       <ToolButton
         destructive
         label={`מחיקת שאלה ${number}`}
-        focusId={focusId(questionKey, "remove")}
+        focusId={focusId("question", index, "remove")}
         onClick={onRemove}
       >
         <Trash2 />
@@ -104,7 +104,7 @@ function QuestionSummary({
       type="button"
       aria-expanded={open}
       aria-controls={bodyId}
-      data-focus-id={focusId(question.key, "summary")}
+      data-focus-id={focusId("question", number - 1, "summary")}
       onClick={onToggle}
       className="flex w-full items-center gap-3 px-4 py-3 text-start outline-none focus-visible:ring-[3px] focus-visible:ring-ring lg:hidden"
     >
@@ -220,7 +220,7 @@ function QuestionFields(props: QuestionFieldsProps) {
       <div className="col-span-2 row-start-2 lg:col-span-1 lg:col-start-2 lg:row-start-1">
         <KindSelect question={question} number={number} onChange={onChange} />
       </div>
-      <QuestionTools questionKey={question.key} number={number} count={count} onMove={onMove} onRemove={onRemove} />
+      <QuestionTools number={number} count={count} onMove={onMove} onRemove={onRemove} />
       <div className="col-span-2 row-start-3 lg:col-span-3 lg:col-start-1 lg:row-start-2">
         <QuestionBody question={question} number={number} showProblems={showProblems} onChange={onChange} />
       </div>
