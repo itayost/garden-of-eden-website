@@ -1,5 +1,17 @@
 import type { Profile } from "@/types/database";
 
+/** What a Trainee with no usable name is greeted as. */
+const GENERIC_FIRST_NAME = "מתאמן";
+
+/**
+ * The name a Trainee is greeted by: the first word of the full name, with the
+ * generic greeting for a missing or blank one. The one rule behind every
+ * "היי, <name>" on the dashboard.
+ */
+export function firstNameOf(fullName: string | null): string {
+  return fullName?.trim().split(/\s+/)[0] || GENERIC_FIRST_NAME;
+}
+
 /**
  * Check if a profile has all required fields completed
  * Required: full_name, birthdate

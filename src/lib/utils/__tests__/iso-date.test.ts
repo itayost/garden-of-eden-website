@@ -71,4 +71,10 @@ describe("shortDate", () => {
   test("leaves two-digit parts alone", () => {
     expect(shortDate("2026-12-25")).toBe("25.12");
   });
+
+  test("day then month, for a day in either single-digit or two-digit months", () => {
+    expect(shortDate("2026-11-05")).toBe("5.11");
+    expect(shortDate("2026-01-05")).toBe("5.1");
+    expect(shortDate("2026-10-29")).toBe("29.10");
+  });
 });

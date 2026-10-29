@@ -3,12 +3,19 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { getTaskCountsAction } from "@/lib/actions/admin-tasks";
+import { getBranchScopeAction } from "@/lib/actions/shared";
+import { isBranchManager } from "@/lib/branches/branch-scope";
 import { endingSoonBadgeCount } from "@/features/finance/lib/ending-soon-count";
 import { ADMIN_PAGE_TITLES } from "@/lib/navigation/admin-nav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { MotionProvider } from "@/components/MotionProvider";
 import type { Profile } from "@/types/database";
+
+async function managesAnyBranch(role: string): Promise<boolean> {
+  const scope = await getBranchScopeAction();
+  return "success" in scope && isBranchManager(role, scope.data.managedBranchIds);
+}
 
 export default async function AdminLayout({
   children,
@@ -40,9 +47,11 @@ export default async function AdminLayout({
   // Task attention count for the nav badge. An admin is nudged by work that
   // needs their judgement (overdue, or closed and unreviewed); a trainer is
   // nudged by their own outstanding work.
-  const [countsResult, endingSoon] = await Promise.all([
+  const [countsResult, endingSoon, managesBranch] = await Promise.all([
     getTaskCountsAction(),
     isAdmin ? endingSoonBadgeCount() : Promise.resolve(0),
+    // Admins see every item already, so only a Trainer needs the lookup.
+    isAdmin ? Promise.resolve(false) : managesAnyBranch(profile?.role ?? ""),
   ]);
   const taskBadge =
     "success" in countsResult
@@ -57,7 +66,12 @@ export default async function AdminLayout({
   return (
     <MotionProvider>
       <SidebarProvider defaultOpen={sidebarOpen}>
-        <AdminSidebar user={user} profile={profile} navBadges={navBadges} />
+        <AdminSidebar
+          user={user}
+          profile={profile}
+          navBadges={navBadges}
+          managesBranch={managesBranch}
+        />
         <SidebarInset>
           <AppTopBar
             user={user}

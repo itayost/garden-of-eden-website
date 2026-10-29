@@ -3629,6 +3629,297 @@ export type Database = {
           },
         ]
       }
+      survey_answers: {
+        Row: {
+          id: string
+          option_id: string | null
+          question_id: string
+          rating: number | null
+          response_id: string
+          text_value: string | null
+        }
+        Insert: {
+          id?: string
+          option_id?: string | null
+          question_id: string
+          rating?: number | null
+          response_id: string
+          text_value?: string | null
+        }
+        Update: {
+          id?: string
+          option_id?: string | null
+          question_id?: string
+          rating?: number | null
+          response_id?: string
+          text_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_answers_option_of_question"
+            columns: ["question_id", "option_id"]
+            isOneToOne: false
+            referencedRelation: "survey_question_options"
+            referencedColumns: ["question_id", "id"]
+          },
+          {
+            foreignKeyName: "survey_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "survey_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "survey_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_branches: {
+        Row: {
+          branch_id: string
+          survey_id: string
+        }
+        Insert: {
+          branch_id: string
+          survey_id: string
+        }
+        Update: {
+          branch_id?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_branches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_branches_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_question_options: {
+        Row: {
+          id: string
+          label: string
+          position: number
+          question_id: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          position: number
+          question_id: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          position?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "survey_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_questions: {
+        Row: {
+          high_label: string | null
+          id: string
+          kind: string
+          low_label: string | null
+          position: number
+          prompt: string
+          required: boolean
+          survey_id: string
+        }
+        Insert: {
+          high_label?: string | null
+          id?: string
+          kind: string
+          low_label?: string | null
+          position: number
+          prompt: string
+          required?: boolean
+          survey_id: string
+        }
+        Update: {
+          high_label?: string | null
+          id?: string
+          kind?: string
+          low_label?: string | null
+          position?: number
+          prompt?: string
+          required?: boolean
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_questions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_responses: {
+        Row: {
+          branch_ids: string[]
+          id: string
+          profile_id: string
+          submitted_at: string
+          survey_id: string
+        }
+        Insert: {
+          branch_ids?: string[]
+          id?: string
+          profile_id: string
+          submitted_at?: string
+          survey_id: string
+        }
+        Update: {
+          branch_ids?: string[]
+          id?: string
+          profile_id?: string
+          submitted_at?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_responses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_views: {
+        Row: {
+          first_seen_at: string
+          profile_id: string
+          survey_id: string
+        }
+        Insert: {
+          first_seen_at?: string
+          profile_id: string
+          survey_id: string
+        }
+        Update: {
+          first_seen_at?: string
+          profile_id?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_views_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_views_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      surveys: {
+        Row: {
+          birth_years: number[]
+          closed_at: string | null
+          closed_by: string | null
+          closes_on: string | null
+          created_at: string
+          created_by: string
+          id: string
+          intro: string | null
+          opens_on: string
+          published_at: string | null
+          published_by: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          birth_years?: number[]
+          closed_at?: string | null
+          closed_by?: string | null
+          closes_on?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          intro?: string | null
+          opens_on: string
+          published_at?: string | null
+          published_by?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          birth_years?: number[]
+          closed_at?: string | null
+          closed_by?: string | null
+          closes_on?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          intro?: string | null
+          opens_on?: string
+          published_at?: string | null
+          published_by?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surveys_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surveys_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surveys_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainee_clips: {
         Row: {
           id: string
@@ -5315,6 +5606,20 @@ export type Database = {
           trainee_count: number
         }[]
       }
+      save_survey_draft: {
+        Args: {
+          p_actor: string
+          p_birth_years: number[]
+          p_branch_ids: string[]
+          p_closes_on: string
+          p_intro: string
+          p_opens_on: string
+          p_questions: Json
+          p_survey_id: string
+          p_title: string
+        }
+        Returns: string
+      }
       save_workout_program_grid: {
         Args: { p_program_id: string; p_rows: Json }
         Returns: undefined
@@ -5325,6 +5630,10 @@ export type Database = {
       }
       shares_branch_with: { Args: { p_profile_id: string }; Returns: boolean }
       soft_delete_user: { Args: { target_user_id: string }; Returns: undefined }
+      submit_survey_response: {
+        Args: { p_answers: Json; p_profile_id: string; p_survey_id: string }
+        Returns: string
+      }
       undo_plan: {
         Args: {
           p_actor: string

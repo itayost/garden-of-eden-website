@@ -23,6 +23,14 @@ export function resolveBranchScope(
   return { kind: "branches", ids: [...memberBranchIds] };
 }
 
+/** A Branch manager (ADR-0009): a Trainer who manages at least one branch. */
+export function isBranchManager(
+  role: string,
+  managedBranchIds: readonly string[],
+): boolean {
+  return role === "trainer" && managedBranchIds.length > 0;
+}
+
 /**
  * Whether a member of staff may act as an Admin for something in these
  * branches: an Admin always, a Trainer only for a branch they manage (a

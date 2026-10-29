@@ -40,6 +40,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
       { href: "/admin/assessments", label: "מבדקים", icon: Target },
       { href: "/admin/nutrition", label: "תזונה", icon: Utensils },
       { href: "/admin/submissions", label: "שאלונים", icon: FileText },
+      { href: "/admin/surveys", label: "סקרים", icon: ClipboardList, adminOrManager: true },
     ],
   },
   {
@@ -91,4 +92,5 @@ export const ADMIN_NAV_FLAT: NavItem[] = ADMIN_NAV_SECTIONS.flatMap((s) => s.ite
 export const ADMIN_PAGE_TITLES = derivePageTitles(ADMIN_NAV_FLAT, {
   "/admin/reports/generate": "סיכום שחקן",
   "/admin/plans/products": "קטלוג מסלולים",
+  "/admin/surveys/new": "סקר חדש",
 });

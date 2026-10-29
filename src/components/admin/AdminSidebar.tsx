@@ -17,6 +17,7 @@ import { NavBadge } from "@/components/ui/nav-badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { isActivePath } from "@/lib/utils/active-path";
 import { ADMIN_NAV_SECTIONS } from "@/lib/navigation/admin-nav";
+import { isNavItemVisible } from "@/lib/navigation/types";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
 
@@ -32,9 +33,11 @@ type AdminSidebarProps = {
   profile: Profile | null;
   /** Attention counts keyed by nav href. Zero or missing renders no badge. */
   navBadges?: Record<string, number>;
+  /** The viewer is a Trainer who manages a branch; Admins pass false. */
+  managesBranch: boolean;
 };
 
-export function AdminSidebar({ user, profile, navBadges }: AdminSidebarProps) {
+export function AdminSidebar({ user, profile, navBadges, managesBranch }: AdminSidebarProps) {
   const pathname = usePathname();
   const isAdmin = profile?.role === "admin";
   const { isMobile, openMobile } = useSidebar();
@@ -70,8 +73,8 @@ export function AdminSidebar({ user, profile, navBadges }: AdminSidebarProps) {
       profile={profile}
     >
       {ADMIN_NAV_SECTIONS.map((section) => {
-        const visibleItems = section.items.filter(
-          (item) => !item.adminOnly || isAdmin,
+        const visibleItems = section.items.filter((item) =>
+          isNavItemVisible(item, { isAdmin, managesBranch }),
         );
         if (visibleItems.length === 0) return null;
         return (

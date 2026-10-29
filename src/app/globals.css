@@ -275,3 +275,22 @@ html[dir="rtl"] {
     }
   }
 }
+
+/* Survey thank-you: the check draws in and a few confetti pieces pop.
+   Both run only for visitors who have not asked for less motion; otherwise the
+   check is simply drawn and the pieces simply sit there. */
+@keyframes survey-check-draw {
+  from { stroke-dashoffset: 30; }
+}
+@keyframes survey-confetti-pop {
+  from { transform: scale(0.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .survey-check path {
+    stroke-dasharray: 30;
+    animation: survey-check-draw 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+  }
+  .survey-confetti {
+    animation: survey-confetti-pop 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}

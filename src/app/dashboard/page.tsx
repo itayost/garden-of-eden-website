@@ -34,11 +34,13 @@ import { BuyPlanCard } from "@/features/plans/components/BuyPlanCard";
 import { canAskParentToBuy } from "@/features/plans/lib/can-ask-parent";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TraineeNotices } from "@/features/notices/components/TraineeNotices";
+import { OpenSurveysSection } from "@/features/surveys/components/trainee/OpenSurveysSection";
 import { getMyNoticesAction } from "@/features/notices/lib/notices";
 import { NextTrainingCard } from "@/features/booking/components/NextTrainingCard";
 import { loadNextBooking } from "@/features/booking/lib/next-booking";
 import type { UserAchievementRow } from "@/types/database";
 import { resolveAgeGroup } from "@/lib/age-group-override";
+import { firstNameOf } from "@/lib/utils/profile";
 
 const MiniRatingChartWrapper = dynamic(
   () => import("./MiniRatingChartWrapper").then(m => ({ default: m.MiniRatingChartWrapper }))
@@ -143,7 +145,7 @@ export default async function DashboardPage() {
     },
   ];
 
-  const firstName = (profile?.full_name || "מתאמן").split(" ")[0];
+  const firstName = firstNameOf(profile?.full_name ?? null);
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -158,6 +160,9 @@ export default async function DashboardPage() {
       </div>
 
       <TraineeNotices notices={notices} />
+      <Suspense fallback={null}>
+        <OpenSurveysSection userId={user.id} firstName={firstName} />
+      </Suspense>
       {hasAssessments && <RatingMigrationBanner />}
       {canBook && <NextTrainingCard next={nextBooking} />}
       {ownPlan ? <MyPlanCard planQueue={ownPlan} canAskParent={canAskParent} /> : canAskParent && <BuyPlanCard />}
