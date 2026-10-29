@@ -4,7 +4,8 @@ import { useId, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { dayMonth, questionCountLabel } from "../../lib/format";
+import { shortDate } from "@/lib/utils/iso-date";
+import { questionCountLabel } from "../../lib/format";
 import type { OfferableSurvey } from "../../lib/types";
 import { PitchMark } from "./PitchMark";
 import { recordSeen } from "./record-seen";
@@ -13,7 +14,7 @@ import { SurveyPopup } from "./SurveyPopup";
 
 function detailsLine(survey: OfferableSurvey): string {
   const count = questionCountLabel(survey.questions.length);
-  return survey.closesOn === null ? count : `${count} · נסגר ב-${dayMonth(survey.closesOn)}`;
+  return survey.closesOn === null ? count : `${count} · נסגר ב-${shortDate(survey.closesOn)}`;
 }
 
 function SurveyRow({

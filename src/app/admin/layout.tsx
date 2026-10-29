@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { getTaskCountsAction } from "@/lib/actions/admin-tasks";
 import { getBranchScopeAction } from "@/lib/actions/shared";
+import { isBranchManager } from "@/lib/branches/branch-scope";
 import { endingSoonBadgeCount } from "@/features/finance/lib/ending-soon-count";
 import { ADMIN_PAGE_TITLES } from "@/lib/navigation/admin-nav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
@@ -11,10 +12,9 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { MotionProvider } from "@/components/MotionProvider";
 import type { Profile } from "@/types/database";
 
-/** A Trainer is a Branch manager when they manage at least one branch. */
-async function managesAnyBranch(): Promise<boolean> {
+async function managesAnyBranch(role: string): Promise<boolean> {
   const scope = await getBranchScopeAction();
-  return "success" in scope && scope.data.managedBranchIds.length > 0;
+  return "success" in scope && isBranchManager(role, scope.data.managedBranchIds);
 }
 
 export default async function AdminLayout({
@@ -51,7 +51,7 @@ export default async function AdminLayout({
     getTaskCountsAction(),
     isAdmin ? endingSoonBadgeCount() : Promise.resolve(0),
     // Admins see every item already, so only a Trainer needs the lookup.
-    isAdmin ? Promise.resolve(false) : managesAnyBranch(),
+    isAdmin ? Promise.resolve(false) : managesAnyBranch(profile?.role ?? ""),
   ]);
   const taskBadge =
     "success" in countsResult

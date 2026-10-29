@@ -14,6 +14,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingTourProvider } from "@/features/onboarding-tour";
 import { SurveyErrorBoundary } from "@/features/surveys/components/trainee/SurveyErrorBoundary";
 import { SurveyPromptLoader } from "@/features/surveys/components/trainee/SurveyPromptLoader";
+import { firstNameOf } from "@/lib/utils/profile";
 import type { Profile } from "@/types/database";
 import {
   resolveAccessTier,
@@ -80,7 +81,7 @@ export default async function DashboardLayout({
     tacticalCourse !== null &&
     canOpenCourse(true, { role: profile?.role ?? null, isActive: profile?.is_active === true });
   const capabilities = { booking: canBook, tacticalCourse: canTacticalCourse };
-  const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "מתאמן";
+  const firstName = firstNameOf(profile?.full_name ?? null);
   const cookieStore = await cookies();
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 

@@ -1,3 +1,4 @@
+import { SHARED_MESSAGES } from "./messages";
 import { SURVEY_LIMITS, type DraftQuestion, type SurveyDraft } from "./types";
 
 function problemIf(condition: boolean, message: string): string[] {
@@ -24,7 +25,7 @@ function introProblems(intro: string | null): string[] {
 }
 
 function branchProblems(branchIds: readonly string[]): string[] {
-  return problemIf(branchIds.length === 0, "צריך לבחור לפחות סניף אחד");
+  return problemIf(branchIds.length === 0, SHARED_MESSAGES.noBranch);
 }
 
 function questionCountProblems(count: number): string[] {
@@ -100,8 +101,8 @@ function dateProblems(draft: SurveyDraft, today: string): string[] {
   const { opensOn, closesOn } = draft;
   if (closesOn === null) return [];
   return [
-    ...problemIf(closesOn < opensOn, "תאריך הסגירה לפני תאריך הפתיחה"),
-    ...problemIf(closesOn < today, "תאריך הסגירה כבר עבר"),
+    ...problemIf(closesOn < opensOn, SHARED_MESSAGES.closeBeforeOpen),
+    ...problemIf(closesOn < today, SHARED_MESSAGES.closeDatePassed),
   ];
 }
 

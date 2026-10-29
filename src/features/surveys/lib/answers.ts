@@ -1,3 +1,4 @@
+import { SHARED_MESSAGES } from "./messages";
 import {
   SURVEY_LIMITS,
   type AnswerInput,
@@ -9,8 +10,6 @@ import {
 const SURVEY_CHANGED_MESSAGE = "הסקר עודכן בינתיים. סגרו אותו ופתחו שוב.";
 export const SUBMIT_FAILED_MESSAGE = "השליחה נכשלה. נסו שוב.";
 const ALREADY_ANSWERED_MESSAGE = "כבר ענית על הסקר הזה";
-/** Also the Trainee actions' refusal for a Survey that is not open today. */
-export const SURVEY_CLOSED_MESSAGE = "הסקר כבר נסגר";
 const CHOICE_INVALID_MESSAGE = "בחירה לא תקינה";
 const RATING_RANGE_MESSAGE = `דירוג חייב להיות בין ${SURVEY_LIMITS.ratingMin} ל-${SURVEY_LIMITS.ratingMax}`;
 const TEXT_TOO_LONG_MESSAGE = `התשובה ארוכה מ-${SURVEY_LIMITS.textAnswerMax} תווים`;
@@ -23,8 +22,8 @@ const TEXT_TOO_LONG_MESSAGE = `התשובה ארוכה מ-${SURVEY_LIMITS.textAn
  */
 const SUBMIT_ERRORS: readonly { readonly code: string; readonly message: string }[] = [
   { code: "already_answered", message: ALREADY_ANSWERED_MESSAGE },
-  { code: "survey_not_open", message: SURVEY_CLOSED_MESSAGE },
-  { code: "not_in_audience", message: "הסקר לא מיועד לך" },
+  { code: "survey_not_open", message: SHARED_MESSAGES.closed },
+  { code: "not_in_audience", message: SHARED_MESSAGES.notForYou },
   { code: "survey_changed", message: SURVEY_CHANGED_MESSAGE },
   { code: "survey_answers_option_of_question", message: SURVEY_CHANGED_MESSAGE },
   { code: "foreign key", message: SURVEY_CHANGED_MESSAGE },
@@ -166,5 +165,5 @@ export function submitErrorMessage(dbMessage: string): string {
  * so the dashboard card and the next popup stop offering it.
  */
 export function surveyIsGone(message: string): boolean {
-  return message === ALREADY_ANSWERED_MESSAGE || message === SURVEY_CLOSED_MESSAGE;
+  return message === ALREADY_ANSWERED_MESSAGE || message === SHARED_MESSAGES.closed;
 }

@@ -2,6 +2,7 @@
  * Display helpers for Surveys: audience wording, short dates and rating tones.
  * Pure, so the admin and Trainee client components can import them.
  */
+import { shortDate } from "@/lib/utils/iso-date";
 
 export type RatingTone = "high" | "mid" | "soft" | "low";
 
@@ -20,11 +21,9 @@ export function questionCountLabel(count: number): string {
   return count === 1 ? "שאלה אחת" : `${count} שאלות`;
 }
 
-/** "5.11" for "2026-11-05": day then month, neither padded. */
-export function dayMonth(isoDate: string): string {
-  const month = Number(isoDate.slice(5, 7));
-  const day = Number(isoDate.slice(8, 10));
-  return `${day}.${month}`;
+/** The parts that are not empty, one middle dot between each: "חיפה · ילידי 2014". */
+export function joinDot(parts: readonly string[]): string {
+  return parts.filter((part) => part !== "").join(" · ");
 }
 
 /**
@@ -49,8 +48,7 @@ export function audienceText(
   branchNames: readonly string[],
   birthYears: readonly number[],
 ): string {
-  const parts = [branchNames.join(", "), birthYearsText(birthYears)];
-  return parts.filter((part) => part !== "").join(" · ");
+  return joinDot([branchNames.join(", "), birthYearsText(birthYears)]);
 }
 
 export interface YearCount {
@@ -104,8 +102,7 @@ export function fixCountText(count: number): string {
 
 /** "נפתח 22.10 · נסגר 5.11"; the close part is left out when there is no close date. */
 export function datesSummary(opensOn: string, closesOn: string | null): string {
-  const parts = [`נפתח ${dayMonth(opensOn)}`, closesOn === null ? "" : `נסגר ${dayMonth(closesOn)}`];
-  return parts.filter((part) => part !== "").join(" · ");
+  return joinDot([`נפתח ${shortDate(opensOn)}`, closesOn === null ? "" : `נסגר ${shortDate(closesOn)}`]);
 }
 
 /**

@@ -12,8 +12,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
-import { SURVEY_CLOSED_MESSAGE } from "../answers";
 import { inSurveyAudience } from "../audience";
+import { SHARED_MESSAGES } from "../messages";
 import { loadCandidate, loadSurvey, type LoadedSurvey } from "../queries";
 import { surveyState } from "../state";
 import type { ActionFailure, Db } from "./staff-access";
@@ -21,11 +21,11 @@ import type { ActionFailure, Db } from "./staff-access";
 export const TRAINEE_MESSAGES = {
   signIn: "נדרשת התחברות",
   tooMany: "יותר מדי ניסיונות. נסו שוב בעוד דקה.",
-  invalidId: "מזהה לא תקין",
-  invalidInput: "קלט לא תקין",
-  notFound: "הסקר לא נמצא",
-  closed: SURVEY_CLOSED_MESSAGE,
-  notForYou: "הסקר לא מיועד לך",
+  invalidId: SHARED_MESSAGES.invalidId,
+  invalidInput: SHARED_MESSAGES.invalidInput,
+  notFound: SHARED_MESSAGES.notFound,
+  closed: SHARED_MESSAGES.closed,
+  notForYou: SHARED_MESSAGES.notForYou,
   failed: "הפעולה נכשלה. נסו שוב.",
 } as const;
 

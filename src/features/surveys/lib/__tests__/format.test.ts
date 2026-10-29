@@ -4,8 +4,8 @@ import {
   audienceSummary,
   audienceText,
   datesSummary,
-  dayMonth,
   fixCountText,
+  joinDot,
   questionCountLabel,
   ratingTone,
   reachCount,
@@ -46,18 +46,19 @@ describe("audienceText", () => {
   });
 });
 
-describe("dayMonth", () => {
-  test("day then month", () => {
-    expect(dayMonth("2026-11-05")).toBe("5.11");
+describe("joinDot", () => {
+  test("joins the parts with a middle dot between spaces", () => {
+    expect(joinDot(["נפתח 22.10", "נסגר 5.11"])).toBe("נפתח 22.10 · נסגר 5.11");
   });
 
-  test("strips the leading zero from the day and the month", () => {
-    expect(dayMonth("2026-01-05")).toBe("5.1");
+  test("leaves empty parts out, wherever they are", () => {
+    expect(joinDot(["", "קריית אתא", "", "ילידי 2014"])).toBe("קריית אתא · ילידי 2014");
   });
 
-  test("keeps two-digit days and months as they are", () => {
-    expect(dayMonth("2026-10-29")).toBe("29.10");
-    expect(dayMonth("2026-12-31")).toBe("31.12");
+  test("one part is returned as it is, and no part gives an empty text", () => {
+    expect(joinDot(["חיפה"])).toBe("חיפה");
+    expect(joinDot([])).toBe("");
+    expect(joinDot(["", ""])).toBe("");
   });
 });
 

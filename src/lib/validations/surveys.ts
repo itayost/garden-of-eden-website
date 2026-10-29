@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { SHARED_MESSAGES } from "@/features/surveys/lib/messages";
 import { QUESTION_KINDS, SURVEY_LIMITS } from "@/features/surveys/lib/types";
 import { isValidDateString, UUID_REGEX } from "@/lib/validations/common";
 
@@ -26,7 +27,7 @@ const RANGE_BIRTH_YEAR = `שנת לידה חייבת להיות בין ${BIRTH_Y
 /** The limit in brackets, appended to a "too long" message. */
 const maxChars = (max: number) => `(מקסימום ${max} תווים)`;
 
-const uuidSchema = z.string().regex(UUID_REGEX, "מזהה לא תקין");
+const uuidSchema = z.string().regex(UUID_REGEX, SHARED_MESSAGES.invalidId);
 
 const dateSchema = z.string().refine(isValidDateString, "תאריך לא תקין");
 

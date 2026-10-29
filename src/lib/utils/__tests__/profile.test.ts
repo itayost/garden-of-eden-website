@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  firstNameOf,
   isProfileComplete,
   getProfileCompletionPercentage,
   getMissingRequiredFields,
@@ -159,5 +160,27 @@ describe("PROFILE_FIELD_LABELS_HE", () => {
   it("has Hebrew labels for optional fields", () => {
     expect(PROFILE_FIELD_LABELS_HE.position).toBe("עמדה");
     expect(PROFILE_FIELD_LABELS_HE.avatar_url).toBe("תמונת פרופיל");
+  });
+});
+
+describe("firstNameOf", () => {
+  it("is the first word of the full name", () => {
+    expect(firstNameOf("נועם לוי")).toBe("נועם");
+    expect(firstNameOf("אורי בן דוד")).toBe("אורי");
+  });
+
+  it("ignores spaces around the name and any run of whitespace between words", () => {
+    expect(firstNameOf("  נועם   לוי ")).toBe("נועם");
+    expect(firstNameOf("נועם\tלוי")).toBe("נועם");
+  });
+
+  it("is the name itself when it is a single word", () => {
+    expect(firstNameOf("נועם")).toBe("נועם");
+  });
+
+  it("falls back to the generic greeting for a missing or blank name", () => {
+    expect(firstNameOf(null)).toBe("מתאמן");
+    expect(firstNameOf("")).toBe("מתאמן");
+    expect(firstNameOf("   ")).toBe("מתאמן");
   });
 });

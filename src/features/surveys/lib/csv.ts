@@ -6,27 +6,15 @@
  */
 import Papa from "papaparse";
 
+import { israelDateStr } from "@/lib/utils/israel-time";
 import type { GridRow, CellAnswer } from "./report";
+import { israelClock } from "./results-view";
 import type { SurveyQuestion } from "./types";
-
-const ISRAEL_TIME_ZONE = "Asia/Jerusalem";
-
-const SENT_AT_FORMAT = new Intl.DateTimeFormat("en-GB", {
-  timeZone: ISRAEL_TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
 
 /** "28.10.2026 17:42": the moment in Israel time, day first. */
 export function formatSentAt(iso: string): string {
-  const parts = Object.fromEntries(
-    SENT_AT_FORMAT.formatToParts(new Date(iso)).map((part) => [part.type, part.value]),
-  );
-  return `${parts.day}.${parts.month}.${parts.year} ${parts.hour}:${parts.minute}`;
+  const [year, month, day] = israelDateStr(iso).split("-");
+  return `${day}.${month}.${year} ${israelClock(iso)}`;
 }
 
 /** A cell that starts with one of these is read by Excel as a formula. */

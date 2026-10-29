@@ -8,7 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { audienceText, dayMonth } from "../../lib/format";
+import { shortDate } from "@/lib/utils/iso-date";
+import { audienceText } from "../../lib/format";
 import type { SurveyListRow } from "../../lib/queries";
 import { SurveyStateBadge } from "./SurveyStateBadge";
 
@@ -26,7 +27,7 @@ function AnsweredCell({ row }: { row: SurveyListRow }) {
     return <span className="text-muted-foreground">עוד לא נשלח</span>;
   }
   if (row.state === "scheduled") {
-    return <span className="text-muted-foreground">ייפתח ב-{dayMonth(row.opensOn)}</span>;
+    return <span className="text-muted-foreground">ייפתח ב-{shortDate(row.opensOn)}</span>;
   }
   if (row.seen === 0) {
     return <span className="text-muted-foreground">עוד אף אחד לא ראה</span>;
@@ -71,7 +72,7 @@ function SurveyRow({ row }: { row: SurveyListRow }) {
         {row.closesOn === null ? (
           <span className="text-muted-foreground">ללא</span>
         ) : (
-          dayMonth(row.closesOn)
+          shortDate(row.closesOn)
         )}
       </TableCell>
       <TableCell className={WIDE_ONLY}>

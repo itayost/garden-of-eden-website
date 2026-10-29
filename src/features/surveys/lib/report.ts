@@ -14,6 +14,7 @@
  *   everything; the name search narrows only the grid page, its count and the
  *   two lists, never `allRows`, so an export is not cut short by it.
  */
+import { progressPercent } from "@/lib/utils/math";
 import {
   SURVEY_PAGE_SIZE,
   type SurveyOption,
@@ -128,11 +129,6 @@ interface Member extends ReportPerson {
 
 type BranchNamer = (branchIds: readonly string[]) => string[];
 
-/** Whole percent of `whole`; 0, never NaN, when there is no whole. */
-function pct(part: number, whole: number): number {
-  return whole === 0 ? 0 : Math.round((part / whole) * 100);
-}
-
 function timeOf(iso: string | null): number {
   return iso === null ? 0 : Date.parse(iso);
 }
@@ -198,7 +194,7 @@ function matchesName(fullName: string, search: string): boolean {
 function rateOf(members: readonly Member[]): { seen: number; answered: number; ratePct: number } {
   const seen = members.filter((m) => m.hasSeen).length;
   const answered = members.filter((m) => m.response !== null).length;
-  return { seen, answered, ratePct: pct(answered, seen) };
+  return { seen, answered, ratePct: progressPercent(answered, seen) };
 }
 
 type MemberInput = Pick<SurveyReportInput, "responses" | "seen" | "audience" | "visibleBranchIds">;
@@ -310,7 +306,7 @@ function summarizeChoice(
     kind,
     options: question.options.map((option) => {
       const count = picks.filter((p) => p.some((o) => o.id === option.id)).length;
-      return { optionId: option.id, label: option.label, count, pct: pct(count, picks.length) };
+      return { optionId: option.id, label: option.label, count, pct: progressPercent(count, picks.length) };
     }),
   };
 }

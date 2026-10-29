@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canManageBranches, isInBranchScope, resolveBranchScope } from "../branch-scope";
+import { canManageBranches, isBranchManager, isInBranchScope, resolveBranchScope } from "../branch-scope";
 
 describe("resolveBranchScope", () => {
   it("gives admins everything regardless of memberships", () => {
@@ -51,5 +51,25 @@ describe("canManageBranches", () => {
 
   it("refuses any other role", () => {
     expect(canManageBranches("trainee", ["b1"], ["b1"])).toBe(false);
+  });
+});
+
+describe("isBranchManager", () => {
+  it("is a trainer who manages at least one branch", () => {
+    expect(isBranchManager("trainer", ["b1"])).toBe(true);
+    expect(isBranchManager("trainer", ["b1", "b2"])).toBe(true);
+  });
+
+  it("is not a trainer who manages nothing", () => {
+    expect(isBranchManager("trainer", [])).toBe(false);
+  });
+
+  it("is not an admin, whose scope is every branch rather than a managed few", () => {
+    expect(isBranchManager("admin", [])).toBe(false);
+    expect(isBranchManager("admin", ["b1"])).toBe(false);
+  });
+
+  it("is not any other role, even with managed branches listed", () => {
+    expect(isBranchManager("trainee", ["b1"])).toBe(false);
   });
 });

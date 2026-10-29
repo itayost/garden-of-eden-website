@@ -4,7 +4,6 @@ import {
   averageText,
   branchYearText,
   clampPage,
-  daysLeft,
   daysLeftText,
   deleteDescription,
   displayName,
@@ -108,8 +107,10 @@ describe("percentOf", () => {
 
 describe("dates under the title", () => {
   test("days left count to the close day, which is still open", () => {
-    expect(daysLeft("2026-11-05", "2026-10-29")).toBe(7);
-    expect(daysLeft("2026-10-29", "2026-10-29")).toBe(0);
+    const closing = { opensOn: "2026-10-22", closesOn: "2026-11-05", closedAt: null };
+    expect(runDatesText(closing, "open", "2026-10-29")).toBe("22.10 עד 5.11 · נשארו 7 ימים");
+    expect(runDatesText(closing, "open", "2026-11-04")).toBe("22.10 עד 5.11 · נשאר יום אחד");
+    expect(runDatesText(closing, "open", "2026-11-05")).toBe("22.10 עד 5.11 · נסגר היום");
   });
 
   test("days left wording", () => {

@@ -1,24 +1,27 @@
+import { SHARED_MESSAGES } from "./messages";
+
 /**
  * The Hebrew texts the staff actions answer with, in one place so a refusal
- * reads the same wherever it comes from.
+ * reads the same wherever it comes from. Texts the Trainee side and the rules
+ * also say come from SHARED_MESSAGES.
  */
 export const STAFF_MESSAGES = {
   staffOnly: "רק מנהלים ומנהלי סניפים",
-  invalidId: "מזהה לא תקין",
-  invalidInput: "קלט לא תקין",
-  notFound: "הסקר לא נמצא",
+  invalidId: SHARED_MESSAGES.invalidId,
+  invalidInput: SHARED_MESSAGES.invalidInput,
+  notFound: SHARED_MESSAGES.notFound,
   notAllowed: "אין הרשאה לסקר הזה",
-  noBranch: "צריך לבחור לפחות סניף אחד",
+  noBranch: SHARED_MESSAGES.noBranch,
   hasResponses: "כבר יש תשובות, אי אפשר לשנות שאלות או קהל",
   unpublishHasResponses: "כבר יש תשובות, אי אפשר להחזיר לטיוטה",
   deleteHasResponses: "יש תשובות לסקר, רק מנהל יכול למחוק אותו",
   alreadyPublished: "הסקר כבר פורסם",
   notPublished: "הסקר עוד לא פורסם",
-  alreadyClosed: "הסקר כבר נסגר",
+  alreadyClosed: SHARED_MESSAGES.closed,
   closedNoDraft: "סקר שנסגר לא חוזר לטיוטה",
   closedNoEdit: "סקר שנסגר אי אפשר לערוך",
-  closeDatePassed: "תאריך הסגירה כבר עבר",
-  closeBeforeOpen: "תאריך הסגירה לפני תאריך הפתיחה",
+  closeDatePassed: SHARED_MESSAGES.closeDatePassed,
+  closeBeforeOpen: SHARED_MESSAGES.closeBeforeOpen,
   changedMeanwhile: "הסקר השתנה בינתיים. נסו שוב.",
   failed: "השמירה נכשלה. נסו שוב.",
 } as const;

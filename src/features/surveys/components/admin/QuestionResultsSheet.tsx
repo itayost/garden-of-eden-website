@@ -1,6 +1,7 @@
 "use client";
 
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { joinDot } from "../../lib/format";
 import type { QuestionSummary } from "../../lib/report";
 import type { SurveyQuestion } from "../../lib/types";
 import { KIND_META } from "./kind-meta";
@@ -17,8 +18,7 @@ interface QuestionResultsSheetProps {
 }
 
 function sheetNote(question: SurveyQuestion, answered: number): string {
-  const parts = [KIND_META[question.kind].label, question.required ? "" : "לא חובה", `ענו ${answered}`];
-  return parts.filter((part) => part !== "").join(" · ");
+  return joinDot([KIND_META[question.kind].label, question.required ? "" : "לא חובה", `ענו ${answered}`]);
 }
 
 /** The full results of one Question, opened from its grid header or its line in the phone summary. */

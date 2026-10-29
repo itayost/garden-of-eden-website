@@ -40,6 +40,7 @@ import { NextTrainingCard } from "@/features/booking/components/NextTrainingCard
 import { loadNextBooking } from "@/features/booking/lib/next-booking";
 import type { UserAchievementRow } from "@/types/database";
 import { resolveAgeGroup } from "@/lib/age-group-override";
+import { firstNameOf } from "@/lib/utils/profile";
 
 const MiniRatingChartWrapper = dynamic(
   () => import("./MiniRatingChartWrapper").then(m => ({ default: m.MiniRatingChartWrapper }))
@@ -144,7 +145,7 @@ export default async function DashboardPage() {
     },
   ];
 
-  const firstName = (profile?.full_name || "מתאמן").split(" ")[0];
+  const firstName = firstNameOf(profile?.full_name ?? null);
 
   return (
     <div className="space-y-6 md:space-y-8">

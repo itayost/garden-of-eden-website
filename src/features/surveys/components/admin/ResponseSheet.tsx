@@ -12,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { joinDot } from "../../lib/format";
 import type { GridRow } from "../../lib/report";
 import { branchYearText, displayName, sentAtText } from "../../lib/results-view";
 import type { SurveyQuestion } from "../../lib/types";
@@ -38,9 +39,7 @@ export function ResponseSheet({ questions, row, onClose }: ResponseSheetProps) {
             <SheetHeader className="border-b pe-12 text-start">
               <SheetTitle className="text-base font-bold">{displayName(shown.fullName)}</SheetTitle>
               <SheetDescription className="text-xs">
-                {[branchYearText(shown.branchNames, shown.birthYear), `נשלח ${sentAtText(shown.submittedAt)}`]
-                  .filter((part) => part !== "")
-                  .join(" · ")}
+                {joinDot([branchYearText(shown.branchNames, shown.birthYear), `נשלח ${sentAtText(shown.submittedAt)}`])}
               </SheetDescription>
             </SheetHeader>
             <ol className="divide-y px-4">

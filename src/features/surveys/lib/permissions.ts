@@ -4,18 +4,17 @@
  * would refuse.
  *
  * A Branch manager is a Trainer who manages at least one branch (ADR-0009).
- * Writing needs a manager of every branch in the audience, which is stricter
- * than canManageBranches(), so this module carries its own rules.
+ * Seeing a survey is canManageBranches() on its audience. Writing needs a
+ * manager of every branch in the audience, which is stricter, so canEditSurvey
+ * carries its own rule.
  */
+import { canManageBranches, isBranchManager } from "@/lib/branches/branch-scope";
 
 const isAdmin = (role: string): boolean => role === "admin";
 
-const isManager = (role: string, managedBranchIds: readonly string[]): boolean =>
-  role === "trainer" && managedBranchIds.length > 0;
-
 /** Admins and Branch managers may open the surveys pages. */
 export function canUseSurveys(role: string, managedBranchIds: readonly string[]): boolean {
-  return isAdmin(role) || isManager(role, managedBranchIds);
+  return isAdmin(role) || isBranchManager(role, managedBranchIds);
 }
 
 /** An Admin, or a manager of every branch in the audience (never an empty audience). */
@@ -35,9 +34,7 @@ export function canViewSurvey(
   managedBranchIds: readonly string[],
   surveyBranchIds: readonly string[],
 ): boolean {
-  if (isAdmin(role)) return true;
-  if (role !== "trainer") return false;
-  return surveyBranchIds.some((id) => managedBranchIds.includes(id));
+  return canManageBranches(role, managedBranchIds, surveyBranchIds);
 }
 
 /**

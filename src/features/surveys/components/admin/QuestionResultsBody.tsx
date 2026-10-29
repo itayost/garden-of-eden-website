@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { joinDot } from "../../lib/format";
 import type { QuestionSummary } from "../../lib/report";
 import {
   averageText,
@@ -85,9 +86,7 @@ function RatingResults({ summary, question }: { summary: RatingSummary; question
 
 /** "חיפה · 2014 · 28.10": where the answer came from and when. */
 function sourceText(answer: TextSummary["texts"][number]): string {
-  return [branchYearText(answer.branchNames, answer.birthYear), israelDayMonth(answer.submittedAt)]
-    .filter((part) => part !== "")
-    .join(" · ");
+  return joinDot([branchYearText(answer.branchNames, answer.birthYear), israelDayMonth(answer.submittedAt)]);
 }
 
 function TextResults({ summary }: { summary: TextSummary }) {

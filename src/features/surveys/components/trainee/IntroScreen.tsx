@@ -4,7 +4,8 @@ import { CalendarClock, ChevronLeft, ClipboardList, Clock, type LucideIcon } fro
 
 import { DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { dayMonth, questionCountLabel } from "../../lib/format";
+import { shortDate } from "@/lib/utils/iso-date";
+import { questionCountLabel } from "../../lib/format";
 import { durationLabel } from "../../lib/offer";
 import type { OfferableSurvey } from "../../lib/types";
 import { LevelPath } from "./LevelPath";
@@ -46,7 +47,7 @@ export function IntroScreen({
           <Chip icon={ClipboardList}>{questionCountLabel(count)}</Chip>
           <Chip icon={Clock}>{durationLabel(count)}</Chip>
           {survey.closesOn !== null && (
-            <Chip icon={CalendarClock}>{`פתוח עד ${dayMonth(survey.closesOn)}`}</Chip>
+            <Chip icon={CalendarClock}>{`פתוח עד ${shortDate(survey.closesOn)}`}</Chip>
           )}
         </div>
         <div className="mb-5 border-t border-brand-lime/15 pt-4">

@@ -3,8 +3,9 @@
  * them, paging, the dates under the title and the one-line summaries. Pure,
  * so the server page and the client components import the same functions.
  */
+import { daysBetween, shortDate } from "@/lib/utils/iso-date";
 import { israelDateStr, getIsraelTime } from "@/lib/utils/israel-time";
-import { dayMonth } from "./format";
+import { joinDot } from "./format";
 import type { QuestionSummary, SurveyReport } from "./report";
 import { SURVEY_PAGE_SIZE, type SurveyRecord, type SurveyState } from "./types";
 
@@ -31,7 +32,7 @@ export function israelClock(iso: string): string {
 
 /** "28.10": the Israel day of a moment, day then month, neither padded. */
 export function israelDayMonth(iso: string): string {
-  return dayMonth(israelDateStr(iso));
+  return shortDate(israelDateStr(iso));
 }
 
 /** "28.10 · 17:42": the sent column and the Response sheet. */
@@ -73,13 +74,6 @@ export function percentOf(part: number, whole: number): number {
   return whole === 0 ? 0 : (part / whole) * 100;
 }
 
-const MS_PER_DAY = 86_400_000;
-
-/** Whole days from `today` to `closesOn`, both Israel days; 0 on the close day itself. */
-export function daysLeft(closesOn: string, today: string): number {
-  return Math.round((Date.parse(`${closesOn}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / MS_PER_DAY);
-}
-
 export function daysLeftText(days: number): string {
   if (days <= 0) return "נסגר היום";
   if (days === 1) return "נשאר יום אחד";
@@ -94,17 +88,17 @@ type RunDates = Pick<SurveyRecord, "opensOn" | "closesOn" | "closedAt">;
  */
 export function runDatesText(dates: RunDates, state: SurveyState, today: string): string {
   const { opensOn, closesOn, closedAt } = dates;
-  const end = closedAt !== null ? israelDayMonth(closedAt) : closesOn !== null ? dayMonth(closesOn) : null;
-  if (end === null) return `${state === "scheduled" ? "ייפתח" : "נפתח"} ${dayMonth(opensOn)}`;
-  const range = `${dayMonth(opensOn)} עד ${end}`;
+  const end = closedAt !== null ? israelDayMonth(closedAt) : closesOn !== null ? shortDate(closesOn) : null;
+  if (end === null) return `${state === "scheduled" ? "ייפתח" : "נפתח"} ${shortDate(opensOn)}`;
+  const range = `${shortDate(opensOn)} עד ${end}`;
+  // Whole days from today to the close day, both Israel days; 0 on the close day itself.
   const showDaysLeft = state === "open" && closesOn !== null;
-  return showDaysLeft ? `${range} · ${daysLeftText(daysLeft(closesOn, today))}` : range;
+  return showDaysLeft ? `${range} · ${daysLeftText(daysBetween(today, closesOn))}` : range;
 }
 
 /** "חיפה · 2014": a Trainee's branches and birth year, a missing part left out. */
 export function branchYearText(branchNames: readonly string[], birthYear: number | null): string {
-  const parts = [branchNames.join(", "), birthYear === null ? "" : String(birthYear)];
-  return parts.filter((part) => part !== "").join(" · ");
+  return joinDot([branchNames.join(", "), birthYear === null ? "" : String(birthYear)]);
 }
 
 /** The birth years the filter offers, newest first, with the chosen one kept even when nobody has it. */
