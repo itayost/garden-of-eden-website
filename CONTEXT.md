@@ -271,3 +271,20 @@ _Avoid_: Invoice, payment request, checkout link
 **Refund** (החזר):
 Money returned to the payer after a Void or Cancellation, by the method they paid with. A person moves the money; the academy's record of it always carries a credit note.
 _Avoid_: Chargeback, credit, reimbursement
+
+### Surveys
+
+**Survey** (סקר):
+A set of Questions staff send to an audience of Trainees. Each Trainee answers it once, by name.
+_Avoid_: Questionnaire, שאלון (in this app those are the fixed workout, nutrition and mental forms on `/admin/submissions`), poll, form
+
+**Question**:
+One item in a Survey, of one of four kinds: single choice, multiple choice, rating or free text.
+_Avoid_: Field, item
+
+**Response**:
+One Trainee's sent answers to one Survey.
+_Avoid_: Submission (the word the fixed forms use), reply
+
+**Audience**:
+The Trainees a Survey is for, described by branches and birth years, never a stored list of names.
