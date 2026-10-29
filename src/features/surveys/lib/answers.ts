@@ -7,16 +7,25 @@ import {
 
 /** Shown when the Questions changed while the Trainee was answering. */
 const SURVEY_CHANGED_MESSAGE = "הסקר עודכן בינתיים. סגרו אותו ופתחו שוב.";
-const SUBMIT_FAILED_MESSAGE = "השליחה נכשלה. נסו שוב.";
+export const SUBMIT_FAILED_MESSAGE = "השליחה נכשלה. נסו שוב.";
 const CHOICE_INVALID_MESSAGE = "בחירה לא תקינה";
 const RATING_RANGE_MESSAGE = `דירוג חייב להיות בין ${SURVEY_LIMITS.ratingMin} ל-${SURVEY_LIMITS.ratingMax}`;
 const TEXT_TOO_LONG_MESSAGE = `התשובה ארוכה מ-${SURVEY_LIMITS.textAnswerMax} תווים`;
 
-/** Postgres raises these texts; they arrive wrapped in longer messages. */
+/**
+ * Postgres raises these texts; they arrive wrapped in longer messages. The
+ * last three are one failure: an answer whose option is not its Question's own
+ * trips the deferred composite foreign key at commit, which only happens when
+ * the Questions were swapped under the Trainee.
+ */
 const SUBMIT_ERRORS: readonly { readonly code: string; readonly message: string }[] = [
   { code: "already_answered", message: "כבר ענית על הסקר הזה" },
   { code: "survey_not_open", message: "הסקר כבר נסגר" },
+  { code: "not_in_audience", message: "הסקר לא מיועד לך" },
   { code: "survey_changed", message: SURVEY_CHANGED_MESSAGE },
+  { code: "survey_answers_option_of_question", message: SURVEY_CHANGED_MESSAGE },
+  { code: "foreign key", message: SURVEY_CHANGED_MESSAGE },
+  { code: "23503", message: SURVEY_CHANGED_MESSAGE },
 ];
 
 function trimmedText(answer: AnswerInput): string {
@@ -138,7 +147,11 @@ export function toAnswerRows(
   );
 }
 
-/** The Hebrew message for a failed submit. Postgres texts are matched with includes. */
+/**
+ * The Hebrew message for a failed submit. Postgres texts are matched with
+ * includes; pass the error's message together with its code, so a foreign-key
+ * failure is recognised by SQLSTATE even when the message is reworded.
+ */
 export function submitErrorMessage(dbMessage: string): string {
   const known = SUBMIT_ERRORS.find(({ code }) => dbMessage.includes(code));
   return known?.message ?? SUBMIT_FAILED_MESSAGE;

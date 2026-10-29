@@ -57,4 +57,18 @@ describe("submitErrorMessage", () => {
   test("a raised text wrapped in a longer message still maps", () => {
     expect(submitErrorMessage("ERROR: already_answered (SQLSTATE P0001)")).toBe("כבר ענית על הסקר הזה");
   });
+  test("a Trainee outside the audience", () => {
+    expect(submitErrorMessage("not_in_audience")).toBe("הסקר לא מיועד לך");
+  });
+  test("an option that is not its Question's own means the survey changed", () => {
+    const changed = "הסקר עודכן בינתיים. סגרו אותו ופתחו שוב.";
+    expect(
+      submitErrorMessage(
+        'insert or update on table "survey_answers" violates foreign key constraint "survey_answers_option_of_question"',
+      ),
+    ).toBe(changed);
+    expect(submitErrorMessage("23503 something else")).toBe(changed);
+    expect(submitErrorMessage("violates foreign key constraint")).toBe(changed);
+    expect(submitErrorMessage("survey_answers_option_of_question")).toBe(changed);
+  });
 });
