@@ -15,7 +15,7 @@ import { loadSurvey, type LoadedSurvey } from "../queries";
 import { STAFF_MESSAGES } from "../staff-messages";
 import type { SurveyViewer } from "../types";
 
-type Db = ReturnType<typeof createAdminClient>;
+export type Db = ReturnType<typeof createAdminClient>;
 
 export type ActionFailure = { error: string };
 

@@ -1,10 +1,11 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { israelToday } from "@/lib/utils/tasks";
 import { surveyDraftSchema, type SurveyDraftInput } from "@/lib/validations/surveys";
 import { toQuestionsPayload } from "../draft-mapping";
 import { canEditSurvey } from "../permissions";
-import { withBlankClosesOn } from "../staff-input";
+import { saveRefusal, withBlankClosesOn, type StoredSurveyState } from "../staff-input";
 import { saveErrorMessage, STAFF_MESSAGES } from "../staff-messages";
 import type { SurveyViewer } from "../types";
 import {
@@ -13,6 +14,7 @@ import {
   revalidateSurveyPages,
   writeFailed,
   type ActionFailure,
+  type Db,
 } from "./staff-access";
 
 export type SaveSurveyResult = { success: true; surveyId: string } | ActionFailure;
@@ -29,6 +31,25 @@ function branchRefusal(viewer: SurveyViewer, branchIds: readonly string[]): stri
     : STAFF_MESSAGES.notAllowed;
 }
 
+/**
+ * What is stored for the Survey being overwritten, or null when the draft is
+ * new. Refuses an id the viewer may not edit, as every staff action does.
+ */
+async function loadStoredState(
+  db: Db,
+  viewer: SurveyViewer,
+  surveyId: string | null,
+): Promise<ActionFailure | StoredSurveyState | null> {
+  if (surveyId === null) return null;
+  const existing = await loadEditableSurvey(db, viewer, surveyId);
+  if ("error" in existing) return existing;
+  return {
+    publishedAt: existing.record.publishedAt,
+    closedAt: existing.record.closedAt,
+    responseCount: existing.responseCount,
+  };
+}
+
 /** A failed save: the function's own refusals in Hebrew, anything else logged. */
 function saveFailure(dbMessage: string): ActionFailure {
   const known = saveErrorMessage(dbMessage);
@@ -38,7 +59,9 @@ function saveFailure(dbMessage: string): ActionFailure {
 /**
  * Saves a Survey as a draft, creating it when `surveyId` is null. The
  * Survey, its branches, Questions and options are replaced together by
- * save_survey_draft, which also refuses once a Response exists.
+ * save_survey_draft, which also refuses once a Response exists. saveRefusal
+ * judges the rest first: a closed Survey is not saved, and a published one
+ * must stay publishable.
  */
 export async function saveSurveyDraftAction(
   surveyId: string | null,
@@ -57,11 +80,10 @@ export async function saveSurveyDraftAction(
   if (refusal !== null) return { error: refusal };
 
   const db = createAdminClient();
-  if (surveyId !== null) {
-    const existing = await loadEditableSurvey(db, viewer, surveyId);
-    if ("error" in existing) return existing;
-    if (existing.responseCount > 0) return { error: STAFF_MESSAGES.hasResponses };
-  }
+  const stored = await loadStoredState(db, viewer, surveyId);
+  if (stored !== null && "error" in stored) return stored;
+  const problem = saveRefusal(data, stored, israelToday());
+  if (problem !== null) return { error: problem };
 
   const { data: savedId, error } = await db.rpc("save_survey_draft", {
     // The generated types mark every argument required; NULL creates a Survey,

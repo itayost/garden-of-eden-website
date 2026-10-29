@@ -27,9 +27,11 @@ export const STAFF_MESSAGES = {
 const SAVE_ERRORS = [
   { code: "survey_has_responses", message: STAFF_MESSAGES.hasResponses },
   { code: "survey_not_found", message: STAFF_MESSAGES.notFound },
+  // The surveys_dates CHECK: the action refuses this first, this is the backstop.
+  { code: "surveys_dates", message: STAFF_MESSAGES.closeBeforeOpen },
 ] as const;
 
-/** The Hebrew message for an error the save function raises on purpose, or null for any other failure. */
+/** The Hebrew message for an error the save function raises on purpose or a CHECK it can trip, or null for any other failure. */
 export function saveErrorMessage(dbMessage: string): string | null {
   const known = SAVE_ERRORS.find(({ code }) => dbMessage.includes(code));
   return known?.message ?? null;

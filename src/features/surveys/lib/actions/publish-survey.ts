@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { israelToday } from "@/lib/utils/tasks";
 import { toDraft } from "../draft-mapping";
 import { publishProblem } from "../publish";
+import { PROBLEM_SEPARATOR } from "../staff-input";
 import { STAFF_MESSAGES } from "../staff-messages";
 import { publishedOpensOn } from "../state";
 import {
@@ -13,9 +14,6 @@ import {
   writeFailed,
   type ActionOutcome,
 } from "./staff-access";
-
-/** Joins every problem that stops a publish, so the builder can list them all. */
-const PROBLEM_SEPARATOR = " · ";
 
 /**
  * Publishes a draft once it passes the publish rules. A Survey published after

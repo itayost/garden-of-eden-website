@@ -1,4 +1,9 @@
+import { publishProblem } from "./publish";
 import { STAFF_MESSAGES } from "./staff-messages";
+import type { SurveyDraft } from "./types";
+
+/** Joins every problem that stops a publish, so the builder can list them all. */
+export const PROBLEM_SEPARATOR = " · ";
 
 /**
  * A form sends an empty close date as "", which the date schema would refuse:
@@ -22,4 +27,34 @@ export function closeDateProblem(opensOn: string, closesOn: string | null, today
   if (closesOn < today) return STAFF_MESSAGES.closeDatePassed;
   if (closesOn < opensOn) return STAFF_MESSAGES.closeBeforeOpen;
   return null;
+}
+
+/** What a save needs to know about the Survey it would overwrite. */
+export interface StoredSurveyState {
+  publishedAt: string | null;
+  closedAt: string | null;
+  responseCount: number;
+}
+
+/**
+ * Why a draft may not be saved, or null. `stored` is the Survey being
+ * overwritten, or null for a new one. A closed Survey stays as it is, and one
+ * with Responses keeps its Questions and Audience. A published Survey is live,
+ * so a save must leave it publishable: it never loses its Questions or gains a
+ * blank option. A draft is looser, except that its close date may not precede
+ * its open date (the database refuses that too, without saying why).
+ */
+export function saveRefusal(
+  draft: SurveyDraft,
+  stored: StoredSurveyState | null,
+  today: string,
+): string | null {
+  if (stored !== null && stored.closedAt !== null) return STAFF_MESSAGES.alreadyClosed;
+  if (stored !== null && stored.responseCount > 0) return STAFF_MESSAGES.hasResponses;
+  if (draft.closesOn !== null && draft.closesOn < draft.opensOn) {
+    return STAFF_MESSAGES.closeBeforeOpen;
+  }
+  if (stored === null || stored.publishedAt === null) return null;
+  const problems = publishProblem(draft, today);
+  return problems.length === 0 ? null : problems.join(PROBLEM_SEPARATOR);
 }

@@ -14,6 +14,12 @@ describe("saveErrorMessage", () => {
     expect(saveErrorMessage("P0001: survey_has_responses (CONTEXT: PL/pgSQL)")).toBe(STAFF_MESSAGES.hasResponses);
   });
 
+  test("the surveys_dates constraint reads as a close date before the open date", () => {
+    expect(
+      saveErrorMessage('new row for relation "surveys" violates check constraint "surveys_dates"'),
+    ).toBe("תאריך הסגירה לפני תאריך הפתיחה");
+  });
+
   test("an error the function does not name is unknown", () => {
     expect(saveErrorMessage("insert or update violates foreign key constraint")).toBeNull();
   });
