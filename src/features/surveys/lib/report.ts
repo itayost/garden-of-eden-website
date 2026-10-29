@@ -201,6 +201,27 @@ function rateOf(members: readonly Member[]): { seen: number; answered: number; r
   return { seen, answered, ratePct: pct(answered, seen) };
 }
 
+type MemberInput = Pick<SurveyReportInput, "responses" | "seen" | "audience" | "visibleBranchIds">;
+
+/** Everyone the report counts in the viewer's visible branches, before any filter. */
+function visibleMembersOf(input: MemberInput): Member[] {
+  return buildMembers(input.audience, input.responses, input.seen).filter((m) =>
+    inVisibleBranches(m, input.visibleBranchIds),
+  );
+}
+
+function totalsOf(members: readonly Member[]): SurveyReport["totals"] {
+  return { audience: members.length, ...rateOf(members) };
+}
+
+/**
+ * The summary strip's numbers with no filter applied. The Surveys list shows
+ * these per row, so a row and the results page it opens always agree.
+ */
+export function surveyTotals(input: MemberInput): SurveyReport["totals"] {
+  return totalsOf(visibleMembersOf(input));
+}
+
 /** Only the branches the viewer may see, and only the filtered one when set. */
 function byBranchOf(
   members: readonly Member[],
@@ -360,11 +381,9 @@ function unseenOf(members: readonly Member[], namesOf: BranchNamer): PersonRow[]
 }
 
 export function buildSurveyReport(input: SurveyReportInput): SurveyReport {
-  const { questions, branches, responses, seen, audience, visibleBranchIds, filters } = input;
+  const { questions, branches, visibleBranchIds, filters } = input;
   const namesOf = branchNamer(branches);
-  const visible = buildMembers(audience, responses, seen).filter((m) =>
-    inVisibleBranches(m, visibleBranchIds),
-  );
+  const visible = visibleMembersOf(input);
   const scoped = visible.filter((m) => matchesFilters(m, filters));
   const listed = scoped.filter((m) => matchesName(m.fullName, filters.search));
   const responders = scoped.flatMap((m) => (m.response === null ? [] : [m.response]));
@@ -373,7 +392,7 @@ export function buildSurveyReport(input: SurveyReportInput): SurveyReport {
   const start = (Math.max(1, filters.page) - 1) * SURVEY_PAGE_SIZE;
 
   return {
-    totals: { audience: scoped.length, ...rateOf(scoped) },
+    totals: totalsOf(scoped),
     byBranch: byBranchOf(scoped, branches, visibleBranchIds, filters),
     questions: questions.map((q) => summarizeQuestion(q, responders, namesOf)),
     allRows,

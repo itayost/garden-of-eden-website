@@ -1,8 +1,14 @@
 import { describe, expect, test } from "vitest";
-import type { AudienceCandidate } from "../audience";
+import { inSurveyAudience, birthYearOf, type AudienceCandidate } from "../audience";
+import {
+  buildSurveyReport,
+  type ReportFilters,
+  type ReportPerson,
+} from "../report";
 import {
   branchIdsByProfile,
-  surveyCounts,
+  groupBy,
+  surveyListTotals,
   toCandidate,
   toOfferableSurvey,
   toQuestions,
@@ -11,7 +17,9 @@ import {
   toSurveyRecord,
   type CandidateRow,
   type QuestionRow,
+  type ResponseRow,
   type SurveyRow,
+  type ViewRow,
 } from "../rows";
 
 const KA = "b-ka";
@@ -260,14 +268,35 @@ describe("toReportSeen", () => {
   });
 });
 
-describe("surveyCounts", () => {
+describe("groupBy", () => {
+  test("groups items under their key and keeps their order", () => {
+    const grouped = groupBy(
+      [
+        { survey: "s1", n: 1 },
+        { survey: "s2", n: 2 },
+        { survey: "s1", n: 3 },
+      ],
+      (item) => item.survey,
+    );
+
+    expect(grouped.get("s1")?.map((item) => item.n)).toEqual([1, 3]);
+    expect(grouped.get("s2")?.map((item) => item.n)).toEqual([2]);
+    expect(grouped.get("s3")).toBeUndefined();
+  });
+
+  test("nothing in, nothing out", () => {
+    expect(groupBy([], (item: string) => item).size).toBe(0);
+  });
+});
+
+describe("surveyListTotals", () => {
   const kid = (
     profileId: string,
     branchIds: string[],
     over: Partial<AudienceCandidate> = {},
   ): AudienceCandidate => ({
     profileId,
-    fullName: profileId,
+    fullName: `name-${profileId}`,
     role: "trainee",
     isActive: true,
     deletedAt: null,
@@ -277,81 +306,113 @@ describe("surveyCounts", () => {
     ...over,
   });
 
+  // c1, c3 and "mover" answered; "gone" answered and has since been deactivated.
+  // c2, c4 (inactive) and c5 only saw it; c6 never did; "ghost" saw it and belongs to no branch.
   const candidates = [
     kid("c1", [KA]),
     kid("c2", [KA], { birthdate: "2015-05-05" }),
     kid("c3", [HA]),
     kid("c4", [HA], { isActive: false }),
     kid("c5", [KA, HA]),
+    kid("c6", [HA]),
+    kid("mover", [HA]),
+    kid("gone", [HA], { isActive: false }),
   ];
-  // c1 and c3 answered; "gone" answered from HA and has since left every branch.
+  const response = (id: string, profileId: string, branchIds: string[]): ResponseRow => ({
+    id,
+    profile_id: profileId,
+    submitted_at: "2026-10-05T10:00:00Z",
+    branch_ids: branchIds,
+  });
+  // "mover" answered from KA and has since moved to HA.
   const responses = [
-    { profileId: "c1", branchIds: [KA] },
-    { profileId: "c3", branchIds: [HA] },
-    { profileId: "gone", branchIds: [HA] },
+    response("r1", "c1", [KA]),
+    response("r3", "c3", [HA]),
+    response("rm", "mover", [KA]),
+    response("rg", "gone", [HA]),
   ];
-  // c1 and c3 also saw it; c2, c4, c5 and "ghost" only saw it.
-  const viewerIds = ["c1", "c2", "c3", "c4", "c5", "ghost"];
+  const view = (profileId: string): ViewRow => ({
+    profile_id: profileId,
+    first_seen_at: "2026-10-04T09:00:00Z",
+  });
+  const views = ["c1", "c2", "c3", "c4", "c5", "mover", "gone", "ghost"].map(view);
   const survey = { branchIds: [KA, HA], birthYears: [] as number[] };
 
-  test("an Admin counts every branch of the Survey and every view", () => {
-    const counts = surveyCounts({ survey, visibleBranchIds: null, candidates, responses, viewerIds });
+  const defaultFilters: ReportFilters = {
+    branchId: null,
+    birthYear: null,
+    segment: "answered",
+    search: "",
+    page: 1,
+  };
 
-    expect(counts).toEqual({ answered: 3, seen: 7, audience: 4 });
+  /** The results page's own totals, built the way its page builds them. */
+  function reportTotals(
+    target: { branchIds: string[]; birthYears: number[] },
+    visibleBranchIds: string[] | null,
+  ) {
+    const audience: ReportPerson[] = candidates
+      .filter((c) => inSurveyAudience(c, target))
+      .map((c) => ({
+        profileId: c.profileId,
+        fullName: c.fullName,
+        branchIds: c.branchIds,
+        birthYear: birthYearOf(c.birthdate),
+      }));
+    return buildSurveyReport({
+      questions: [],
+      branches: [
+        { id: KA, name: "קריית אתא" },
+        { id: HA, name: "חיפה" },
+      ],
+      responses: toReportResponses(responses, [], []),
+      seen: toReportSeen(views),
+      audience,
+      visibleBranchIds,
+      filters: defaultFilters,
+    }).totals;
+  }
+
+  const listTotals = (target: typeof survey, visibleBranchIds: string[] | null) =>
+    surveyListTotals({ survey: target, visibleBranchIds, candidates, responses, views });
+
+  test.each([
+    ["an Admin", null],
+    ["a manager of Kiryat Ata", [KA]],
+    ["a manager of Haifa", [HA]],
+    ["a manager of both", [KA, HA]],
+  ])("the list counts equal the results page totals for %s", (_who, visibleBranchIds) => {
+    expect(listTotals(survey, visibleBranchIds)).toEqual(reportTotals(survey, visibleBranchIds));
   });
 
-  test("a manager counts Responses by their stored branches", () => {
-    const counts = surveyCounts({ survey, visibleBranchIds: [HA], candidates, responses, viewerIds });
-
-    // c3 and "gone" answered from HA; c4 and c5 only saw it from HA.
-    expect(counts).toEqual({ answered: 2, seen: 4, audience: 2 });
-  });
-
-  test("a manager counts a viewer who only saw it by their current branches", () => {
-    const counts = surveyCounts({ survey, visibleBranchIds: [KA], candidates, responses, viewerIds });
-
-    // c1 answered from KA; c2 and c5 only saw it from KA; c4 and "ghost" are not in KA.
-    expect(counts).toEqual({ answered: 1, seen: 3, audience: 3 });
-  });
-
-  test("a responder is placed by the stored branches, not the current ones", () => {
-    const moved = [{ profileId: "c5", branchIds: [HA] }];
-
-    const counts = surveyCounts({
-      survey,
-      visibleBranchIds: [KA],
-      candidates,
-      responses: moved,
-      viewerIds: ["c5"],
-    });
-
-    expect(counts.answered).toBe(0);
-    expect(counts.seen).toBe(0);
-  });
-
-  test("birth years narrow the audience and nothing else", () => {
+  test("the list counts equal the results page totals when birth years narrow the Audience", () => {
     const only2014 = { branchIds: [KA, HA], birthYears: [2014] };
 
-    const counts = surveyCounts({
-      survey: only2014,
-      visibleBranchIds: null,
-      candidates,
-      responses,
-      viewerIds,
-    });
+    expect(listTotals(only2014, null)).toEqual(reportTotals(only2014, null));
+    expect(listTotals(only2014, [KA])).toEqual(reportTotals(only2014, [KA]));
+  });
 
-    expect(counts).toEqual({ answered: 3, seen: 7, audience: 3 });
+  test("an Admin counts the Audience and every responder once, and no one outside both", () => {
+    // Audience: c1, c2, c3, c5, c6, mover. Plus "gone", who answered and left it.
+    // Not counted: c4 (inactive viewer) and "ghost" (a viewer in no branch).
+    expect(listTotals(survey, null)).toEqual({ audience: 7, seen: 6, answered: 4, ratePct: 67 });
+  });
+
+  test("a manager places a responder by the branch they answered from", () => {
+    // c1 and "mover" (now in Haifa) answered from Kiryat Ata; c2 and c5 only saw it from there.
+    expect(listTotals(survey, [KA])).toEqual({ audience: 4, seen: 4, answered: 2, ratePct: 50 });
   });
 
   test("a Survey nobody touched is all zeros", () => {
-    const counts = surveyCounts({
+    const totals = surveyListTotals({
       survey,
       visibleBranchIds: null,
       candidates: [],
       responses: [],
-      viewerIds: [],
+      views: [],
     });
 
-    expect(counts).toEqual({ answered: 0, seen: 0, audience: 0 });
+    expect(totals).toEqual({ audience: 0, seen: 0, answered: 0, ratePct: 0 });
   });
 });
+

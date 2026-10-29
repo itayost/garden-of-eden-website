@@ -6,7 +6,13 @@
 import { parseAccessOverride, resolveAccessTier } from "@/lib/access/course-access";
 import type { Tables } from "@/types/database";
 import { birthYearOf, inSurveyAudience, type AudienceCandidate } from "./audience";
-import type { ReportResponse, ReportSeen } from "./report";
+import {
+  surveyTotals,
+  type ReportPerson,
+  type ReportResponse,
+  type ReportSeen,
+  type SurveyReport,
+} from "./report";
 import {
   QUESTION_KINDS,
   type AnswerRow,
@@ -137,8 +143,24 @@ export function toCandidate(row: CandidateRow, branchIds: readonly string[]): Au
   };
 }
 
+/**
+ * Items under their key, in the order given. The built-in grouping helpers are
+ * missing on Node 20 (CI), so this stands in for them. The map and its lists
+ * are built here and handed out finished.
+ */
+export function groupBy<T>(items: readonly T[], keyOf: (item: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = keyOf(item);
+    const group = groups.get(key);
+    if (group === undefined) groups.set(key, [item]);
+    else group.push(item);
+  }
+  return groups;
+}
+
 export function branchIdsByProfile(rows: readonly MembershipRow[]): Map<string, string[]> {
-  const grouped = Map.groupBy(rows, (row) => row.profile_id);
+  const grouped = groupBy(rows, (row) => row.profile_id);
   return new Map(
     [...grouped].map(([profileId, memberships]): [string, string[]] => [
       profileId,
@@ -165,7 +187,7 @@ export function toReportResponses(
   answers: readonly AnswerDbRow[],
   profiles: readonly ReportProfileRow[],
 ): ReportResponse[] {
-  const answersByResponse = Map.groupBy(answers, (answer) => answer.response_id);
+  const answersByResponse = groupBy(answers, (answer) => answer.response_id);
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
   return responses.map((response) => {
     const profile = profileById.get(response.profile_id);
@@ -184,55 +206,39 @@ export function toReportSeen(rows: readonly ViewRow[]): ReportSeen[] {
   return rows.map((row) => ({ profileId: row.profile_id, firstSeenAt: row.first_seen_at }));
 }
 
-export interface SurveyCountsInput {
+export interface SurveyListTotalsInput {
   survey: Pick<SurveyRecord, "branchIds" | "birthYears">;
   /** The branches the viewer may see; null for an Admin. */
   visibleBranchIds: readonly string[] | null;
-  /** Trainees with a membership in the visible branches, every membership listed. */
+  /** Trainee profiles in the Survey's branches, every membership listed. */
   candidates: readonly AudienceCandidate[];
-  responses: readonly { profileId: string; branchIds: readonly string[] }[];
-  /** Everyone with a Seen row for this Survey. */
-  viewerIds: readonly string[];
+  /** This Survey's Responses and Seen rows. */
+  responses: readonly ResponseRow[];
+  views: readonly ViewRow[];
 }
 
-export interface SurveyCounts {
-  answered: number;
-  seen: number;
-  audience: number;
+function toReportPerson(candidate: AudienceCandidate): ReportPerson {
+  return {
+    profileId: candidate.profileId,
+    fullName: candidate.fullName,
+    branchIds: candidate.branchIds,
+    birthYear: birthYearOf(candidate.birthdate),
+  };
 }
-
-const isVisible = (branchIds: readonly string[], visible: readonly string[] | null): boolean =>
-  visible === null || branchIds.some((id) => visible.includes(id));
 
 /**
- * The three numbers of a list row, narrowed to the viewer's visible branches.
- * - answered: Responses sent from a visible branch (their stored snapshot).
- * - seen: those, plus everyone who only saw the Survey and now belongs to a
- *   visible branch. A viewer who also responded is placed by the Response
- *   alone, so answered never passes seen.
- * - audience: today's Audience within the visible branches.
+ * The numbers on a Surveys list row: the results page's own totals (the
+ * report's rules, not a copy of them) with no filter, for the branches the
+ * viewer may see. The Audience is the candidates who pass the Survey's own
+ * branches and birth years, as the results page builds it. Names and answers
+ * do not change a count, so the Responses carry none.
  */
-export function surveyCounts(input: SurveyCountsInput): SurveyCounts {
-  const { survey, visibleBranchIds, candidates, responses, viewerIds } = input;
-  const audienceBranchIds = visibleBranchIds ?? survey.branchIds;
-  const audience = candidates.filter((candidate) =>
-    inSurveyAudience(candidate, { branchIds: audienceBranchIds, birthYears: survey.birthYears }),
-  ).length;
-
-  const answeredIds = responses
-    .filter((response) => isVisible(response.branchIds, visibleBranchIds))
-    .map((response) => response.profileId);
-  const responderIds = new Set(responses.map((response) => response.profileId));
-  const currentBranches = new Map(
-    candidates.map((candidate) => [candidate.profileId, candidate.branchIds]),
-  );
-  const onlySeenIds = viewerIds.filter(
-    (id) => !responderIds.has(id) && isVisible(currentBranches.get(id) ?? [], visibleBranchIds),
-  );
-
-  return {
-    answered: answeredIds.length,
-    seen: new Set([...answeredIds, ...onlySeenIds]).size,
-    audience,
-  };
+export function surveyListTotals(input: SurveyListTotalsInput): SurveyReport["totals"] {
+  const { survey, visibleBranchIds, candidates, responses, views } = input;
+  return surveyTotals({
+    audience: candidates.filter((c) => inSurveyAudience(c, survey)).map(toReportPerson),
+    responses: toReportResponses(responses, [], []),
+    seen: toReportSeen(views),
+    visibleBranchIds,
+  });
 }

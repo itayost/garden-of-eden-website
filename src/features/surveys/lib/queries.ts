@@ -18,13 +18,16 @@ import { canViewSurvey, visibleSurveyBranches } from "./permissions";
 import type { ReportResponse, ReportSeen } from "./report";
 import {
   branchIdsByProfile,
-  surveyCounts,
+  groupBy,
+  surveyListTotals,
   toCandidate,
   toOfferableSurvey,
   toQuestions,
   toReportResponses,
   toReportSeen,
   toSurveyRecord,
+  type ResponseRow,
+  type ViewRow,
 } from "./rows";
 import { surveyState } from "./state";
 import type {
@@ -132,6 +135,8 @@ export interface SurveyListRow {
   answered: number;
   seen: number;
   audience: number;
+  /** Answered out of seen, in whole percent: the results page's own figure. */
+  ratePct: number;
   opensOn: string;
   closesOn: string | null;
   writerName: string;
@@ -140,26 +145,31 @@ export interface SurveyListRow {
 /** What the list rows are counted from, read once for every listed Survey. */
 interface ListReads {
   candidates: AudienceCandidate[];
-  responsesBySurvey: Map<string, { profile_id: string; branch_ids: string[] }[]>;
-  viewsBySurvey: Map<string, { profile_id: string }[]>;
+  responsesBySurvey: Map<string, (ResponseRow & { survey_id: string })[]>;
+  viewsBySurvey: Map<string, (ViewRow & { survey_id: string })[]>;
   branches: { id: string; name_he: string }[];
   writerNames: Map<string, string>;
 }
 
-async function readListReads(
-  db: Db,
-  surveys: readonly SurveyRecord[],
-  audienceBranchIds: readonly string[],
-): Promise<ListReads> {
+async function readListReads(db: Db, surveys: readonly SurveyRecord[]): Promise<ListReads> {
   const surveyIds = surveys.map((survey) => survey.id);
   const [responses, views, candidates, branches, writers] = await Promise.all([
     readInChunks(surveyIds, "survey_id", () =>
-      db.from("survey_responses").select("id, survey_id, profile_id, branch_ids").order("id"),
+      db
+        .from("survey_responses")
+        .select("id, survey_id, profile_id, submitted_at, branch_ids")
+        .order("id"),
     ),
     readInChunks(surveyIds, "survey_id", () =>
-      db.from("survey_views").select("survey_id, profile_id").order("survey_id").order("profile_id"),
+      db
+        .from("survey_views")
+        .select("survey_id, profile_id, first_seen_at")
+        .order("survey_id")
+        .order("profile_id"),
     ),
-    loadAudienceCandidates(db, audienceBranchIds),
+    // The Survey's own branches, not only the viewer's: the Audience is the
+    // one the results page builds, and the totals narrow it to the viewer.
+    loadAudienceCandidates(db, unique(surveys.flatMap((survey) => survey.branchIds))),
     readAllPages(() => db.from("branches").select("id, name_he").order("order_index").order("id")),
     readInChunks(unique(surveys.map((survey) => survey.createdBy)), "id", () =>
       db.from("profiles").select("id, full_name").order("id"),
@@ -167,8 +177,8 @@ async function readListReads(
   ]);
   return {
     candidates,
-    responsesBySurvey: Map.groupBy(must("list responses read", responses), (r) => r.survey_id),
-    viewsBySurvey: Map.groupBy(must("list views read", views), (v) => v.survey_id),
+    responsesBySurvey: groupBy(must("list responses read", responses), (r) => r.survey_id),
+    viewsBySurvey: groupBy(must("list views read", views), (v) => v.survey_id),
     branches: must("list branches read", branches),
     writerNames: new Map(
       must("list writers read", writers).map((writer) => [writer.id, writer.full_name ?? ""]),
@@ -190,15 +200,12 @@ function toListRow(
       .filter((branch) => record.branchIds.includes(branch.id))
       .map((branch) => branch.name_he),
     birthYears: [...record.birthYears],
-    ...surveyCounts({
+    ...surveyListTotals({
       survey: record,
       visibleBranchIds,
       candidates: reads.candidates,
-      responses: (reads.responsesBySurvey.get(record.id) ?? []).map((response) => ({
-        profileId: response.profile_id,
-        branchIds: response.branch_ids,
-      })),
-      viewerIds: (reads.viewsBySurvey.get(record.id) ?? []).map((view) => view.profile_id),
+      responses: reads.responsesBySurvey.get(record.id) ?? [],
+      views: reads.viewsBySurvey.get(record.id) ?? [],
     }),
     opensOn: record.opensOn,
     closesOn: record.closesOn,
@@ -234,10 +241,7 @@ export async function loadSurveyList(
 
   const visibleBranchesOf = (record: SurveyRecord) =>
     visibleSurveyBranches(viewer.role, viewer.managedBranchIds, record.branchIds);
-  const audienceBranchIds = unique(
-    visible.flatMap((record) => visibleBranchesOf(record) ?? record.branchIds),
-  );
-  const reads = await readListReads(db, visible, audienceBranchIds);
+  const reads = await readListReads(db, visible);
   return visible.map((record) => toListRow(record, visibleBranchesOf(record), reads, today));
 }
 
