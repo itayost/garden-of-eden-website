@@ -114,6 +114,8 @@ interface SimpleTablePaginationProps {
   onPageChange: (page: number) => void;
   /** Optional label for the item type, e.g. "שחקנים" */
   itemLabel?: string;
+  /** Between the first and last row number of the range. Defaults to "-" ("מציג 1-20"); " עד " reads "מציג 1 עד 20". */
+  rangeSeparator?: string;
 }
 
 /**
@@ -126,6 +128,7 @@ export function SimpleTablePagination({
   currentPage,
   onPageChange,
   itemLabel,
+  rangeSeparator = "-",
 }: SimpleTablePaginationProps) {
   const pageCount = Math.ceil(totalItems / pageSize);
   if (pageCount <= 1) return null;
@@ -136,7 +139,7 @@ export function SimpleTablePagination({
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <span className="text-sm text-muted-foreground">
-        מציג {start}-{end} מתוך {totalItems}
+        מציג {start}{rangeSeparator}{end} מתוך {totalItems}
         {itemLabel ? ` ${itemLabel}` : ""}
       </span>
 

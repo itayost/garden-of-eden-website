@@ -6,6 +6,7 @@ import {
   type ReportPerson,
 } from "../report";
 import {
+  audienceReportPeople,
   branchIdsByProfile,
   groupBy,
   surveyListTotals,
@@ -416,3 +417,46 @@ describe("surveyListTotals", () => {
   });
 });
 
+
+describe("audienceReportPeople", () => {
+  const candidate = (profileId: string, over: Partial<AudienceCandidate> = {}): AudienceCandidate => ({
+    profileId,
+    fullName: `name-${profileId}`,
+    role: "trainee",
+    isActive: true,
+    deletedAt: null,
+    birthdate: "2014-03-02",
+    accessTier: "full",
+    branchIds: [KA],
+    ...over,
+  });
+
+  test("keeps only the Trainees the Survey is for, as report people with their birth year", () => {
+    const people = audienceReportPeople(
+      [
+        candidate("in", { branchIds: [KA, HA] }),
+        candidate("other-year", { birthdate: "2012-01-01" }),
+        candidate("other-branch", { branchIds: [HA] }),
+        candidate("inactive", { isActive: false }),
+        candidate("no-birthdate", { birthdate: null }),
+      ],
+      { branchIds: [KA], birthYears: [2014] },
+    );
+
+    expect(people).toEqual([
+      { profileId: "in", fullName: "name-in", branchIds: [KA, HA], birthYear: 2014 },
+    ]);
+  });
+
+  test("no birth years named means every year, with or without a birthdate", () => {
+    const people = audienceReportPeople(
+      [candidate("a"), candidate("b", { birthdate: null })],
+      { branchIds: [KA], birthYears: [] },
+    );
+
+    expect(people.map((p) => [p.profileId, p.birthYear])).toEqual([
+      ["a", 2014],
+      ["b", null],
+    ]);
+  });
+});

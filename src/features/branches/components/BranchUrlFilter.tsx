@@ -14,6 +14,11 @@ import type { BranchOption } from "@/types/branches";
 interface BranchUrlFilterProps {
   branches: BranchOption[];
   className?: string;
+  /**
+   * Called right after the branch is written to the URL. A page that pages its
+   * rows clears its page here; nuqs merges both writes into one URL update.
+   */
+  onChange?: () => void;
 }
 
 /**
@@ -24,6 +29,7 @@ interface BranchUrlFilterProps {
 export function BranchUrlFilter({
   branches,
   className = "w-full md:w-40",
+  onChange,
 }: BranchUrlFilterProps) {
   const [branch, setBranch] = useQueryState(
     "branch",
@@ -33,7 +39,10 @@ export function BranchUrlFilter({
   return (
     <Select
       value={branch}
-      onValueChange={(v) => setBranch(v === BRANCH_FILTER_ALL ? null : v)}
+      onValueChange={(v) => {
+        void setBranch(v === BRANCH_FILTER_ALL ? null : v);
+        onChange?.();
+      }}
     >
       <SelectTrigger className={className} aria-label="סניף">
         <SelectValue placeholder="סניף" />

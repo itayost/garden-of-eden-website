@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { formatSentAt, surveyCsvRows } from "../csv";
+import { csvDownloadText, formatSentAt, surveyCsvRows } from "../csv";
 import type { CellAnswer, GridRow } from "../report";
 import type { SurveyQuestion } from "../types";
 import { KA, HA, build, person, questions } from "./fixtures";
@@ -118,4 +118,31 @@ test("the rating, the birth year and the sent time are not prefixed", () => {
   expect(row["1. כמה?"]).toBe("4");
   expect(row["שנתון"]).toBe("2014");
   expect(row["נשלח"]).toBe("28.10.2026 17:42");
+});
+
+test("the download starts with the byte order mark so Excel reads Hebrew", () => {
+  const text = csvDownloadText([{ "שם": "יונתן", "שנתון": "2014" }]);
+  expect(text.startsWith("\uFEFF")).toBe(true);
+  expect(text.slice(1)).toBe("שם,שנתון\r\nיונתן,2014");
+});
+
+test("a cell already neutralised against formulas is not quoted a second time", () => {
+  const rows = surveyCsvRows(questions, [
+    {
+      profileId: "p1",
+      fullName: "=cmd()",
+      branchNames: ["חיפה"],
+      birthYear: 2014,
+      submittedAt: "2026-10-28T15:42:00Z",
+      answers: {},
+    },
+  ]);
+  const text = csvDownloadText(rows);
+  expect(text).toContain("\r\n'=cmd(),חיפה,2014");
+  expect(text).not.toContain("''=cmd()");
+});
+
+test("cells with a comma, a quote or a line break are quoted", () => {
+  const text = csvDownloadText([{ a: 'אמר "כן", ואז\nהלך' }]);
+  expect(text.slice(1)).toBe('a\r\n"אמר ""כן"", ואז\nהלך"');
 });

@@ -1,8 +1,11 @@
 /**
- * Survey results as CSV rows: one row per Response with Hebrew headers. Pure;
- * the export button joins the rows with Papa.unparse and adds the BOM. Every
- * text cell built from data is already safe to open in Excel (see neutralise).
+ * Survey results as CSV rows: one row per Response with Hebrew headers, and the
+ * text of the download. Pure. Every text cell built from data is already safe
+ * to open in Excel (see neutralise), so the text is written without Papa's own
+ * formula escaping, which would quote those cells a second time.
  */
+import Papa from "papaparse";
+
 import type { GridRow, CellAnswer } from "./report";
 import type { SurveyQuestion } from "./types";
 
@@ -63,4 +66,9 @@ export function surveyCsvRows(
       questions.map((q, i) => [`${i + 1}. ${q.text}`, cellText(row.answers[q.id])]),
     ),
   }));
+}
+
+/** The file's text: the rows as CSV behind a byte order mark, so Excel reads the Hebrew. */
+export function csvDownloadText(rows: readonly Record<string, string>[]): string {
+  return `\uFEFF${Papa.unparse([...rows])}`;
 }

@@ -6,11 +6,13 @@ import type { ReportFilters, ReportSegment } from "./report";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-const SEGMENTS: readonly ReportSegment[] = ["answered", "seen", "unseen"];
+/** The three views of the results page, in the order the segmented control shows them. */
+export const REPORT_SEGMENTS: readonly ReportSegment[] = ["answered", "seen", "unseen"];
 const DEFAULT_SEGMENT: ReportSegment = "answered";
 const MIN_BIRTH_YEAR = 1990;
 const MAX_BIRTH_YEAR = 2030;
-const MAX_SEARCH_LENGTH = 60;
+/** The name search is cut to this many characters (the page keeps the same limit on its input). */
+export const MAX_SEARCH_LENGTH = 60;
 /** Nine digits keeps the number a safe integer. */
 const WHOLE_NUMBER = /^\d{1,9}$/;
 
@@ -52,7 +54,7 @@ export function parseReportFilters(
   return {
     branchId: branch !== undefined && allowedBranchIds.includes(branch) ? branch : null,
     birthYear: parseBirthYear(firstValue(params.year)),
-    segment: SEGMENTS.find((s) => s === segment) ?? DEFAULT_SEGMENT,
+    segment: REPORT_SEGMENTS.find((s) => s === segment) ?? DEFAULT_SEGMENT,
     search: parseSearch(firstValue(params.q)),
     page: parsePage(firstValue(params.page)),
   };

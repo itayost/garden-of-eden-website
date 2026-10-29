@@ -227,6 +227,18 @@ function toReportPerson(candidate: AudienceCandidate): ReportPerson {
 }
 
 /**
+ * The Survey's Audience as the report counts it: the candidates who pass the
+ * Survey's own branches and birth years, with their current branches. The
+ * results page and the list rows both build it here, so they cannot disagree.
+ */
+export function audienceReportPeople(
+  candidates: readonly AudienceCandidate[],
+  survey: Pick<SurveyRecord, "branchIds" | "birthYears">,
+): ReportPerson[] {
+  return candidates.filter((c) => inSurveyAudience(c, survey)).map(toReportPerson);
+}
+
+/**
  * The numbers on a Surveys list row: the results page's own totals (the
  * report's rules, not a copy of them) with no filter, for the branches the
  * viewer may see. The Audience is the candidates who pass the Survey's own
@@ -236,7 +248,7 @@ function toReportPerson(candidate: AudienceCandidate): ReportPerson {
 export function surveyListTotals(input: SurveyListTotalsInput): SurveyReport["totals"] {
   const { survey, visibleBranchIds, candidates, responses, views } = input;
   return surveyTotals({
-    audience: candidates.filter((c) => inSurveyAudience(c, survey)).map(toReportPerson),
+    audience: audienceReportPeople(candidates, survey),
     responses: toReportResponses(responses, [], []),
     seen: toReportSeen(views),
     visibleBranchIds,
