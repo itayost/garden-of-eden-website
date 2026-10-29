@@ -37,7 +37,7 @@ function chosenOptionIds(answer: AnswerInput): readonly string[] {
 }
 
 /** Whether the answer gives a value for the Question's kind. Blank text and no choice are no value. */
-function hasValue(question: SurveyQuestion, answer: AnswerInput): boolean {
+export function hasValue(question: SurveyQuestion, answer: AnswerInput): boolean {
   switch (question.kind) {
     case "rating":
       return answer.rating !== undefined;

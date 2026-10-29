@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { audienceText, dayMonth, ratingTone } from "../format";
+import { audienceText, dayMonth, questionCountLabel, ratingTone } from "../format";
 
 describe("audienceText", () => {
   test("branches, then a year range when the years run in a row", () => {
@@ -52,5 +52,14 @@ describe("dayMonth", () => {
 describe("ratingTone", () => {
   test("5 is high, 4 mid, 3 soft, 2 and 1 low", () => {
     expect([5, 4, 3, 2, 1].map(ratingTone)).toEqual(["high", "mid", "soft", "low", "low"]);
+  });
+});
+
+describe("questionCountLabel", () => {
+  test("a count of questions, and the singular for one", () => {
+    expect(questionCountLabel(1)).toBe("שאלה אחת");
+    expect(questionCountLabel(2)).toBe("2 שאלות");
+    expect(questionCountLabel(5)).toBe("5 שאלות");
+    expect(questionCountLabel(20)).toBe("20 שאלות");
   });
 });

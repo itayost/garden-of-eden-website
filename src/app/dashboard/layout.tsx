@@ -12,6 +12,7 @@ import { AppTopBar } from "@/components/layout/AppTopBar";
 import { MotionProvider } from "@/components/MotionProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingTourProvider } from "@/features/onboarding-tour";
+import { SurveyPromptLoader } from "@/features/surveys/components/trainee/SurveyPromptLoader";
 import type { Profile } from "@/types/database";
 import {
   resolveAccessTier,
@@ -78,6 +79,7 @@ export default async function DashboardLayout({
     tacticalCourse !== null &&
     canOpenCourse(true, { role: profile?.role ?? null, isActive: profile?.is_active === true });
   const capabilities = { booking: canBook, tacticalCourse: canTacticalCourse };
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "מתאמן";
   const cookieStore = await cookies();
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
@@ -102,6 +104,13 @@ export default async function DashboardLayout({
       <Suspense fallback={null}>
         <OnboardingTourProvider
           tourCompleted={profile?.tour_completed ?? true}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <SurveyPromptLoader
+          userId={user.id}
+          tourCompleted={profile?.tour_completed ?? true}
+          firstName={firstName}
         />
       </Suspense>
     </SidebarProvider>

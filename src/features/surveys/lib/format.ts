@@ -15,6 +15,11 @@ export function ratingTone(rating: number): RatingTone {
   return "low";
 }
 
+/** "שאלה אחת", or "<n> שאלות". */
+export function questionCountLabel(count: number): string {
+  return count === 1 ? "שאלה אחת" : `${count} שאלות`;
+}
+
 /** "5.11" for "2026-11-05": day then month, neither padded. */
 export function dayMonth(isoDate: string): string {
   const month = Number(isoDate.slice(5, 7));
