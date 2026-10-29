@@ -12,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
+import { SURVEY_CLOSED_MESSAGE } from "../answers";
 import { inSurveyAudience } from "../audience";
 import { loadCandidate, loadSurvey, type LoadedSurvey } from "../queries";
 import { surveyState } from "../state";
@@ -23,7 +24,7 @@ export const TRAINEE_MESSAGES = {
   invalidId: "מזהה לא תקין",
   invalidInput: "קלט לא תקין",
   notFound: "הסקר לא נמצא",
-  closed: "הסקר כבר נסגר",
+  closed: SURVEY_CLOSED_MESSAGE,
   notForYou: "הסקר לא מיועד לך",
   failed: "הפעולה נכשלה. נסו שוב.",
 } as const;

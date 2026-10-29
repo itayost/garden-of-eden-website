@@ -35,6 +35,7 @@ import { canAskParentToBuy } from "@/features/plans/lib/can-ask-parent";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TraineeNotices } from "@/features/notices/components/TraineeNotices";
 import { OpenSurveysCard } from "@/features/surveys/components/trainee/OpenSurveysCard";
+import { SurveyErrorBoundary } from "@/features/surveys/components/trainee/SurveyErrorBoundary";
 import { loadTraineeOffers } from "@/features/surveys/lib/trainee-offers";
 import { getMyNoticesAction } from "@/features/notices/lib/notices";
 import { NextTrainingCard } from "@/features/booking/components/NextTrainingCard";
@@ -161,7 +162,9 @@ export default async function DashboardPage() {
       </div>
 
       <TraineeNotices notices={notices} />
-      <OpenSurveysCard surveys={openSurveys} firstName={firstName} />
+      <SurveyErrorBoundary>
+        <OpenSurveysCard surveys={openSurveys} firstName={firstName} />
+      </SurveyErrorBoundary>
       {hasAssessments && <RatingMigrationBanner />}
       {canBook && <NextTrainingCard next={nextBooking} />}
       {ownPlan ? <MyPlanCard planQueue={ownPlan} canAskParent={canAskParent} /> : canAskParent && <BuyPlanCard />}

@@ -8,6 +8,9 @@ import {
 /** Shown when the Questions changed while the Trainee was answering. */
 const SURVEY_CHANGED_MESSAGE = "הסקר עודכן בינתיים. סגרו אותו ופתחו שוב.";
 export const SUBMIT_FAILED_MESSAGE = "השליחה נכשלה. נסו שוב.";
+const ALREADY_ANSWERED_MESSAGE = "כבר ענית על הסקר הזה";
+/** Also the Trainee actions' refusal for a Survey that is not open today. */
+export const SURVEY_CLOSED_MESSAGE = "הסקר כבר נסגר";
 const CHOICE_INVALID_MESSAGE = "בחירה לא תקינה";
 const RATING_RANGE_MESSAGE = `דירוג חייב להיות בין ${SURVEY_LIMITS.ratingMin} ל-${SURVEY_LIMITS.ratingMax}`;
 const TEXT_TOO_LONG_MESSAGE = `התשובה ארוכה מ-${SURVEY_LIMITS.textAnswerMax} תווים`;
@@ -19,8 +22,8 @@ const TEXT_TOO_LONG_MESSAGE = `התשובה ארוכה מ-${SURVEY_LIMITS.textAn
  * the Questions were swapped under the Trainee.
  */
 const SUBMIT_ERRORS: readonly { readonly code: string; readonly message: string }[] = [
-  { code: "already_answered", message: "כבר ענית על הסקר הזה" },
-  { code: "survey_not_open", message: "הסקר כבר נסגר" },
+  { code: "already_answered", message: ALREADY_ANSWERED_MESSAGE },
+  { code: "survey_not_open", message: SURVEY_CLOSED_MESSAGE },
   { code: "not_in_audience", message: "הסקר לא מיועד לך" },
   { code: "survey_changed", message: SURVEY_CHANGED_MESSAGE },
   { code: "survey_answers_option_of_question", message: SURVEY_CHANGED_MESSAGE },
@@ -155,4 +158,13 @@ export function toAnswerRows(
 export function submitErrorMessage(dbMessage: string): string {
   const known = SUBMIT_ERRORS.find(({ code }) => dbMessage.includes(code));
   return known?.message ?? SUBMIT_FAILED_MESSAGE;
+}
+
+/**
+ * Whether a refusal means the Survey can no longer be answered by this
+ * Trainee: they already did, or it closed. The popup refreshes the page then,
+ * so the dashboard card and the next popup stop offering it.
+ */
+export function surveyIsGone(message: string): boolean {
+  return message === ALREADY_ANSWERED_MESSAGE || message === SURVEY_CLOSED_MESSAGE;
 }

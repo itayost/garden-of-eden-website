@@ -67,7 +67,7 @@ export function QuestionScreen({
           <span aria-hidden="true" className="size-10 flex-none" />
         )}
         <LevelPath questions={survey.questions} current={step - 1} />
-        <CloseButton />
+        <CloseButton disabled={sending} />
       </SheetTop>
       <SheetBody>
         <QuestionStep

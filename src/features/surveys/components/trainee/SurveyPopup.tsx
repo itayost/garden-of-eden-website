@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 import { Dialog } from "@/components/ui/dialog";
 import { SheetDialogContent } from "@/components/ui/sheet-dialog";
 import type { OfferableSurvey } from "../../lib/types";
@@ -25,14 +27,22 @@ export interface SurveyPopupProps {
  *
  * The built-in close button is replaced by one inside the header row, so the
  * level path can sit between "back" and "close". Escape, a tap outside, that
- * button and "אחר כך" all end in `onOpenChange(false)`.
+ * button and "אחר כך" all end in `onOpenChange(false)`, except while a send is
+ * in flight: closing then would snooze a Survey whose send may still fail and
+ * lose the answers, so those requests are ignored until the send ends.
  *
  * `--ring` is set to lime here because the app's focus outline reads from it
  * and the default green is too dark on the forest sheet.
  */
 export function SurveyPopup({ survey, firstName, mode, open, onOpenChange, onSent }: SurveyPopupProps) {
+  const sendingRef = useRef(false);
+  const requestOpenChange = (next: boolean) => {
+    if (!next && sendingRef.current) return;
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={requestOpenChange}>
       <SheetDialogContent
         showCloseButton={false}
         aria-describedby={undefined}
@@ -43,8 +53,11 @@ export function SurveyPopup({ survey, firstName, mode, open, onOpenChange, onSen
           survey={survey}
           firstName={firstName}
           mode={mode}
-          onClose={() => onOpenChange(false)}
+          onClose={() => requestOpenChange(false)}
           onSent={onSent}
+          onSendingChange={(sending) => {
+            sendingRef.current = sending;
+          }}
         />
       </SheetDialogContent>
     </Dialog>

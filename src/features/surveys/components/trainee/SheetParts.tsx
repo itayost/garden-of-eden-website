@@ -31,9 +31,9 @@ export function SheetTop({ children }: { children?: ReactNode }) {
 }
 
 /** Closes the sheet: the same as "אחר כך" and Escape. */
-export function CloseButton({ className }: { className?: string }) {
+export function CloseButton({ className, disabled }: { className?: string; disabled?: boolean }) {
   return (
-    <DialogClose aria-label="סגירה" className={cn(ICON_BUTTON, className)}>
+    <DialogClose aria-label="סגירה" disabled={disabled} className={cn(ICON_BUTTON, className)}>
       <X className="size-[18px]" aria-hidden="true" />
     </DialogClose>
   );

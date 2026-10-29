@@ -12,6 +12,7 @@ import { AppTopBar } from "@/components/layout/AppTopBar";
 import { MotionProvider } from "@/components/MotionProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingTourProvider } from "@/features/onboarding-tour";
+import { SurveyErrorBoundary } from "@/features/surveys/components/trainee/SurveyErrorBoundary";
 import { SurveyPromptLoader } from "@/features/surveys/components/trainee/SurveyPromptLoader";
 import type { Profile } from "@/types/database";
 import {
@@ -107,11 +108,13 @@ export default async function DashboardLayout({
         />
       </Suspense>
       <Suspense fallback={null}>
-        <SurveyPromptLoader
-          userId={user.id}
-          tourCompleted={profile?.tour_completed ?? true}
-          firstName={firstName}
-        />
+        <SurveyErrorBoundary>
+          <SurveyPromptLoader
+            userId={user.id}
+            tourCompleted={profile?.tour_completed ?? true}
+            firstName={firstName}
+          />
+        </SurveyErrorBoundary>
       </Suspense>
     </SidebarProvider>
     </MotionProvider>

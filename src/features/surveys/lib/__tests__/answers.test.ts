@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { answersProblem, submitErrorMessage, toAnswerRows } from "../answers";
+import { answersProblem, submitErrorMessage, surveyIsGone, toAnswerRows } from "../answers";
 import type { AnswerInput, SurveyQuestion } from "../types";
 
 const Q: SurveyQuestion[] = [
@@ -70,5 +70,20 @@ describe("submitErrorMessage", () => {
     expect(submitErrorMessage("23503 something else")).toBe(changed);
     expect(submitErrorMessage("violates foreign key constraint")).toBe(changed);
     expect(submitErrorMessage("survey_answers_option_of_question")).toBe(changed);
+  });
+});
+
+describe("surveyIsGone", () => {
+  test("an answered or closed Survey is gone for this Trainee, whichever path refused", () => {
+    expect(surveyIsGone(submitErrorMessage("already_answered"))).toBe(true);
+    expect(surveyIsGone(submitErrorMessage("survey_not_open"))).toBe(true);
+    expect(surveyIsGone("הסקר כבר נסגר")).toBe(true);
+  });
+
+  test("other refusals leave the Survey where it is", () => {
+    expect(surveyIsGone(submitErrorMessage("not_in_audience"))).toBe(false);
+    expect(surveyIsGone(submitErrorMessage("survey_changed"))).toBe(false);
+    expect(surveyIsGone(submitErrorMessage("connection reset"))).toBe(false);
+    expect(surveyIsGone("יותר מדי ניסיונות. נסו שוב בעוד דקה.")).toBe(false);
   });
 });

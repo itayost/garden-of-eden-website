@@ -19,7 +19,8 @@ interface SurveyPromptLoaderProps {
  * nothing is offerable. After a send the layout re-renders without the answered
  * Survey; rendering null here would unmount the prompt and its open thank-you
  * screen, and a later refresh would mount a fresh one that opens a second popup
- * in the same visit. A prompt that stays mounted keeps its once-per-visit state.
+ * in the same page load. A prompt that stays mounted keeps its once-per-page-load
+ * state.
  */
 export async function SurveyPromptLoader({
   userId,

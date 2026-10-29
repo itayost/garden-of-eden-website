@@ -4,10 +4,10 @@ import { useId, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { markSurveySeenAction } from "../../lib/actions/mark-seen";
 import { dayMonth, questionCountLabel } from "../../lib/format";
 import type { OfferableSurvey } from "../../lib/types";
 import { PitchMark } from "./PitchMark";
+import { recordSeen } from "./record-seen";
 import { SOFT_TEXT } from "./sheet-styles";
 import { SurveyPopup } from "./SurveyPopup";
 
@@ -64,7 +64,7 @@ export function OpenSurveysCard({
   const answer = (survey: OfferableSurvey) => {
     setActive(survey);
     setOpen(true);
-    void markSurveySeenAction(survey.id);
+    recordSeen(survey.id);
   };
 
   return (

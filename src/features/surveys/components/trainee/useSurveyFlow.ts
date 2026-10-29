@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { submitSurveyResponseAction } from "../../lib/actions/submit-survey";
-import { SUBMIT_FAILED_MESSAGE } from "../../lib/answers";
+import { SUBMIT_FAILED_MESSAGE, surveyIsGone } from "../../lib/answers";
 import { answersToSend, type AnswerMap } from "../../lib/popup-answers";
 import type { OfferableSurvey } from "../../lib/types";
 
@@ -21,15 +21,26 @@ async function sendAnswers(survey: OfferableSurvey, answers: AnswerMap): Promise
   }
 }
 
+export interface FlowCallbacks {
+  /** The answers are saved, after the router refresh is requested. */
+  onSent?: () => void;
+  /** A send began (true) or ended, saved or not (false). */
+  onSendingChange?: (sending: boolean) => void;
+}
+
 /**
  * Where the Trainee is in one Survey and what they have answered. Step 0 is the
  * intro, 1..n the Questions, n + 1 the thanks. A failed send keeps the answers
  * and the step, and says why; preview mode never calls the server.
+ *
+ * A refusal that says the Survey is answered or closed also refreshes the
+ * router, so the dashboard card and the next popup drop it; the sheet stays to
+ * show the refusal.
  */
 export function useSurveyFlow(
   survey: OfferableSurvey,
   mode: "live" | "preview",
-  onSent?: () => void,
+  callbacks: FlowCallbacks = {},
 ) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -42,22 +53,30 @@ export function useSurveyFlow(
     setStep(next);
   };
 
+  const setBusy = (busy: boolean) => {
+    setSending(busy);
+    callbacks.onSendingChange?.(busy);
+  };
+
   async function send() {
-    setSending(true);
+    setBusy(true);
     setError(null);
-    if (mode === "live") {
-      const problem = await sendAnswers(survey, answers);
-      if (problem !== null) {
-        setError(problem);
-        setSending(false);
-        return;
+    try {
+      if (mode === "live") {
+        const problem = await sendAnswers(survey, answers);
+        if (problem !== null) {
+          setError(problem);
+          if (surveyIsGone(problem)) router.refresh();
+          return;
+        }
+        // The refresh drops the answered Survey from the list behind the sheet.
+        router.refresh();
+        callbacks.onSent?.();
       }
-      // The refresh drops the answered Survey from the list behind the sheet.
-      router.refresh();
-      onSent?.();
+      setStep(survey.questions.length + 1);
+    } finally {
+      setBusy(false);
     }
-    setSending(false);
-    setStep(survey.questions.length + 1);
   }
 
   return { step, goTo, answers, setAnswers, sending, error, send };

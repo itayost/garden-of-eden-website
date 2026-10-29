@@ -58,6 +58,7 @@ beforeEach(() => {
   refresh.mockReset();
   submit.mockReset();
   markSeen.mockReset();
+  markSeen.mockResolvedValue({ success: true });
   submit.mockResolvedValue({ success: true });
 });
 
@@ -99,6 +100,94 @@ describe("SurveyPrompt: when it opens", () => {
   test("with no Survey it renders nothing", () => {
     const { container } = render(prompt(null));
     expect(container.innerHTML).toBe("");
+  });
+});
+
+describe("SurveyPrompt: a Seen record that cannot be sent", () => {
+  test("a failed request is logged and does not stop the popup", async () => {
+    markSeen.mockRejectedValue(new Error("network"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      render(prompt(FIRST));
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+      await waitFor(() =>
+        expect(log).toHaveBeenCalledWith("[surveys] marking a survey seen failed:", "network"),
+      );
+    } finally {
+      log.mockRestore();
+    }
+  });
+});
+
+describe("SurveyPrompt: closing while a send is in flight", () => {
+  /** Answers the one Question and sends, leaving the send pending until `finish` is called. */
+  async function startSend() {
+    let finish: (outcome: unknown) => void = () => undefined;
+    submit.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    render(prompt(FIRST));
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+    fireEvent.click(screen.getByText("יאללה, מתחילים"));
+    fireEvent.click(screen.getByRole("radio", { name: "4" }));
+    fireEvent.click(screen.getByText("שליחה"));
+    await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
+    return finish;
+  }
+
+  test("Escape and the close button are ignored until the send ends", async () => {
+    const finish = await startSend();
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(localStorage.getItem(snoozeKey(FIRST.id))).toBeNull();
+    finish({ success: true });
+    await waitFor(() => expect(screen.getByText("תודה, נועם!")).toBeTruthy());
+  });
+
+  test("a send that fails keeps the sheet, the answer and the error, with no snooze", async () => {
+    const finish = await startSend();
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    finish({ error: "השליחה נכשלה. נסו שוב." });
+    expect(await screen.findByRole("alert")).toHaveTextContent("השליחה נכשלה. נסו שוב.");
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "4" })).toBeChecked();
+    expect(localStorage.getItem(snoozeKey(FIRST.id))).toBeNull();
+  });
+
+  test("once the send has failed, closing works and snoozes the Survey again", async () => {
+    const finish = await startSend();
+    finish({ error: "השליחה נכשלה. נסו שוב." });
+    await screen.findByRole("alert");
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(localStorage.getItem(snoozeKey(FIRST.id))).toBe(israelToday());
+  });
+});
+
+describe("SurveyPrompt: a refusal that ends the Survey", () => {
+  async function sendRefused(message: string) {
+    submit.mockResolvedValue({ error: message });
+    render(prompt(FIRST));
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+    fireEvent.click(screen.getByText("יאללה, מתחילים"));
+    fireEvent.click(screen.getByRole("radio", { name: "3" }));
+    fireEvent.click(screen.getByText("שליחה"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+  }
+
+  test("already answered refreshes the page so the card and prompt drop the Survey", async () => {
+    await sendRefused("כבר ענית על הסקר הזה");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  test("closed refreshes the page too", async () => {
+    await sendRefused("הסקר כבר נסגר");
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  test("any other refusal leaves the page alone", async () => {
+    await sendRefused("השליחה נכשלה. נסו שוב.");
+    expect(refresh).not.toHaveBeenCalled();
   });
 });
 

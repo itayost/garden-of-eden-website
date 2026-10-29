@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { israelToday } from "@/lib/utils/tasks";
-import { markSurveySeenAction } from "../../lib/actions/mark-seen";
 import { isSnoozed, surveyPromptAllowedOn } from "../../lib/offer";
 import { browserStorage, readSnooze, writeSnooze } from "../../lib/snooze-storage";
 import type { OfferableSurvey } from "../../lib/types";
+import { recordSeen } from "./record-seen";
 import { SurveyPopup } from "./SurveyPopup";
 
 interface SurveyPromptProps {
@@ -15,12 +15,13 @@ interface SurveyPromptProps {
   firstName: string;
 }
 
-/** Waiting for a page where it may show, showing, or finished with for this page visit. */
+/** Waiting for a page where it may show, showing, or finished with until the next full page load. */
 type Phase = "waiting" | "open" | "done";
 
 /**
- * Opens the Survey popup on its own, once per page visit, on pages where the
- * Trainee is not mid-activity and unless they chose "later" today on this device.
+ * Opens the Survey popup on its own, once per full page load of the trainee
+ * area, on pages where the Trainee is not mid-activity and unless they closed
+ * it without sending today on this device.
  *
  * It keeps the Survey it was first given. After a send the popup refreshes the
  * router and the layout hands down the next Survey; that one must wait for the
@@ -42,7 +43,7 @@ export function SurveyPrompt({ survey, firstName }: SurveyPromptProps) {
     setPhase("open");
     if (!seenRef.current) {
       seenRef.current = true;
-      void markSurveySeenAction(offered.id);
+      recordSeen(offered.id);
     }
   }, [offered, pathname, phase]);
 

@@ -15,7 +15,7 @@ const KIND_ICONS: Record<QuestionKind, LucideIcon> = {
  * Most Questions that still get an icon tile. Past this the tiles would be too
  * small to hold an icon on a phone, so the path becomes a row of segments.
  */
-const ICON_TILES_MAX = 7;
+const ICON_TILES_MAX = 5;
 
 type TileState = "done" | "now" | "ahead";
 

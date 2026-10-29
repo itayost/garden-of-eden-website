@@ -16,6 +16,8 @@ export interface SurveyFlowProps {
   /** Hides the sheet: "אחר כך", the close button, Escape and "סגירה" all end here. */
   onClose: () => void;
   onSent?: () => void;
+  /** A send began (true) or ended (false); the popup refuses to close while one is in flight. */
+  onSendingChange?: (sending: boolean) => void;
 }
 
 /**
@@ -23,8 +25,8 @@ export interface SurveyFlowProps {
  * It lives inside the dialog content, so closing the sheet unmounts it and
  * half-filled answers are gone, which is intended: they are never saved.
  */
-export function SurveyFlow({ survey, firstName, mode, onClose, onSent }: SurveyFlowProps) {
-  const flow = useSurveyFlow(survey, mode, onSent);
+export function SurveyFlow({ survey, firstName, mode, onClose, onSent, onSendingChange }: SurveyFlowProps) {
+  const flow = useSurveyFlow(survey, mode, { onSent, onSendingChange });
   const { step } = flow;
   const question = survey.questions[step - 1];
 
