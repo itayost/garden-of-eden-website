@@ -13,8 +13,6 @@ const {
   optionMax,
   labelMax,
   textAnswerMax,
-  ratingMin,
-  ratingMax,
 } = SURVEY_LIMITS;
 
 /** Birth years an Audience can name; a year outside this range matches nobody. */
@@ -24,7 +22,6 @@ const BIRTH_YEAR_MAX = 2030;
 const BRANCHES_MAX = 10;
 
 const RANGE_BIRTH_YEAR = `שנת לידה חייבת להיות בין ${BIRTH_YEAR_MIN} ל-${BIRTH_YEAR_MAX}`;
-const RANGE_RATING = `הדירוג חייב להיות בין ${ratingMin} ל-${ratingMax}`;
 
 /** The limit in brackets, appended to a "too long" message. */
 const maxChars = (max: number) => `(מקסימום ${max} תווים)`;
@@ -108,16 +105,12 @@ const answerSchema = z.object({
     .array(uuidSchema)
     .max(optionsMax, `אפשר לבחור עד ${optionsMax} תשובות`)
     .optional(),
-  rating: z
-    .number()
-    .int("הדירוג חייב להיות מספר שלם")
-    .min(ratingMin, RANGE_RATING)
-    .max(ratingMax, RANGE_RATING)
-    .optional(),
+  // Shape and upper bound only. Blank text is skipped and a required answer is
+  // refused by answersProblem, and the 1 to 5 rating range is checked there too.
+  rating: z.number().int("הדירוג חייב להיות מספר שלם").optional(),
   text: z
     .string()
     .trim()
-    .min(1, "נדרשת תשובה")
     .max(textAnswerMax, `התשובה ארוכה מדי ${maxChars(textAnswerMax)}`)
     .optional(),
 });

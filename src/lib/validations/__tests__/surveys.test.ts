@@ -98,20 +98,33 @@ describe("surveySubmitSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("submit refuses a whitespace-only text answer", () => {
-    const result = surveySubmitSchema.safeParse({
+  test("submit accepts an empty or spaces-only text answer and leaves required checks to answersProblem", () => {
+    const emptyText = surveySubmitSchema.safeParse({
+      surveyId: SURVEY_ID,
+      answers: [{ questionId: QUESTION_ID, text: "" }],
+    });
+    const blankText = surveySubmitSchema.safeParse({
       surveyId: SURVEY_ID,
       answers: [{ questionId: QUESTION_ID, text: "   " }],
+    });
+    expect(emptyText.success).toBe(true);
+    expect(blankText.success).toBe(true);
+  });
+
+  test("submit refuses a non-integer rating", () => {
+    const result = surveySubmitSchema.safeParse({
+      surveyId: SURVEY_ID,
+      answers: [{ questionId: QUESTION_ID, rating: 2.5 }],
     });
     expect(result.success).toBe(false);
   });
 
-  test("submit refuses a rating outside 1 to 5", () => {
+  test("submit accepts an integer rating outside 1 to 5, leaving the range to answersProblem", () => {
     const result = surveySubmitSchema.safeParse({
       surveyId: SURVEY_ID,
       answers: [{ questionId: QUESTION_ID, rating: 6 }],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   test("submit accepts a choice, a rating and a text answer", () => {
