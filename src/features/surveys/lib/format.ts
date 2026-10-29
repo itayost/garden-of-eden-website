@@ -23,15 +23,15 @@ export function dayMonth(isoDate: string): string {
 }
 
 /**
- * Years ascending, as a range when they run in a row ("2013 עד 2015") and
- * listed otherwise ("2013, 2015"). A repeated year is listed once.
+ * Years ascending, as a range only when three or more run in a row ("2013 עד 2015").
+ * Two years, or years with a gap, are listed ("2013, 2015"). A repeated year is listed once.
  */
 function birthYearsText(birthYears: readonly number[]): string {
   const years = [...new Set(birthYears)].sort((a, b) => a - b);
   if (years.length === 0) return "";
   const first = years[0];
   const last = years[years.length - 1];
-  const inARow = years.length > 1 && last - first === years.length - 1;
+  const inARow = years.length > 2 && last - first === years.length - 1;
   const label = inARow ? `${first} עד ${last}` : years.join(", ");
   return `ילידי ${label}`;
 }

@@ -12,8 +12,8 @@ describe("audienceText", () => {
     expect(audienceText(["קריית אתא"], [2013, 2015])).toBe("קריית אתא · ילידי 2013, 2015");
   });
 
-  test("two consecutive years read as a range too", () => {
-    expect(audienceText(["קריית אתא"], [2014, 2013])).toBe("קריית אתא · ילידי 2013 עד 2014");
+  test("two years are listed, even when they run in a row", () => {
+    expect(audienceText(["קריית אתא"], [2014, 2013])).toBe("קריית אתא · ילידי 2013, 2014");
   });
 
   test("one year, or none", () => {
