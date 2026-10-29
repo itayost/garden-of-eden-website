@@ -20,7 +20,14 @@ export function publishedOpensOn(opensOn: string, today: string): string {
   return opensOn < today ? today : opensOn;
 }
 
-export type SurveyListFilter = "all" | "open" | "draft" | "ended";
+export const SURVEY_LIST_FILTERS = ["all", "open", "draft", "ended"] as const;
+
+export type SurveyListFilter = (typeof SURVEY_LIST_FILTERS)[number];
+
+/** The list's `?state=` value as a filter; anything unknown shows everything. */
+export function parseListFilter(value: string | undefined): SurveyListFilter {
+  return SURVEY_LIST_FILTERS.find((filter) => filter === value) ?? "all";
+}
 
 export function matchesListFilter(state: SurveyState, filter: SurveyListFilter): boolean {
   switch (filter) {

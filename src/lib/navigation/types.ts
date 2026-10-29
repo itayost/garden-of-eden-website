@@ -7,6 +7,8 @@ export type NavItem = {
   icon: LucideIcon;
   exact?: boolean;
   adminOnly?: boolean;
+  /** Shown to Admins and to Branch managers (a Trainer who manages a branch). */
+  adminOrManager?: boolean;
   mobilePrimary?: boolean;
   // Order within the mobile bottom-nav bar / "עוד" sheet (independent of the
   // sidebar's list order, so both surfaces read one config yet keep their own order).
@@ -41,6 +43,16 @@ export function filterNavForCapabilities(
   capabilities: NavCapabilities,
 ): NavItem[] {
   return items.filter((item) => !item.requires || capabilities[item.requires]);
+}
+
+/** Who is looking at the staff menu, for the role-gated items. */
+export type NavViewer = { isAdmin: boolean; managesBranch: boolean };
+
+/** Whether a staff menu item shows for this viewer. Cosmetic; the page gates itself. */
+export function isNavItemVisible(item: NavItem, viewer: NavViewer): boolean {
+  if (item.adminOnly) return viewer.isAdmin;
+  if (item.adminOrManager) return viewer.isAdmin || viewer.managesBranch;
+  return true;
 }
 
 export function derivePageTitles(

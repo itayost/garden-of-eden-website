@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { matchesListFilter, publishedOpensOn, surveyState } from "../state";
+import { matchesListFilter, parseListFilter, publishedOpensOn, surveyState } from "../state";
 
 const TODAY = "2026-10-29";
 const base = {
@@ -65,5 +65,21 @@ describe("matchesListFilter", () => {
     expect(matchesListFilter("open", "draft")).toBe(false);
     expect(matchesListFilter("ended", "ended")).toBe(true);
     expect(matchesListFilter("open", "ended")).toBe(false);
+  });
+});
+
+describe("parseListFilter", () => {
+  test("a known filter name is kept", () => {
+    expect(parseListFilter("open")).toBe("open");
+    expect(parseListFilter("draft")).toBe("draft");
+    expect(parseListFilter("ended")).toBe("ended");
+    expect(parseListFilter("all")).toBe("all");
+  });
+
+  test("a missing, unknown or odd value falls back to all", () => {
+    expect(parseListFilter(undefined)).toBe("all");
+    expect(parseListFilter("")).toBe("all");
+    expect(parseListFilter("scheduled")).toBe("all");
+    expect(parseListFilter("OPEN")).toBe("all");
   });
 });
