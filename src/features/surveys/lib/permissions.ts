@@ -60,3 +60,18 @@ export function visibleSurveyBranches(
   if (isAdmin(role)) return null;
   return surveyBranchIds.filter((id) => managedBranchIds.includes(id));
 }
+
+/**
+ * The branches the viewer may put in a Survey's audience: all of them for an
+ * Admin, only the managed ones for a Branch manager, none for anyone else.
+ * The save action refuses any other branch too; this keeps the picker honest.
+ */
+export function choosableBranches<T extends { id: string }>(
+  role: string,
+  managedBranchIds: readonly string[],
+  branches: readonly T[],
+): T[] {
+  if (isAdmin(role)) return [...branches];
+  if (role !== "trainer") return [];
+  return branches.filter((branch) => managedBranchIds.includes(branch.id));
+}

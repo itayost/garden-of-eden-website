@@ -105,6 +105,34 @@ function dateProblems(draft: SurveyDraft, today: string): string[] {
   ];
 }
 
+/** The publish problems by the part of the form they belong to, each in form order. */
+export interface PublishProblemGroups {
+  /** Title, intro and audience. */
+  basics: string[];
+  /** The number of Questions and each Question. */
+  questions: string[];
+  dates: string[];
+}
+
+/**
+ * What stops a Survey from being published, grouped for a checklist. Empty
+ * groups are parts that pass. publishProblem() is these groups, in this order.
+ */
+export function publishProblemGroups(draft: SurveyDraft, today: string): PublishProblemGroups {
+  return {
+    basics: [
+      ...titleProblems(draft.title),
+      ...introProblems(draft.intro),
+      ...branchProblems(draft.branchIds),
+    ],
+    questions: [
+      ...questionCountProblems(draft.questions.length),
+      ...draft.questions.flatMap((question, index) => questionProblems(question, index + 1)),
+    ],
+    dates: dateProblems(draft, today),
+  };
+}
+
 /**
  * The problems that stop a Survey from being published, in form order. An
  * empty list means it is ready. Saving a draft is looser; see
@@ -114,12 +142,6 @@ function dateProblems(draft: SurveyDraft, today: string): string[] {
  * orders them. Pass `today` from israelToday().
  */
 export function publishProblem(draft: SurveyDraft, today: string): string[] {
-  return [
-    ...titleProblems(draft.title),
-    ...introProblems(draft.intro),
-    ...branchProblems(draft.branchIds),
-    ...questionCountProblems(draft.questions.length),
-    ...draft.questions.flatMap((question, index) => questionProblems(question, index + 1)),
-    ...dateProblems(draft, today),
-  ];
+  const groups = publishProblemGroups(draft, today);
+  return [...groups.basics, ...groups.questions, ...groups.dates];
 }

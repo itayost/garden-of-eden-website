@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { matchesListFilter, parseListFilter, publishedOpensOn, surveyState } from "../state";
+import {
+  matchesListFilter,
+  parseListFilter,
+  publishedOpensOn,
+  reopensEndedSurvey,
+  surveyState,
+} from "../state";
 
 const TODAY = "2026-10-29";
 const base = {
@@ -81,5 +87,35 @@ describe("parseListFilter", () => {
     expect(parseListFilter("")).toBe("all");
     expect(parseListFilter("scheduled")).toBe("all");
     expect(parseListFilter("OPEN")).toBe("all");
+  });
+});
+
+describe("reopensEndedSurvey", () => {
+  const endedByDate = { ...base, closesOn: "2026-10-28" };
+
+  test("a new close date from today on reopens a survey that ended by date", () => {
+    expect(reopensEndedSurvey(endedByDate, "2026-11-12", TODAY)).toBe(true);
+    expect(reopensEndedSurvey(endedByDate, TODAY, TODAY)).toBe(true);
+  });
+
+  test("a new close date that is still in the past leaves it ended", () => {
+    expect(reopensEndedSurvey(endedByDate, "2026-10-28", TODAY)).toBe(false);
+  });
+
+  test("no new close date is not a date to say", () => {
+    expect(reopensEndedSurvey(endedByDate, null, TODAY)).toBe(false);
+  });
+
+  test("a survey that is still open does not reopen", () => {
+    expect(reopensEndedSurvey(base, "2026-11-12", TODAY)).toBe(false);
+  });
+
+  test("a survey closed early stays closed", () => {
+    const closedEarly = { ...endedByDate, closedAt: "2026-10-27T10:00:00Z" };
+    expect(reopensEndedSurvey(closedEarly, "2026-11-12", TODAY)).toBe(false);
+  });
+
+  test("a draft never ended", () => {
+    expect(reopensEndedSurvey({ ...endedByDate, publishedAt: null }, "2026-11-12", TODAY)).toBe(false);
   });
 });

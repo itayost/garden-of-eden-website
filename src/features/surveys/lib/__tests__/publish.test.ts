@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { publishProblem } from "../publish";
+import { publishProblem, publishProblemGroups } from "../publish";
 import type { DraftQuestion, SurveyDraft } from "../types";
 
 const TODAY = "2026-10-29";
@@ -164,6 +164,49 @@ describe("publishProblem", () => {
       "צריך כותרת של 2 עד 120 תווים",
       "שאלה 1: צריך טקסט של 2 עד 300 תווים",
       "שאלה 2: צריך 2 עד 10 תשובות",
+    ]);
+  });
+});
+
+describe("publishProblemGroups", () => {
+  test("a complete draft has no problem in any group", () => {
+    expect(publishProblemGroups(draft(), TODAY)).toEqual({ basics: [], questions: [], dates: [] });
+  });
+
+  test("title, intro and branch problems are basics, Question problems are questions, date problems are dates", () => {
+    const groups = publishProblemGroups(
+      draft({
+        title: "א",
+        branchIds: [],
+        closesOn: "2026-10-01",
+        questions: [q({ options: ["רק אחת"] })],
+      }),
+      TODAY,
+    );
+    expect(groups.basics).toEqual(["צריך כותרת של 2 עד 120 תווים", "צריך לבחור לפחות סניף אחד"]);
+    expect(groups.questions).toEqual(["שאלה 1: צריך 2 עד 10 תשובות"]);
+    expect(groups.dates).toEqual(["תאריך הסגירה לפני תאריך הפתיחה", "תאריך הסגירה כבר עבר"]);
+  });
+
+  test("no Questions is a questions problem", () => {
+    expect(publishProblemGroups(draft({ questions: [] }), TODAY).questions).toEqual([
+      "צריך לפחות שאלה אחת",
+    ]);
+  });
+
+  test("the groups, one after the other, are exactly what publishProblem lists", () => {
+    const messy = draft({
+      title: "א",
+      intro: "א".repeat(501),
+      branchIds: [],
+      closesOn: "2026-10-01",
+      questions: [q({ text: "א" }), q({ options: ["", ""] })],
+    });
+    const groups = publishProblemGroups(messy, TODAY);
+    expect(publishProblem(messy, TODAY)).toEqual([
+      ...groups.basics,
+      ...groups.questions,
+      ...groups.dates,
     ]);
   });
 });

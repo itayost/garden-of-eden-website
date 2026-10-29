@@ -52,3 +52,73 @@ export function audienceText(
   const parts = [branchNames.join(", "), birthYearsText(birthYears)];
   return parts.filter((part) => part !== "").join(" · ");
 }
+
+export interface YearCount {
+  year: number;
+  count: number;
+}
+
+/**
+ * How many Trainees a Survey reaches: every eligible one when no year is
+ * ticked (those without a birthdate included), otherwise those born in a
+ * ticked year. A ticked year nobody was born in adds nothing.
+ */
+export function reachCount(
+  birthYears: readonly number[],
+  years: readonly YearCount[],
+  totalAllYears: number,
+): number {
+  if (birthYears.length === 0) return totalAllYears;
+  return years
+    .filter((entry) => birthYears.includes(entry.year))
+    .reduce((sum, entry) => sum + entry.count, 0);
+}
+
+/**
+ * The years to offer, newest first: the eligible ones, plus any ticked year
+ * nobody in the chosen branches was born in (shown with no one), so a year
+ * the audience no longer has can still be unticked.
+ */
+export function yearChoices(years: readonly YearCount[], selected: readonly number[]): YearCount[] {
+  const offered = new Set(years.map((entry) => entry.year));
+  const absent = selected
+    .filter((year) => !offered.has(year))
+    .map((year) => ({ year, count: 0 }));
+  return [...years, ...absent].sort((a, b) => b.year - a.year);
+}
+
+/** "יישלח ל-<n> חניכים פעילים", and the singular for one. */
+export function reachText(count: number): string {
+  return count === 1 ? "יישלח לחניך פעיל אחד" : `יישלח ל-${count} חניכים פעילים`;
+}
+
+/** "<n> חניכים כבר ענו", and the singular for one. */
+export function answeredText(count: number): string {
+  return count === 1 ? "חניך אחד כבר ענה" : `${count} חניכים כבר ענו`;
+}
+
+/** "דבר אחד לתקן", or "<n> דברים לתקן". */
+export function fixCountText(count: number): string {
+  return count === 1 ? "דבר אחד לתקן" : `${count} דברים לתקן`;
+}
+
+/** "נפתח 22.10 · נסגר 5.11"; the close part is left out when there is no close date. */
+export function datesSummary(opensOn: string, closesOn: string | null): string {
+  const parts = [`נפתח ${dayMonth(opensOn)}`, closesOn === null ? "" : `נסגר ${dayMonth(closesOn)}`];
+  return parts.filter((part) => part !== "").join(" · ");
+}
+
+/**
+ * The audience on one line for the folded phone section: branches, years and,
+ * once it is known, how many Trainees. "לא נבחר סניף" when there is nothing yet.
+ */
+export function audienceSummary(
+  branchNames: readonly string[],
+  birthYears: readonly number[],
+  reach: number | null,
+): string {
+  const who = audienceText(branchNames, birthYears);
+  if (who === "") return "לא נבחר סניף";
+  if (reach === null) return who;
+  return `${who} · ${reach === 1 ? "חניך אחד" : `${reach} חניכים`}`;
+}

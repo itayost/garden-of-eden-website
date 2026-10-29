@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   canDeleteSurvey,
+  choosableBranches,
   canEditSurvey,
   canUseSurveys,
   canViewSurvey,
@@ -82,5 +83,35 @@ describe("canUseSurveys", () => {
 
   test("a trainee never opens the surveys pages", () => {
     expect(canUseSurveys("trainee", [KA])).toBe(false);
+  });
+});
+
+describe("choosableBranches", () => {
+  const options = [
+    { id: KA, nameHe: "קריית אתא" },
+    { id: HAIFA, nameHe: "חיפה" },
+  ];
+
+  test("an Admin may choose every branch", () => {
+    expect(choosableBranches("admin", [], options)).toEqual(options);
+  });
+
+  test("a manager may choose only the branches they manage", () => {
+    expect(choosableBranches("trainer", [KA], options)).toEqual([options[0]]);
+  });
+
+  test("a trainer who manages no listed branch may choose none", () => {
+    expect(choosableBranches("trainer", [], options)).toEqual([]);
+    expect(choosableBranches("trainer", ["b-other"], options)).toEqual([]);
+  });
+
+  test("anyone else may choose none", () => {
+    expect(choosableBranches("trainee", [KA], options)).toEqual([]);
+  });
+
+  test("does not change the list it was given", () => {
+    const given = [...options];
+    choosableBranches("trainer", [KA], given);
+    expect(given).toEqual(options);
   });
 });
