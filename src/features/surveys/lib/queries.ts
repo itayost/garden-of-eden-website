@@ -45,6 +45,10 @@ const SURVEY_WITH_BRANCHES = "*, survey_branches(branch_id)";
 const SURVEY_WITH_QUESTIONS =
   "*, survey_branches(branch_id), survey_questions(id, position, kind, prompt, required, low_label, high_label, survey_question_options(id, position, label))";
 
+/** As SURVEY_WITH_QUESTIONS, with the branches joined so a read can filter on them. */
+const OFFERABLE_SURVEY =
+  "*, survey_branches!inner(branch_id), survey_questions(id, position, kind, prompt, required, low_label, high_label, survey_question_options(id, position, label))";
+
 const CANDIDATE_COLUMNS =
   "id, full_name, role, is_active, deleted_at, birthdate, arbox_paid_training, arbox_bought_course, access_override";
 
@@ -301,34 +305,51 @@ export async function loadReportRows(
  * The Surveys this Trainee could answer today: published, not closed, open
  * today, the Trainee in the Audience and no Response yet. In no particular
  * order; the caller picks which to show.
+ *
+ * Runs on every Trainee dashboard load, so the database does the narrowing the
+ * checks below repeat: Surveys still open by date, and only those of a branch
+ * the Trainee belongs to. The joined `survey_branches` rows are narrowed the
+ * same way, so a record's `branchIds` here are the Trainee's branches of it,
+ * which is all the Audience check needs. The checks stay the source of truth.
  */
 export async function loadOfferableSurveys(
   db: Db,
   profileId: string,
   today: string,
 ): Promise<OfferableSurvey[]> {
-  const [candidate, surveys, answered] = await Promise.all([
-    loadCandidate(db, profileId),
-    readAllPages(() =>
+  const candidate = await loadCandidate(db, profileId);
+  // A profile in no branch is in no Survey's Audience.
+  if (candidate === null || candidate.branchIds.length === 0) return [];
+
+  const rows = must(
+    "open surveys read",
+    await readAllPages(() =>
       db
         .from("surveys")
-        .select(SURVEY_WITH_QUESTIONS)
+        .select(OFFERABLE_SURVEY)
+        .in("survey_branches.branch_id", candidate.branchIds)
         .not("published_at", "is", null)
         .is("closed_at", null)
         .lte("opens_on", today)
+        .or(`closes_on.is.null,closes_on.gte.${today}`)
         .order("id"),
     ),
-    readAllPages(() =>
-      db.from("survey_responses").select("survey_id").eq("profile_id", profileId).order("id"),
+  );
+  if (rows.length === 0) return [];
+
+  const answered = must(
+    "answered surveys read",
+    await readInChunks(
+      rows.map((row) => row.id),
+      "survey_id",
+      () => db.from("survey_responses").select("survey_id").eq("profile_id", profileId).order("id"),
     ),
-  ]);
-  const rows = must("open surveys read", surveys);
-  const answeredIds = new Set(must("answered surveys read", answered).map((r) => r.survey_id));
-  if (candidate === null) return [];
+  );
+  const answeredIds = new Set(answered.map((response) => response.survey_id));
 
   return rows.flatMap((row) => {
     const record = toSurveyRecord(row);
-    // closes_on is judged here, with the rest of the open-today rule.
+    // closes_on is judged here too, with the rest of the open-today rule.
     if (surveyState(record, today) !== "open" || answeredIds.has(record.id)) return [];
     if (!inSurveyAudience(candidate, record)) return [];
     const offer = toOfferableSurvey(record, toQuestions(row.survey_questions));
