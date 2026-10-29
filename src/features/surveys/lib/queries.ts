@@ -313,13 +313,24 @@ export async function loadReportRows(
  * the Trainee belongs to. The joined `survey_branches` rows are narrowed the
  * same way, so a record's `branchIds` here are the Trainee's branches of it,
  * which is all the Audience check needs. The checks stay the source of truth.
+ *
+ * The Trainee's own Responses (a handful, indexed by profile) are read beside
+ * the profile and filtered in memory, so no read waits on the Surveys read.
  */
 export async function loadOfferableSurveys(
   db: Db,
   profileId: string,
   today: string,
 ): Promise<OfferableSurvey[]> {
-  const candidate = await loadCandidate(db, profileId);
+  const [candidate, answered] = await Promise.all([
+    loadCandidate(db, profileId),
+    readAllPages(() =>
+      db.from("survey_responses").select("survey_id").eq("profile_id", profileId).order("id"),
+    ),
+  ]);
+  const answeredIds = new Set(
+    must("answered surveys read", answered).map((response) => response.survey_id),
+  );
   // A profile in no branch is in no Survey's Audience.
   if (candidate === null || candidate.branchIds.length === 0) return [];
 
@@ -337,18 +348,6 @@ export async function loadOfferableSurveys(
         .order("id"),
     ),
   );
-  if (rows.length === 0) return [];
-
-  const answered = must(
-    "answered surveys read",
-    await readInChunks(
-      rows.map((row) => row.id),
-      "survey_id",
-      () => db.from("survey_responses").select("survey_id").eq("profile_id", profileId).order("id"),
-    ),
-  );
-  const answeredIds = new Set(answered.map((response) => response.survey_id));
-
   return rows.flatMap((row) => {
     const record = toSurveyRecord(row);
     // closes_on is judged here too, with the rest of the open-today rule.
