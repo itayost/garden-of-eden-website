@@ -10,6 +10,8 @@ interface ToolButtonProps {
   destructive?: boolean;
   /** The smaller square used inside an option row. */
   compact?: boolean;
+  /** Lets the list put focus back here after a move or a delete (see useFocusRestore). */
+  focusId?: string;
   onClick: () => void;
   children: ReactNode;
 }
@@ -20,6 +22,7 @@ export function ToolButton({
   disabled = false,
   destructive = false,
   compact = false,
+  focusId,
   onClick,
   children,
 }: ToolButtonProps) {
@@ -34,6 +37,7 @@ export function ToolButton({
       )}
       disabled={disabled}
       aria-label={label}
+      data-focus-id={focusId}
       onClick={onClick}
     >
       {children}

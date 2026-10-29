@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { toast } from "sonner";
 
 import { emptyQuestion, newDraft } from "../../../lib/draft";
 import type { SurveyDraft, SurveyState } from "../../../lib/types";
@@ -81,6 +82,7 @@ beforeEach(() => {
   for (const mock of [push, replace, refresh, save, publish, unpublish, audienceYears, deleteSurvey]) {
     mock.mockReset();
   }
+  vi.mocked(toast.error).mockReset();
   save.mockResolvedValue({ success: true, surveyId: SURVEY_ID });
   publish.mockResolvedValue({ success: true });
   unpublish.mockResolvedValue({ success: true });
@@ -171,6 +173,56 @@ describe("SurveyBuilder: Questions", () => {
     expect(questionTexts()).toEqual(["שנייה"]);
   });
 
+  test("a moved Question keeps focus on the arrow that was pressed, at its new place", () => {
+    renderBuilder();
+    for (let count = 0; count < 3; count += 1) click("טקסט חופשי");
+    click("הזזת שאלה 1 למטה");
+    expect(screen.getByRole("button", { name: "הזזת שאלה 2 למטה" })).toHaveFocus();
+    click("הזזת שאלה 3 למעלה");
+    expect(screen.getByRole("button", { name: "הזזת שאלה 2 למעלה" })).toHaveFocus();
+  });
+
+  test("a Question that reaches an end passes focus to the other arrow, which still works", () => {
+    renderBuilder();
+    for (let count = 0; count < 3; count += 1) click("טקסט חופשי");
+    click("הזזת שאלה 2 למטה");
+    expect(screen.getByRole("button", { name: "הזזת שאלה 3 למטה" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "הזזת שאלה 3 למעלה" })).toHaveFocus();
+    click("הזזת שאלה 3 למעלה");
+    click("הזזת שאלה 2 למעלה");
+    expect(screen.getByRole("button", { name: "הזזת שאלה 1 למעלה" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "הזזת שאלה 1 למטה" })).toHaveFocus();
+  });
+
+  test("deleting a Question puts focus on the delete button of the one that took its place", () => {
+    renderBuilder();
+    for (let count = 0; count < 3; count += 1) click("טקסט חופשי");
+    click("מחיקת שאלה 1");
+    expect(screen.getByRole("button", { name: "מחיקת שאלה 1" })).toHaveFocus();
+    expect(questionTexts()).toHaveLength(2);
+  });
+
+  test("deleting the last Question puts focus on the add row", () => {
+    renderBuilder();
+    click("טקסט חופשי");
+    click("טקסט חופשי");
+    click("מחיקת שאלה 2");
+    expect(screen.getByRole("button", { name: "דירוג 1 עד 5" })).toHaveFocus();
+  });
+
+  test("at lg the tools come right after the kind, before the answers and the required switch", () => {
+    renderBuilder();
+    click("בחירה אחת");
+    const kind = screen.getByRole("combobox", { name: "סוג שאלה 1" });
+    const up = screen.getByRole("button", { name: "הזזת שאלה 1 למעלה" });
+    const firstOption = screen.getByRole("textbox", { name: "תשובה 1 בשאלה 1" });
+    const required = screen.getByRole("switch", { name: "חובה לענות" });
+    const follows = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(kind, up)).toBe(true);
+    expect(follows(up, firstOption)).toBe(true);
+    expect(follows(firstOption, required)).toBe(true);
+  });
+
   test("stops offering new Questions at 20", () => {
     const nineteen = Array.from({ length: 19 }, (_, index) => ({
       ...emptyQuestion("text"),
@@ -237,6 +289,28 @@ describe("SurveyBuilder: options", () => {
     withChoice();
     click("מחיקת תשובה 1 בשאלה 1");
     expect(optionTexts()).toEqual(["פעמיים"]);
+  });
+
+  test("a moved option keeps focus on the arrow that was pressed, or the other one at an end", () => {
+    withChoice();
+    click("הוספת תשובה");
+    click("הזזת תשובה 1 למטה בשאלה 1");
+    expect(screen.getByRole("button", { name: "הזזת תשובה 2 למטה בשאלה 1" })).toHaveFocus();
+    click("הזזת תשובה 2 למטה בשאלה 1");
+    expect(screen.getByRole("button", { name: "הזזת תשובה 3 למעלה בשאלה 1" })).toHaveFocus();
+  });
+
+  test("deleting an option puts focus on the delete button of the one that took its place", () => {
+    withChoice();
+    click("הוספת תשובה");
+    click("מחיקת תשובה 1 בשאלה 1");
+    expect(screen.getByRole("button", { name: "מחיקת תשובה 1 בשאלה 1" })).toHaveFocus();
+  });
+
+  test("deleting the last option puts focus on the add button", () => {
+    withChoice();
+    click("מחיקת תשובה 2 בשאלה 1");
+    expect(screen.getByRole("button", { name: "הוספת תשובה" })).toHaveFocus();
   });
 
   test("a rating's end labels are typed beside the scale; a blank one is no label", () => {
@@ -341,11 +415,34 @@ describe("SurveyBuilder: saving a draft", () => {
     replaceState.mockRestore();
   });
 
-  test("saving a Survey that already exists stays on its page", async () => {
+  test("saving a Survey that already exists stays on its page and refreshes it", async () => {
     renderBuilder({ surveyId: SURVEY_ID, initial: COMPLETE });
     headerButton("שמירה כטיוטה");
     await waitFor(() => expect(save).toHaveBeenCalledWith(SURVEY_ID, COMPLETE));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  test("saving a published Survey refreshes the page so its state badge is current", async () => {
+    renderBuilder({ surveyId: SURVEY_ID, initial: COMPLETE, state: "open" });
+    headerButton("שמירה");
+    await waitFor(() => expect(save).toHaveBeenCalledWith(SURVEY_ID, COMPLETE));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+  });
+
+  test("the first save of a new Survey moves the address and does not also refresh", async () => {
+    renderBuilder({ initial: COMPLETE });
+    headerButton("שמירה כטיוטה");
+    await waitFor(() => expect(replace).toHaveBeenCalledTimes(1));
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  test("a save that fails refreshes nothing", async () => {
+    save.mockResolvedValue({ error: "השמירה נכשלה. נסו שוב." });
+    renderBuilder({ surveyId: SURVEY_ID, initial: COMPLETE, state: "open" });
+    headerButton("שמירה");
+    await screen.findByRole("alert");
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   test("a save that fails does not leave the page", async () => {
@@ -428,6 +525,33 @@ describe("SurveyBuilder: publishing", () => {
     headerButton("פרסום");
     expect(await screen.findByRole("alert")).toHaveTextContent("אין הרשאה לסקר הזה");
     expect(publish).not.toHaveBeenCalled();
+  });
+
+  test("a publish that fails after the first save moves the address to the saved draft", async () => {
+    publish.mockResolvedValueOnce({ error: "הסקר השתנה בינתיים. נסו שוב." });
+    renderBuilder({ initial: COMPLETE });
+    headerButton("פרסום");
+    await screen.findByRole("alert");
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith(`/admin/surveys/${SURVEY_ID}/edit`);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  test("the refusal also reaches a toast, because the page that lists it is replaced", async () => {
+    publish.mockResolvedValueOnce({ error: "צריך כותרת של 2 עד 120 תווים · צריך לפחות שאלה אחת" });
+    renderBuilder({ initial: COMPLETE });
+    headerButton("פרסום");
+    await screen.findByRole("alert");
+    expect(toast.error).toHaveBeenCalledWith("צריך כותרת של 2 עד 120 תווים · צריך לפחות שאלה אחת");
+  });
+
+  test("a publish that fails for a Survey that was already saved leaves the address alone", async () => {
+    publish.mockResolvedValueOnce({ error: "הסקר השתנה בינתיים. נסו שוב." });
+    renderBuilder({ surveyId: SURVEY_ID, initial: COMPLETE });
+    headerButton("פרסום");
+    await screen.findByRole("alert");
+    expect(replace).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   test("a publish that fails after the first save keeps the saved Survey for the next try", async () => {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { publishProblem } from "../../lib/publish";
+import { PROBLEM_SEPARATOR } from "../../lib/staff-input";
 import type { SurveyDraft } from "../../lib/types";
 import { publishSaved, saveDraft, unpublishSaved } from "./builder-requests";
 
@@ -54,25 +55,33 @@ interface SavedSurvey {
 /**
  * Saves the draft. The first save of a new Survey moves to its edit page with
  * router.replace, so a reload opens the saved draft; the edit page reads it
- * back from the server, and later saves go to the same Survey.
+ * back from the server, and later saves go to the same Survey. A save of an
+ * existing Survey refreshes the page, so the state badge follows the dates.
  */
 function useSaveAction(run: BuilderRun, saved: SavedSurvey, draft: SurveyDraft, published: boolean) {
   const router = useRouter();
   return async () => {
     if (run.pending !== null) return;
+    const isNew = saved.id === null;
     run.begin("save");
     const outcome = await saveDraft(saved.id, draft);
     if ("errors" in outcome) return run.fail(outcome.errors);
     saved.remember(outcome.surveyId);
     run.finish();
     toast.success(published ? "השינויים נשמרו" : "הטיוטה נשמרה");
-    if (saved.id === null) router.replace(editHref(outcome.surveyId));
+    if (isNew) router.replace(editHref(outcome.surveyId));
+    else router.refresh();
   };
 }
 
 /**
  * Publishing is a save, then a publish, then the Survey's own page. The
  * address is not touched on the way: that page replaces it.
+ *
+ * Unless the publish is refused for a Survey this publish was the first to
+ * save: the address would stay on /new, where a reload loses the draft, so it
+ * moves to the edit page. That page replaces this one and its list of reasons
+ * with it, so the reasons also go to a toast.
  */
 function usePublishAction(
   run: BuilderRun,
@@ -85,12 +94,20 @@ function usePublishAction(
     options.onAttempt();
     const problems = publishProblem(options.draft, options.today);
     if (problems.length > 0) return run.show(problems);
+    const isNew = saved.id === null;
     run.begin("publish");
     const outcome = await saveDraft(saved.id, options.draft);
     if ("errors" in outcome) return run.fail(outcome.errors);
     saved.remember(outcome.surveyId);
     const refusal = await publishSaved(outcome.surveyId);
-    if (refusal !== null) return run.fail(refusal);
+    if (refusal !== null) {
+      run.fail(refusal);
+      if (isNew) {
+        toast.error(refusal.join(PROBLEM_SEPARATOR));
+        router.replace(editHref(outcome.surveyId));
+      }
+      return;
+    }
     toast.success("הסקר פורסם");
     // Still pending: the page is on its way out, and a second click must do nothing.
     router.push(`/admin/surveys/${outcome.surveyId}`);
