@@ -14,11 +14,12 @@ function renderBody(
   over: Partial<Parameters<typeof build>[0]> = {},
   page = 1,
   extra: Partial<ReportFilters> = {},
+  narrowed = false,
 ) {
   const report = build({ ...over, filters: { ...filters, segment, page, ...extra } });
   render(
     <NuqsTestingAdapter>
-      <ResultsBody report={report} questions={questions} segment={segment} page={page} />
+      <ResultsBody report={report} questions={questions} segment={segment} page={page} narrowed={narrowed} />
     </NuqsTestingAdapter>,
   );
 }
@@ -39,6 +40,17 @@ describe("ResultsBody: the answered segment", () => {
     renderBody("answered", {}, 1, { search: "אין כזה" });
     expect(screen.getByText("אין כאן אף אחד")).toBeTruthy();
     expect(screen.queryByText("עוד אף אחד לא ענה")).toBeNull();
+  });
+
+  test("a birth year nobody answered in says nobody is here, not that nobody answered", () => {
+    renderBody("answered", {}, 1, { birthYear: 2001 }, true);
+    expect(screen.getByText("אין כאן אף אחד")).toBeTruthy();
+    expect(screen.queryByText("עוד אף אחד לא ענה")).toBeNull();
+  });
+
+  test("with no filter and no Response it still says nobody has answered yet", () => {
+    renderBody("answered", { responses: [] }, 1, {}, false);
+    expect(screen.getByText("עוד אף אחד לא ענה")).toBeTruthy();
   });
 });
 

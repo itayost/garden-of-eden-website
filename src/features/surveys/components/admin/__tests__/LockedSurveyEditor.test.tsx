@@ -180,6 +180,20 @@ describe("LockedSurveyEditor: moving the close date of a survey that ended by da
     fireEvent.change(dateInput(), { target: { value: "2026-11-12" } });
     expect(screen.queryByText("סקר שנסגר לפי תאריך נפתח שוב עד התאריך החדש.")).toBeNull();
   });
+
+  test("clearing the date warns that it opens again with no end date", () => {
+    renderLocked({ record: ended });
+    expect(screen.queryByText("ייפתח שוב ללא תאריך סגירה")).toBeNull();
+    fireEvent.change(dateInput(), { target: { value: "" } });
+    expect(screen.getByText("ייפתח שוב ללא תאריך סגירה")).toBeTruthy();
+    expect(screen.queryByText("סקר שנסגר לפי תאריך נפתח שוב עד התאריך החדש.")).toBeNull();
+  });
+
+  test("clearing the date of a survey that is still open warns of nothing", () => {
+    renderLocked();
+    fireEvent.change(dateInput(), { target: { value: "" } });
+    expect(screen.queryByText("ייפתח שוב ללא תאריך סגירה")).toBeNull();
+  });
 });
 
 describe("LockedSurveyEditor: closing now", () => {
@@ -190,6 +204,12 @@ describe("LockedSurveyEditor: closing now", () => {
     fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "סגירה" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/admin/surveys/${SURVEY_ID}`));
     expect(closeSurvey).toHaveBeenCalledWith(SURVEY_ID);
+  });
+
+  test("a survey that already ended by date has no close button, only save", () => {
+    renderLocked({ record: { closesOn: "2026-10-28" } });
+    expect(screen.queryByRole("button", { name: "סגירה עכשיו" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "שמירה" }).length).toBeGreaterThan(0);
   });
 
   test("cancelling the confirmation closes nothing", () => {

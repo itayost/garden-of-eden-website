@@ -8,12 +8,19 @@ import { SurveyDetailsFields } from "./SurveyDetailsFields";
 import type { LockedValues } from "./useLockedDetails";
 
 const REOPEN_HINT = "סקר שנסגר לפי תאריך נפתח שוב עד התאריך החדש.";
+const REOPEN_NO_END_HINT = "ייפתח שוב ללא תאריך סגירה";
+
+/** What the close date field says about reopening: a later date, or no end date at all. */
+function reopenHint(reopens: boolean, closesOn: string): string | undefined {
+  if (!reopens) return undefined;
+  return closesOn === "" ? REOPEN_NO_END_HINT : REOPEN_HINT;
+}
 
 interface LockedDetailsPanelProps {
   /** At least one: the Survey is locked because someone answered. */
   responseCount: number;
   values: LockedValues;
-  /** The new close date opens a Survey that ended by date. */
+  /** The new close date (or none) opens a Survey that ended by date. */
   reopens: boolean;
   onEdit: (patch: Partial<LockedValues>) => void;
 }
@@ -44,7 +51,7 @@ export function LockedDetailsPanel({ responseCount, values, reopens, onEdit }: L
         label="נסגר"
         optional
         value={values.closesOn}
-        hint={reopens ? REOPEN_HINT : undefined}
+        hint={reopenHint(reopens, values.closesOn)}
         onChange={(closesOn) => onEdit({ closesOn })}
       />
     </section>

@@ -102,8 +102,18 @@ describe("reopensEndedSurvey", () => {
     expect(reopensEndedSurvey(endedByDate, "2026-10-28", TODAY)).toBe(false);
   });
 
-  test("no new close date is not a date to say", () => {
-    expect(reopensEndedSurvey(endedByDate, null, TODAY)).toBe(false);
+  test("clearing the close date of a survey that ended by date reopens it with no end", () => {
+    expect(reopensEndedSurvey(endedByDate, null, TODAY)).toBe(true);
+  });
+
+  test("clearing the close date of a survey still open reopens nothing", () => {
+    expect(reopensEndedSurvey(base, null, TODAY)).toBe(false);
+  });
+
+  test("clearing the close date of a survey closed early or a draft reopens nothing", () => {
+    const closedEarly = { ...endedByDate, closedAt: "2026-10-27T10:00:00Z" };
+    expect(reopensEndedSurvey(closedEarly, null, TODAY)).toBe(false);
+    expect(reopensEndedSurvey({ ...endedByDate, publishedAt: null }, null, TODAY)).toBe(false);
   });
 
   test("a survey that is still open does not reopen", () => {

@@ -14,7 +14,7 @@ import "server-only";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
 import { inSurveyAudience, type AudienceCandidate } from "./audience";
-import { canViewSurvey, visibleSurveyBranches } from "./permissions";
+import { canListSurvey, visibleSurveyBranches } from "./permissions";
 import type { ReportResponse, ReportSeen } from "./report";
 import {
   branchIdsByProfile,
@@ -218,10 +218,10 @@ function toListRow(
 }
 
 /**
- * Every Survey the viewer may see, newest first, with its counts narrowed to
- * the branches the viewer may see. The reads for all listed Surveys are
- * batched: one pass over their Responses, Seen rows and Audience, not one per
- * Survey.
+ * Every Survey the viewer may see, newest first (a draft only for someone who
+ * may edit it), with its counts narrowed to the branches the viewer may see.
+ * The reads for all listed Surveys are batched: one pass over their Responses,
+ * Seen rows and Audience, not one per Survey.
  */
 export async function loadSurveyList(
   db: Db,
@@ -240,7 +240,9 @@ export async function loadSurveyList(
   );
   const visible = rows
     .map(toSurveyRecord)
-    .filter((record) => canViewSurvey(viewer.role, viewer.managedBranchIds, record.branchIds));
+    .filter((record) =>
+      canListSurvey(viewer.role, viewer.managedBranchIds, record.branchIds, record.publishedAt === null),
+    );
   if (visible.length === 0) return [];
 
   const visibleBranchesOf = (record: SurveyRecord) =>

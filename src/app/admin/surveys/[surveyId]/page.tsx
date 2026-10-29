@@ -15,7 +15,7 @@ import {
 } from "@/features/surveys/lib/permissions";
 import { loadAudienceCandidates, loadReportRows, loadSurvey, type LoadedSurvey } from "@/features/surveys/lib/queries";
 import { buildSurveyReport, type ReportFilters, type SurveyReport } from "@/features/surveys/lib/report";
-import { parseReportFilters } from "@/features/surveys/lib/report-filters";
+import { isNarrowed, parseReportFilters } from "@/features/surveys/lib/report-filters";
 import { clampPage, runDatesText, segmentCounts } from "@/features/surveys/lib/results-view";
 import { audienceReportPeople } from "@/features/surveys/lib/rows";
 import { surveyState } from "@/features/surveys/lib/state";
@@ -129,11 +129,13 @@ function ResultsPageView({ viewer, data }: { viewer: SurveyViewer; data: Results
   const filterBranches = branches
     .filter((branch) => visibleBranchIds === null || visibleBranchIds.includes(branch.id))
     .map((branch) => ({ id: branch.id, nameHe: branch.name }));
+  const rights = actionRights(viewer, data);
   const actions = (
     <SurveyActions
       surveyId={record.id}
-      {...actionRights(viewer, data)}
-      responseCount={survey.responseCount}
+      {...rights}
+      // The all-branch total reaches only a viewer who may delete the Survey.
+      responseCount={rights.canDelete ? survey.responseCount : 0}
       csvRows={surveyCsvRows(questions, report.allRows)}
       csvFileName={`survey-${today}.csv`}
     />
@@ -153,7 +155,13 @@ function ResultsPageView({ viewer, data }: { viewer: SurveyViewer; data: Results
         <PhoneSummaryList questions={questions} summaries={report.questions} />
       )}
       <ResultsToolbar counts={segmentCounts(report.totals)} branches={filterBranches} birthYears={report.birthYears} />
-      <ResultsBody report={report} questions={questions} segment={filters.segment} page={filters.page} />
+      <ResultsBody
+        report={report}
+        questions={questions}
+        segment={filters.segment}
+        page={filters.page}
+        narrowed={isNarrowed(filters)}
+      />
     </div>
   );
 }

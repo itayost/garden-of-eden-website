@@ -193,6 +193,14 @@ describe("topOptions", () => {
     if (summary.kind !== "single_choice") throw new Error("fixture");
     expect(topOptions(summary.options, 2).map((o) => o.label)).toEqual(["אפשרות 2"]);
   });
+
+  test("leaves the options it was given in their order", () => {
+    const summary = choice([1, 5, 3]);
+    if (summary.kind !== "single_choice") throw new Error("fixture");
+    const before = summary.options.map((o) => o.label);
+    topOptions(summary.options, 3);
+    expect(summary.options.map((o) => o.label)).toEqual(before);
+  });
 });
 
 describe("scaledHeights", () => {

@@ -40,6 +40,21 @@ export function canViewSurvey(
   return surveyBranchIds.some((id) => managedBranchIds.includes(id));
 }
 
+/**
+ * Whether the survey belongs in the viewer's list. A draft opens only in the
+ * builder, so it is listed only to someone who may edit it: a manager never
+ * sees an Admin's draft that also goes to another branch.
+ */
+export function canListSurvey(
+  role: string,
+  managedBranchIds: readonly string[],
+  surveyBranchIds: readonly string[],
+  isDraft: boolean,
+): boolean {
+  if (isDraft) return canEditSurvey(role, managedBranchIds, surveyBranchIds);
+  return canViewSurvey(role, managedBranchIds, surveyBranchIds);
+}
+
 /** An Admin always; a manager who may edit the survey, only before any Response. */
 export function canDeleteSurvey(
   role: string,

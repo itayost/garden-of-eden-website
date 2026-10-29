@@ -28,8 +28,11 @@ function AnsweredCell({ row }: { row: SurveyListRow }) {
   if (row.state === "scheduled") {
     return <span className="text-muted-foreground">ייפתח ב-{dayMonth(row.opensOn)}</span>;
   }
+  if (row.seen === 0) {
+    return <span className="text-muted-foreground">עוד אף אחד לא ראה</span>;
+  }
   return (
-    <div className="w-40">
+    <div className="w-28 md:w-40">
       <div className="flex items-baseline gap-1.5">
         <span className="font-bold tabular-nums">{row.answered}</span>
         <span className="text-xs text-muted-foreground">
@@ -47,7 +50,7 @@ function SurveyRow({ row }: { row: SurveyListRow }) {
   const audience = audienceText(row.branchNames, row.birthYears);
   return (
     <TableRow className="relative">
-      <TableCell className="min-w-48 max-w-sm whitespace-normal">
+      <TableCell className="max-w-sm whitespace-normal md:min-w-48">
         {/* The link's ::after covers the whole row, so the row is the click target. */}
         <Link
           href={rowHref(row)}

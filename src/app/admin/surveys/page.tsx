@@ -53,16 +53,13 @@ export default async function SurveysPage({ searchParams }: PageProps) {
       {surveys.length === 0 ? (
         <EmptyState icon={ClipboardList} title="עוד אין סקרים" cta={{ label: "סקר חדש", href: NEW_SURVEY_HREF }} />
       ) : (
-        <div className="space-y-3">
+        <>
           {rows.length === 0 ? (
             <p className="py-12 text-center text-muted-foreground">אין סקרים במצב הזה</p>
           ) : (
             <SurveyListTable rows={rows} />
           )}
-          <p className="text-xs text-muted-foreground">
-            מנהל סניף רואה כאן רק סקרים שנשלחו לסניף שלו, וגם בהם רק את החניכים של הסניף.
-          </p>
-        </div>
+        </>
       )}
     </div>
   );

@@ -59,3 +59,11 @@ export function parseReportFilters(
     page: parsePage(firstValue(params.page)),
   };
 }
+
+/**
+ * Whether a branch or birth-year filter cuts the report down. The name search
+ * and the page do not: they never change who the report counts.
+ */
+export function isNarrowed(filters: ReportFilters): boolean {
+  return filters.branchId !== null || filters.birthYear !== null;
+}

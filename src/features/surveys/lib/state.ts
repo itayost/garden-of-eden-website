@@ -22,8 +22,9 @@ export function publishedOpensOn(opensOn: string, today: string): string {
 
 /**
  * True when moving the close date to `newClosesOn` opens a Survey that ended
- * by date again, until that date. A Survey closed early stays closed, a
- * draft never ended, and no new date (or one still in the past) reopens nothing.
+ * by date again: until that date, or with no end at all when the date is
+ * cleared. A Survey closed early stays closed, a draft never ended, and a new
+ * date still in the past reopens nothing.
  */
 export function reopensEndedSurvey(
   survey: Pick<SurveyRecord, "publishedAt" | "closedAt" | "opensOn" | "closesOn">,
@@ -31,7 +32,7 @@ export function reopensEndedSurvey(
   today: string,
 ): boolean {
   const endedByDate = survey.closedAt === null && surveyState(survey, today) === "ended";
-  return endedByDate && newClosesOn !== null && newClosesOn >= today;
+  return endedByDate && (newClosesOn === null || newClosesOn >= today);
 }
 
 export const SURVEY_LIST_FILTERS = ["all", "open", "draft", "ended"] as const;

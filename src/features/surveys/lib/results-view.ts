@@ -117,9 +117,12 @@ type ChoiceOptions = Extract<QuestionSummary, { kind: "single_choice" | "multi_c
 
 /** The options picked most, most first (ties keep the authored order); never one nobody picked. */
 export function topOptions(options: ChoiceOptions, count: number): ChoiceOptions {
+  // Not toSorted: this runs in the browser, and older iOS and Chrome lack it.
+  // filter() hands back a new array, so sorting it leaves `options` alone, and
+  // the sort is stable, so ties keep the authored order.
   return options
     .filter((option) => option.count > 0)
-    .toSorted((a, b) => b.count - a.count)
+    .sort((a, b) => b.count - a.count)
     .slice(0, count);
 }
 

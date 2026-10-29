@@ -14,13 +14,16 @@ interface ResultsBodyProps {
   segment: ReportSegment;
   /** The 1-based page the address asks for; a page past the end shows the last one. */
   page: number;
+  /** A branch or birth-year filter is on, so an empty slice is not "nobody answered". */
+  narrowed: boolean;
 }
 
 const NOBODY = <EmptyState icon={Users} title="אין כאן אף אחד" />;
 
-function AnsweredBody({ report, questions, page }: Omit<ResultsBodyProps, "segment">) {
+function AnsweredBody({ report, questions, page, narrowed }: Omit<ResultsBodyProps, "segment">) {
   if (report.totals.answered === 0) {
-    return <EmptyState icon={MessageSquareText} title="עוד אף אחד לא ענה" />;
+    // Inside a branch or birth-year slice, the Survey may well have answers elsewhere.
+    return narrowed ? NOBODY : <EmptyState icon={MessageSquareText} title="עוד אף אחד לא ענה" />;
   }
   // Answers exist, but the name search matched none of them.
   if (report.rowCount === 0) return NOBODY;
@@ -47,8 +50,10 @@ function PeopleBody({ rows, showSeenDate, page }: { rows: readonly PersonRow[]; 
 }
 
 /** The part of the page the segmented control switches: the grid, or one of the two lists. */
-export function ResultsBody({ report, questions, segment, page }: ResultsBodyProps) {
-  if (segment === "answered") return <AnsweredBody report={report} questions={questions} page={page} />;
+export function ResultsBody({ report, questions, segment, page, narrowed }: ResultsBodyProps) {
+  if (segment === "answered") {
+    return <AnsweredBody report={report} questions={questions} page={page} narrowed={narrowed} />;
+  }
   const showSeenDate = segment === "seen";
   return (
     <PeopleBody

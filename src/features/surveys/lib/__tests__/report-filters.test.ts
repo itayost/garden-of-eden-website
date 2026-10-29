@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { parseReportFilters } from "../report-filters";
+import { isNarrowed, parseReportFilters } from "../report-filters";
 
 const ALLOWED = ["b-ka"];
 
@@ -62,4 +62,12 @@ test("a repeated parameter uses its first value", () => {
   const filters = parseReportFilters({ branch: ["b-ka", "b-ha"], year: ["2015", "2014"] }, ALLOWED);
   expect(filters.branchId).toBe("b-ka");
   expect(filters.birthYear).toBe(2015);
+});
+
+test("a branch or a birth year narrows the report; a search, a page or a segment does not", () => {
+  const none = parseReportFilters({}, ALLOWED);
+  expect(isNarrowed(none)).toBe(false);
+  expect(isNarrowed(parseReportFilters({ q: "לוי", page: "2", segment: "seen" }, ALLOWED))).toBe(false);
+  expect(isNarrowed(parseReportFilters({ branch: "b-ka" }, ALLOWED))).toBe(true);
+  expect(isNarrowed(parseReportFilters({ year: "2014" }, ALLOWED))).toBe(true);
 });

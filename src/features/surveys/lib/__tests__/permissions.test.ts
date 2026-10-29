@@ -3,6 +3,7 @@ import {
   canDeleteSurvey,
   choosableBranches,
   canEditSurvey,
+  canListSurvey,
   canUseSurveys,
   canViewSurvey,
   visibleSurveyBranches,
@@ -48,6 +49,27 @@ describe("canViewSurvey", () => {
 
   test("an Admin views every survey", () => {
     expect(canViewSurvey("admin", [], [HAIFA])).toBe(true);
+  });
+});
+
+describe("canListSurvey", () => {
+  test("a published survey is listed to anyone who may view it", () => {
+    expect(canListSurvey("trainer", [KA], [KA, HAIFA], false)).toBe(true);
+    expect(canListSurvey("trainer", [KA], [HAIFA], false)).toBe(false);
+    expect(canListSurvey("admin", [], [HAIFA], false)).toBe(true);
+  });
+
+  test("a draft is listed only to someone who may edit it", () => {
+    expect(canListSurvey("admin", [], [KA, HAIFA], true)).toBe(true);
+    expect(canListSurvey("trainer", [KA], [KA], true)).toBe(true);
+  });
+
+  test("a manager does not see a draft that also goes to another branch", () => {
+    expect(canListSurvey("trainer", [KA], [KA, HAIFA], true)).toBe(false);
+  });
+
+  test("a manager does not see a draft that avoids their branches", () => {
+    expect(canListSurvey("trainer", [KA], [HAIFA], true)).toBe(false);
   });
 });
 

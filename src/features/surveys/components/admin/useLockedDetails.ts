@@ -34,7 +34,7 @@ async function sendDetails(surveyId: string, values: LockedValues): Promise<stri
 
 /**
  * The title, intro and close date of a Survey that has Responses, and saving
- * them. `reopens` says the new close date opens a Survey that ended by date.
+ * them. `reopens` says the new close date (or none) opens a Survey that ended by date.
  * An edit clears the last refusal.
  */
 export function useLockedDetails(record: SurveyRecord, today: string) {
