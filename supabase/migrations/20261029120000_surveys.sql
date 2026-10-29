@@ -2,7 +2,8 @@
 --
 -- Expand only: seven new tables and two functions. Apply this BEFORE
 -- deploying the code, which reads and writes them; the code running today
--- never touches them. Needs set_row_updated_at() from 20260911120000.
+-- never touches them. Needs set_row_updated_at() from 20260911120000 and reads
+-- profile_branches.
 --
 -- Every table is read and written only by server actions with the service
 -- role: RLS is on with no policies, and anon and authenticated have no
@@ -215,16 +216,24 @@ END $function$;
 REVOKE ALL ON FUNCTION public.save_survey_draft(uuid, uuid, text, text, date, date, smallint[], uuid[], jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.save_survey_draft(uuid, uuid, text, text, date, date, smallint[], uuid[], jsonb) TO service_role;
 
--- Writes a Trainee's Response and its answers together, or nothing. The
--- shared row lock keeps a concurrent save_survey_draft() from swapping the
--- Questions underneath; an answer to a Question (or option) that is no longer
--- there is refused as survey_changed. p_answers is an array of
--- {question_id, option_id, rating, text}; the action has already judged
--- required and shape (answersProblem), this is the last line.
+-- Writes a Trainee's Response and its answers together, or nothing. Judged
+-- here, under the Survey's shared row lock (which keeps a concurrent
+-- save_survey_draft() from swapping the Questions underneath):
+--   * the Survey is published, not closed, and today in Israel is inside
+--     opens_on .. closes_on (survey_not_open);
+--   * the Trainee belongs to a branch of the Survey (not_in_audience); the
+--     Response keeps those branches as its snapshot, computed here and never
+--     taken from the caller;
+--   * every answer is to a Question of this Survey, to an option of that
+--     Question, and has the value its Question kind takes: an option on a
+--     choice Question (one at most on a single choice), a rating on a rating
+--     Question, text on a text Question (survey_changed).
+-- Access tier, is_active, birth year and required Questions are the action's
+-- (answersProblem and the audience rules); this is the last line.
+-- p_answers is an array of {question_id, option_id, rating, text}.
 CREATE OR REPLACE FUNCTION public.submit_survey_response(
   p_survey_id uuid,
   p_profile_id uuid,
-  p_branch_ids uuid[],
   p_answers jsonb
 )
 RETURNS uuid
@@ -235,29 +244,53 @@ AS $function$
 DECLARE
   v_published_at timestamptz;
   v_closed_at timestamptz;
+  v_opens_on date;
+  v_closes_on date;
+  v_today date := (now() AT TIME ZONE 'Asia/Jerusalem')::date;
+  v_branch_ids uuid[];
   v_response_id uuid;
 BEGIN
-  SELECT published_at, closed_at INTO v_published_at, v_closed_at
+  SELECT published_at, closed_at, opens_on, closes_on
+    INTO v_published_at, v_closed_at, v_opens_on, v_closes_on
     FROM surveys WHERE id = p_survey_id FOR SHARE;
-  IF NOT FOUND OR v_published_at IS NULL OR v_closed_at IS NOT NULL THEN
+  IF NOT FOUND
+     OR v_published_at IS NULL
+     OR v_closed_at IS NOT NULL
+     OR v_today NOT BETWEEN v_opens_on AND COALESCE(v_closes_on, 'infinity'::date) THEN
     RAISE EXCEPTION 'survey_not_open';
   END IF;
 
+  SELECT COALESCE(array_agg(pb.branch_id ORDER BY pb.branch_id), '{}'::uuid[]) INTO v_branch_ids
+    FROM profile_branches pb
+    JOIN survey_branches sb ON sb.branch_id = pb.branch_id AND sb.survey_id = p_survey_id
+    WHERE pb.profile_id = p_profile_id;
+  IF cardinality(v_branch_ids) = 0 THEN RAISE EXCEPTION 'not_in_audience'; END IF;
+
   IF EXISTS (
-    SELECT 1
-    FROM jsonb_to_recordset(p_answers) AS a(question_id uuid, option_id uuid, rating smallint, text text)
-    WHERE NOT EXISTS (
-            SELECT 1 FROM survey_questions q WHERE q.id = a.question_id AND q.survey_id = p_survey_id
-          )
-       OR (a.option_id IS NOT NULL AND NOT EXISTS (
-            SELECT 1 FROM survey_question_options o WHERE o.id = a.option_id AND o.question_id = a.question_id
+    WITH a AS (
+      SELECT x.question_id, x.option_id, x.rating, x.text, q.id AS known_question_id, q.kind
+      FROM jsonb_to_recordset(p_answers) AS x(question_id uuid, option_id uuid, rating smallint, text text)
+      LEFT JOIN survey_questions q ON q.id = x.question_id AND q.survey_id = p_survey_id
+    )
+    SELECT 1 FROM a
+    WHERE a.known_question_id IS NULL
+       OR (a.option_id IS NOT NULL AND (
+            a.kind NOT IN ('single_choice', 'multi_choice')
+            OR NOT EXISTS (SELECT 1 FROM survey_question_options o WHERE o.id = a.option_id AND o.question_id = a.question_id)
           ))
+       OR (a.rating IS NOT NULL AND a.kind <> 'rating')
+       OR (a.text IS NOT NULL AND a.kind <> 'text')
+    UNION ALL
+    SELECT 1 FROM a
+    WHERE a.kind = 'single_choice' AND a.option_id IS NOT NULL
+    GROUP BY a.question_id
+    HAVING count(*) > 1
   ) THEN
     RAISE EXCEPTION 'survey_changed';
   END IF;
 
   INSERT INTO survey_responses (survey_id, profile_id, branch_ids)
-    VALUES (p_survey_id, p_profile_id, COALESCE(p_branch_ids, '{}'))
+    VALUES (p_survey_id, p_profile_id, v_branch_ids)
     ON CONFLICT (survey_id, profile_id) DO NOTHING
     RETURNING id INTO v_response_id;
   IF v_response_id IS NULL THEN RAISE EXCEPTION 'already_answered'; END IF;
@@ -274,5 +307,5 @@ BEGIN
   RETURN v_response_id;
 END $function$;
 
-REVOKE ALL ON FUNCTION public.submit_survey_response(uuid, uuid, uuid[], jsonb) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.submit_survey_response(uuid, uuid, uuid[], jsonb) TO service_role;
+REVOKE ALL ON FUNCTION public.submit_survey_response(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_survey_response(uuid, uuid, jsonb) TO service_role;
