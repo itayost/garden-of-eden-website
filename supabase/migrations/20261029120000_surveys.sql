@@ -46,7 +46,8 @@ CREATE TABLE IF NOT EXISTS public.survey_questions (
   required boolean NOT NULL DEFAULT true,
   low_label text CHECK (low_label IS NULL OR char_length(low_label) <= 40),
   high_label text CHECK (high_label IS NULL OR char_length(high_label) <= 40),
-  UNIQUE (survey_id, position)
+  UNIQUE (survey_id, position),
+  CONSTRAINT survey_questions_labels_only_on_rating CHECK (kind = 'rating' OR (low_label IS NULL AND high_label IS NULL))
 );
 
 CREATE TABLE IF NOT EXISTS public.survey_question_options (
@@ -54,7 +55,10 @@ CREATE TABLE IF NOT EXISTS public.survey_question_options (
   question_id uuid NOT NULL REFERENCES public.survey_questions(id) ON DELETE CASCADE,
   position smallint NOT NULL CHECK (position BETWEEN 0 AND 9),
   label text NOT NULL CHECK (char_length(label) <= 100),
-  UNIQUE (question_id, position)
+  UNIQUE (question_id, position),
+  -- The target of survey_answers' composite foreign key, so an answer's
+  -- option must belong to the answer's own Question.
+  CONSTRAINT survey_question_options_question_id_id_key UNIQUE (question_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS public.survey_views (
@@ -73,19 +77,28 @@ CREATE TABLE IF NOT EXISTS public.survey_responses (
   UNIQUE (survey_id, profile_id)
 );
 
+-- A Question or option that has answers cannot be deleted on its own (NO
+-- ACTION); deleting the whole Survey still removes everything, because its
+-- Responses, and so their answers, cascade in the same statement. Both
+-- foreign keys to Questions and options are deferred to the end of the
+-- transaction on purpose: the Survey's cascades fire in trigger-name order,
+-- and a plain NO ACTION check made when the Questions cascade ends, before
+-- the Responses cascade has run, would refuse the Survey's own deletion.
 CREATE TABLE IF NOT EXISTS public.survey_answers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   response_id uuid NOT NULL REFERENCES public.survey_responses(id) ON DELETE CASCADE,
-  question_id uuid NOT NULL REFERENCES public.survey_questions(id) ON DELETE CASCADE,
-  option_id uuid REFERENCES public.survey_question_options(id) ON DELETE CASCADE,
+  question_id uuid NOT NULL REFERENCES public.survey_questions(id) ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+  option_id uuid,
   rating smallint CHECK (rating BETWEEN 1 AND 5),
   text_value text CHECK (text_value IS NULL OR char_length(text_value) BETWEEN 1 AND 1000),
   CONSTRAINT survey_answers_one_value CHECK (num_nonnulls(option_id, rating, text_value) = 1),
-  UNIQUE (response_id, question_id, option_id)
+  -- One answer per rating or text Question, distinct options on a choice
+  -- Question (NULL option_ids count as equal).
+  CONSTRAINT survey_answers_one_value_per_option UNIQUE NULLS NOT DISTINCT (response_id, question_id, option_id),
+  -- MATCH SIMPLE: a NULL option_id (rating or text answer) is not checked.
+  CONSTRAINT survey_answers_option_of_question FOREIGN KEY (question_id, option_id)
+    REFERENCES public.survey_question_options (question_id, id) ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED
 );
--- UNIQUE above treats NULL option_ids as distinct; this closes that gap so a
--- rating or text Question has one answer per Response.
-CREATE UNIQUE INDEX IF NOT EXISTS survey_answers_one_per_question ON public.survey_answers (response_id, question_id) WHERE option_id IS NULL;
 
 -- The unique keys already lead with survey_id, question_id or response_id;
 -- these cover the remaining foreign keys.
@@ -139,7 +152,8 @@ REVOKE ALL ON public.survey_answers FROM anon, authenticated;
 -- serialises it with submit_survey_response(), so a Response cannot land
 -- while the Questions are being swapped. p_questions is an array of
 -- {kind, prompt, required, low_label, high_label, options: [label, ...]},
--- stored in array order.
+-- stored in array order. Labels are kept only on rating Questions (trimmed,
+-- an empty one as NULL).
 CREATE OR REPLACE FUNCTION public.save_survey_draft(
   p_survey_id uuid,
   p_actor uuid,
@@ -158,9 +172,6 @@ SET search_path TO 'public'
 AS $function$
 DECLARE
   v_id uuid;
-  v_question jsonb;
-  v_index bigint;
-  v_question_id uuid;
 BEGIN
   IF p_survey_id IS NULL THEN
     INSERT INTO surveys (title, intro, opens_on, closes_on, birth_years, created_by)
@@ -188,27 +199,29 @@ BEGIN
   INSERT INTO survey_branches (survey_id, branch_id)
     SELECT DISTINCT v_id, b FROM unnest(p_branch_ids) AS b;
 
-  FOR v_question, v_index IN
-    SELECT q.value, q.ordinality FROM jsonb_array_elements(p_questions) WITH ORDINALITY AS q(value, ordinality)
-  LOOP
-    INSERT INTO survey_questions (survey_id, position, kind, prompt, required, low_label, high_label)
-      VALUES (
-        v_id,
-        v_index - 1,
-        v_question->>'kind',
-        v_question->>'prompt',
-        COALESCE((v_question->>'required')::boolean, true),
-        v_question->>'low_label',
-        v_question->>'high_label'
-      )
-      RETURNING id INTO v_question_id;
-
-    INSERT INTO survey_question_options (question_id, position, label)
-      SELECT v_question_id, o.ordinality - 1, o.label
-      FROM jsonb_array_elements_text(
-        CASE WHEN jsonb_typeof(v_question->'options') = 'array' THEN v_question->'options' ELSE '[]'::jsonb END
-      ) WITH ORDINALITY AS o(label, ordinality);
-  END LOOP;
+  -- Every Question and every option in one statement: the Question ids are
+  -- generated up front so the options can name their Question.
+  WITH q AS MATERIALIZED (
+    SELECT gen_random_uuid() AS id, e.ordinality - 1 AS position, e.value AS def
+    FROM jsonb_array_elements(p_questions) WITH ORDINALITY AS e(value, ordinality)
+  ), new_questions AS (
+    INSERT INTO survey_questions (id, survey_id, position, kind, prompt, required, low_label, high_label)
+      SELECT q.id,
+             v_id,
+             q.position,
+             q.def->>'kind',
+             q.def->>'prompt',
+             COALESCE((q.def->>'required')::boolean, true),
+             CASE WHEN q.def->>'kind' = 'rating' THEN NULLIF(btrim(q.def->>'low_label'), '') END,
+             CASE WHEN q.def->>'kind' = 'rating' THEN NULLIF(btrim(q.def->>'high_label'), '') END
+      FROM q
+  )
+  INSERT INTO survey_question_options (question_id, position, label)
+    SELECT q.id, o.ordinality - 1, o.label
+    FROM q
+    CROSS JOIN LATERAL jsonb_array_elements_text(
+      CASE WHEN jsonb_typeof(q.def->'options') = 'array' THEN q.def->'options' ELSE '[]'::jsonb END
+    ) WITH ORDINALITY AS o(label, ordinality);
 
   RETURN v_id;
 END $function$;
@@ -224,10 +237,13 @@ GRANT EXECUTE ON FUNCTION public.save_survey_draft(uuid, uuid, text, text, date,
 --   * the Trainee belongs to a branch of the Survey (not_in_audience); the
 --     Response keeps those branches as its snapshot, computed here and never
 --     taken from the caller;
---   * every answer is to a Question of this Survey, to an option of that
---     Question, and has the value its Question kind takes: an option on a
---     choice Question (one at most on a single choice), a rating on a rating
---     Question, text on a text Question (survey_changed).
+--   * every answer is to a Question of this Survey and has the value its
+--     Question kind takes: an option on a choice Question (one at most on a
+--     single choice), a rating on a rating Question, text on a text Question
+--     (survey_changed). That an option belongs to its answer's own Question is
+--     the table's job (foreign key survey_answers_option_of_question: an
+--     option of another Question fails with 23503 when the transaction
+--     commits, and the whole call is rolled back).
 -- Access tier, is_active, birth year and required Questions are the action's
 -- (answersProblem and the audience rules); this is the last line.
 -- p_answers is an array of {question_id, option_id, rating, text}.
@@ -274,10 +290,7 @@ BEGIN
     )
     SELECT 1 FROM a
     WHERE a.known_question_id IS NULL
-       OR (a.option_id IS NOT NULL AND (
-            a.kind NOT IN ('single_choice', 'multi_choice')
-            OR NOT EXISTS (SELECT 1 FROM survey_question_options o WHERE o.id = a.option_id AND o.question_id = a.question_id)
-          ))
+       OR (a.option_id IS NOT NULL AND a.kind NOT IN ('single_choice', 'multi_choice'))
        OR (a.rating IS NOT NULL AND a.kind <> 'rating')
        OR (a.text IS NOT NULL AND a.kind <> 'text')
     UNION ALL
