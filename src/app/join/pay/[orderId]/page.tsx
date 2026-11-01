@@ -9,6 +9,7 @@ import { PaymentsClosedNotice } from "@/features/enrollment/components/PaymentsC
 import { FullLoadGuard } from "@/features/enrollment/components/FullLoadGuard";
 import { canPayOnline } from "@/lib/payments/online-payments";
 import { orderPlanName } from "@/lib/plans/manual-card";
+import { maxInstallmentsFor } from "@/lib/plans/installments";
 import type { Order, PlanProduct } from "@/types/plans";
 
 export const metadata: Metadata = {
@@ -62,11 +63,13 @@ export default async function PayPage({ params }: PageProps) {
   }
 
   const { data: product } = (await typedFrom(db, "plan_products")
-    .select("name_he, sessions_total, duration_days")
+    .select("name_he, staff_terms, max_installments")
     .eq("id", order.product_id)
-    .maybeSingle()) as { data: Pick<PlanProduct, "name_he" | "sessions_total" | "duration_days"> | null };
+    .maybeSingle()) as { data: Pick<PlanProduct, "name_he" | "staff_terms" | "max_installments"> | null };
 
   const amount = Number(order.amount_ils);
+  // No product row means the charge refuses anyway; offer a single payment.
+  const maxInstallments = product ? maxInstallmentsFor(product, order) : 1;
   const isOpen = await canPayOnline();
 
   return (
@@ -100,7 +103,7 @@ export default async function PayPage({ params }: PageProps) {
       <section className="rounded-2xl border bg-white p-4 sm:p-6">
         {isOpen ? (
           <FullLoadGuard>
-            <PaymentForm orderId={order.id} amountIls={amount} />
+            <PaymentForm orderId={order.id} amountIls={amount} maxInstallments={maxInstallments} />
           </FullLoadGuard>
         ) : (
           <PaymentsClosedNotice />

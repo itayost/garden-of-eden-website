@@ -63,6 +63,8 @@ export interface ManualPaymentResult {
   invoice: { url: string | null; error: string | null; skipped: boolean } | null;
   /** shareUrl: the template waits for Meta, so staff open the chat from their own WhatsApp. */
   whatsapp: { sentTo: string | null; error: string | null; skipped: boolean; shareUrl?: string | null };
+  /** The קריית אתא welcome waits for Meta: staff send it to the child's phone by hand. */
+  welcomeShareUrl: string | null;
   agreementUrl: string;
 }
 
@@ -219,6 +221,7 @@ export async function recordManualPayment(
           shareUrl: whatsapp.shareUrl,
         }
       : { sentTo: null, error: null, skipped: true },
+    welcomeShareUrl: whatsapp?.welcomeShareUrl ?? null,
     agreementUrl: agreementLink(agreement.id),
   };
 }

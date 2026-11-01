@@ -18,16 +18,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { detectBrand, formatCardNumber } from "@/lib/payments/card";
-import {
-  cardPaymentSchema,
-  MAX_INSTALLMENTS,
-  type CardPaymentInput,
-} from "@/lib/validations/card-payment";
+import { cardPaymentSchema, type CardPaymentInput } from "@/lib/validations/card-payment";
 import { chargeOrderAction } from "../lib/actions/charge-order";
 
 interface PaymentFormProps {
   orderId: string;
   amountIls: number;
+  /** The product's cap (maxInstallmentsFor); the charge enforces it again. */
+  maxInstallments: number;
 }
 
 const BRAND_LABEL: Record<string, string> = {
@@ -51,7 +49,7 @@ const select =
  * nothing here writes to storage, and the number is masked to its brand for
  * the on-screen hint only.
  */
-export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
+export function PaymentForm({ orderId, amountIls, maxInstallments }: PaymentFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const form = useForm<CardPaymentInput>({
@@ -209,7 +207,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
             )}
           />
         </div>
-        {MAX_INSTALLMENTS > 1 && (
+        {maxInstallments > 1 && (
           <FormField
             control={form.control}
             name="installments"
@@ -218,7 +216,7 @@ export function PaymentForm({ orderId, amountIls }: PaymentFormProps) {
                 <FormLabel required>תשלומים</FormLabel>
                 <FormControl>
                   <select {...f} value={String(f.value ?? 1)} className={select} disabled={loading}>
-                    {Array.from({ length: MAX_INSTALLMENTS }, (_, i) => i + 1).map((n) => (
+                    {Array.from({ length: maxInstallments }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>
                         {n === 1 ? "תשלום אחד" : `${n} תשלומים של ₪${Math.ceil(amountIls / n).toLocaleString("he-IL")}`}
                       </option>

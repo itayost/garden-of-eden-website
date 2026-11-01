@@ -13,6 +13,7 @@ import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import { sameTraineeOrders } from "@/lib/plans/bound-renewal";
 import { capturedPriceHolds } from "@/lib/plans/discount";
 import { orderManualTerms, orderPlanName } from "@/lib/plans/manual-card";
+import { maxInstallmentsFor } from "@/lib/plans/installments";
 import type { Order, PlanProduct } from "@/types/plans";
 import { completeCardPayment } from "../complete-card-payment";
 
@@ -66,10 +67,12 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
   // The product and the agreement are read together; both must hold.
   const [{ data: product }, { count: signed }] = await Promise.all([
     typedFrom(db, "plan_products")
-      .select("id, name_he, price_ils, is_active, once_per_trainee, staff_terms")
+      .select("id, name_he, price_ils, is_active, once_per_trainee, staff_terms, max_installments")
       .eq("id", order.product_id)
       .maybeSingle() as unknown as Promise<{
-      data: Pick<PlanProduct, "id" | "name_he" | "price_ils" | "is_active" | "once_per_trainee" | "staff_terms"> | null;
+      data:
+        | Pick<PlanProduct, "id" | "name_he" | "price_ils" | "is_active" | "once_per_trainee" | "staff_terms" | "max_installments">
+        | null;
     }>,
     // A Payment link's agreement is signed by the parent before the card page;
     // the online form signs its own when the order is made.
@@ -93,6 +96,12 @@ export async function chargeOrderAction(input: CardPaymentInput): Promise<Charge
     return { error: "המסלול או המחיר השתנו. התחילו הרשמה חדשה." };
   }
   if (!signed) return { error: "יש לחתום על ההסכם לפני התשלום." };
+  const maxInstallments = maxInstallmentsFor(product, order);
+  if (data.installments > maxInstallments) {
+    return {
+      error: maxInstallments === 1 ? "את המסלול הזה משלמים בתשלום אחד." : `את המסלול הזה אפשר לשלם בעד ${maxInstallments} תשלומים.`,
+    };
+  }
   if (product.once_per_trainee) {
     const { count } = await typedFrom(db, "orders")
       .select("id", { count: "exact", head: true })

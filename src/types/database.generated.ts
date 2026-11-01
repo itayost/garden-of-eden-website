@@ -2465,6 +2465,7 @@ export type Database = {
           id: string
           is_active: boolean
           kind: string
+          max_installments: number
           name_he: string
           once_per_trainee: boolean
           order_index: number
@@ -2483,6 +2484,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           kind: string
+          max_installments?: number
           name_he: string
           once_per_trainee?: boolean
           order_index?: number
@@ -2501,6 +2503,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           kind?: string
+          max_installments?: number
           name_he?: string
           once_per_trainee?: boolean
           order_index?: number
