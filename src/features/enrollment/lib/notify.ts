@@ -4,7 +4,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { signAgreementToken } from "@/lib/plans/agreement-token";
-import { sendWelcomeMessage } from "@/lib/whatsapp/welcome";
+import { JOIN_WELCOME_TEXT, sendJoinWelcome } from "@/lib/whatsapp/join-welcome";
 import type { WhatsAppResult } from "@/lib/whatsapp/api";
 import { sendPlanConfirmed } from "@/lib/whatsapp/plan-templates";
 import { planConfirmedText, templateMissing, waShareUrl } from "@/lib/whatsapp/share";
@@ -17,9 +17,10 @@ import type { Order } from "@/types/plans";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.edengarden.co.il";
 
 /**
- * Two messages after fulfillment: the app welcome to the child's login phone
- * when the account is new (the welcome dispatcher only covers Arbox accounts),
- * and the plan confirmation with the agreement link to the parent.
+ * Two messages after fulfillment: the קריית אתא welcome (book on the site) to
+ * the child's login phone until one has gone out, and the plan confirmation
+ * with the agreement link to the parent. Never the Haifa welcome: that one
+ * sends Arbox accounts to Arbox, and its dispatcher covers only them.
  * Best-effort: a failed send is logged, never thrown; the money already landed.
  */
 export interface NotifyOutcome {
@@ -31,9 +32,11 @@ export interface NotifyOutcome {
   sentTo: string | null;
   /** The confirmation template is not set yet: staff send this chat from their own WhatsApp. */
   shareUrl: string | null;
+  /** The welcome template is not set yet: staff send its words to the child's phone by hand. */
+  welcomeShareUrl: string | null;
 }
 
-const NOTHING: NotifyOutcome = { welcome: null, confirmed: null, agreementUrl: null, sentTo: null, shareUrl: null };
+const NOTHING: NotifyOutcome = { welcome: null, confirmed: null, agreementUrl: null, sentTo: null, shareUrl: null, welcomeShareUrl: null };
 
 /** The parent's link for an agreement id; the same page signs and later displays. */
 export function agreementLink(agreementId: string): string {
@@ -55,7 +58,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
         .maybeSingle() as Promise<{ data: { id: string } | null }>,
       db
         .from("profiles")
-        .select("welcome_message_sent_at, full_name, phone")
+        .select("welcome_message_sent_at, phone")
         .eq("id", order.profile_id)
         .maybeSingle(),
       typedFrom(db, "plan_products")
@@ -69,13 +72,19 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
   if (profile && !profile.phone) {
     console.warn(`[notify] order ${order.id}: trainee ${order.profile_id} has no login phone; welcome skipped, staff must set it`);
   } else if (profile && !profile.welcome_message_sent_at) {
-    welcome = await sendWelcomeMessage(order.login_phone, profile.full_name);
-    if (welcome.success) {
+    welcome = await sendJoinWelcome(order.login_phone);
+    // Stamped also while the template waits for Meta (staff get welcomeShareUrl):
+    // an unstamped profile that gains an arbox_user_id would get the Haifa
+    // welcome from the nightly dispatcher, which sends Arbox accounts to Arbox.
+    if (welcome.success || templateMissing(welcome)) {
       await db
         .from("profiles")
         .update({ welcome_message_sent_at: new Date().toISOString() })
         .eq("id", order.profile_id);
-    } else {
+    }
+    if (templateMissing(welcome)) {
+      console.warn(`[notify] order ${order.id}: ${welcome.error}; the welcome goes out by hand only`);
+    } else if (!welcome.success) {
       console.error(`[notify] welcome failed for order ${order.id}:`, welcome.error);
     }
   }
@@ -98,5 +107,13 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
   }
   // Until Meta approves the template, the same words go out by hand.
   const shareUrl = templateMissing(confirmed) ? waShareUrl(order.payer_phone, planConfirmedText(message)) : null;
-  return { welcome, confirmed, agreementUrl: agreement ? agreementUrl : null, sentTo: order.payer_phone, shareUrl };
+  const welcomeShareUrl = templateMissing(welcome) ? waShareUrl(order.login_phone, JOIN_WELCOME_TEXT) : null;
+  return {
+    welcome,
+    confirmed,
+    agreementUrl: agreement ? agreementUrl : null,
+    sentTo: order.payer_phone,
+    shareUrl,
+    welcomeShareUrl,
+  };
 }

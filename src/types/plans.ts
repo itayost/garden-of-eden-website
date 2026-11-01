@@ -24,6 +24,8 @@ export interface PlanProduct {
   updated_at: string;
   /** Sold on terms staff type (a manual Card); never active, never in the catalog. */
   staff_terms: boolean;
+  /** Most card installments (1-3); a manual Card's cap follows its order's sessions instead. */
+  max_installments: number;
 }
 
 /** charging: the card is at the acquirer; a second submit finds nothing to claim. */

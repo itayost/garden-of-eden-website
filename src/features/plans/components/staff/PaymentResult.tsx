@@ -150,6 +150,19 @@ export function PaymentResult({
             )}
           </Line>
         )}
+
+        {result.welcomeShareUrl && (
+          <Line ok={false}>
+            <div className="font-medium">הודעת הפתיחה לחניך עוד לא נשלחה</div>
+            <div className="text-muted-foreground">התבנית עוד לא אושרה ב-Meta. שלחו לחניך מהוואטסאפ שלכם:</div>
+            <Button size="sm" asChild>
+              <a href={result.welcomeShareUrl} target="_blank" rel="noreferrer">
+                <MessageCircle className="h-3 w-3 me-1" />
+                פתיחת וואטסאפ לחניך
+              </a>
+            </Button>
+          </Line>
+        )}
       </ul>
 
       <div className="flex flex-wrap gap-2">
