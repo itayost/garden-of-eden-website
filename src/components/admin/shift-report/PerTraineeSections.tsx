@@ -29,11 +29,7 @@ import {
   TraineeMultiSelect,
   type TraineeOption,
 } from "./TraineeMultiSelect";
-import type { ShiftReportFormData } from "@/lib/validations/shift-report";
-import {
-  ACHIEVEMENT_CATEGORIES,
-  type AchievementCategory,
-} from "@/lib/validations/shift-report";
+import type { ShiftReportFormData, WorkTopic } from "@/lib/validations/shift-report";
 
 export type PerTraineeField =
   | "achievements_per_trainee"
@@ -85,7 +81,7 @@ export type BoolField =
 
 interface PerTraineeEntry {
   details?: string;
-  categories?: AchievementCategory[];
+  categories?: WorkTopic[];
 }
 
 interface PerTraineeCardProps {
@@ -96,6 +92,8 @@ interface PerTraineeCardProps {
   setValue: UseFormSetValue<ShiftReportFormData>;
   getValues: UseFormGetValues<ShiftReportFormData>;
   categoriesLabel: string;
+  /** The checkboxes this section offers (achievements or work topics). */
+  categoryOptions: readonly WorkTopic[];
   detailsPlaceholder: string;
 }
 
@@ -110,6 +108,7 @@ const PerTraineeCard = memo(function PerTraineeCard({
   setValue,
   getValues,
   categoriesLabel,
+  categoryOptions,
   detailsPlaceholder,
 }: PerTraineeCardProps) {
   const entryPath = `${perTraineeField}.${traineeId}` as FieldPath<ShiftReportFormData>;
@@ -128,9 +127,9 @@ const PerTraineeCard = memo(function PerTraineeCard({
   );
 
   const handleToggleCategory = useCallback(
-    (category: AchievementCategory) => {
+    (category: WorkTopic) => {
       const current =
-        (getValues(categoriesPath) as AchievementCategory[] | undefined) ?? [];
+        (getValues(categoriesPath) as WorkTopic[] | undefined) ?? [];
       const updated = current.includes(category)
         ? current.filter((c) => c !== category)
         : [...current, category];
@@ -146,7 +145,7 @@ const PerTraineeCard = memo(function PerTraineeCard({
       <div>
         <p className="text-sm text-muted-foreground mb-2">{categoriesLabel}</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {ACHIEVEMENT_CATEGORIES.map((cat) => (
+          {categoryOptions.map((cat) => (
             <label
               key={cat}
               className="flex items-center gap-2 text-sm cursor-pointer"
@@ -222,6 +221,7 @@ interface PerTraineeCategoriesSectionProps {
   traineeIdsField: TraineeIdsField;
   perTraineeField: PerTraineeField;
   categoriesLabel: string;
+  categoryOptions: readonly WorkTopic[];
   detailsPlaceholder: string;
 }
 
@@ -236,6 +236,7 @@ export const PerTraineeCategoriesSection = memo(function PerTraineeCategoriesSec
   traineeIdsField,
   perTraineeField,
   categoriesLabel,
+  categoryOptions,
   detailsPlaceholder,
 }: PerTraineeCategoriesSectionProps) {
   const isYes = useWatch({ control: form.control, name: boolField }) as boolean;
@@ -320,6 +321,7 @@ export const PerTraineeCategoriesSection = memo(function PerTraineeCategoriesSec
               setValue={form.setValue}
               getValues={form.getValues}
               categoriesLabel={categoriesLabel}
+              categoryOptions={categoryOptions}
               detailsPlaceholder={detailsPlaceholder}
             />
           ))}
