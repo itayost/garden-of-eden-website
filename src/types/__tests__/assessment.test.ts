@@ -9,6 +9,7 @@ import {
   ASSESSMENT_UNITS,
   DRIBBLING_TESTS_SINCE,
   DRIBBLING_TEST_KEYS,
+  ENVELOPE_TESTS_SINCE,
 } from "../assessment";
 import type { PlayerAssessment } from "../assessment";
 
@@ -20,7 +21,7 @@ function createMockAssessment(
   overrides: Partial<PlayerAssessment> = {}
 ): Partial<PlayerAssessment> {
   return {
-    assessment_date: "2026-10-15",
+    assessment_date: "2026-12-01",
     sprint_5m: null,
     sprint_10m: null,
     sprint_20m: null,
@@ -42,6 +43,8 @@ function createMockAssessment(
     shuffle_10m: null,
     sprint_10m_h: null,
     sprint_10m_h_ball: null,
+    envelope: null,
+    envelope_ball: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,
@@ -174,6 +177,19 @@ describe("isLowerBetter", () => {
     expect(isLowerBetter("shuffle_10m")).toBe(true);
     expect(isLowerBetter("sprint_10m_h")).toBe(true);
     expect(isLowerBetter("sprint_10m_h_ball")).toBe(true);
+    expect(isLowerBetter("envelope")).toBe(true);
+    expect(isLowerBetter("envelope_ball")).toBe(true);
+  });
+
+  it("lists the two envelope tests after the first three dribbling tests", () => {
+    expect(DRIBBLING_TEST_KEYS).toEqual([
+      "shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball", "envelope", "envelope_ball",
+    ]);
+  });
+
+  it("names the envelope tests as the academy does", () => {
+    expect(ASSESSMENT_LABELS_HE.envelope).toBe("מבדק מעטפה");
+    expect(ASSESSMENT_LABELS_HE.envelope_ball).toBe("מעטפה עם כדור");
   });
 
   it("labels the dribbling tests in Hebrew with seconds as the unit", () => {
@@ -231,6 +247,8 @@ describe("getAssessmentCompleteness", () => {
       shuffle_10m: 3.0,
       sprint_10m_h: 2.8,
       sprint_10m_h_ball: 3.3,
+      envelope: 18.5,
+      envelope_ball: 22.4,
     });
     expect(getAssessmentCompleteness(assessment)).toBe(100);
   });
@@ -262,14 +280,21 @@ describe("getAssessmentCompleteness", () => {
   });
 });
 
+const WITHOUT_DRIBBLING: Partial<PlayerAssessment> = {
+  sprint_5m: 1.2, sprint_10m: 2.3, sprint_20m: 3.5,
+  jump_2leg_distance: 180, jump_right_leg: 160, jump_left_leg: 155, jump_2leg_height: 45,
+  blaze_spot_time: 30, flexibility_ankle: 12, flexibility_knee: 15, flexibility_hip: 20,
+  kick_power_right_foot: 85, kick_power_left_foot: 80, kick_power_machine_pct: 35,
+  coordination: "advanced", leg_power_technique: "normal", body_structure: "strong_athletic",
+};
+
+/** Complete as of the first dribbling rollout: every test but the envelope ones. */
+const WITHOUT_ENVELOPE: Partial<PlayerAssessment> = {
+  ...WITHOUT_DRIBBLING,
+  shuffle_10m: 3.0, sprint_10m_h: 2.8, sprint_10m_h_ball: 3.3,
+};
+
 describe("dribbling tests only count from their rollout date", () => {
-  const WITHOUT_DRIBBLING: Partial<PlayerAssessment> = {
-    sprint_5m: 1.2, sprint_10m: 2.3, sprint_20m: 3.5,
-    jump_2leg_distance: 180, jump_right_leg: 160, jump_left_leg: 155, jump_2leg_height: 45,
-    blaze_spot_time: 30, flexibility_ankle: 12, flexibility_knee: 15, flexibility_hip: 20,
-    kick_power_right_foot: 85, kick_power_left_foot: 80, kick_power_machine_pct: 35,
-    coordination: "advanced", leg_power_technique: "normal", body_structure: "strong_athletic",
-  };
 
   it("keeps an older complete assessment at 100%", () => {
     const old = createMockAssessment({ ...WITHOUT_DRIBBLING, assessment_date: "2026-09-01" });
@@ -289,6 +314,40 @@ describe("dribbling tests only count from their rollout date", () => {
   it("never pushes an older assessment past 100% when a dribbling test is present", () => {
     const old = createMockAssessment({
       ...WITHOUT_DRIBBLING, assessment_date: "2026-09-01", shuffle_10m: 3.0,
+    });
+    expect(getAssessmentCompleteness(old)).toBe(100);
+  });
+});
+
+describe("envelope tests only count from their own rollout date", () => {
+  const BEFORE_ENVELOPE = "2026-10-15";
+
+  it("starts after the first dribbling tests", () => {
+    expect(ENVELOPE_TESTS_SINCE > DRIBBLING_TESTS_SINCE).toBe(true);
+    expect(BEFORE_ENVELOPE < ENVELOPE_TESTS_SINCE).toBe(true);
+  });
+
+  it("keeps a complete assessment from before the envelope rollout at 100%", () => {
+    const old = createMockAssessment({ ...WITHOUT_ENVELOPE, assessment_date: BEFORE_ENVELOPE });
+    expect(getAssessmentCompleteness(old)).toBe(100);
+  });
+
+  it("requires the envelope tests from their rollout date on", () => {
+    const onRollout = createMockAssessment({ ...WITHOUT_ENVELOPE, assessment_date: ENVELOPE_TESTS_SINCE });
+    expect(getAssessmentCompleteness(onRollout)).toBe(Math.round((20 / 22) * 100));
+  });
+
+  it("counts three dribbling tests before the envelope rollout and five from it", () => {
+    const dribblingTotal = (date: string) =>
+      computeSectionCompleteness(createMockAssessment({ assessment_date: date }))
+        .find((s) => s.key === "dribbling")!.total;
+    expect(dribblingTotal(BEFORE_ENVELOPE)).toBe(3);
+    expect(dribblingTotal(ENVELOPE_TESTS_SINCE)).toBe(5);
+  });
+
+  it("never pushes an older assessment past 100% when an envelope test is present", () => {
+    const old = createMockAssessment({
+      ...WITHOUT_ENVELOPE, assessment_date: BEFORE_ENVELOPE, envelope: 18.5,
     });
     expect(getAssessmentCompleteness(old)).toBe(100);
   });
@@ -348,6 +407,7 @@ describe("computeSectionCompleteness", () => {
     const full = createMockAssessment({
       sprint_5m: 1.1, sprint_10m: 2.2, sprint_20m: 3.3,
       shuffle_10m: 3.0, sprint_10m_h: 2.8, sprint_10m_h_ball: 3.3,
+      envelope: 18.5, envelope_ball: 22.4,
       jump_2leg_distance: 200, jump_right_leg: 180, jump_left_leg: 175, jump_2leg_height: 60,
       blaze_spot_time: 30, flexibility_ankle: 10, flexibility_knee: 15, flexibility_hip: 20,
       coordination: "advanced", leg_power_technique: "normal", body_structure: "good_build",

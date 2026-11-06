@@ -55,6 +55,22 @@ export const METRIC_DEFINITIONS: Record<PhysicalMetricKey, MetricDefinition> = {
     color: "var(--chart-3)",
     category: "dribbling",
   },
+  envelope: {
+    key: "envelope",
+    labelHe: ASSESSMENT_LABELS_HE.envelope,
+    unit: ASSESSMENT_UNITS.envelope,
+    lowerIsBetter: true,
+    color: "var(--chart-4)",
+    category: "dribbling",
+  },
+  envelope_ball: {
+    key: "envelope_ball",
+    labelHe: ASSESSMENT_LABELS_HE.envelope_ball,
+    unit: ASSESSMENT_UNITS.envelope_ball,
+    lowerIsBetter: true,
+    color: "var(--chart-5)",
+    category: "dribbling",
+  },
 
   // Jump tests (higher is better)
   jump_2leg_distance: {

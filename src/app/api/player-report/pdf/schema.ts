@@ -10,6 +10,8 @@ const playerAssessmentSchema = z.object({
   shuffle_10m: z.number().nullable(),
   sprint_10m_h: z.number().nullable(),
   sprint_10m_h_ball: z.number().nullable(),
+  envelope: z.number().nullable(),
+  envelope_ball: z.number().nullable(),
   jump_2leg_height: z.number().nullable(),
   jump_2leg_distance: z.number().nullable(),
   jump_right_leg: z.number().nullable(),

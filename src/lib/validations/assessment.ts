@@ -42,6 +42,9 @@ export const assessmentSchema = z.object({
   shuffle_10m: z.number().positive().max(30).optional().nullable(),
   sprint_10m_h: z.number().positive().max(30).optional().nullable(),
   sprint_10m_h_ball: z.number().positive().max(30).optional().nullable(),
+  // Envelope tests take longer; the DB CHECK allows 0 < x <= 60
+  envelope: z.number().positive().max(60).optional().nullable(),
+  envelope_ball: z.number().positive().max(60).optional().nullable(),
 
   // Mental notes (free text) with max length
   concentration_notes: z.string().max(MAX_NOTES_TEXT).optional().nullable(),
@@ -80,6 +83,8 @@ export const ASSESSMENT_FIELDS: (keyof AssessmentFormData)[] = [
   "shuffle_10m",
   "sprint_10m_h",
   "sprint_10m_h_ball",
+  "envelope",
+  "envelope_ball",
   "concentration_notes",
   "decision_making_notes",
   "work_ethic_notes",
@@ -112,6 +117,8 @@ export const DEFAULT_ASSESSMENT: AssessmentFormData = {
   shuffle_10m: null,
   sprint_10m_h: null,
   sprint_10m_h_ball: null,
+  envelope: null,
+  envelope_ball: null,
   concentration_notes: null,
   decision_making_notes: null,
   work_ethic_notes: null,

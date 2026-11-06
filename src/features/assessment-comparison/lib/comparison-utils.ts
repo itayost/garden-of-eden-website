@@ -51,6 +51,8 @@ const NUMERIC_FIELDS = [
   "shuffle_10m",
   "sprint_10m_h",
   "sprint_10m_h_ball",
+  "envelope",
+  "envelope_ball",
 ] as const;
 
 // Categorical fields that can be compared

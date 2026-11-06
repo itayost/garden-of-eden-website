@@ -55,6 +55,8 @@ export const METRIC_LABELS_HE: Record<PhysicalMetricKey, string> = {
   shuffle_10m: ASSESSMENT_LABELS_HE.shuffle_10m,
   sprint_10m_h: ASSESSMENT_LABELS_HE.sprint_10m_h,
   sprint_10m_h_ball: ASSESSMENT_LABELS_HE.sprint_10m_h_ball,
+  envelope: ASSESSMENT_LABELS_HE.envelope,
+  envelope_ball: ASSESSMENT_LABELS_HE.envelope_ball,
 };
 
 /** Units for metrics */
@@ -76,6 +78,8 @@ export const METRIC_UNITS: Record<PhysicalMetricKey, string> = {
   shuffle_10m: ASSESSMENT_UNITS.shuffle_10m,
   sprint_10m_h: ASSESSMENT_UNITS.sprint_10m_h,
   sprint_10m_h_ball: ASSESSMENT_UNITS.sprint_10m_h_ball,
+  envelope: ASSESSMENT_UNITS.envelope,
+  envelope_ball: ASSESSMENT_UNITS.envelope_ball,
 };
 
 /** Check if a metric is lower-is-better */

@@ -12,6 +12,8 @@ describe("getMetricDirection", () => {
     expect(getMetricDirection("shuffle_10m")).toBe("lower_is_better");
     expect(getMetricDirection("sprint_10m_h")).toBe("lower_is_better");
     expect(getMetricDirection("sprint_10m_h_ball")).toBe("lower_is_better");
+    expect(getMetricDirection("envelope")).toBe("lower_is_better");
+    expect(getMetricDirection("envelope_ball")).toBe("lower_is_better");
   });
 
   it("blaze spot is a hit count, so higher_is_better", () => {
