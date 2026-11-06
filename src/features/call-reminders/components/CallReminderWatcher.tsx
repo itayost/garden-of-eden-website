@@ -95,6 +95,9 @@ export function CallReminderWatcher() {
       }
       const key = targetKey(reminder.target);
       setReminders((prev) => prev.filter((r) => targetKey(r.target) !== key));
+      // A refresh that read before the dismiss committed would bring the row
+      // back; asking again supersedes it.
+      void refresh();
     } catch {
       toast.error("שגיאה בסגירת התזכורת");
     } finally {
@@ -103,12 +106,22 @@ export function CallReminderWatcher() {
   };
 
   const closeDocumenting = () => setDocumenting(null);
+  const summary =
+    reminders.length === 0
+      ? ""
+      : reminders.length === 1
+        ? "שיחה שלא תועדה"
+        : `${reminders.length} שיחות שלא תועדו`;
 
   return (
     <>
+      {/* Always mounted, so screen readers announce the first reminder too. */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {summary}
+      </div>
+
       {reminders.length > 0 && (
         <section
-          role="status"
           aria-label="תזכורות לתיעוד שיחות"
           className={cn(
             "fixed inset-x-4 bottom-[max(env(safe-area-inset-bottom),1rem)] z-50",
@@ -123,9 +136,7 @@ export function CallReminderWatcher() {
             className="flex w-full items-center gap-2 bg-amber-500/10 px-4 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           >
             <PhoneMissed className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
-            <span className="flex-1 text-sm font-semibold">
-              {reminders.length === 1 ? "שיחה שלא תועדה" : `${reminders.length} שיחות שלא תועדו`}
-            </span>
+            <span className="flex-1 text-sm font-semibold">{summary}</span>
             <ChevronDown
               className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")}
               aria-hidden
@@ -144,13 +155,19 @@ export function CallReminderWatcher() {
                   </div>
                   <p className="text-sm text-muted-foreground">לא תיעדת את השיחה</p>
                   <div className="flex gap-2">
-                    <Button size="sm" className="flex-1" onClick={() => setDocumenting(reminder)}>
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      aria-label={`תיעוד השיחה עם ${reminder.contactName}`}
+                      onClick={() => setDocumenting(reminder)}
+                    >
                       תיעוד
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="flex-1"
+                      aria-label={`לא התקיימה שיחה עם ${reminder.contactName}`}
                       disabled={dismissingId === reminder.attemptId}
                       onClick={() => void dismiss(reminder)}
                     >

@@ -4,6 +4,7 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhoneIL } from "@/lib/validations/common";
 import { assertPhoneInScope } from "@/lib/retention/scope";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { LeadContactOutcome } from "@/types/leads";
 import { retentionCallLogSchema, type RetentionCallLogInput } from "../validations";
 
@@ -34,6 +35,9 @@ export async function addRetentionCallLogAction(
     };
   }
   const { reportMonth, phone, traineeName, outcome, notes } = parsed.data;
+
+  const limit = await checkRateLimit(`retention-call-log:${user!.id}`, "general");
+  if (limit.rateLimited) return { error: "יותר מדי בקשות, נסו שוב בעוד דקה" };
 
   const scopeError = await assertPhoneInScope(phone);
   if (scopeError) return { error: scopeError };

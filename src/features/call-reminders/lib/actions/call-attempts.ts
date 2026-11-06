@@ -4,6 +4,7 @@ import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidUUID } from "@/lib/validations/common";
 import { assertPhoneInScope } from "@/lib/retention/scope";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { callTargetSchema, contactNameSchema } from "../validations";
 import {
   CALL_REMINDER_DELAY_MS,
@@ -23,6 +24,7 @@ const MESSAGES = {
   startFailed: "שגיאה בשמירת השיחה",
   loadFailed: "שגיאה בטעינת התזכורות",
   dismissFailed: "שגיאה בסגירת התזכורת",
+  tooMany: "יותר מדי בקשות, נסו שוב בעוד דקה",
 } as const;
 
 type AdminDb = ReturnType<typeof createAdminClient>;
@@ -72,6 +74,9 @@ export async function startCallAttemptAction(
   const parsed = callTargetSchema.safeParse(rawTarget);
   if (!parsed.success) return { error: MESSAGES.invalid };
   const target = parsed.data;
+
+  const limit = await checkRateLimit(`call-attempt:${user!.id}`, "general");
+  if (limit.rateLimited) return { error: MESSAGES.tooMany };
 
   const db = createAdminClient();
   const contact = await resolveContactName(db, target, rawName);

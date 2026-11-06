@@ -63,7 +63,9 @@ export async function loadCallerAttempts(
     .eq("caller_id", callerId)
     .is("dismissed_at", null)
     .gte("started_at", windowStart)
-    .order("started_at", { ascending: true })
+    // Newest first: documented attempts stay in this set for the whole
+    // window, so a busy caller's cap must drop the oldest, not today's.
+    .order("started_at", { ascending: false })
     .limit(MAX_OPEN_ATTEMPTS);
   if (target?.kind === "lead") query = query.eq("lead_id", target.leadId);
   if (target?.kind === "retention") query = query.eq("trainee_phone", target.phone);
@@ -89,7 +91,9 @@ async function loadCallerDocumentation(
   callerId: string,
   attempts: readonly AttemptRow[],
 ): Promise<{ rows: readonly DocumentationRow[] } | { error: string }> {
-  const since = attempts[0].startedAt;
+  const since = new Date(
+    Math.min(...attempts.map((a) => Date.parse(a.startedAt))),
+  ).toISOString();
   const leadIds = [
     ...new Set(attempts.flatMap((a) => (a.target.kind === "lead" ? [a.target.leadId] : []))),
   ];
@@ -104,6 +108,9 @@ async function loadCallerDocumentation(
           .from("lead_contact_log")
           .select("lead_id, created_at")
           .eq("author_id", callerId)
+          // Sending a WhatsApp logs a message_sent entry by itself
+          // (logWhatsAppMessage); that is not documenting a call.
+          .neq("contact_type", "message_sent")
           .in("lead_id", leadIds)
           .gte("created_at", since),
     phones.length === 0

@@ -50,7 +50,7 @@ Eden asked for a call button in leads and in customer retention. When a trainer 
 
 An attempt is documented when a log entry exists that was written by the same trainer, for the same person, at or after the attempt started:
 
-- Lead: any `lead_contact_log` entry for that lead by that trainer (any contact type, any outcome, including "לא ענה"). This needs `lead_contact_log.author_id`, set by `addContactLogAction`. Old rows keep NULL.
+- Lead: any `lead_contact_log` entry for that lead by that trainer (any outcome, including "לא ענה"), except `message_sent`, which sending a WhatsApp writes by itself. This needs `lead_contact_log.author_id`, which a trigger takes from the session (the table's policy lets staff write rows directly); an update cannot change an entry's author, lead or time. Old rows keep NULL.
 - Retention: any `retention_call_log` entry for that phone by that trainer.
 
 Because nothing is written to the attempt on documentation, a successful save can never leave a stale reminder, and a failed save leaves it in place.

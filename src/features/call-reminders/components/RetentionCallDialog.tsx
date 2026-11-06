@@ -198,7 +198,7 @@ function CallHistory({ history }: { readonly history: History }) {
   return (
     <ol className="max-h-56 space-y-2 overflow-y-auto">
       {history.entries.map((entry) => (
-        <li key={entry.id} className="rounded-md border-s-2 border-emerald-600/40 bg-muted/40 px-3 py-2">
+        <li key={entry.id} className="rounded-md bg-muted/40 px-3 py-2">
           <div className="flex items-baseline justify-between gap-2 text-sm">
             <span className="font-medium">{LEAD_OUTCOME_LABELS[entry.outcome]}</span>
             <span className="text-xs text-muted-foreground">

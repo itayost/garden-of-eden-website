@@ -73,7 +73,9 @@ COMMENT ON COLUMN public.lead_contact_log.author_id IS
 -- (admin_trainer_all) lets any staff member insert or update any row. The
 -- author must therefore come from the session, not the request, or one
 -- trainer could clear another's call reminder. Service-role writes (no
--- auth.uid()) keep what they pass; an update never changes the author.
+-- auth.uid()) keep what they pass. An update never changes the author, the
+-- lead or the time, so an old entry cannot be moved onto an open call; the
+-- app never updates these rows.
 CREATE OR REPLACE FUNCTION public.lead_contact_log_set_author()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -86,6 +88,8 @@ BEGIN
     END IF;
   ELSE
     NEW.author_id := OLD.author_id;
+    NEW.lead_id := OLD.lead_id;
+    NEW.created_at := OLD.created_at;
   END IF;
   RETURN NEW;
 END;
