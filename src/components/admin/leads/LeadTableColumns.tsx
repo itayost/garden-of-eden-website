@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadTabBadge } from "./LeadTabBadge";
 import { formatRelativeTime } from "@/lib/utils/date";
-import { formatPhoneToLocal } from "@/lib/validations/common";
+import { CallLink } from "@/features/call-reminders/components/CallLink";
 import type { Lead } from "@/types/leads";
 
 function formatDate(dateString: string): string {
@@ -64,9 +64,11 @@ export function getLeadColumns({ showPaidIndicator }: GetLeadColumnsOptions): Co
       accessorKey: "phone",
       header: "טלפון",
       cell: ({ row }) => (
-        <span dir="ltr" className="text-right">
-          {formatPhoneToLocal(row.getValue("phone")) || "—"}
-        </span>
+        <CallLink
+          target={{ kind: "lead", leadId: row.original.id }}
+          phone={row.original.phone}
+          contactName={row.original.name}
+        />
       ),
       enableSorting: false,
     },

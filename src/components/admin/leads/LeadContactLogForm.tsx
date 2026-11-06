@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { contactLogSchema, type ContactLogInput } from "@/lib/validations/leads";
 import { addContactLogAction } from "@/lib/actions/admin-leads";
+import { CALL_EVENTS, emitCallEvent } from "@/features/call-reminders/lib/events";
 import {
   LEAD_CONTACT_TYPE_LABELS,
   LEAD_OUTCOME_LABELS,
@@ -28,10 +29,23 @@ import {
 interface LeadContactLogFormProps {
   leadId: string;
   onSuccess?: () => void;
+  /** Preselects the type, e.g. "call" when documenting from a call reminder. */
+  defaultContactType?: LeadContactType;
 }
 
-export function LeadContactLogForm({ leadId, onSuccess }: LeadContactLogFormProps) {
+export function LeadContactLogForm({
+  leadId,
+  onSuccess,
+  defaultContactType,
+}: LeadContactLogFormProps) {
   const [loading, setLoading] = useState(false);
+  const emptyValues: ContactLogInput = {
+    lead_id: leadId,
+    contact_type: defaultContactType as LeadContactType,
+    rep: "",
+    notes: "",
+    outcome: undefined,
+  };
 
   const {
     register,
@@ -42,13 +56,7 @@ export function LeadContactLogForm({ leadId, onSuccess }: LeadContactLogFormProp
     formState: { errors },
   } = useForm<ContactLogInput>({
     resolver: zodResolver(contactLogSchema),
-    defaultValues: {
-      lead_id: leadId,
-      contact_type: undefined,
-      rep: "",
-      notes: "",
-      outcome: undefined,
-    },
+    defaultValues: emptyValues,
   });
 
   const contactType = watch("contact_type");
@@ -63,7 +71,9 @@ export function LeadContactLogForm({ leadId, onSuccess }: LeadContactLogFormProp
         return;
       }
       toast.success("רישום יצירת קשר נוסף בהצלחה");
-      reset({ lead_id: leadId, contact_type: undefined, rep: "", notes: "", outcome: undefined });
+      reset(emptyValues);
+      // A new entry may close this staff member's call reminder for the lead.
+      emitCallEvent(CALL_EVENTS.documented);
       onSuccess?.();
     } catch {
       toast.error("שגיאה בהוספת רישום");

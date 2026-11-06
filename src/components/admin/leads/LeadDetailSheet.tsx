@@ -37,6 +37,7 @@ import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import { LeadStatusBadge } from "./LeadStatusBadge";
 import { LeadContactLogForm } from "./LeadContactLogForm";
 import { LeadContactTimeline } from "./LeadContactTimeline";
+import { CallLink } from "@/features/call-reminders/components/CallLink";
 import { LeadCloseDealDialog } from "./LeadCloseDealDialog";
 import { TrainerAssignmentSelect } from "./TrainerAssignmentSelect";
 import {
@@ -295,7 +296,11 @@ export function LeadDetailSheet({ lead, open, onOpenChange, trainers, tabs }: Le
             )}
           </SheetTitle>
           <SheetDescription>
-            <span dir="ltr">{formatPhoneToLocal(lead.phone) || "—"}</span>
+            <CallLink
+              target={{ kind: "lead", leadId: lead.id }}
+              phone={lead.phone}
+              contactName={lead.name}
+            />
             {" · "}
             נוצר {new Date(lead.created_at).toLocaleDateString("he-IL")}
           </SheetDescription>
