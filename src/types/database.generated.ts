@@ -752,6 +752,54 @@ export type Database = {
         }
         Relationships: []
       }
+      call_attempts: {
+        Row: {
+          caller_id: string
+          contact_name: string
+          dismissed_at: string | null
+          id: string
+          lead_id: string | null
+          report_month: string | null
+          started_at: string
+          trainee_phone: string | null
+        }
+        Insert: {
+          caller_id: string
+          contact_name: string
+          dismissed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          report_month?: string | null
+          started_at?: string
+          trainee_phone?: string | null
+        }
+        Update: {
+          caller_id?: string
+          contact_name?: string
+          dismissed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          report_month?: string | null
+          started_at?: string
+          trainee_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_attempts_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_attempts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       churned_customers: {
         Row: {
           assigned_trainer_id: string | null
@@ -1563,6 +1611,7 @@ export type Database = {
       }
       lead_contact_log: {
         Row: {
+          author_id: string | null
           contact_type: Database["public"]["Enums"]["lead_contact_type"]
           created_at: string
           id: string
@@ -1572,6 +1621,7 @@ export type Database = {
           rep: string | null
         }
         Insert: {
+          author_id?: string | null
           contact_type: Database["public"]["Enums"]["lead_contact_type"]
           created_at?: string
           id?: string
@@ -1581,6 +1631,7 @@ export type Database = {
           rep?: string | null
         }
         Update: {
+          author_id?: string | null
           contact_type?: Database["public"]["Enums"]["lead_contact_type"]
           created_at?: string
           id?: string
@@ -1590,6 +1641,13 @@ export type Database = {
           rep?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "lead_contact_log_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lead_contact_log_lead_id_fkey"
             columns: ["lead_id"]
@@ -3351,6 +3409,47 @@ export type Database = {
           welcome_message_sent_at?: string | null
         }
         Relationships: []
+      }
+      retention_call_log: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          outcome: Database["public"]["Enums"]["lead_contact_outcome"]
+          report_month: string
+          trainee_name: string
+          trainee_phone: string
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          outcome: Database["public"]["Enums"]["lead_contact_outcome"]
+          report_month: string
+          trainee_name: string
+          trainee_phone: string
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          outcome?: Database["public"]["Enums"]["lead_contact_outcome"]
+          report_month?: string
+          trainee_name?: string
+          trainee_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_call_log_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       retention_notes: {
         Row: {
