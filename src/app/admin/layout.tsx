@@ -10,6 +10,7 @@ import { ADMIN_PAGE_TITLES } from "@/lib/navigation/admin-nav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { MotionProvider } from "@/components/MotionProvider";
+import { CallReminderWatcher } from "@/features/call-reminders/components/CallReminderWatcher";
 import type { Profile } from "@/types/database";
 
 async function managesAnyBranch(role: string): Promise<boolean> {
@@ -84,6 +85,7 @@ export default async function AdminLayout({
           <main id="main-content" tabIndex={-1} className="outline-none container mx-auto px-4 pt-6 pb-[max(env(safe-area-inset-bottom),2rem)]">
             {children}
           </main>
+          <CallReminderWatcher />
         </SidebarInset>
       </SidebarProvider>
     </MotionProvider>
