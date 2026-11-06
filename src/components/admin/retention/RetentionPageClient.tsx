@@ -396,6 +396,7 @@ export function RetentionPageClient({
               <TabsContent key={category} value={category} className="mt-4">
                 {hasData ? (
                   <RetentionTable
+                    reportMonth={selectedMonth}
                     entries={data[category].filter(inScope)}
                     monthKeys={monthKeys}
                     notes={notes}

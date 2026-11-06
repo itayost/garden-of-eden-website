@@ -16,6 +16,7 @@ import {
 } from "@/components/admin/TableToolbar";
 import { RetentionNoteCell } from "./RetentionNoteCell";
 import { MoveToChurnedButton } from "./MoveToChurnedButton";
+import { RetentionCallCell } from "@/features/call-reminders/components/RetentionCallCell";
 import { TrainerAssignmentSelect } from "@/components/admin/leads/TrainerAssignmentSelect";
 import { formatRelativeTime } from "@/lib/utils/date";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
@@ -65,6 +66,8 @@ const BRANCH_COLUMNS = [
 ] as const;
 
 interface RetentionTableProps {
+  /** The report month shown, stored with each call documented from it. */
+  reportMonth: string;
   entries: readonly RetentionViewEntry[];
   monthKeys: readonly string[];
   notes: ReadonlyMap<string, RetentionNote>;
@@ -91,6 +94,7 @@ interface RetentionTableProps {
 }
 
 export function RetentionTable({
+  reportMonth,
   entries,
   monthKeys,
   notes,
@@ -150,6 +154,7 @@ export function RetentionTable({
             <TableHeader>
               <TableRow>
                 <TableHead rowSpan={2} className="text-right">שם לקוח</TableHead>
+                <TableHead rowSpan={2} className="text-right">שיחה</TableHead>
                 <TableHead rowSpan={2} className="text-right">תאריך סיום</TableHead>
                 {monthKeys.map((mk, i) => (
                   <TableHead key={mk} colSpan={BRANCH_COLUMNS.length} className="text-center border-s">
@@ -200,6 +205,13 @@ export function RetentionTable({
                           </Badge>
                         )}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <RetentionCallCell
+                        reportMonth={reportMonth}
+                        phone={entry.phone}
+                        traineeName={entry.name}
+                      />
                     </TableCell>
                     <TableCell>{formatDate(entry.end_date)}</TableCell>
                     {monthKeys.flatMap((mk, mi) =>
