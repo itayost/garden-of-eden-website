@@ -16,7 +16,7 @@ type ActionResult =
  * Add a contact log entry for a lead
  */
 export async function addContactLogAction(input: ContactLogInput): Promise<ActionResult> {
-  const { error: authError } = await verifyAdminOrTrainer();
+  const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const validated = contactLogSchema.safeParse(input);
@@ -31,7 +31,10 @@ export async function addContactLogAction(input: ContactLogInput): Promise<Actio
 
   const supabase = await createClient();
 
+  // author_id lets a later entry by the same staff member close their call
+  // reminder for this lead (src/features/call-reminders).
   const { error } = await typedFrom(supabase, "lead_contact_log").insert({
+    author_id: user!.id,
     lead_id,
     contact_type,
     rep: rep || null,

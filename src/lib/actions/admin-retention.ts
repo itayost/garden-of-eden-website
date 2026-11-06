@@ -4,24 +4,12 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
-import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { visibleTraineePhones } from "@/features/branches/lib/memberships";
 import { normalizePhoneIL } from "@/lib/validations/common";
+import { assertPhoneInScope, callerVisiblePhones } from "@/lib/retention/scope";
 import type { RetentionReportData } from "@/lib/arbox/retention";
 import type { RetentionViewData, RetentionViewEntry } from "@/lib/arbox/retention-branches";
 import { loadRetentionView } from "@/lib/arbox/retention-branches-load";
 import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
-
-/**
- * Retention rows are keyed by Arbox phone, so a trainer's branch scope is a
- * set of phones. Null means no restriction (admins, unassigned trainers).
- */
-async function callerVisiblePhones(): Promise<Set<string> | null | { error: string }> {
-  const scopeResult = await getBranchScopeAction();
-  if ("error" in scopeResult) return { error: scopeResult.error };
-  return visibleTraineePhones(createAdminClient(), scopeResult.data.scope);
-}
 
 function scopeReport(
   report: RetentionViewData,
@@ -39,16 +27,6 @@ function scopeReport(
   };
 }
 
-/** Trainers may annotate or reassign only customers inside their branches. */
-async function assertPhoneInScope(traineePhone: string): Promise<string | null> {
-  const visible = await callerVisiblePhones();
-  if (visible instanceof Set || visible === null) {
-    if (visible === null) return null;
-    const phone = normalizePhoneIL(traineePhone);
-    return phone !== null && visible.has(phone) ? null : "הלקוח אינו בסניף שלך";
-  }
-  return visible.error;
-}
 import { isPastReportMonth } from "@/lib/utils/retention-month-list";
 import { checkRateLimit, isAdminExempt } from "@/lib/rate-limit";
 import {

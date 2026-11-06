@@ -29,6 +29,7 @@ import { TablePagination } from "@/components/admin/TablePagination";
 import { LEAD_UNASSIGNED_VALUE, type Lead, type LeadStatus } from "@/types/leads";
 import { leadPhoneSearchFragment } from "@/lib/validations/leads";
 import { formatPhoneToLocal } from "@/lib/validations/common";
+import { CallLink } from "@/features/call-reminders/components/CallLink";
 import type { LeadTab } from "@/types/lead-tabs";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 
@@ -174,11 +175,16 @@ export function LeadDataTable({
         {table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map((row) => {
             const lead = row.original;
+            // The call link sits beside the card's button, never inside it:
+            // a link nested in a button is invalid and would open the sheet.
             return (
+              <div
+                key={row.id}
+                className="flex items-center gap-1 rounded-lg border pe-2 hover:bg-muted/50 transition-colors"
+              >
               <button
                 type="button"
-                key={row.id}
-                className="flex w-full items-center gap-3 p-3 rounded-lg border cursor-pointer text-start hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex min-w-0 flex-1 items-center gap-3 p-3 rounded-lg cursor-pointer text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => handleRowClick(lead)}
               >
                 <div className="flex-1 min-w-0">
@@ -209,6 +215,13 @@ export function LeadDataTable({
                   {new Date(lead.created_at).toLocaleDateString("he-IL")}
                 </span>
               </button>
+              <CallLink
+                variant="icon"
+                target={{ kind: "lead", leadId: lead.id }}
+                phone={lead.phone}
+                contactName={lead.name}
+              />
+              </div>
             );
           })
         ) : (
