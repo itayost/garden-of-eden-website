@@ -16,6 +16,8 @@ const empty = (over: Partial<PlayerAssessment>): PlayerAssessment => ({
   shuffle_10m: null,
   sprint_10m_h: null,
   sprint_10m_h_ball: null,
+  envelope: null,
+  envelope_ball: null,
   concentration_notes: null, decision_making_notes: null,
   work_ethic_notes: null, recovery_notes: null, nutrition_notes: null,
   assessed_by: null, notes: null,

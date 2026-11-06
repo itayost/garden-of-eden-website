@@ -9,7 +9,7 @@
 
 import type { PlayerAssessment, CoordinationLevel, BodyStructure, LegPowerTechnique } from "@/types/assessment";
 import { DRIBBLING_TEST_KEYS } from "@/types/assessment";
-import type { NumericMetricKey } from "@/lib/utils/assessment-metrics";
+import { COUNTED_METRIC_KEYS, type NumericMetricKey } from "@/lib/utils/assessment-metrics";
 
 // ===========================================
 // RATING CALCULATION FUNCTIONS
@@ -86,8 +86,11 @@ export function getLatestAssessmentsPerUser(assessments: readonly PlayerAssessme
 // GROUP STATISTICS
 // ===========================================
 
-/** Best and worst value of every numeric test within an age group. */
-export type GroupStats = Record<NumericMetricKey, { best: number; worst: number }>;
+/**
+ * Best and worst value of every numeric test within an age group, and for the
+ * COUNTED_METRIC_KEYS how many trainees in the group have a result.
+ */
+export type GroupStats = Record<NumericMetricKey, { best: number; worst: number; players?: number }>;
 
 // ===========================================
 // CATEGORICAL BONUSES
@@ -151,7 +154,16 @@ type BonusFn = (a: PlayerAssessment) => number;
 interface PrimaryInput {
   metric: NumericMetric;
   lowerBetter: boolean;
+  /** Rate the test only once this many trainees in the age group have a result. */
+  minPlayers?: number;
 }
+
+/**
+ * A test added after the age groups already had ratings counts toward the card
+ * only from this many results: with fewer, the first trainees' times are the
+ * group's best and worst, and they would rate 99 or 30 on noise.
+ */
+const NEW_TEST_MIN_PLAYERS = 5;
 
 interface StatConfig {
   primary: readonly PrimaryInput[];
@@ -199,9 +211,11 @@ export const CARD_STAT_CONFIG: Readonly<Record<StatKey, StatConfig>> = {
     bonuses: [(a) => getBodyStructureBonus(a.body_structure)],
   },
   dribbling: {
-    primary: [
-      ...DRIBBLING_TEST_KEYS.map((metric) => ({ metric, lowerBetter: true })),
-    ],
+    primary: DRIBBLING_TEST_KEYS.map((metric) => ({
+      metric,
+      lowerBetter: true,
+      ...(COUNTED_METRIC_KEYS.includes(metric) ? { minPlayers: NEW_TEST_MIN_PLAYERS } : {}),
+    })),
     bonuses: [(a) => getCoordinationBonus(a.coordination)],
   },
   passing: {
@@ -228,7 +242,8 @@ function ratePrimary(
   input: PrimaryInput
 ): number | null {
   const value = assessment[input.metric] as number | null;
-  const { best, worst } = groupStats[input.metric];
+  const { best, worst, players } = groupStats[input.metric];
+  if (input.minPlayers !== undefined && (players ?? 0) < input.minPlayers) return null;
   return input.lowerBetter
     ? calculateRatingLowerBetter(value, best, worst)
     : calculateRatingHigherBetter(value, best, worst);

@@ -117,6 +117,8 @@ export interface PlayerAssessment {
   shuffle_10m: number | null;
   sprint_10m_h: number | null;
   sprint_10m_h_ball: number | null;
+  envelope: number | null;
+  envelope_ball: number | null;
 
   // Mental notes
   concentration_notes: string | null;
@@ -170,6 +172,8 @@ export const ASSESSMENT_LABELS_HE: Record<string, string> = {
   shuffle_10m: "צעדי רדיפה 10 מטר",
   sprint_10m_h: "ספרינט 10 מטר צורת ח",
   sprint_10m_h_ball: "ספרינט 10 מטר צורת ח עם כדור",
+  envelope: "מבדק מעטפה",
+  envelope_ball: "מעטפה עם כדור",
 
   // Mental notes
   concentration_notes: "ריכוז",
@@ -203,21 +207,41 @@ export const ASSESSMENT_UNITS: Record<string, string> = {
   shuffle_10m: "שניות",
   sprint_10m_h: "שניות",
   sprint_10m_h_ball: "שניות",
+  envelope: "שניות",
+  envelope_ball: "שניות",
 };
 
 // ===========================================
 // ASSESSMENT SECTIONS FOR FORM
 // ===========================================
 
-/** The three timed dribbling tests (seconds, lower is better). */
-export const DRIBBLING_TEST_KEYS = ["shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball"] as const;
+/** The five timed dribbling tests (seconds, lower is better). */
+export const DRIBBLING_TEST_KEYS = [
+  "shuffle_10m",
+  "sprint_10m_h",
+  "sprint_10m_h_ball",
+  "envelope",
+  "envelope_ball",
+] as const;
+
+/** First assessment date on which the first three dribbling tests exist. */
+export const DRIBBLING_TESTS_SINCE = "2026-09-29";
+
+/** First assessment date on which the two envelope tests exist. */
+export const ENVELOPE_TESTS_SINCE = "2026-11-06";
 
 /**
- * First assessment date on which the dribbling tests exist. Earlier
- * assessments could not have them, so completeness ignores them there and a
- * complete assessment from before the rollout stays at 100%.
+ * Tests added after the assessment began, with the first date each exists.
+ * Older assessments could not have them, so completeness ignores them there
+ * and an assessment that was complete on its own date stays at 100%.
  */
-export const DRIBBLING_TESTS_SINCE = "2026-09-29";
+const TEST_SINCE: Readonly<Record<string, string>> = {
+  shuffle_10m: DRIBBLING_TESTS_SINCE,
+  sprint_10m_h: DRIBBLING_TESTS_SINCE,
+  sprint_10m_h_ball: DRIBBLING_TESTS_SINCE,
+  envelope: ENVELOPE_TESTS_SINCE,
+  envelope_ball: ENVELOPE_TESTS_SINCE,
+};
 
 export type AssessmentMonthStatus = 'full' | 'partial' | 'none';
 
@@ -236,8 +260,6 @@ export interface AssessmentSection {
   title: string;
   fields: string[];
   type: "number" | "select" | "textarea";
-  /** First assessment date the section exists; older assessments skip it. */
-  since?: string;
 }
 
 export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
@@ -252,7 +274,6 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
     title: "מבדקי כדרור",
     fields: [...DRIBBLING_TEST_KEYS],
     type: "number",
-    since: DRIBBLING_TESTS_SINCE,
   },
   {
     key: "jumps",
@@ -290,10 +311,19 @@ export const ASSESSMENT_SECTIONS: AssessmentSection[] = [
 // HELPER FUNCTIONS
 // ===========================================
 
-/** The sections that existed on this assessment's date (see AssessmentSection.since). */
+/**
+ * The sections as they were on this assessment's date: each keeps only the
+ * tests that existed then (see TEST_SINCE), and a section with none is left out.
+ */
 function sectionsFor(assessment: Partial<PlayerAssessment>): AssessmentSection[] {
   const date = assessment.assessment_date;
-  return ASSESSMENT_SECTIONS.filter((section) => !section.since || !date || date >= section.since);
+  const existed = (field: string) => {
+    const since = TEST_SINCE[field];
+    return !since || !date || date >= since;
+  };
+  return ASSESSMENT_SECTIONS
+    .map((section) => ({ ...section, fields: section.fields.filter(existed) }))
+    .filter((section) => section.fields.length > 0);
 }
 
 const LOWER_IS_BETTER_FIELDS: ReadonlySet<string> = new Set([
@@ -307,7 +337,7 @@ export function isLowerBetter(fieldName: string): boolean {
 
 /**
  * Returns section-level completeness for the ASSESSMENT_SECTIONS that apply to
- * this assessment's date (see AssessmentSection.since).
+ * this assessment's date (see sectionsFor).
  * Returns [] when assessment is null (trainee has no record for the month).
  * Mental (textarea) fields are completed if non-null AND non-empty string.
  * Quantitative fields are completed if non-null.

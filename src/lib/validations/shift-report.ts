@@ -22,12 +22,30 @@ export const ACHIEVEMENT_CATEGORIES = [
 
 export type AchievementCategory = (typeof ACHIEVEMENT_CATEGORIES)[number];
 
+/** Topics a trainer can mark as worked on with a trainee: every achievement
+ * category, then the work-only topics. */
+export const WORK_TOPICS = [
+  ...ACHIEVEMENT_CATEGORIES,
+  "סיומות לשער",
+  "סריקות",
+  "דיוק במסירה לשער קטן",
+  "השתחררות מלחץ",
+  "עבודה כנגד גומיית התנגדות",
+] as const;
+
+export type WorkTopic = (typeof WORK_TOPICS)[number];
+
 /** Per-trainee entry. `categories` is set for sections with a category
  * taxonomy (achievements, worked-on focus); for details-only sections it
  * is omitted. */
 const perTraineeEntry = z.object({
   details: z.string().max(MAX_TEXT).optional(),
   categories: z.array(z.enum(ACHIEVEMENT_CATEGORIES)).optional(),
+});
+
+/** Worked-on entry: the same shape, choosing from WORK_TOPICS. */
+const workedOnEntry = perTraineeEntry.extend({
+  categories: z.array(z.enum(WORK_TOPICS)).optional(),
 });
 
 export const shiftReportSchema = z.object({
@@ -62,7 +80,7 @@ export const shiftReportSchema = z.object({
   has_worked_on_focus: z.boolean(),
   worked_on_trainee_ids: z.array(z.string()),
   worked_on_details: optionalText,
-  worked_on_per_trainee: z.record(z.string(), perTraineeEntry).optional(),
+  worked_on_per_trainee: z.record(z.string(), workedOnEntry).optional(),
 
   // Step 3: Trainee Positives & Wellbeing
   has_achievements: z.boolean(),

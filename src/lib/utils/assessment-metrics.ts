@@ -23,3 +23,9 @@ export const NUMERIC_METRIC_KEYS = [
 ] as const;
 
 export type NumericMetricKey = (typeof NUMERIC_METRIC_KEYS)[number];
+
+/**
+ * Tests whose age-group benchmark also stores how many trainees have a result
+ * (`<key>_players`), so the card can wait until enough of them do.
+ */
+export const COUNTED_METRIC_KEYS: readonly NumericMetricKey[] = ["envelope", "envelope_ball"];

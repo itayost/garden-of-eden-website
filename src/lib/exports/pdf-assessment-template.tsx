@@ -159,6 +159,8 @@ export function AssessmentPdfDocument({
             <Text style={styles.tableCellHeader}>צעדי רדיפה</Text>
             <Text style={styles.tableCellHeader}>צורת ח</Text>
             <Text style={styles.tableCellHeader}>צורת ח עם כדור</Text>
+            <Text style={styles.tableCellHeader}>מעטפה</Text>
+            <Text style={styles.tableCellHeader}>מעטפה עם כדור</Text>
           </View>
           {assessments.map((a) => (
             <View key={a.id} style={styles.tableRow}>
@@ -166,6 +168,8 @@ export function AssessmentPdfDocument({
               <Text style={styles.tableCell}>{a.shuffle_10m ?? "---"}</Text>
               <Text style={styles.tableCell}>{a.sprint_10m_h ?? "---"}</Text>
               <Text style={styles.tableCell}>{a.sprint_10m_h_ball ?? "---"}</Text>
+              <Text style={styles.tableCell}>{a.envelope ?? "---"}</Text>
+              <Text style={styles.tableCell}>{a.envelope_ball ?? "---"}</Text>
             </View>
           ))}
         </View>

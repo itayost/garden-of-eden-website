@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { PlayerAssessment } from "@/types/assessment";
+import { DRIBBLING_TEST_KEYS } from "@/types/assessment";
 import {
   ASSESSMENT_LABELS_HE,
   COORDINATION_OPTIONS,
@@ -67,7 +68,7 @@ function buildSingleValueCard(
 // Spec-defined metric key lists
 const NUMERIC_METRIC_KEYS: (keyof PlayerAssessment)[] = [
   "sprint_5m", "sprint_10m", "sprint_20m",
-  "shuffle_10m", "sprint_10m_h", "sprint_10m_h_ball",
+  ...DRIBBLING_TEST_KEYS,
   "jump_2leg_height", "jump_2leg_distance", "jump_right_leg", "jump_left_leg",
   "blaze_spot_time",
   "kick_power_right_foot", "kick_power_left_foot", "kick_power_machine_pct",
@@ -272,10 +273,11 @@ ${(["PAC","SHO","PAS","DRI","DEF","PHY"] as const).map((label, i) => {
           ? getCategoricalLabel(key, String(prevVal))
           : prevVal !== null && prevVal !== undefined ? String(prevVal) : "—";
 
+        // 1px row padding keeps the 22 test rows on page 1 (2px pushed them to a third page).
         return `<tr style="border-bottom:1px solid #1f2937;">
-<td style="padding:2px 8px;line-height:1.3;color:#9ca3af;font-size:10px;">${ASSESSMENT_LABELS_HE[String(key)] ?? String(key)}</td>
-<td style="padding:2px 8px;line-height:1.3;text-align:center;font-size:10px;color:${isCategorical ? "inherit" : color};font-weight:${comparison ? "700" : "400"};">${displayLatest}</td>
-${previous ? `<td style="padding:2px 8px;line-height:1.3;text-align:center;font-size:10px;color:#6b7280;">${displayPrev}</td>` : ""}
+<td style="padding:1px 8px;line-height:1.3;color:#9ca3af;font-size:10px;">${ASSESSMENT_LABELS_HE[String(key)] ?? String(key)}</td>
+<td style="padding:1px 8px;line-height:1.3;text-align:center;font-size:10px;color:${isCategorical ? "inherit" : color};font-weight:${comparison ? "700" : "400"};">${displayLatest}</td>
+${previous ? `<td style="padding:1px 8px;line-height:1.3;text-align:center;font-size:10px;color:#6b7280;">${displayPrev}</td>` : ""}
 </tr>`;
       }).join("");
 

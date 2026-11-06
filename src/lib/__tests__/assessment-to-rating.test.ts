@@ -24,6 +24,8 @@ const FULL_GROUP_STATS: GroupStats = {
   shuffle_10m: { best: 2.5, worst: 3.5 },
   sprint_10m_h: { best: 2.2, worst: 3.2 },
   sprint_10m_h_ball: { best: 2.6, worst: 3.8 },
+  envelope: { best: 15, worst: 25, players: 12 },
+  envelope_ball: { best: 18, worst: 30, players: 12 },
 };
 
 const NO_DATA_GROUP_STATS: GroupStats = {
@@ -44,6 +46,8 @@ const NO_DATA_GROUP_STATS: GroupStats = {
   shuffle_10m: { best: -1, worst: -1 },
   sprint_10m_h: { best: -1, worst: -1 },
   sprint_10m_h_ball: { best: -1, worst: -1 },
+  envelope: { best: -1, worst: -1 },
+  envelope_ball: { best: -1, worst: -1 },
 };
 
 function emptyAssessment(): PlayerAssessment {
@@ -72,6 +76,8 @@ function emptyAssessment(): PlayerAssessment {
     shuffle_10m: null,
     sprint_10m_h: null,
     sprint_10m_h_ball: null,
+    envelope: null,
+    envelope_ball: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,
@@ -194,6 +200,91 @@ describe("calculateCardRatings — dribbling comes from the three timed dribblin
     expect(r.pace).toBeNull();
     expect(r.physical).toBeNull();
     expect(r.passing).toBeNull();
+  });
+});
+
+describe("calculateCardRatings — the envelope tests join dribbling", () => {
+  it("averages all five timed dribbling tests", () => {
+    const r = calculateCardRatings(
+      {
+        ...emptyAssessment(),
+        shuffle_10m: 2.5, // 99
+        sprint_10m_h: 2.2, // 99
+        sprint_10m_h_ball: 2.6, // 99
+        envelope: 25, // 30
+        envelope_ball: 30, // 30
+      },
+      FULL_GROUP_STATS
+    );
+    expect(r.dribbling).toBe(71); // (99 * 3 + 30 * 2) / 5 = 71.4 -> 71
+  });
+
+  it("treats a faster envelope time as better", () => {
+    const fastest = calculateCardRatings({ ...emptyAssessment(), envelope: 15, envelope_ball: 18 }, FULL_GROUP_STATS);
+    const slowest = calculateCardRatings({ ...emptyAssessment(), envelope: 25, envelope_ball: 30 }, FULL_GROUP_STATS);
+    expect(fastest.dribbling).toBe(99);
+    expect(slowest.dribbling).toBe(30);
+  });
+
+  it("rates dribbling from the envelope tests alone", () => {
+    const r = calculateCardRatings({ ...emptyAssessment(), envelope_ball: 24 }, FULL_GROUP_STATS);
+    expect(r.dribbling).toBe(65); // midway between 18 and 30 -> 64.5 -> 65
+  });
+
+  it("leaves an assessment without envelope tests where it was", () => {
+    const threeTests: PlayerAssessment = {
+      ...emptyAssessment(),
+      shuffle_10m: 2.5, // 99
+      sprint_10m_h: 2.2, // 99
+      sprint_10m_h_ball: 3.8, // 30
+    };
+    expect(calculateCardRatings(threeTests, FULL_GROUP_STATS).dribbling).toBe(76); // 228 / 3 = 76
+  });
+});
+
+describe("calculateCardRatings — an envelope test needs 5 trainees in the age group", () => {
+  const withPlayers = (players: number): GroupStats => ({
+    ...FULL_GROUP_STATS,
+    envelope: { ...FULL_GROUP_STATS.envelope, players },
+    envelope_ball: { ...FULL_GROUP_STATS.envelope_ball, players },
+  });
+
+  const allFive: PlayerAssessment = {
+    ...emptyAssessment(),
+    shuffle_10m: 2.5, // 99
+    sprint_10m_h: 2.2, // 99
+    sprint_10m_h_ball: 2.6, // 99
+    envelope: 25, // 30 once counted
+    envelope_ball: 30, // 30 once counted
+  };
+
+  it("leaves the envelope tests out of dribbling while fewer than 5 trainees have them", () => {
+    expect(calculateCardRatings(allFive, withPlayers(4)).dribbling).toBe(99);
+  });
+
+  it("counts them from the fifth trainee on", () => {
+    expect(calculateCardRatings(allFive, withPlayers(5)).dribbling).toBe(71);
+  });
+
+  it("gives no dribbling rating from envelope tests alone before then", () => {
+    const onlyEnvelope = { ...emptyAssessment(), envelope: 15, envelope_ball: 18 };
+    expect(calculateCardRatings(onlyEnvelope, withPlayers(1)).dribbling).toBeNull();
+  });
+
+  it("treats a missing count as no trainees", () => {
+    const noCount: GroupStats = {
+      ...FULL_GROUP_STATS,
+      envelope: { best: 15, worst: 25 },
+      envelope_ball: { best: 18, worst: 30 },
+    };
+    expect(calculateCardRatings(allFive, noCount).dribbling).toBe(99);
+  });
+
+  it("asks it of the envelope tests only", () => {
+    const minimums = CARD_STAT_CONFIG.dribbling.primary
+      .filter((input) => input.minPlayers !== undefined)
+      .map((input) => [input.metric, input.minPlayers]);
+    expect(minimums).toEqual([["envelope", 5], ["envelope_ball", 5]]);
   });
 });
 

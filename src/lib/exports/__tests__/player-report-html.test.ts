@@ -29,6 +29,8 @@ function makeAssessment(overrides: Partial<PlayerAssessment> = {}): PlayerAssess
     shuffle_10m: null,
     sprint_10m_h: null,
     sprint_10m_h_ball: null,
+    envelope: null,
+    envelope_ball: null,
     flexibility_ankle: 15,
     flexibility_knee: 12,
     flexibility_hip: 20,
@@ -177,6 +179,17 @@ describe("buildPlayerReportHtml", () => {
       mockAssets,
     );
     expect(html).toContain("#d97706");
+  });
+
+  it("shows the envelope tests by their Hebrew names", () => {
+    const html = buildPlayerReportHtml(
+      makeProps({ assessments: [makeAssessment({ envelope: 18.4, envelope_ball: 21.9 })] }),
+      mockAssets,
+    );
+    expect(html).toContain("מבדק מעטפה");
+    expect(html).toContain("מעטפה עם כדור");
+    expect(html).toContain("18.4");
+    expect(html).toContain("21.9");
   });
 
   it("mini chart compares the latest two recorded values when the previous assessment skipped the test", () => {

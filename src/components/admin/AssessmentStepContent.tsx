@@ -289,6 +289,8 @@ export function AssessmentStepContent({
             <NumberInput name="shuffle_10m" step="0.001" form={form} previousAssessment={previousAssessment} />
             <NumberInput name="sprint_10m_h" step="0.001" form={form} previousAssessment={previousAssessment} />
             <NumberInput name="sprint_10m_h_ball" step="0.001" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="envelope" step="0.001" form={form} previousAssessment={previousAssessment} />
+            <NumberInput name="envelope_ball" step="0.001" form={form} previousAssessment={previousAssessment} />
           </CardContent>
         </Card>
       );

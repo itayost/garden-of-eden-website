@@ -8,6 +8,7 @@ const validAssessment = {
   blaze_spot_time: null, kick_power_kaiser: null,
   kick_power_right_foot: null, kick_power_left_foot: null, kick_power_machine_pct: null,
   shuffle_10m: null, sprint_10m_h: null, sprint_10m_h_ball: null,
+  envelope: null, envelope_ball: null,
   flexibility_ankle: null, flexibility_knee: null, flexibility_hip: null,
   coordination: null, leg_power_technique: null, body_structure: null,
   concentration_notes: null, decision_making_notes: null, work_ethic_notes: null,
@@ -29,6 +30,14 @@ const validBody = {
 };
 
 describe("playerReportPdfBodySchema", () => {
+  it("keeps the envelope test times for the report", () => {
+    const result = playerReportPdfBodySchema.parse({
+      ...validBody,
+      assessments: [{ ...validAssessment, envelope: 18.4, envelope_ball: 21.9 }],
+    });
+    expect(result.assessments[0]).toMatchObject({ envelope: 18.4, envelope_ball: 21.9 });
+  });
+
   it("accepts a valid body", () => {
     expect(() => playerReportPdfBodySchema.parse(validBody)).not.toThrow();
   });

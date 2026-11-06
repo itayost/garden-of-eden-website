@@ -67,6 +67,12 @@ export type Database = {
           age_group: string
           blaze_spot_time_best: number | null
           blaze_spot_time_worst: number | null
+          envelope_ball_best: number | null
+          envelope_ball_players: number
+          envelope_ball_worst: number | null
+          envelope_best: number | null
+          envelope_players: number
+          envelope_worst: number | null
           flexibility_ankle_best: number | null
           flexibility_ankle_worst: number | null
           flexibility_hip_best: number | null
@@ -106,6 +112,12 @@ export type Database = {
           age_group: string
           blaze_spot_time_best?: number | null
           blaze_spot_time_worst?: number | null
+          envelope_ball_best?: number | null
+          envelope_ball_players?: number
+          envelope_ball_worst?: number | null
+          envelope_best?: number | null
+          envelope_players?: number
+          envelope_worst?: number | null
           flexibility_ankle_best?: number | null
           flexibility_ankle_worst?: number | null
           flexibility_hip_best?: number | null
@@ -145,6 +157,12 @@ export type Database = {
           age_group?: string
           blaze_spot_time_best?: number | null
           blaze_spot_time_worst?: number | null
+          envelope_ball_best?: number | null
+          envelope_ball_players?: number
+          envelope_ball_worst?: number | null
+          envelope_best?: number | null
+          envelope_players?: number
+          envelope_worst?: number | null
           flexibility_ankle_best?: number | null
           flexibility_ankle_worst?: number | null
           flexibility_hip_best?: number | null
@@ -2611,6 +2629,8 @@ export type Database = {
           decision_making_notes: string | null
           deleted_at: string | null
           deleted_by: string | null
+          envelope: number | null
+          envelope_ball: number | null
           flexibility_ankle: number | null
           flexibility_hip: number | null
           flexibility_knee: number | null
@@ -2647,6 +2667,8 @@ export type Database = {
           decision_making_notes?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          envelope?: number | null
+          envelope_ball?: number | null
           flexibility_ankle?: number | null
           flexibility_hip?: number | null
           flexibility_knee?: number | null
@@ -2683,6 +2705,8 @@ export type Database = {
           decision_making_notes?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          envelope?: number | null
+          envelope_ball?: number | null
           flexibility_ankle?: number | null
           flexibility_hip?: number | null
           flexibility_knee?: number | null

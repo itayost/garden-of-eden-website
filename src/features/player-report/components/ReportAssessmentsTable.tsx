@@ -23,6 +23,8 @@ const METRIC_ROWS: { key: keyof PlayerAssessment; label: string }[] = [
   { key: "shuffle_10m", label: ASSESSMENT_LABELS_HE.shuffle_10m },
   { key: "sprint_10m_h", label: ASSESSMENT_LABELS_HE.sprint_10m_h },
   { key: "sprint_10m_h_ball", label: ASSESSMENT_LABELS_HE.sprint_10m_h_ball },
+  { key: "envelope", label: ASSESSMENT_LABELS_HE.envelope },
+  { key: "envelope_ball", label: ASSESSMENT_LABELS_HE.envelope_ball },
   { key: "jump_2leg_height", label: ASSESSMENT_LABELS_HE.jump_2leg_height },
   { key: "jump_2leg_distance", label: ASSESSMENT_LABELS_HE.jump_2leg_distance },
   { key: "jump_right_leg", label: ASSESSMENT_LABELS_HE.jump_right_leg },

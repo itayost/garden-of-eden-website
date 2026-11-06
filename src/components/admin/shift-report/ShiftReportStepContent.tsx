@@ -24,7 +24,11 @@ import {
   PerTraineeCategoriesSection,
   PerTraineeDetailsSection,
 } from "./PerTraineeSections";
-import type { ShiftReportFormData } from "@/lib/validations/shift-report";
+import {
+  ACHIEVEMENT_CATEGORIES,
+  WORK_TOPICS,
+  type ShiftReportFormData,
+} from "@/lib/validations/shift-report";
 
 export const SHIFT_REPORT_STEPS = [
   { key: "basic", title: "מידע בסיסי" },
@@ -218,6 +222,7 @@ const TraineeIssuesStep = memo(function TraineeIssuesStep({
           traineeIdsField="worked_on_trainee_ids"
           perTraineeField="worked_on_per_trainee"
           categoriesLabel="על מה עבדת עם המתאמן"
+          categoryOptions={WORK_TOPICS}
           detailsPlaceholder="פרט על מה עבדת עם המתאמן היום"
         />
       </CardContent>
@@ -243,6 +248,7 @@ const TraineePositivesStep = memo(function TraineePositivesStep({
           traineeIdsField="achievements_trainee_ids"
           perTraineeField="achievements_per_trainee"
           categoriesLabel="קטגוריות הצטיינות"
+          categoryOptions={ACHIEVEMENT_CATEGORIES}
           detailsPlaceholder="פרט את ההישגים או השיפורים"
         />
 

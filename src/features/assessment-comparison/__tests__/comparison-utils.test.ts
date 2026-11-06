@@ -35,6 +35,8 @@ function createMockAssessment(overrides: Partial<PlayerAssessment> = {}): Player
     shuffle_10m: null,
     sprint_10m_h: null,
     sprint_10m_h_ball: null,
+    envelope: null,
+    envelope_ball: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,
@@ -238,6 +240,18 @@ describe('compareAssessments', () => {
     expect(result.deltas.shuffle_10m?.isImprovement).toBe(true);
     expect(result.deltas.sprint_10m_h?.isImprovement).toBe(false);
     expect(result.deltas.sprint_10m_h_ball?.delta).toBe(0);
+  });
+
+  it('should compare the envelope tests, faster is better', () => {
+    const older = createMockAssessment({ envelope: 19.5, envelope_ball: 22.0 });
+    const newer = createMockAssessment({ envelope: 18.25, envelope_ball: 23.0 });
+
+    const result = compareAssessments(older, newer);
+
+    expect(result.deltas.envelope?.delta).toBeCloseTo(-1.25, 2);
+    expect(result.deltas.envelope?.isImprovement).toBe(true);
+    expect(result.deltas.envelope_ball?.delta).toBeCloseTo(1, 2);
+    expect(result.deltas.envelope_ball?.isImprovement).toBe(false);
   });
 
   it('should compare categorical fields', () => {

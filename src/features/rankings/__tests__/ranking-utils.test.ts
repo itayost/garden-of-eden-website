@@ -36,6 +36,8 @@ function createMockAssessment(
     shuffle_10m: null,
     sprint_10m_h: null,
     sprint_10m_h_ball: null,
+    envelope: null,
+    envelope_ball: null,
     concentration_notes: null,
     decision_making_notes: null,
     work_ethic_notes: null,

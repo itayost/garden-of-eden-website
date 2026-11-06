@@ -120,6 +120,8 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
       shuffle_10m: latestAssessment.shuffle_10m,
       sprint_10m_h: latestAssessment.sprint_10m_h,
       sprint_10m_h_ball: latestAssessment.sprint_10m_h_ball,
+      envelope: latestAssessment.envelope,
+      envelope_ball: latestAssessment.envelope_ball,
     }
     : {};
 

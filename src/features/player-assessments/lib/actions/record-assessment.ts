@@ -41,6 +41,8 @@ interface AssessmentInsertInput {
   shuffle_10m?: number | null;
   sprint_10m_h?: number | null;
   sprint_10m_h_ball?: number | null;
+  envelope?: number | null;
+  envelope_ball?: number | null;
   concentration_notes?: string | null;
   decision_making_notes?: string | null;
   work_ethic_notes?: string | null;
@@ -55,8 +57,8 @@ interface RecordResult {
   error?: string;
 }
 
-// Postgres check_violation: a value outside a column's CHECK range (the timed
-// dribbling tests allow 0 < x <= 30). The wizard saves without running the zod
+// Postgres check_violation: a value outside a column's CHECK range (the 10 m
+// dribbling tests allow 0 < x <= 30, the envelope tests 0 < x <= 60). The wizard saves without running the zod
 // schema, so this is where an out-of-range entry lands.
 const CHECK_VIOLATION = "23514";
 
