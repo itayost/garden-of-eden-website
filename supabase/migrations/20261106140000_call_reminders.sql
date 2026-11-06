@@ -69,6 +69,35 @@ CREATE INDEX IF NOT EXISTS lead_contact_log_author_created_idx
 COMMENT ON COLUMN public.lead_contact_log.author_id IS
   'Staff member who wrote the entry; NULL for entries written before 2026-11-06.';
 
+-- Staff write lead_contact_log with their own session, and its policy
+-- (admin_trainer_all) lets any staff member insert or update any row. The
+-- author must therefore come from the session, not the request, or one
+-- trainer could clear another's call reminder. Service-role writes (no
+-- auth.uid()) keep what they pass; an update never changes the author.
+CREATE OR REPLACE FUNCTION public.lead_contact_log_set_author()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $function$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF auth.uid() IS NOT NULL THEN
+      NEW.author_id := auth.uid();
+    END IF;
+  ELSE
+    NEW.author_id := OLD.author_id;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.lead_contact_log_set_author() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS lead_contact_log_set_author ON public.lead_contact_log;
+CREATE TRIGGER lead_contact_log_set_author
+  BEFORE INSERT OR UPDATE ON public.lead_contact_log
+  FOR EACH ROW EXECUTE FUNCTION public.lead_contact_log_set_author();
+
 ALTER TABLE public.call_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.retention_call_log ENABLE ROW LEVEL SECURITY;
 
