@@ -1,9 +1,11 @@
 /**
- * The enforced Content-Security-Policy for the card page. Card numbers are
- * typed on our own page and sent to our server, so any injected script there
- * could read them. Only scripts carrying this request's nonce run, plus what
- * they load ('strict-dynamic'), and nothing may be sent to another origin.
- * The rest of the site keeps the report-only policy in next.config.ts.
+ * The enforced Content-Security-Policy for the card page. The card is typed
+ * inside Pelecard's payment page, framed here, so our page never sees it;
+ * the policy keeps an injected script from swapping that frame for a fake
+ * form. Only scripts carrying this request's nonce run, plus what they load
+ * ('strict-dynamic'), only Pelecard may be framed, and nothing may be sent
+ * to another origin. The rest of the site keeps the report-only policy in
+ * next.config.ts.
  *
  * Styles stay 'unsafe-inline': Tailwind and Framer Motion write inline
  * styles, and a style cannot read a form field.
@@ -39,6 +41,7 @@ export function paymentPageCsp(nonce: string, { dev }: { dev: boolean }): string
     "img-src 'self' data: blob:",
     "font-src 'self'",
     `connect-src 'self'${dev ? " ws:" : ""}`,
+    "frame-src https://*.pelecard.biz",
     // The root layout registers /sw.js; under 'strict-dynamic' workers need their own source.
     "worker-src 'self'",
     "form-action 'self'",

@@ -4,12 +4,13 @@ import { ShieldCheck } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
-import { PaymentForm } from "@/features/enrollment/components/PaymentForm";
 import { PaymentsClosedNotice } from "@/features/enrollment/components/PaymentsClosedNotice";
 import { FullLoadGuard } from "@/features/enrollment/components/FullLoadGuard";
+import { PelecardFrame } from "@/features/enrollment/components/PelecardFrame";
+import { openPaymentPage } from "@/features/enrollment/lib/open-payment-page";
 import { canPayOnline } from "@/lib/payments/online-payments";
+import { declineMessage } from "@/lib/payments/pelecard-page-mapping";
 import { orderPlanName } from "@/lib/plans/manual-card";
-import { maxInstallmentsFor } from "@/lib/plans/installments";
 import type { Order, PlanProduct } from "@/types/plans";
 
 export const metadata: Metadata = {
@@ -19,15 +20,19 @@ export const metadata: Metadata = {
 
 interface PageProps {
   params: Promise<{ orderId: string }>;
+  searchParams: Promise<{ declined?: string }>;
 }
 
 /**
- * The site's own card page for one order. The order id is the only thing in
- * the URL; the amount and the plan come from the row, never from the client.
- * A paid order goes straight to the confirmation, a failed one to a retry.
+ * The card page for one order. The parent pays on Pelecard's payment page,
+ * framed here; the order id is the only thing in the URL, and the amount and
+ * the plan come from the row, never from the client. A paid order goes
+ * straight to the confirmation, a failed one to a retry. A decline returns
+ * here with its code and a fresh Pelecard page.
  */
-export default async function PayPage({ params }: PageProps) {
+export default async function PayPage({ params, searchParams }: PageProps) {
   const { orderId } = await params;
+  const { declined } = await searchParams;
   if (!isValidUUID(orderId)) notFound();
 
   const db = createAdminClient();
@@ -63,14 +68,14 @@ export default async function PayPage({ params }: PageProps) {
   }
 
   const { data: product } = (await typedFrom(db, "plan_products")
-    .select("name_he, staff_terms, max_installments")
+    .select("name_he")
     .eq("id", order.product_id)
-    .maybeSingle()) as { data: Pick<PlanProduct, "name_he" | "staff_terms" | "max_installments"> | null };
+    .maybeSingle()) as { data: Pick<PlanProduct, "name_he"> | null };
 
   const amount = Number(order.amount_ils);
-  // No product row means the charge refuses anyway; offer a single payment.
-  const maxInstallments = product ? maxInstallmentsFor(product, order) : 1;
   const isOpen = await canPayOnline();
+  const page = isOpen ? await openPaymentPage(order.id) : null;
+  const declinedCode = declined && /^\d{3}$/.test(declined) ? declined : null;
 
   return (
     <div className="space-y-6">
@@ -101,9 +106,18 @@ export default async function PayPage({ params }: PageProps) {
       </section>
 
       <section className="rounded-2xl border bg-white p-4 sm:p-6">
-        {isOpen ? (
+        {page ? (
           <FullLoadGuard>
-            <PaymentForm orderId={order.id} amountIls={amount} maxInstallments={maxInstallments} />
+            {declinedCode && (
+              <p role="alert" className="mb-4 rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                {declineMessage(declinedCode)}
+              </p>
+            )}
+            {page.kind === "frame" ? (
+              <PelecardFrame url={page.url} />
+            ) : (
+              <p className="py-6 text-center text-sm text-black/70">{page.text}</p>
+            )}
           </FullLoadGuard>
         ) : (
           <PaymentsClosedNotice />

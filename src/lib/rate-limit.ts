@@ -55,14 +55,15 @@ const paymentLimiter = redis
   : null;
 
 /**
- * Card attempts per order: 5 per 24 hours, keyed by order id. A decline
- * returns the order to pending, so without this one order could be used to
- * test stolen cards from rotating IPs. Fails closed like the payment limiter.
+ * Pelecard payment pages per order: 10 per 24 hours, keyed by order id. Every
+ * load of the card page opens one, and a decline returns the order to
+ * pending, so without this one order could be used to test stolen cards from
+ * rotating IPs. Fails closed like the payment limiter.
  */
 const paymentOrderLimiter = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(5, "24 h"),
+      limiter: Ratelimit.slidingWindow(10, "24 h"),
       prefix: "goe:payment-order",
       analytics: true,
     })
