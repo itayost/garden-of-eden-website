@@ -31,7 +31,8 @@ describe("paymentPageCsp", () => {
 
   it("lets only Pelecard's payment page into a frame", () => {
     const csp = directives(paymentPageCsp("abc123", { dev: false }));
-    expect(csp.get("frame-src")).toBe("https://*.pelecard.biz");
+    // The bare host too: isPelecardPageUrl accepts it.
+    expect(csp.get("frame-src")).toBe("https://pelecard.biz https://*.pelecard.biz");
   });
 
   it("sends nothing to another origin", () => {
