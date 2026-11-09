@@ -107,7 +107,8 @@ describe("buildInitRequest", () => {
       TelField: "hide",
     });
     expect(body.CssURL).toBe(`${SITE}/pelecard/payment-page.css`);
-    expect(body.LogoURL).toBe(`${SITE}/logo-transparent.png`);
+    // Pelecard's page left our logo's 150x59 box empty; its own logo shows instead.
+    expect(body).not.toHaveProperty("LogoURL");
   });
 
   it("carries the terminal credentials for the server-side call only", () => {

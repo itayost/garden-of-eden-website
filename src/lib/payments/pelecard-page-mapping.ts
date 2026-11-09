@@ -71,7 +71,8 @@ export function buildInitRequest(
     EmailField: "hide",
     TelField: "hide",
     CssURL: `${site}/pelecard/payment-page.css`,
-    LogoURL: `${site}/logo-transparent.png`,
+    // No LogoURL: Pelecard's page left our logo's 150x59 box empty on the
+    // first live page (2026-11-09), and its own logo is the reassuring one.
   };
 }
 
