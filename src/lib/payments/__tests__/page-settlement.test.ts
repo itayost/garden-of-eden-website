@@ -12,6 +12,7 @@ import {
   returnRedirect,
   SUPERSEDED_NOTE,
   unverifiedOutcome,
+  withRefundFlagged,
 } from "../page-settlement";
 
 const ID = "3f2b8c1e-9a4d-4e21-b7c6-0d5e8f9a1b2c";
@@ -127,6 +128,27 @@ describe("canCheckWithPelecard", () => {
     expect(canCheckWithPelecard({ status: "pending", payment_provider: "manual" })).toBe(false);
     expect(canCheckWithPelecard({ status: "paid", payment_provider: "isracard" })).toBe(false);
     expect(canCheckWithPelecard({ status: "failed", payment_provider: "isracard" })).toBe(false);
+  });
+
+  it("offers it on a link a newer Payment link closed, which the parent may still have paid", () => {
+    expect(
+      canCheckWithPelecard({ status: "failed", payment_provider: "isracard", fulfillment_error: SUPERSEDED_NOTE }),
+    ).toBe(true);
+  });
+});
+
+describe("withRefundFlagged", () => {
+  const row = (id: string, created_at: string) => ({ id, created_at });
+
+  it("adds flagged orders older than the recent list, newest first, once each", () => {
+    const recent = [row("c", "2026-11-09"), row("b", "2026-11-08")];
+    const flagged = [row("b", "2026-11-08"), row("a", "2026-01-01")];
+    expect(withRefundFlagged(recent, flagged).map((r) => r.id)).toEqual(["c", "b", "a"]);
+  });
+
+  it("returns the recent list unchanged when nothing is flagged", () => {
+    const recent = [row("c", "2026-11-09")];
+    expect(withRefundFlagged(recent, [])).toEqual(recent);
   });
 });
 

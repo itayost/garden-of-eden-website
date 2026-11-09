@@ -68,6 +68,8 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
         return;
       }
       if (result.outcome === "not_found") toast.info("לא נמצא חיוב בפלאקארד להזמנה הזו");
+      else if (result.outcome === "refund_flagged")
+        toast.warning("החיוב נמצא, אבל קישור אחר של החניך כבר שולם. ההזמנה סומנה להחזר בפלאקארד");
       else if (result.outcome === "released") toast.success("לא נמצא חיוב. ההזמנה חזרה לתשלום");
       else if (result.note) toast.warning(result.note);
       else toast.success("החיוב נמצא וההזמנה הושלמה");
@@ -141,7 +143,7 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                 )}
                 {isRefundFlag(order.fulfillment_error) && !(order.status === "paid" && !order.fulfilled_at) && (
                   <p className="mt-1 text-xs font-medium text-destructive">
-                    להחזר בפלאקארד: {order.fulfillment_error}
+                    להחזר בפלאקארד: <bdi dir="ltr">{order.fulfillment_error}</bdi>
                   </p>
                 )}
                 {canCheckWithPelecard(order) && (

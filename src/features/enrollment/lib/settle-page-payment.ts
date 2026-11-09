@@ -16,7 +16,7 @@ import {
 } from "@/lib/payments/page-settlement";
 import { markChecking } from "@/lib/payments/page-cache";
 import { retryWhile } from "@/lib/utils/retry";
-import { closeNewerPaymentLinks, newerPaymentLinkPaid } from "@/features/plans/lib/payment-link-supersede";
+import { closeNewerPaymentLinks, otherPaymentLinkPaidSince } from "@/features/plans/lib/payment-link-supersede";
 import type { Order } from "@/types/plans";
 import { completeCardPayment } from "./complete-card-payment";
 import type { PaidReference } from "./mark-paid";
@@ -166,7 +166,7 @@ async function flagRefund(
 function refundReason(order: OrderRow): string {
   if (order.status === "paid") return "paid twice";
   if (order.status === "failed" && order.fulfillment_error === SUPERSEDED_NOTE) {
-    return "a newer Payment link was already paid";
+    return "another Payment link for this child was already paid";
   }
   return `paid on a ${order.status} order`;
 }
@@ -180,7 +180,7 @@ async function applyPaid(
   const ref = paidReference(tx);
   const pelecardId = ref.transactionId ?? tx.transactionId;
   const superseded = order.status === "failed" && order.fulfillment_error === SUPERSEDED_NOTE;
-  const newerLinkPaid = superseded ? await newerPaymentLinkPaid(db, order) : false;
+  const newerLinkPaid = superseded ? await otherPaymentLinkPaidSince(db, order) : false;
 
   switch (paidOrderAction(order, pelecardId, newerLinkPaid)) {
     case "already_done":
@@ -213,7 +213,12 @@ async function finish(
   retried: boolean,
 ): Promise<SettleOutcome> {
   const completion = await completeCardPayment(db, order.id, ref, NO_ISSUER, opts);
-  if (completion.status === "claim_failed") return { kind: "unverified" };
+  if (completion.status === "claim_failed") {
+    // Charged but not saved: hold the order so the card page cannot open another
+    // page for it. The note completeCardPayment wrote (with the transaction) stays.
+    await typedFrom(db, "orders").update({ status: "charging" }).eq("id", order.id).in("status", ["pending", "expired"]);
+    return { kind: "unverified" };
+  }
   if (completion.status !== "already_paid") return { kind: "paid" };
 
   const { data: fresh } = (await typedFrom(db, "orders")
