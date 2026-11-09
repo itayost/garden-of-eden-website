@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildInitRequest,
+  callbackIds,
   declineMessage,
   feedbackIds,
   isPelecardPageUrl,
@@ -83,7 +84,8 @@ describe("buildInitRequest", () => {
     expect(body.ErrorURL).toBe(body.GoodURL);
     expect(body.FeedbackOnTop).toBe("True");
     expect(body.FeedbackDataTransferMethod).toBe("GET");
-    expect(body.ServerSideGoodFeedbackURL).toBe(`${SITE}/api/webhooks/pelecard`);
+    // Pelecard's result JSON has no UserKey, so the callback learns the order from its path.
+    expect(body.ServerSideGoodFeedbackURL).toBe(`${SITE}/api/webhooks/pelecard/${order.id}`);
     expect(body.ServerSideErrorFeedbackURL).toBe(body.ServerSideGoodFeedbackURL);
     expect(body).not.toHaveProperty("CancelURL");
   });
@@ -153,22 +155,18 @@ describe("reusablePage", () => {
   const now = 1_700_000_000_000;
 
   it("reuses a page opened within the window, so a reload opens nothing new", () => {
-    expect(reusablePage({ url, openedAt: now - 60_000 }, now, false)).toBe(url);
+    expect(reusablePage({ url, openedAt: now - 60_000 }, now)).toBe(url);
   });
 
   it("opens a new page once the window has passed", () => {
-    expect(reusablePage({ url, openedAt: now - PAGE_REUSE_MS }, now, false)).toBeNull();
-  });
-
-  it("never reuses after a decline, whose Pelecard page has ended", () => {
-    expect(reusablePage({ url, openedAt: now - 1_000 }, now, true)).toBeNull();
+    expect(reusablePage({ url, openedAt: now - PAGE_REUSE_MS }, now)).toBeNull();
   });
 
   it("ignores anything that is not a remembered Pelecard page", () => {
-    expect(reusablePage(null, now, false)).toBeNull();
-    expect(reusablePage({ url: "https://evil.example/pay", openedAt: now }, now, false)).toBeNull();
-    expect(reusablePage({ url, openedAt: "yesterday" }, now, false)).toBeNull();
-    expect(reusablePage({ url, openedAt: now + 60_000 }, now, false)).toBeNull();
+    expect(reusablePage(null, now)).toBeNull();
+    expect(reusablePage({ url: "https://evil.example/pay", openedAt: now }, now)).toBeNull();
+    expect(reusablePage({ url, openedAt: "yesterday" }, now)).toBeNull();
+    expect(reusablePage({ url, openedAt: now + 60_000 }, now)).toBeNull();
   });
 
   it("keeps the window short", () => {
@@ -211,6 +209,12 @@ describe("parsePageTransaction", () => {
     expect(parsePageTransaction({ StatusCode: "501", ErrorMessage: "x" }).ok).toBe(false);
     expect(parsePageTransaction("x").ok).toBe(false);
     expect(parsePageTransaction({ StatusCode: "000", ResultData: { ShvaResult: "000" } }).ok).toBe(false);
+  });
+
+  it("accepts ResultData as a one-item list, as the Services guide prints it", () => {
+    const listed = { ...DOCUMENTED_TX, ResultData: [DOCUMENTED_TX.ResultData] };
+    const parsed = parsePageTransaction(listed);
+    expect(parsed.ok && parsed.tx.transactionId).toBe("1a111c-1d1f6g-9h8j");
   });
 
   it("counts installments only above one payment", () => {
@@ -267,6 +271,12 @@ describe("judgePagePayment", () => {
     expect(judgePagePayment(tx({}), order, "error").kind).toBe("unknown");
   });
 
+  it("leaves the order binding to ValidateByUniqueKey when Pelecard echoes no paramX", () => {
+    expect(judgePagePayment(tx({ paramX: "" }), order, "not_checked")).toEqual({ kind: "needs_validation" });
+    expect(judgePagePayment(tx({ paramX: "" }), order, "valid")).toEqual({ kind: "paid" });
+    expect(judgePagePayment(tx({ paramX: "" }), order, "invalid").kind).toBe("unknown");
+  });
+
   it("calls a transaction without a Shva result unfinished, not ambiguous", () => {
     expect(judgePagePayment(tx({ shvaResult: null }), order, "valid")).toEqual({ kind: "unfinished" });
   });
@@ -300,5 +310,36 @@ describe("feedbackIds", () => {
   it("drops a UserKey that is not a uuid, and survives an empty body", () => {
     expect(feedbackIds(JSON.stringify({ TransactionId: "abc", UserKey: "x" })).orderId).toBeNull();
     expect(feedbackIds("")).toEqual({ orderId: null, transactionId: null, statusCode: null });
+  });
+
+  it("reads URL-encoded JSON sent without a field name", () => {
+    expect(feedbackIds(encodeURIComponent(JSON.stringify({ TransactionId: "abc" }))).transactionId).toBe("abc");
+  });
+
+  it("reads JSON sent in one of several form fields", () => {
+    const body = `source=pelecard&data=${encodeURIComponent(JSON.stringify({ ResultData: { TransactionId: "abc" } }))}`;
+    expect(feedbackIds(body).transactionId).toBe("abc");
+  });
+});
+
+describe("callbackIds", () => {
+  const body = JSON.stringify({ StatusCode: "000", ResultData: { TransactionId: "abc", ShvaResult: "000" } });
+
+  it("takes the order from the URL path when Pelecard's body has no UserKey", () => {
+    expect(callbackIds(ORDER_ID, body)).toEqual({ orderId: ORDER_ID, transactionId: "abc", statusCode: "000" });
+  });
+
+  it("ignores a body whose UserKey names another order", () => {
+    const other = JSON.stringify({ TransactionId: "abc", UserKey: "11111111-2222-4333-8444-555555555555" });
+    expect(callbackIds(ORDER_ID, other)).toBeNull();
+  });
+
+  it("ignores a path that is not an order id", () => {
+    expect(callbackIds("x", body)).toBeNull();
+  });
+
+  it("reads the return URL's query the same way", () => {
+    const query = new URLSearchParams({ PelecardTransactionId: "abc", PelecardStatusCode: "036" });
+    expect(callbackIds(ORDER_ID, query)).toEqual({ orderId: ORDER_ID, transactionId: "abc", statusCode: "036" });
   });
 });

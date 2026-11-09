@@ -52,11 +52,23 @@ export function paidOrderAction(
   }
 }
 
-/** The refund note, ahead of whatever note the order already carried. */
+/**
+ * A PostgREST .or() filter matching orders whose note is not a refund flag,
+ * so fulfillment and invoice writes never erase one. The value is quoted:
+ * it contains a space and a colon.
+ */
+export const KEEP_REFUND_FLAG_FILTER = `fulfillment_error.is.null,fulfillment_error.not.like."${REFUND_FLAG_PREFIX}*"`;
+
+/**
+ * The refund note, ahead of whatever note the order already carried. The
+ * same transaction flagged again (its return and its callback) changes
+ * nothing.
+ */
 export function refundNote(
   existing: string | null,
   details: { pelecardId: string; approvalNumber: string | null; reason: string },
 ): string {
+  if (existing && isRefundFlag(existing) && existing.includes(`transaction ${details.pelecardId}`)) return existing;
   const approval = details.approvalNumber ? `, approval ${details.approvalNumber}` : "";
   const note = `${REFUND_FLAG_PREFIX} ${details.reason}, transaction ${details.pelecardId}${approval}`;
   return existing ? `${note} | ${existing}` : note;
@@ -90,6 +102,38 @@ export function isRefundFlag(note: string | null): boolean {
 export function canCheckWithPelecard(order: { status: OrderStatus; payment_provider: string }): boolean {
   if (order.status === "charging") return true;
   return order.status === "pending" && order.payment_provider !== "manual";
+}
+
+/**
+ * Why a result was not a confirmed payment: Pelecard's answer could not be
+ * read, its transaction has no result yet, it belongs to another order, or
+ * it is this order's transaction with money moved that does not add up.
+ */
+export type NoPaymentReason = "unreadable" | "unfinished" | "not_ours" | "ambiguous";
+
+export interface NoPaymentPlan {
+  outcome: SettleOutcome;
+  /** Move the order to charging for an admin (money moved on this order). */
+  hold: boolean;
+  /** Show "being checked" on the card page for a while instead of a new page. */
+  markChecking: boolean;
+}
+
+/**
+ * What to do without a confirmed payment. Only this order's own transaction
+ * with money moved holds the order in the database, whatever the browser's
+ * hint says. When Pelecard cannot say yet, a decline hint is believed;
+ * otherwise the card page only says "being checked" for a while, which
+ * writes nothing anyone could abuse to lock the order. Another order's
+ * transaction is ignored.
+ */
+export function planWithoutPayment(reason: NoPaymentReason, hintCode: string | null): NoPaymentPlan {
+  if (reason === "ambiguous") return { outcome: { kind: "unverified" }, hold: true, markChecking: false };
+  if (reason === "not_ours") {
+    return { outcome: { kind: "ignored", reason: "the transaction belongs to another order" }, hold: false, markChecking: false };
+  }
+  const hinted = unverifiedOutcome(hintCode);
+  return { outcome: hinted, hold: false, markChecking: hinted.kind === "unverified" };
 }
 
 /**

@@ -40,7 +40,8 @@ export function buildInitRequest(
 ): Record<string, string> {
   const site = siteUrl.replace(/\/+$/, "");
   const returnUrl = `${site}/join/pay/${order.id}/return`;
-  const webhookUrl = `${site}/api/webhooks/pelecard`;
+  // Pelecard's result JSON carries no UserKey, so the callback learns the order from its path.
+  const webhookUrl = `${site}/api/webhooks/pelecard/${order.id}`;
   return {
     terminal: creds.terminal,
     user: creds.user,
@@ -111,6 +112,14 @@ export function parseInitResponse(text: string): InitResult {
  */
 export const PAGE_REUSE_MS = 5 * 60 * 1000;
 
+/**
+ * How long the card page says "being checked" instead of opening a new
+ * Pelecard page, after a result Pelecard could not confirm yet. Keeps a
+ * parent who may have paid from paying again while the callback or an admin
+ * settles it.
+ */
+export const CHECKING_MS = 15 * 60 * 1000;
+
 export interface CachedPage {
   url: string;
   openedAt: number;
@@ -118,11 +127,11 @@ export interface CachedPage {
 
 /**
  * The page to show again instead of opening a new one: a remembered
- * Pelecard URL opened within the reuse window. Never after a decline, whose
- * Pelecard page has ended.
+ * Pelecard URL opened within the reuse window. The return route forgets the
+ * page once Pelecard ends it (a decline), so the next load opens a new one.
  */
-export function reusablePage(cached: unknown, now: number, forceNew: boolean): string | null {
-  if (forceNew || !isRecord(cached)) return null;
+export function reusablePage(cached: unknown, now: number): string | null {
+  if (!isRecord(cached)) return null;
   const { url, openedAt } = cached;
   if (typeof url !== "string" || !isPelecardPageUrl(url)) return null;
   if (typeof openedAt !== "number" || !Number.isFinite(openedAt)) return null;
@@ -235,7 +244,9 @@ export function parsePageTransaction(body: unknown): { ok: true; tx: PageTransac
     const message = typeof body.ErrorMessage === "string" ? oneLine(body.ErrorMessage) : "";
     return { ok: false, reason: `GetTransaction status ${status ?? "missing"} ${message}`.trim() };
   }
-  const data = body.ResultData;
+  // The Iframe guide prints ResultData as an object, the Services guide as a list of one.
+  const listed = Array.isArray(body.ResultData) && body.ResultData.length === 1 ? body.ResultData[0] : body.ResultData;
+  const data: unknown = listed;
   if (!isRecord(data)) return { ok: false, reason: "GetTransaction answered without ResultData" };
   const transactionId = text(data.TransactionId);
   if (!transactionId) return { ok: false, reason: "GetTransaction answered without a TransactionId" };
@@ -289,17 +300,19 @@ export function pageCardBrand(brand: unknown, issuer: unknown): CardBrand {
 
 /**
  * Whether a payment page transaction paid this order. A transaction carrying
- * another order's paramX is not ours and changes nothing here. A readable
- * non-000 result is a decline. A clean approval still needs
- * ValidateByUniqueKey, and anything else about our transaction that does not
- * match exactly is unknown: money may have moved, so a person decides.
+ * another order's paramX is not ours and changes nothing here; one with no
+ * paramX echoed is bound to the order by ValidateByUniqueKey alone (its
+ * UniqueKey is the order id). A readable non-000 result is a decline. A
+ * clean approval still needs ValidateByUniqueKey, and anything else about
+ * our transaction that does not match exactly is unknown: money may have
+ * moved, so a person decides.
  */
 export function judgePagePayment(
   tx: PageTransaction,
   order: { id: string; amountIls: number },
   validation: PageValidation | "not_checked",
 ): PageVerdict {
-  if (tx.paramX !== pelecardParamX(order.id)) return { kind: "not_ours" };
+  if (tx.paramX && tx.paramX !== pelecardParamX(order.id)) return { kind: "not_ours" };
   if (tx.shvaResult === null) return { kind: "unfinished" };
   if (tx.shvaResult !== "000") return { kind: "not_paid", code: tx.shvaResult };
   const expected = toAgorot(order.amountIls);
@@ -327,14 +340,20 @@ function parseJsonObject(value: string): Record<string, unknown> | null {
   }
 }
 
-/** Raw JSON, form fields, or JSON wrapped in a single form field. */
+/**
+ * Raw JSON, form fields, JSON inside one of the form fields, or URL-encoded
+ * JSON sent without a field name (it parses as a key with no value).
+ */
 function feedbackRecord(input: string | URLSearchParams): Record<string, unknown> {
   const json = typeof input === "string" ? parseJsonObject(input) : null;
   if (json) return json;
   const params = typeof input === "string" ? new URLSearchParams(input) : input;
   const entries = [...params.entries()];
-  const wrapped = entries.length === 1 ? parseJsonObject(entries[0][1]) : null;
-  return wrapped ?? Object.fromEntries(entries);
+  const wrapped = entries
+    .map(([key, value]) => parseJsonObject(value) ?? (value === "" ? parseJsonObject(key) : null))
+    .find((found): found is Record<string, unknown> => found !== null);
+  const fields = Object.fromEntries(entries.filter(([, value]) => value !== ""));
+  return wrapped ? { ...fields, ...wrapped } : fields;
 }
 
 /** The callback or return fields as one flat, lowercased record. */
@@ -349,11 +368,13 @@ function feedbackFields(input: string | URLSearchParams): Fields {
  * which Pelecard transaction, and the status Pelecard claims. All of it is
  * a hint; the payment is confirmed with Pelecard before anything changes.
  */
-export function feedbackIds(input: string | URLSearchParams): {
+export interface FeedbackIds {
   orderId: string | null;
   transactionId: string | null;
   statusCode: string | null;
-} {
+}
+
+export function feedbackIds(input: string | URLSearchParams): FeedbackIds {
   const fields = feedbackFields(input);
   const orderId = text(fields.userkey);
   const transactionId = text(fields.pelecardtransactionid) || text(fields.transactionid);
@@ -362,4 +383,17 @@ export function feedbackIds(input: string | URLSearchParams): {
     transactionId: transactionId || null,
     statusCode: normalizeCode(fields.pelecardstatuscode ?? fields.shvaresult ?? fields.statuscode),
   };
+}
+
+/**
+ * The ids for a return or callback whose URL path names the order (Pelecard's
+ * result JSON has no UserKey). A UserKey that names another order means the
+ * request is not about this one. The path adds no trust: the payment is
+ * still bound to the order by paramX and ValidateByUniqueKey.
+ */
+export function callbackIds(pathOrderId: string, input: string | URLSearchParams): FeedbackIds | null {
+  if (!isValidUUID(pathOrderId)) return null;
+  const ids = feedbackIds(input);
+  if (ids.orderId && ids.orderId !== pathOrderId) return null;
+  return { ...ids, orderId: pathOrderId };
 }

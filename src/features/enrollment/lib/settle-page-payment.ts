@@ -7,12 +7,15 @@ import { getPageTransaction, validatePagePayment } from "@/lib/payments/pelecard
 import { judgePagePayment, type PageTransaction, type PageVerdict } from "@/lib/payments/pelecard-page-mapping";
 import {
   paidOrderAction,
+  planWithoutPayment,
   refundNote,
   SUPERSEDED_NOTE,
   UNVERIFIED_NOTE,
-  unverifiedOutcome,
+  type NoPaymentReason,
   type SettleOutcome,
 } from "@/lib/payments/page-settlement";
+import { markChecking } from "@/lib/payments/page-cache";
+import { retryWhile } from "@/lib/utils/retry";
 import { closeNewerPaymentLinks, newerPaymentLinkPaid } from "@/features/plans/lib/payment-link-supersede";
 import type { Order } from "@/types/plans";
 import { completeCardPayment } from "./complete-card-payment";
@@ -26,6 +29,9 @@ type OrderRow = Pick<
 const ORDER_COLUMNS = "id, status, amount_ils, fulfillment_error, provider_transaction_id, profile_id, created_at";
 
 const NO_ISSUER = { id: null, name: null };
+
+const READ_ATTEMPTS = 3;
+const READ_RETRY_DELAY_MS = 1_000;
 
 /**
  * Settles one payment made on Pelecard's payment page, for the return route
@@ -43,15 +49,15 @@ export async function settlePagePayment(
     .eq("id", input.orderId)
     .maybeSingle()) as { data: OrderRow | null; error: { message: string } | null };
   if (error) {
-    console.error(`[pelecard-page] order ${input.orderId} read failed:`, error.message);
-    return unverifiedOutcome(input.hintCode);
+    return withoutPayment(db, input.orderId, "unreadable", input.hintCode, `order read failed: ${error.message}`);
   }
   if (!order) return { kind: "ignored", reason: "no such order" };
 
-  // Until Pelecard shows a transaction of this order, nothing is written:
-  // anyone holding an order id could otherwise lock the parent out.
-  const fetched = await getPageTransaction(input.transactionId);
-  if (!fetched.ok) return leaveAlone(order.id, input.hintCode, fetched.reason);
+  // Until Pelecard shows a transaction of this order with money moved,
+  // nothing is written to the order: anyone holding an order id could
+  // otherwise lock the parent out.
+  const fetched = await readTransaction(input.transactionId, order);
+  if (!fetched.ok) return withoutPayment(db, order.id, "unreadable", input.hintCode, fetched.reason);
 
   const verdict = await verdictFor(fetched.tx, order);
   switch (verdict.kind) {
@@ -60,20 +66,51 @@ export async function settlePagePayment(
     case "not_paid":
       return { kind: "not_paid", code: verdict.code };
     case "not_ours":
-      return leaveAlone(order.id, input.hintCode, "the transaction belongs to another order");
+      return withoutPayment(db, order.id, "not_ours", input.hintCode, "the transaction belongs to another order");
     case "unfinished":
-      return leaveAlone(order.id, input.hintCode, "the transaction has no result yet");
+      return withoutPayment(db, order.id, "unfinished", input.hintCode, "the transaction has no result yet");
     case "unknown":
-      return holdUnverified(db, order, input.hintCode, verdict.reason);
+      return withoutPayment(db, order.id, "ambiguous", input.hintCode, verdict.reason);
     case "needs_validation":
-      return holdUnverified(db, order, input.hintCode, "validation did not run");
+      return withoutPayment(db, order.id, "ambiguous", input.hintCode, "validation did not run");
   }
 }
 
-/** Nothing to act on: the order is left as it is. */
-function leaveAlone(orderId: string, hintCode: string | null, reason: string): SettleOutcome {
-  console.warn(`[pelecard-page] order ${orderId} left as is: ${reason}`);
-  return unverifiedOutcome(hintCode);
+/**
+ * GetTransaction, asked again a couple of times while Pelecard cannot answer
+ * or has no result yet: right after the redirect its record may lag.
+ */
+function readTransaction(transactionId: string, order: OrderRow) {
+  const judgeable = { id: order.id, amountIls: Number(order.amount_ils) };
+  return retryWhile(
+    () => getPageTransaction(transactionId),
+    (read) => !read.ok || judgePagePayment(read.tx, judgeable, "not_checked").kind === "unfinished",
+    { attempts: READ_ATTEMPTS, delayMs: READ_RETRY_DELAY_MS },
+  );
+}
+
+/**
+ * No confirmed payment. Holds the order only for its own transaction with
+ * money moved; marks it "being checked" (Redis, a few minutes) when Pelecard
+ * cannot say yet and the hint says paid, which an admin should look at.
+ */
+async function withoutPayment(
+  db: SupabaseClient,
+  orderId: string,
+  reason: NoPaymentReason,
+  hintCode: string | null,
+  detail: string,
+): Promise<SettleOutcome> {
+  const plan = planWithoutPayment(reason, hintCode);
+  if (plan.hold || plan.markChecking) {
+    // A distinct line to search the logs for: money may have moved.
+    console.error(`[pelecard-page] UNCONFIRMED order ${orderId} (${reason}, hint ${hintCode ?? "none"}): ${detail}`);
+  } else {
+    console.warn(`[pelecard-page] order ${orderId} left as is (${reason}): ${detail}`);
+  }
+  if (plan.hold) await holdOrder(db, orderId);
+  if (plan.markChecking) await markChecking(orderId);
+  return plan.outcome;
 }
 
 async function verdictFor(tx: PageTransaction, order: OrderRow): Promise<PageVerdict> {
@@ -86,25 +123,13 @@ async function verdictFor(tx: PageTransaction, order: OrderRow): Promise<PageVer
   return judgePagePayment(tx, { id: order.id, amountIls }, validation);
 }
 
-/**
- * Holds an order whose own Pelecard transaction could not be confirmed
- * (money may have moved), unless the hint was a decline.
- */
-async function holdUnverified(
-  db: SupabaseClient,
-  order: OrderRow,
-  hintCode: string | null,
-  reason: string,
-): Promise<SettleOutcome> {
-  console.warn(`[pelecard-page] order ${order.id} not verified: ${reason}`);
-  const outcome = unverifiedOutcome(hintCode);
-  if (outcome.kind !== "unverified") return outcome;
+/** Holds an order whose own transaction moved money that does not add up, for an admin. */
+async function holdOrder(db: SupabaseClient, orderId: string): Promise<void> {
   const { error } = (await typedFrom(db, "orders")
     .update({ status: "charging", fulfillment_error: UNVERIFIED_NOTE })
-    .eq("id", order.id)
+    .eq("id", orderId)
     .in("status", ["pending", "expired"])) as { error: { message: string } | null };
-  if (error) console.error(`[pelecard-page] order ${order.id} hold failed:`, error.message);
-  return outcome;
+  if (error) console.error(`[pelecard-page] order ${orderId} hold failed:`, error.message);
 }
 
 function paidReference(tx: PageTransaction): PaidReference {

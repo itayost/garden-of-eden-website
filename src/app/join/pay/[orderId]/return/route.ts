@@ -3,7 +3,8 @@ import { waitUntil } from "@vercel/functions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/validations/common";
-import { feedbackIds } from "@/lib/payments/pelecard-page-mapping";
+import { callbackIds } from "@/lib/payments/pelecard-page-mapping";
+import { forgetPage } from "@/lib/payments/page-cache";
 import { returnRedirect, unverifiedOutcome, type SettleOutcome } from "@/lib/payments/page-settlement";
 import { settlePagePayment } from "@/features/enrollment/lib/settle-page-payment";
 
@@ -28,8 +29,8 @@ async function outcomeFor(request: NextRequest, orderId: string, fields: URLSear
   // Too many: send the parent to the confirmation page and let the callback settle it.
   if (limit.rateLimited) return { kind: "unverified" };
 
-  const ids = feedbackIds(fields);
-  if (ids.orderId && ids.orderId !== orderId) return { kind: "ignored", reason: "UserKey belongs to another order" };
+  const ids = callbackIds(orderId, fields);
+  if (!ids) return { kind: "ignored", reason: "UserKey belongs to another order" };
   if (!ids.transactionId) {
     // Nothing to ask Pelecard about, so the order is not held.
     const hinted = unverifiedOutcome(ids.statusCode);
@@ -52,6 +53,8 @@ async function respond(request: NextRequest, context: RouteContext, fields: URLS
   if (!isValidUUID(orderId)) return NextResponse.redirect(new URL("/join", request.url), 303);
   const outcome = await outcomeFor(request, orderId, fields);
   console.info(`[pelecard-return] order ${orderId}: ${outcome.kind}`);
+  // Pelecard ended this page: the card page opens a new one instead of reusing it.
+  if (outcome.kind === "not_paid" || outcome.kind === "ignored") await forgetPage(orderId);
   return NextResponse.redirect(new URL(returnRedirect(outcome, orderId), request.url), 303);
 }
 

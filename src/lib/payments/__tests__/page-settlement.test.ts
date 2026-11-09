@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   canCheckWithPelecard,
   isRefundFlag,
+  KEEP_REFUND_FLAG_FILTER,
   paidOrderAction,
+  planWithoutPayment,
   refundNote,
   REFUND_FLAG_PREFIX,
   returnRedirect,
@@ -52,6 +54,47 @@ describe("refundNote", () => {
   it("stands alone when nothing was there", () => {
     const note = refundNote(null, { pelecardId: "9", approvalNumber: null, reason: "paid twice" });
     expect(note).toBe(`${REFUND_FLAG_PREFIX} paid twice, transaction 9`);
+  });
+
+  it("does not repeat a refund already flagged for the same transaction (return and callback)", () => {
+    const first = refundNote(null, { pelecardId: "9", approvalNumber: "1", reason: "paid twice" });
+    expect(refundNote(first, { pelecardId: "9", approvalNumber: "1", reason: "paid twice" })).toBe(first);
+  });
+});
+
+describe("KEEP_REFUND_FLAG_FILTER", () => {
+  it("matches only notes that are not refund flags, quoted for PostgREST", () => {
+    expect(KEEP_REFUND_FLAG_FILTER).toBe(`fulfillment_error.is.null,fulfillment_error.not.like."${REFUND_FLAG_PREFIX}*"`);
+  });
+});
+
+describe("planWithoutPayment", () => {
+  it("holds an order whose own transaction moved money but does not add up, whatever the hint", () => {
+    for (const hint of ["000", "036", null]) {
+      expect(planWithoutPayment("ambiguous", hint)).toEqual({ outcome: { kind: "unverified" }, hold: true, markChecking: false });
+    }
+  });
+
+  it("marks the order as being checked when Pelecard cannot say yet and the hint says paid", () => {
+    for (const reason of ["unreadable", "unfinished"] as const) {
+      expect(planWithoutPayment(reason, "000")).toEqual({ outcome: { kind: "unverified" }, hold: false, markChecking: true });
+      expect(planWithoutPayment(reason, null)).toEqual({ outcome: { kind: "unverified" }, hold: false, markChecking: true });
+    }
+  });
+
+  it("believes a decline hint when Pelecard cannot say yet", () => {
+    expect(planWithoutPayment("unreadable", "036")).toEqual({
+      outcome: { kind: "not_paid", code: "036" },
+      hold: false,
+      markChecking: false,
+    });
+  });
+
+  it("ignores another order's transaction entirely", () => {
+    const plan = planWithoutPayment("not_ours", "000");
+    expect(plan.outcome.kind).toBe("ignored");
+    expect(plan.hold).toBe(false);
+    expect(plan.markChecking).toBe(false);
   });
 });
 

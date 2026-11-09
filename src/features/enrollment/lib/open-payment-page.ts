@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { openPelecardPage } from "@/lib/payments/pelecard";
-import { readCachedPage, rememberPage } from "@/lib/payments/page-cache";
+import { isChecking, readCachedPage, rememberPage } from "@/lib/payments/page-cache";
 import { reusablePage } from "@/lib/payments/pelecard-page-mapping";
 import { canPayOnline, PAYMENTS_CLOSED_MESSAGE } from "@/lib/payments/online-payments";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
@@ -26,6 +26,9 @@ type ProductRow = Pick<
 const INIT_FAILED =
   "לא הצלחנו לפתוח את דף התשלום. נסו שוב בעוד כמה דקות או כתבו לנו בוואטסאפ 052-577-9446.";
 
+const CHECKING =
+  "התשלום שלכם בבדיקה מול חברת הסליקה. אל תשלמו שוב: אם תוך 15 דקות לא הגיע אישור בוואטסאפ, כתבו לנו ל-052-577-9446.";
+
 const message = (text: string): PaymentPageView => ({ kind: "message", text });
 
 async function clientIp(): Promise<string> {
@@ -40,7 +43,7 @@ async function clientIp(): Promise<string> {
  * price the order captured, the agreement signed, the intro pack bought only
  * once. The amount and the installment cap always come from the rows.
  */
-export async function openPaymentPage(orderId: string, opts: { fresh: boolean }): Promise<PaymentPageView> {
+export async function openPaymentPage(orderId: string): Promise<PaymentPageView> {
   if (!(await canPayOnline())) return message(PAYMENTS_CLOSED_MESSAGE);
 
   const db = createAdminClient();
@@ -67,8 +70,11 @@ export async function openPaymentPage(orderId: string, opts: { fresh: boolean })
     return message("חבילת ההיכרות כבר נרכשה למספר הזה. בחרו מסלול אחר.");
   }
 
+  // A payment Pelecard could not confirm yet may have gone through: no second page meanwhile.
+  if (await isChecking(order.id)) return message(CHECKING);
+
   // A reload shows the page already open; only a new page counts against the limits.
-  const reused = reusablePage(await readCachedPage(order.id), Date.now(), opts.fresh);
+  const reused = reusablePage(await readCachedPage(order.id), Date.now());
   if (reused) return { kind: "frame", url: reused };
 
   const limited = await pageLimitRefusal(order.id);
