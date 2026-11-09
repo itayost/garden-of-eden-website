@@ -5,7 +5,12 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/validations/common";
 import { callbackIds } from "@/lib/payments/pelecard-page-mapping";
 import { forgetPage } from "@/lib/payments/page-cache";
-import { returnRedirect, unverifiedOutcome, type SettleOutcome } from "@/lib/payments/page-settlement";
+import {
+  forgetsOpenPage,
+  returnRedirect,
+  unverifiedOutcome,
+  type SettleOutcome,
+} from "@/lib/payments/page-settlement";
 import { settlePagePayment } from "@/features/enrollment/lib/settle-page-payment";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +59,7 @@ async function respond(request: NextRequest, context: RouteContext, fields: URLS
   const outcome = await outcomeFor(request, orderId, fields);
   console.info(`[pelecard-return] order ${orderId}: ${outcome.kind}`);
   // Pelecard ended this page: the card page opens a new one instead of reusing it.
-  if (outcome.kind === "not_paid" || outcome.kind === "ignored") await forgetPage(orderId);
+  if (forgetsOpenPage(outcome)) await forgetPage(orderId);
   return NextResponse.redirect(new URL(returnRedirect(outcome, orderId), request.url), 303);
 }
 

@@ -137,6 +137,23 @@ export function planWithoutPayment(reason: NoPaymentReason, hintCode: string | n
 }
 
 /**
+ * Whether the return route forgets the order's open Pelecard page: only
+ * after a decline, which ended it. An ignored or unconfirmed request, which
+ * anyone holding the order id could send, changes nothing.
+ */
+export function forgetsOpenPage(outcome: SettleOutcome): boolean {
+  return outcome.kind === "not_paid";
+}
+
+/**
+ * The callback's rate-limit key: per order and sender, so forged callbacks
+ * from elsewhere cannot use up the budget of Pelecard's own address.
+ */
+export function callbackLimitKey(orderId: string, ip: string): string {
+  return `order:${orderId}:ip:${ip}`;
+}
+
+/**
  * When Pelecard could not confirm a result: a decline hint is believed,
  * because a forged one only hurts whoever forged it (and the callback still
  * settles a real payment); anything else holds the order for an admin.

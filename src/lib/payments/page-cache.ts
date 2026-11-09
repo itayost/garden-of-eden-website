@@ -39,11 +39,15 @@ export async function rememberPage(orderId: string, page: CachedPage): Promise<v
   }
 }
 
-/** After Pelecard ended the page (a decline), the next load opens a new one. */
+/**
+ * After Pelecard ended the page (a decline), the next load opens a new one.
+ * The "being checked" mark is left to expire: no unconfirmed request may
+ * clear it.
+ */
 export async function forgetPage(orderId: string): Promise<void> {
   if (!redis) return;
   try {
-    await redis.del(pageKey(orderId), checkingKey(orderId));
+    await redis.del(pageKey(orderId));
   } catch (error) {
     warn(orderId, "cache delete", error);
   }

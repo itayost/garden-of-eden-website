@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  callbackLimitKey,
   canCheckWithPelecard,
+  forgetsOpenPage,
   isRefundFlag,
   KEEP_REFUND_FLAG_FILTER,
   paidOrderAction,
@@ -133,6 +135,25 @@ describe("isRefundFlag", () => {
     expect(isRefundFlag(refundNote(null, { pelecardId: "9", approvalNumber: null, reason: "paid twice" }))).toBe(true);
     expect(isRefundFlag("invoice: timeout")).toBe(false);
     expect(isRefundFlag(null)).toBe(false);
+  });
+});
+
+describe("forgetsOpenPage", () => {
+  it("forgets the open page only after a decline, which ended it", () => {
+    expect(forgetsOpenPage({ kind: "not_paid", code: "036" })).toBe(true);
+  });
+
+  it("keeps it for anything a forged request could cause or that settled nothing", () => {
+    expect(forgetsOpenPage({ kind: "ignored", reason: "x" })).toBe(false);
+    expect(forgetsOpenPage({ kind: "unverified" })).toBe(false);
+    expect(forgetsOpenPage({ kind: "paid" })).toBe(false);
+  });
+});
+
+describe("callbackLimitKey", () => {
+  it("gives every sender its own budget per order, so forged callbacks cannot use up Pelecard's", () => {
+    expect(callbackLimitKey(ID, "31.168.172.190")).toBe(`order:${ID}:ip:31.168.172.190`);
+    expect(callbackLimitKey(ID, "1.2.3.4")).not.toBe(callbackLimitKey(ID, "31.168.172.190"));
   });
 });
 
