@@ -48,8 +48,10 @@ export async function settlePagePayment(
   }
   if (!order) return { kind: "ignored", reason: "no such order" };
 
+  // Until Pelecard shows a transaction of this order, nothing is written:
+  // anyone holding an order id could otherwise lock the parent out.
   const fetched = await getPageTransaction(input.transactionId);
-  if (!fetched.ok) return holdUnverified(db, order, input.hintCode, fetched.reason);
+  if (!fetched.ok) return leaveAlone(order.id, input.hintCode, fetched.reason);
 
   const verdict = await verdictFor(fetched.tx, order);
   switch (verdict.kind) {
@@ -57,11 +59,21 @@ export async function settlePagePayment(
       return applyPaid(db, order, fetched.tx);
     case "not_paid":
       return { kind: "not_paid", code: verdict.code };
+    case "not_ours":
+      return leaveAlone(order.id, input.hintCode, "the transaction belongs to another order");
+    case "unfinished":
+      return leaveAlone(order.id, input.hintCode, "the transaction has no result yet");
     case "unknown":
       return holdUnverified(db, order, input.hintCode, verdict.reason);
     case "needs_validation":
       return holdUnverified(db, order, input.hintCode, "validation did not run");
   }
+}
+
+/** Nothing to act on: the order is left as it is. */
+function leaveAlone(orderId: string, hintCode: string | null, reason: string): SettleOutcome {
+  console.warn(`[pelecard-page] order ${orderId} left as is: ${reason}`);
+  return unverifiedOutcome(hintCode);
 }
 
 async function verdictFor(tx: PageTransaction, order: OrderRow): Promise<PageVerdict> {
@@ -74,7 +86,10 @@ async function verdictFor(tx: PageTransaction, order: OrderRow): Promise<PageVer
   return judgePagePayment(tx, { id: order.id, amountIls }, validation);
 }
 
-/** Holds an order whose result could not be confirmed, unless the hint was a decline. */
+/**
+ * Holds an order whose own Pelecard transaction could not be confirmed
+ * (money may have moved), unless the hint was a decline.
+ */
 async function holdUnverified(
   db: SupabaseClient,
   order: OrderRow,

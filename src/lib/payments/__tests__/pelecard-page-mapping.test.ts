@@ -233,10 +233,19 @@ describe("judgePagePayment", () => {
     expect(judgePagePayment(tx({ totalAgorot: 45000 }), order, "valid").kind).toBe("unknown");
     expect(judgePagePayment(tx({ totalAgorot: null }), order, "valid").kind).toBe("unknown");
     expect(judgePagePayment(tx({ currency: "2" }), order, "valid").kind).toBe("unknown");
-    expect(judgePagePayment(tx({ paramX: "0000000000000000000" }), order, "valid").kind).toBe("unknown");
-    expect(judgePagePayment(tx({ shvaResult: null }), order, "valid").kind).toBe("unknown");
     expect(judgePagePayment(tx({}), order, "invalid").kind).toBe("unknown");
     expect(judgePagePayment(tx({}), order, "error").kind).toBe("unknown");
+  });
+
+  it("calls a transaction without a Shva result unfinished, not ambiguous", () => {
+    expect(judgePagePayment(tx({ shvaResult: null }), order, "valid")).toEqual({ kind: "unfinished" });
+  });
+
+  it("says nothing about this order from another order's transaction, paid or not", () => {
+    const foreign = "0000000000000000000";
+    expect(judgePagePayment(tx({ paramX: foreign }), order, "valid")).toEqual({ kind: "not_ours" });
+    expect(judgePagePayment(tx({ paramX: foreign, shvaResult: "036" }), order, "not_checked")).toEqual({ kind: "not_ours" });
+    expect(judgePagePayment(tx({ paramX: foreign, shvaResult: null }), order, "not_checked")).toEqual({ kind: "not_ours" });
   });
 });
 

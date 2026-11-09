@@ -169,6 +169,10 @@ export type PageVerdict =
   | { kind: "paid" }
   | { kind: "needs_validation" }
   | { kind: "not_paid"; code: string }
+  /** Another order's transaction: it says nothing about this one. */
+  | { kind: "not_ours" }
+  /** No Shva result yet: nothing shows that money moved. */
+  | { kind: "unfinished" }
   | { kind: "unknown"; reason: string };
 
 const PAGE_STORED_FIELDS = [
@@ -258,24 +262,25 @@ export function pageCardBrand(brand: unknown, issuer: unknown): CardBrand {
 }
 
 /**
- * Whether a payment page transaction paid this order. A readable non-000
- * result is a decline. A clean approval still needs ValidateByUniqueKey,
- * and anything that does not match the order exactly is unknown: money may
- * have moved, so a person decides.
+ * Whether a payment page transaction paid this order. A transaction carrying
+ * another order's paramX is not ours and changes nothing here. A readable
+ * non-000 result is a decline. A clean approval still needs
+ * ValidateByUniqueKey, and anything else about our transaction that does not
+ * match exactly is unknown: money may have moved, so a person decides.
  */
 export function judgePagePayment(
   tx: PageTransaction,
   order: { id: string; amountIls: number },
   validation: PageValidation | "not_checked",
 ): PageVerdict {
-  if (tx.shvaResult === null) return { kind: "unknown", reason: "no Shva result" };
+  if (tx.paramX !== pelecardParamX(order.id)) return { kind: "not_ours" };
+  if (tx.shvaResult === null) return { kind: "unfinished" };
   if (tx.shvaResult !== "000") return { kind: "not_paid", code: tx.shvaResult };
   const expected = toAgorot(order.amountIls);
   if (tx.totalAgorot !== expected) {
     return { kind: "unknown", reason: `charged ${tx.totalAgorot ?? "unknown"} agorot, expected ${expected}` };
   }
   if (tx.currency !== CURRENCY_ILS) return { kind: "unknown", reason: `currency ${tx.currency ?? "missing"}` };
-  if (tx.paramX !== pelecardParamX(order.id)) return { kind: "unknown", reason: "paramX belongs to another order" };
   if (validation === "not_checked") return { kind: "needs_validation" };
   if (validation === "valid") return { kind: "paid" };
   return { kind: "unknown", reason: `ValidateByUniqueKey ${validation}` };
