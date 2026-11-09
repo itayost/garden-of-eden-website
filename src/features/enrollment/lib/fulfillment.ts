@@ -9,6 +9,7 @@ import { loadQueueRows, loadStoredPlans } from "@/features/plans/lib/queries";
 import { israelToday } from "@/lib/utils/tasks";
 import type { EnrollmentAgreement, Order, PlanProduct } from "@/types/plans";
 import { ensureBranchMembership, findOrCreateAccount } from "./trainee-account";
+import { KEEP_REFUND_FLAG_FILTER } from "@/lib/payments/page-settlement";
 
 export type FulfillResult =
   | { ok: true; profileId: string; planId: string }
@@ -152,16 +153,20 @@ export async function fulfillFromInput(
       .update({
         profile_id: profileId,
         fulfilled_at: new Date().toISOString(),
-        fulfillment_error: null,
       })
       .eq("id", order.id);
     if (orderError) throw new Error(`order update failed: ${orderError.message}`);
+    // Clears an earlier failure note, never a refund flag (a second card charge to refund).
+    await typedFrom(db, "orders").update({ fulfillment_error: null }).eq("id", order.id).or(KEEP_REFUND_FLAG_FILTER);
 
     return { ok: true, profileId, planId };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[fulfillment] order ${order.id}:`, message);
-    await typedFrom(db, "orders").update({ fulfillment_error: message }).eq("id", order.id);
+    await typedFrom(db, "orders")
+      .update({ fulfillment_error: message })
+      .eq("id", order.id)
+      .or(KEEP_REFUND_FLAG_FILTER);
     return { ok: false, error: message };
   }
 }

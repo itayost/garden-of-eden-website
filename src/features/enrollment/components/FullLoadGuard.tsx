@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import { loadedAsDocument } from "@/lib/security/payment-csp";
-
-const noSubscription = () => () => {};
 
 function isDocumentLoad(): boolean {
   const entry = performance.getEntriesByType("navigation")[0];
@@ -12,20 +10,16 @@ function isDocumentLoad(): boolean {
 }
 
 /**
- * Renders the card form only on a document loaded for this page. The card
- * page's enforced CSP comes with its own document load; reached by a
- * client-side navigation (a Link, router.push, a redirect) it would run under
- * the previous page's report-only policy, so the page reloads itself first.
+ * Keeps the card page under its own enforced CSP. That policy comes with the
+ * page's own document load; reached by a client-side navigation (a Link,
+ * router.push, a redirect) the page would run under the previous page's
+ * report-only policy, so it reloads itself. The children always render, on
+ * the server too, so Pelecard's frame is in the page's HTML source.
  */
 export function FullLoadGuard({ children }: { children: React.ReactNode }) {
-  const isReady = useSyncExternalStore(noSubscription, isDocumentLoad, () => false);
-
   useEffect(() => {
     if (!isDocumentLoad()) window.location.reload();
   }, []);
 
-  if (!isReady) {
-    return <p className="py-8 text-center text-sm text-black/60">טוען את טופס התשלום המאובטח...</p>;
-  }
   return <>{children}</>;
 }

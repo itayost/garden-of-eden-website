@@ -30,7 +30,7 @@ export interface RateLimitResult {
  * Create Redis client from environment variables.
  * Uses Redis.fromEnv() which reads UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.
  */
-function createRedisClient(): Redis | null {
+export function createRedisClient(): Redis | null {
   try {
     return Redis.fromEnv();
   } catch {
@@ -55,15 +55,32 @@ const paymentLimiter = redis
   : null;
 
 /**
- * Card attempts per order: 5 per 24 hours, keyed by order id. A decline
- * returns the order to pending, so without this one order could be used to
- * test stolen cards from rotating IPs. Fails closed like the payment limiter.
+ * Pelecard payment pages opened per order: 5 per 24 hours, keyed by order
+ * id. A reload within a few minutes reuses the open page and does not count
+ * (src/lib/payments/page-cache.ts); a decline opens a new one. Without this,
+ * one order could be used to test stolen cards from rotating IPs. Fails
+ * closed like the payment limiter.
  */
 const paymentOrderLimiter = redis
   ? new Ratelimit({
       redis,
       limiter: Ratelimit.slidingWindow(5, "24 h"),
       prefix: "goe:payment-order",
+      analytics: true,
+    })
+  : null;
+
+/**
+ * Pelecard payment page results: 60 per hour per IP, for the return route
+ * and the server-side callback. Each one makes our server ask Pelecard about
+ * a transaction, so a flood must not turn us into a hammer on their API.
+ * Nothing is trusted without that check, so it fails open.
+ */
+const paymentFeedbackLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(60, "1 h"),
+      prefix: "goe:payment-feedback",
       analytics: true,
     })
   : null;
@@ -159,6 +176,7 @@ const generalLimiter = redis
 const LIMITERS = {
   payment: paymentLimiter,
   payment_order: paymentOrderLimiter,
+  payment_feedback: paymentFeedbackLimiter,
   checkout: checkoutLimiter,
   booking: bookingLimiter,
   purchase_request: purchaseRequestLimiter,
