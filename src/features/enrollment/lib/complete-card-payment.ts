@@ -30,8 +30,9 @@ export async function completeCardPayment(
   orderId: string,
   ref: PaidReference,
   issuer: { id: string | null; name: string | null },
+  opts: { allowSuperseded?: boolean } = {},
 ): Promise<CardPaymentCompletion> {
-  const claim = await markOrderPaid(db, orderId, ref);
+  const claim = await markOrderPaid(db, orderId, ref, opts);
   if (claim.error) {
     console.error(`[card-payment] order ${orderId} paid but not claimed:`, claim.error);
     // Keep the acquirer's reference on the row: reconcile must never hand

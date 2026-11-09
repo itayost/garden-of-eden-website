@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
+import { SUPERSEDED_NOTE } from "@/lib/payments/page-settlement";
 import type { Order } from "@/types/plans";
 
 export interface PaidReference {
@@ -14,19 +15,27 @@ export interface PaidReference {
   raw: unknown;
 }
 
+/** Orders a confirmed payment may claim. */
+const CLAIMABLE = "status.in.(pending,charging,expired)";
+/** Also a link a newer Payment link closed while the parent was paying it. */
+const CLAIMABLE_OR_SUPERSEDED = `${CLAIMABLE},and(status.eq.failed,fulfillment_error.eq."${SUPERSEDED_NOTE}")`;
+
 /**
- * Moves one order to paid in a single conditional update: from charging (the
- * site's own card page, which claims first), or from pending / expired (a
- * hosted-page webhook, where the provider already charged). The caller that
- * gets a row back owns fulfillment; anyone else lost the race.
+ * Moves one order to paid in a single conditional update: from pending,
+ * expired or charging (the provider already charged), and with
+ * `allowSuperseded` also from a failed order a newer Payment link closed.
+ * A note left from before the payment is cleared. The caller that gets a row
+ * back owns fulfillment; anyone else lost the race.
  */
 export async function markOrderPaid(
   db: SupabaseClient,
   orderId: string,
   ref: PaidReference,
+  opts: { allowSuperseded?: boolean } = {},
 ): Promise<{ claimed: boolean; error: string | null }> {
   const { data, error } = (await typedFrom(db, "orders")
     .update({
+      fulfillment_error: null,
       status: "paid",
       paid_at: new Date().toISOString(),
       payment_provider: ref.provider,
@@ -39,7 +48,7 @@ export async function markOrderPaid(
       payment_method: ref.provider === "isracard" ? "card" : undefined,
     })
     .eq("id", orderId)
-    .in("status", ["pending", "charging", "expired"])
+    .or(opts.allowSuperseded ? CLAIMABLE_OR_SUPERSEDED : CLAIMABLE)
     .select("id")) as { data: { id: string }[] | null; error: { code?: string; message: string } | null };
   if (error) {
     if (error.code === "23505") return { claimed: false, error: "transaction id already used" };
