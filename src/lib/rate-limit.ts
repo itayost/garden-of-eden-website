@@ -69,6 +69,21 @@ const paymentOrderLimiter = redis
   : null;
 
 /**
+ * Pelecard payment page results: 60 per hour per IP, for the return route
+ * and the server-side callback. Each one makes our server ask Pelecard about
+ * a transaction, so a flood must not turn us into a hammer on their API.
+ * Nothing is trusted without that check, so it fails open.
+ */
+const paymentFeedbackLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(60, "1 h"),
+      prefix: "goe:payment-feedback",
+      analytics: true,
+    })
+  : null;
+
+/**
  * Checkout rate limiter: 5 order creations per 10 minutes per key.
  * Keyed by IP and again by login phone; no money moves, so it fails open.
  */
@@ -159,6 +174,7 @@ const generalLimiter = redis
 const LIMITERS = {
   payment: paymentLimiter,
   payment_order: paymentOrderLimiter,
+  payment_feedback: paymentFeedbackLimiter,
   checkout: checkoutLimiter,
   booking: bookingLimiter,
   purchase_request: purchaseRequestLimiter,
