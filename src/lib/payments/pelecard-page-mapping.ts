@@ -104,6 +104,32 @@ export function parseInitResponse(text: string): InitResult {
   return { ok: true, url };
 }
 
+/**
+ * How long a Pelecard page opened for an order is reused on reload. Short,
+ * so a reused page is still well inside Pelecard's own time limit (status
+ * 301), and long enough that reloading the card page opens nothing new.
+ */
+export const PAGE_REUSE_MS = 5 * 60 * 1000;
+
+export interface CachedPage {
+  url: string;
+  openedAt: number;
+}
+
+/**
+ * The page to show again instead of opening a new one: a remembered
+ * Pelecard URL opened within the reuse window. Never after a decline, whose
+ * Pelecard page has ended.
+ */
+export function reusablePage(cached: unknown, now: number, forceNew: boolean): string | null {
+  if (forceNew || !isRecord(cached)) return null;
+  const { url, openedAt } = cached;
+  if (typeof url !== "string" || !isPelecardPageUrl(url)) return null;
+  if (typeof openedAt !== "number" || !Number.isFinite(openedAt)) return null;
+  const age = now - openedAt;
+  return age >= 0 && age < PAGE_REUSE_MS ? url : null;
+}
+
 /** An https URL on pelecard.biz or one of its subdomains. */
 export function isPelecardPageUrl(url: string): boolean {
   let parsed: URL;

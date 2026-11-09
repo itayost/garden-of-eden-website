@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { openPelecardPage } from "@/lib/payments/pelecard";
+import { readCachedPage, rememberPage } from "@/lib/payments/page-cache";
+import { reusablePage } from "@/lib/payments/pelecard-page-mapping";
 import { canPayOnline, PAYMENTS_CLOSED_MESSAGE } from "@/lib/payments/online-payments";
 import { isIntroPackEligible } from "@/lib/plans/eligibility";
 import { sameTraineeOrders } from "@/lib/plans/bound-renewal";
@@ -38,19 +40,8 @@ async function clientIp(): Promise<string> {
  * price the order captured, the agreement signed, the intro pack bought only
  * once. The amount and the installment cap always come from the rows.
  */
-export async function openPaymentPage(orderId: string): Promise<PaymentPageView> {
+export async function openPaymentPage(orderId: string, opts: { fresh: boolean }): Promise<PaymentPageView> {
   if (!(await canPayOnline())) return message(PAYMENTS_CLOSED_MESSAGE);
-
-  const limit = await checkRateLimit(`ip:${await clientIp()}`, "payment");
-  waitUntil(limit.pending);
-  if (limit.rateLimited) {
-    // limit 0 means the limiter itself is unavailable (no Redis).
-    return message(
-      limit.limit === 0
-        ? "מערכת התשלום אינה זמינה כרגע. נסו שוב בעוד מספר דקות או כתבו לנו בוואטסאפ."
-        : "יותר מדי ניסיונות. נסו שוב בעוד שעה.",
-    );
-  }
 
   const db = createAdminClient();
   const { data: order } = (await typedFrom(db, "orders").select("*").eq("id", orderId).maybeSingle()) as {
@@ -76,13 +67,12 @@ export async function openPaymentPage(orderId: string): Promise<PaymentPageView>
     return message("חבילת ההיכרות כבר נרכשה למספר הזה. בחרו מסלול אחר.");
   }
 
-  // Per order, so one order cannot become a card-testing tool: every page
-  // Pelecard opens for it counts.
-  const orderLimit = await checkRateLimit(`order:${order.id}`, "payment_order");
-  waitUntil(orderLimit.pending);
-  if (orderLimit.rateLimited) {
-    return message("יותר מדי ניסיונות תשלום להזמנה הזו. כתבו לנו בוואטסאפ 052-577-9446 ונשלים יחד.");
-  }
+  // A reload shows the page already open; only a new page counts against the limits.
+  const reused = reusablePage(await readCachedPage(order.id), Date.now(), opts.fresh);
+  if (reused) return { kind: "frame", url: reused };
+
+  const limited = await pageLimitRefusal(order.id);
+  if (limited) return message(limited);
 
   const page = await openPelecardPage({
     id: order.id,
@@ -93,7 +83,29 @@ export async function openPaymentPage(orderId: string): Promise<PaymentPageView>
     console.error(`[pelecard-page] order ${order.id} init failed: ${page.reason}`);
     return message(INIT_FAILED);
   }
+  await rememberPage(order.id, { url: page.url, openedAt: Date.now() });
   return { kind: "frame", url: page.url };
+}
+
+/**
+ * The limits on opening a new Pelecard page: per IP, and per order so one
+ * order cannot become a card-testing tool.
+ */
+async function pageLimitRefusal(orderId: string): Promise<string | null> {
+  const limit = await checkRateLimit(`ip:${await clientIp()}`, "payment");
+  waitUntil(limit.pending);
+  if (limit.rateLimited) {
+    // limit 0 means the limiter itself is unavailable (no Redis).
+    return limit.limit === 0
+      ? "מערכת התשלום אינה זמינה כרגע. נסו שוב בעוד מספר דקות או כתבו לנו בוואטסאפ."
+      : "יותר מדי ניסיונות. נסו שוב בעוד שעה.";
+  }
+  const orderLimit = await checkRateLimit(`order:${orderId}`, "payment_order");
+  waitUntil(orderLimit.pending);
+  if (orderLimit.rateLimited) {
+    return "יותר מדי ניסיונות תשלום להזמנה הזו. כתבו לנו בוואטסאפ 052-577-9446 ונשלים יחד.";
+  }
+  return null;
 }
 
 /**

@@ -9,6 +9,8 @@ import {
   parseInitResponse,
   parsePageTransaction,
   parseValidateResponse,
+  PAGE_REUSE_MS,
+  reusablePage,
   type PageTransaction,
 } from "../pelecard-page-mapping";
 
@@ -143,6 +145,34 @@ describe("isPelecardPageUrl", () => {
     expect(isPelecardPageUrl("https://pelecard.biz.evil.example/")).toBe(false);
     expect(isPelecardPageUrl("https://evilpelecard.biz/")).toBe(false);
     expect(isPelecardPageUrl("not a url")).toBe(false);
+  });
+});
+
+describe("reusablePage", () => {
+  const url = "https://gateway21.pelecard.biz/PaymentGW?transactionId=abc";
+  const now = 1_700_000_000_000;
+
+  it("reuses a page opened within the window, so a reload opens nothing new", () => {
+    expect(reusablePage({ url, openedAt: now - 60_000 }, now, false)).toBe(url);
+  });
+
+  it("opens a new page once the window has passed", () => {
+    expect(reusablePage({ url, openedAt: now - PAGE_REUSE_MS }, now, false)).toBeNull();
+  });
+
+  it("never reuses after a decline, whose Pelecard page has ended", () => {
+    expect(reusablePage({ url, openedAt: now - 1_000 }, now, true)).toBeNull();
+  });
+
+  it("ignores anything that is not a remembered Pelecard page", () => {
+    expect(reusablePage(null, now, false)).toBeNull();
+    expect(reusablePage({ url: "https://evil.example/pay", openedAt: now }, now, false)).toBeNull();
+    expect(reusablePage({ url, openedAt: "yesterday" }, now, false)).toBeNull();
+    expect(reusablePage({ url, openedAt: now + 60_000 }, now, false)).toBeNull();
+  });
+
+  it("keeps the window short", () => {
+    expect(PAGE_REUSE_MS).toBeLessThanOrEqual(5 * 60 * 1000);
   });
 });
 

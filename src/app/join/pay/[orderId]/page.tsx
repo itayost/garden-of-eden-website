@@ -74,8 +74,9 @@ export default async function PayPage({ params, searchParams }: PageProps) {
 
   const amount = Number(order.amount_ils);
   const isOpen = await canPayOnline();
-  const page = isOpen ? await openPaymentPage(order.id) : null;
   const declinedCode = declined && /^\d{3}$/.test(declined) ? declined : null;
+  // After a decline Pelecard's page has ended, so a fresh one opens.
+  const page = isOpen ? await openPaymentPage(order.id, { fresh: declinedCode !== null }) : null;
 
   return (
     <div className="space-y-6">
