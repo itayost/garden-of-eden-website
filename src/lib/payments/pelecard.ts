@@ -1,13 +1,6 @@
 import "server-only";
 
-import type { CardChargeRequest, CardChargeResult } from "./provider";
-import {
-  buildDebitRequest,
-  parseDebitResponse,
-  pelecardParamX,
-  toAgorot,
-  type PelecardCredentials,
-} from "./pelecard-mapping";
+import { pelecardParamX, toAgorot, type PelecardCredentials } from "./pelecard-mapping";
 import { lookupWindow, parseCompleteTransData, parseTrxLookUp, type LookupOutcome } from "./pelecard-lookup";
 import {
   buildInitRequest,
@@ -21,13 +14,11 @@ import {
 } from "./pelecard-page-mapping";
 
 /**
- * Pelecard adapter: the site's card page charges through Pelecard's Services
- * API on the academy's website terminal, and Isracard settles. Until the
- * terminal settings exist the page renders and validates, and a submit is
- * refused here with the card details discarded.
- *
- * Card data is only in the request body sent to Pelecard. Nothing here logs a
- * body or puts one in an error message.
+ * Pelecard adapter for the academy's website terminal (Isracard settles).
+ * The parent pays on Pelecard's own payment page (PaymentGW), framed in the
+ * card page: this module opens that page, asks what happened on it, and
+ * looks up a charge for the admin check (Services API). No card data ever
+ * passes through here. Nothing here logs a request or response body.
  */
 
 const DEFAULT_API_URL = "https://gateway21.pelecard.biz";
@@ -123,49 +114,6 @@ export async function validatePagePayment(
     return parseValidateResponse(text);
   } catch {
     return "error";
-  }
-}
-
-/**
- * Charges the card once. Returns a decline or a failure when nothing was
- * charged, and throws when the outcome is unknown (timeout, network error, an
- * unreadable or ambiguous answer): the caller then keeps the order claimed
- * for an admin to reconcile rather than let the parent retry.
- */
-export async function chargeCard(request: CardChargeRequest): Promise<CardChargeResult> {
-  const creds = credentials();
-  if (!creds) {
-    return {
-      ok: false,
-      code: "not_configured",
-      message: "התשלום באתר ייפתח בקרוב. בינתיים אפשר להשלים את ההרשמה בוואטסאפ 052-577-9446.",
-    };
-  }
-
-  const { path, body } = buildDebitRequest(request, creds);
-  let json: unknown;
-  try {
-    json = await postService(path, body);
-  } catch (error) {
-    throw new Error(`Pelecard ${path} failed: ${error instanceof Error ? error.message || error.name : "request error"}`);
-  }
-
-  const outcome = parseDebitResponse(json, toAgorot(request.amountIls));
-  switch (outcome.kind) {
-    case "approved":
-      return { ok: true, transactionId: outcome.transactionId, approvalNumber: outcome.approvalNumber, raw: outcome.raw };
-    case "declined":
-      console.warn(
-        `[pelecard] order ${request.orderId} ${path} declined, status ${outcome.statusCode}: ${outcome.providerMessage}`,
-      );
-      return { ok: false, code: "declined", message: outcome.message };
-    case "failed":
-      console.error(
-        `[pelecard] order ${request.orderId} ${path} failed, status ${outcome.statusCode}: ${outcome.providerMessage}`,
-      );
-      return { ok: false, code: "error", message: outcome.message };
-    case "unknown":
-      throw new Error(`Pelecard ${path} outcome unknown: ${outcome.reason}`);
   }
 }
 

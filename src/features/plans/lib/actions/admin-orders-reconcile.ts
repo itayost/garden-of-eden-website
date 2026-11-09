@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { lookupCharge } from "@/lib/payments/pelecard";
+import { canCheckWithPelecard } from "@/lib/payments/page-settlement";
 import { completeCardPayment, PAID_NOT_SAVED_PREFIX } from "@/features/enrollment/lib/complete-card-payment";
 import type { Order } from "@/types/plans";
 
@@ -19,13 +20,17 @@ const RELEASE_AFTER_MS = 10 * 60 * 1000;
 export type ReconcileResult =
   | { outcome: "paid"; note: string | null }
   | { outcome: "released" }
+  | { outcome: "not_found" }
   | { error: string };
 
 /**
- * Settles an order stuck in charging (the charge call's answer never came)
- * by asking Pelecard what the terminal recorded. A matching approved charge
- * marks the order paid and runs the same steps as the card page; no charge
- * hands the order back to pending so the parent can pay again. Admin only.
+ * Asks Pelecard what the terminal recorded for an order: one held in
+ * charging (its result never arrived or could not be confirmed), or an open
+ * card order whose payment may have landed while the redirect and the
+ * callback were both lost. A matching approved charge marks the order paid
+ * and runs the same steps as the card page. With no charge, a held order
+ * goes back to pending so the parent can pay again; an open one stays as it
+ * is. Admin or the branch's manager.
  */
 export async function reconcileChargingOrderAction(orderId: string): Promise<ReconcileResult> {
   const { error: authError, user, profile } = await verifyAdminOrTrainer();
@@ -34,23 +39,29 @@ export async function reconcileChargingOrderAction(orderId: string): Promise<Rec
 
   const db = createAdminClient();
   const { data: order } = (await typedFrom(db, "orders")
-    .select("id, status, amount_ils, updated_at, fulfillment_error, branch_id")
+    .select("id, status, payment_provider, amount_ils, created_at, updated_at, fulfillment_error, branch_id")
     .eq("id", orderId)
     .maybeSingle()) as {
-    data: Pick<Order, "id" | "status" | "amount_ils" | "updated_at" | "fulfillment_error" | "branch_id"> | null;
+    data: Pick<
+      Order,
+      "id" | "status" | "payment_provider" | "amount_ils" | "created_at" | "updated_at" | "fulfillment_error" | "branch_id"
+    > | null;
   };
   if (!order) return { error: "ההזמנה לא נמצאה" };
   const denied = await verifyAdminOrBranchManager([order.branch_id]);
   if (denied) return { error: denied };
-  if (order.status !== "charging") return { error: "ההזמנה אינה בחיוב" };
+  if (!canCheckWithPelecard(order)) return { error: "אין מה לבדוק בהזמנה הזו מול פלאקארד" };
 
-  const chargingSince = new Date(order.updated_at);
+  // An open order's Pelecard pages may date from its creation; a held one's charge from the hold.
+  const chargingSince = new Date(order.status === "pending" ? order.created_at : order.updated_at);
   const found = await lookupCharge(order.id, Number(order.amount_ils), chargingSince);
 
   if (found.kind === "error") {
     console.error(`[reconcile] order ${order.id} lookup failed: ${found.reason}`);
     return { error: `הבדיקה מול פלאקארד נכשלה (${found.reason}). נסו שוב או בדקו בממשק של פלאקארד.` };
   }
+
+  if (found.kind === "not_found" && order.status === "pending") return { outcome: "not_found" };
 
   if (found.kind === "not_found") {
     // The card page saw this charge approved; a lookup that misses it is wrong.

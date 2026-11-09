@@ -76,6 +76,22 @@ export function returnRedirect(outcome: SettleOutcome, orderId: string): string 
   }
 }
 
+/** A note asking an admin to refund a payment by hand in Pelecard. */
+export function isRefundFlag(note: string | null): boolean {
+  return note?.startsWith(REFUND_FLAG_PREFIX) ?? false;
+}
+
+/**
+ * Orders the admin may check against Pelecard: one held in charging, and
+ * an open card order (online or a Payment link), whose payment may have
+ * landed while both the redirect and the callback were lost. Staff
+ * payments (manual) are paid on the spot and never wait on Pelecard.
+ */
+export function canCheckWithPelecard(order: { status: OrderStatus; payment_provider: string }): boolean {
+  if (order.status === "charging") return true;
+  return order.status === "pending" && order.payment_provider !== "manual";
+}
+
 /**
  * When Pelecard could not confirm a result: a decline hint is believed,
  * because a forged one only hurts whoever forged it (and the callback still

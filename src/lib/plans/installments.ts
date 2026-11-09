@@ -1,4 +1,5 @@
-import { MAX_INSTALLMENTS } from "@/lib/validations/card-payment";
+/** The most installments any card payment may be split into. */
+export const MAX_INSTALLMENTS = 3;
 
 /**
  * The most card installments one order may be paid in (issue #161).

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  canCheckWithPelecard,
+  isRefundFlag,
   paidOrderAction,
   refundNote,
   REFUND_FLAG_PREFIX,
@@ -66,6 +68,28 @@ describe("returnRedirect", () => {
 
   it("sends anything ignored back to the card page", () => {
     expect(returnRedirect({ kind: "ignored", reason: "x" }, ID)).toBe(`/join/pay/${ID}`);
+  });
+});
+
+describe("canCheckWithPelecard", () => {
+  it("offers the check on held orders and on open card orders", () => {
+    expect(canCheckWithPelecard({ status: "charging", payment_provider: "isracard" })).toBe(true);
+    expect(canCheckWithPelecard({ status: "pending", payment_provider: "isracard" })).toBe(true);
+    expect(canCheckWithPelecard({ status: "pending", payment_provider: "morning" })).toBe(true);
+  });
+
+  it("does not offer it on staff payments or settled orders", () => {
+    expect(canCheckWithPelecard({ status: "pending", payment_provider: "manual" })).toBe(false);
+    expect(canCheckWithPelecard({ status: "paid", payment_provider: "isracard" })).toBe(false);
+    expect(canCheckWithPelecard({ status: "failed", payment_provider: "isracard" })).toBe(false);
+  });
+});
+
+describe("isRefundFlag", () => {
+  it("recognizes a refund note and nothing else", () => {
+    expect(isRefundFlag(refundNote(null, { pelecardId: "9", approvalNumber: null, reason: "paid twice" }))).toBe(true);
+    expect(isRefundFlag("invoice: timeout")).toBe(false);
+    expect(isRefundFlag(null)).toBe(false);
   });
 });
 
