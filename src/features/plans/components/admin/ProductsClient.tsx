@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { reorderProductsAction, updateProductAction } from "../../lib/actions/admin-products";
+import { reorderProductsAction, updateProductAction, type CatalogProduct } from "../../lib/actions/admin-products";
 import type { ProductInput } from "@/lib/validations/plans-admin";
 import type { PlanProduct } from "@/types/plans";
 
@@ -111,15 +111,32 @@ function ProductDialog({ product, onClose }: { product: PlanProduct; onClose: ()
   );
 }
 
-export function ProductsClient({ initialProducts }: { initialProducts: PlanProduct[] }) {
+interface BranchGroup {
+  name: string;
+  products: CatalogProduct[];
+}
+
+/** The catalog per branch, in the branches' order; each keeps its display order. */
+function byBranch(products: readonly CatalogProduct[]): BranchGroup[] {
+  const groups = new Map<string, BranchGroup & { order: number }>();
+  for (const product of products) {
+    const name = product.branch?.name_he ?? "ללא סניף";
+    const group = groups.get(name) ?? { name, order: product.branch?.order_index ?? Number.MAX_SAFE_INTEGER, products: [] };
+    groups.set(name, { ...group, products: [...group.products, product] });
+  }
+  return [...groups.values()].sort((a, b) => a.order - b.order);
+}
+
+export function ProductsClient({ initialProducts }: { initialProducts: CatalogProduct[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState<PlanProduct | null>(null);
   const [reordering, startReorder] = useTransition();
 
-  const move = (index: number, direction: -1 | 1) => {
+  // Order is per branch: a move swaps two neighbours within one branch's list.
+  const move = (group: BranchGroup, index: number, direction: -1 | 1) => {
     const target = index + direction;
-    if (target < 0 || target >= initialProducts.length) return;
-    const ids = initialProducts.map((p) => p.id);
+    if (target < 0 || target >= group.products.length) return;
+    const ids = group.products.map((p) => p.id);
     const reordered = ids.map((id, i) => {
       if (i === index) return ids[target];
       if (i === target) return ids[index];
@@ -133,41 +150,58 @@ export function ProductsClient({ initialProducts }: { initialProducts: PlanProdu
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {editing && (
         <ProductDialog key={editing.id} product={editing} onClose={() => setEditing(null)} />
       )}
-      <div className="rounded-lg border divide-y">
-        {initialProducts.map((product, index) => (
-          <div key={product.id} className="flex items-center justify-between gap-4 px-4 py-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{product.name_he}</span>
-                <span className="text-sm text-muted-foreground">
-                  ₪{product.price_ils.toLocaleString("he-IL")}
-                </span>
-                {!product.is_active && <Badge variant="outline">מוסתר</Badge>}
-                {product.once_per_trainee && <Badge variant="secondary">חד-פעמי</Badge>}
+      {byBranch(initialProducts).map((group) => (
+        <section key={group.name} className="space-y-2">
+          <h2 className="text-lg font-semibold">סניף {group.name}</h2>
+          <div className="rounded-lg border divide-y">
+            {group.products.map((product, index) => (
+              <div key={product.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{product.name_he}</span>
+                    <span className="text-sm text-muted-foreground">
+                      ₪{product.price_ils.toLocaleString("he-IL")}
+                    </span>
+                    {!product.is_active && <Badge variant="outline">מוסתר</Badge>}
+                    {product.once_per_trainee && <Badge variant="secondary">חד-פעמי</Badge>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {product.sessions_total !== null ? `${product.sessions_total} אימונים · ` : ""}
+                    {product.duration_days} ימים
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => move(group, index, -1)}
+                    disabled={reordering || index === 0}
+                    aria-label="העבר למעלה"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => move(group, index, 1)}
+                    disabled={reordering || index === group.products.length - 1}
+                    aria-label="העבר למטה"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setEditing(product)} aria-label={`ערוך ${product.name_he}`}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {product.sessions_total !== null ? `${product.sessions_total} אימונים · ` : ""}
-                {product.duration_days} ימים
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={() => move(index, -1)} disabled={reordering || index === 0} aria-label="העבר למעלה">
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => move(index, 1)} disabled={reordering || index === initialProducts.length - 1} aria-label="העבר למטה">
-                <ArrowDown className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setEditing(product)} aria-label={`ערוך ${product.name_he}`}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </section>
+      ))}
     </div>
   );
 }

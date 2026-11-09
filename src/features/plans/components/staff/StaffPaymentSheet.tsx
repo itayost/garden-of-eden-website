@@ -282,7 +282,7 @@ export function StaffPaymentSheet({ traineeId, isAdmin, open, onOpenChange }: St
             </div>
           ) : context.products.length === 0 ? (
             <p className="rounded-xl border p-4 text-sm text-muted-foreground">
-              המסלולים באפליקציה זמינים לסניף קריית אתא. מתאמן בחיפה מנוהל ב-Arbox; כדי לרשום לו מסלול כאן, שייכו אותו קודם לסניף קריית אתא.
+              אין מסלולים למכירה בסניף של המתאמן. כדי לרשום לו מסלול כאן, שייכו אותו קודם לסניף שמוכר מסלולים באפליקציה.
             </p>
           ) : (
             <>

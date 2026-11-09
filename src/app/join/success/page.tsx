@@ -1,5 +1,7 @@
 import { isValidUUID } from "@/lib/validations/common";
 import { OrderStatusPoller } from "@/features/enrollment/components/OrderStatusPoller";
+import { JoinFrame } from "@/features/enrollment/components/JoinFrame";
+import { landingBranchOfOrder } from "@/features/enrollment/lib/catalog";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "התשלום התקבל", robots: { index: false, follow: false } };
@@ -10,13 +12,16 @@ interface PageProps {
 
 export default async function JoinSuccessPage({ searchParams }: PageProps) {
   const { order } = await searchParams;
+  const branch = await landingBranchOfOrder(order);
   return (
-    <div className="mx-auto max-w-lg rounded-3xl border bg-white p-10">
-      {order && isValidUUID(order) ? (
-        <OrderStatusPoller orderId={order} />
-      ) : (
-        <p className="text-center text-black/60">אישור התשלום יגיע בוואטסאפ.</p>
-      )}
-    </div>
+    <JoinFrame branch={branch}>
+      <div className="mx-auto max-w-lg rounded-3xl border bg-white p-10">
+        {order && isValidUUID(order) ? (
+          <OrderStatusPoller orderId={order} />
+        ) : (
+          <p className="text-center text-black/60">אישור התשלום יגיע בוואטסאפ.</p>
+        )}
+      </div>
+    </JoinFrame>
   );
 }

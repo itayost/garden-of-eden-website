@@ -1,9 +1,8 @@
-import type { PlanProduct } from "@/types/plans";
-
 /**
- * Copy for the קריית אתא landing page. The Haifa page keeps its hardcoded
- * copy; this file holds only what differs. Location details are null until
- * Eden supplies them, and the page hides the map and address until then.
+ * Copy for the קריית אתא landing page; this file holds only what differs
+ * from the Haifa page. The price cards' words are in landing-plans.ts.
+ * Location details are null until Eden supplies them, and the page hides the
+ * map and address until then.
  */
 export const KIRYAT_ATA_LANDING = {
   path: "/kiryat-ata",
@@ -47,44 +46,3 @@ export const KIRYAT_ATA_LANDING = {
   /** Haifa-only FAQ entries: public transport to the Haifa complex. */
   faqOmit: ["faq-7"],
 } as const;
-
-/** Card bullets per product. Anything not listed falls back to the DB fields. */
-const FEATURES_BY_SLUG: Record<string, readonly string[]> = {
-  monthly: ["2 אימונים בשבוע", "ללא התחייבות: חידוש חודש בחודש מקישור בוואטסאפ", "מעקב התקדמות באפליקציה"],
-  intro_pack: ["4 אימונים להיכרות", "לשחקן חדש בלבד, פעם אחת", "בלי התחייבות להמשך"],
-  card_10: ["10 אימונים", "מתאים ללו\"ז משתנה", "האימונים נרשמים אוטומטית מהנוכחות"],
-  card_20: ["20 אימונים", "המחיר הנמוך ביותר לאימון", "מתאים לשחקן שמתאמן פעמיים בשבוע"],
-  term_4_months: ["4 חודשי אימונים", "מסלול המתקדמים המלא", "מעקב התקדמות ומבדקים"],
-  addon_monthly: ["מפגש מנטלי, תזונה או טקטי מדי חודש", "משלים כל מסלול אימונים", "ללא התחייבות"],
-  addon_single: ["מפגש אחד עם איש המקצוע", "מנטלי, תזונה או טקטי", "נקבע מול הצוות אחרי הרכישה"],
-};
-
-function weeksLabel(days: number): string {
-  const weeks = Math.round(days / 7);
-  if (days === 30) return "בתוקף לחודש";
-  if (days % 30 === 0) return `בתוקף ${days / 30} חודשים`;
-  return `בתוקף ${weeks} שבועות`;
-}
-
-export function featuresFor(product: PlanProduct): readonly string[] {
-  const listed = FEATURES_BY_SLUG[product.slug];
-  const gift = product.gift_he ? [`מתנה: ${product.gift_he}`] : [];
-  if (listed) return [...listed, ...gift];
-  const sessions =
-    product.sessions_total === null
-      ? []
-      : [product.sessions_total === 1 ? "אימון אחד" : `${product.sessions_total} אימונים`];
-  return [...sessions, weeksLabel(product.duration_days), ...gift];
-}
-
-export function periodFor(product: PlanProduct): string {
-  if (product.kind === "addon" && product.sessions_total !== null) {
-    return product.sessions_total === 1 ? "מפגש אחד" : `${product.sessions_total} מפגשים`;
-  }
-  if (product.kind === "subscription" || product.kind === "addon") {
-    return product.duration_days === 30 ? "לחודש" : weeksLabel(product.duration_days);
-  }
-  return product.sessions_total !== null
-    ? `${product.sessions_total} אימונים, ${weeksLabel(product.duration_days)}`
-    : weeksLabel(product.duration_days);
-}

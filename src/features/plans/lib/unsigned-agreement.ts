@@ -3,10 +3,12 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { typedFrom } from "@/lib/supabase/helpers";
 import type { EnrollmentAgreement } from "@/types/plans";
-import { TERMS_VERSION } from "../../../../content/terms-kiryat-ata";
+import { termsVersionOf } from "@/features/enrollment/lib/branch-terms";
 
 export interface UnsignedAgreementInput {
   orderId: string;
+  /** The branch the Plan is sold at: the agreement records that branch's terms. */
+  branchId: string;
   profileId: string | null;
   parent: { name: string; phone: string; email: string | null };
   child: { name: string; birthdate: string | null };
@@ -31,11 +33,18 @@ export async function insertUnsignedAgreement(
   db: SupabaseClient,
   input: UnsignedAgreementInput,
 ): Promise<EnrollmentAgreement | null> {
+  let version: string;
+  try {
+    version = await termsVersionOf(db, input.branchId);
+  } catch (error) {
+    console.error("[agreement] terms version lookup failed:", error);
+    return null;
+  }
   const { data, error } = (await typedFrom(db, "enrollment_agreements")
     .insert({
       order_id: input.orderId,
       profile_id: input.profileId,
-      agreement_version: TERMS_VERSION,
+      agreement_version: version,
       parent_name: input.parent.name,
       parent_id_number: "",
       parent_phone: input.parent.phone,

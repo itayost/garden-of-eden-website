@@ -11,6 +11,9 @@ import { canPayOnline } from "@/lib/payments/online-payments";
 import { orderPlanName } from "@/lib/plans/manual-card";
 import { maxInstallmentsFor } from "@/lib/plans/installments";
 import type { Order, PlanProduct } from "@/types/plans";
+import { landingBranchOf } from "@/features/enrollment/lib/catalog";
+import { JoinFrame } from "@/features/enrollment/components/JoinFrame";
+import { joinHref } from "@/lib/branches/landing-branches";
 
 export const metadata: Metadata = {
   title: "תשלום מאובטח | Garden of Eden",
@@ -32,13 +35,21 @@ export default async function PayPage({ params }: PageProps) {
 
   const db = createAdminClient();
   const { data: order } = (await typedFrom(db, "orders")
-    .select("id, status, amount_ils, child_name, parent_name, product_id, terms_sessions_total, terms_duration_days, agreements:enrollment_agreements(signed_at)")
+    .select("id, status, amount_ils, child_name, parent_name, product_id, branch_id, terms_sessions_total, terms_duration_days, agreements:enrollment_agreements(signed_at)")
     .eq("id", orderId)
     .maybeSingle()) as {
     data:
       | (Pick<
           Order,
-          "id" | "status" | "amount_ils" | "child_name" | "parent_name" | "product_id" | "terms_sessions_total" | "terms_duration_days"
+          | "id"
+          | "status"
+          | "amount_ils"
+          | "child_name"
+          | "parent_name"
+          | "product_id"
+          | "branch_id"
+          | "terms_sessions_total"
+          | "terms_duration_days"
         > & {
           agreements: { signed_at: string | null }[] | null;
         })
@@ -47,18 +58,21 @@ export default async function PayPage({ params }: PageProps) {
   if (!order) notFound();
   if (order.status === "paid" || order.status === "charging") redirect(`/join/success?order=${order.id}`);
   if (order.status === "failed") redirect(`/join/failed?order=${order.id}`);
+  const branch = await landingBranchOf(db, order.branch_id);
 
   // A Payment link is signed before the card; the charge refuses an unsigned one too.
   // The signing link is never derived here: the order id must not unlock the agreement.
   const agreement = order.agreements?.[0];
   if (agreement && !agreement.signed_at) {
     return (
-      <section className="space-y-2 rounded-2xl border bg-white p-4 text-sm">
-        <h1 className="text-xl font-bold">קודם חותמים על ההסכם</h1>
-        <p className="text-black/60">
-          פתחו את הקישור שקיבלתם בוואטסאפ, חתמו על ההסכם, ומשם תעברו לתשלום.
-        </p>
-      </section>
+      <JoinFrame branch={branch}>
+        <section className="space-y-2 rounded-2xl border bg-white p-4 text-sm">
+          <h1 className="text-xl font-bold">קודם חותמים על ההסכם</h1>
+          <p className="text-black/60">
+            פתחו את הקישור שקיבלתם בוואטסאפ, חתמו על ההסכם, ומשם תעברו לתשלום.
+          </p>
+        </section>
+      </JoinFrame>
     );
   }
 
@@ -73,42 +87,47 @@ export default async function PayPage({ params }: PageProps) {
   const isOpen = await canPayOnline();
 
   return (
-    <div className="space-y-6">
-      <header>
-        <p className="text-sm font-medium text-black/60">שלב 2 מתוך 2</p>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold sm:text-3xl">
-          <ShieldCheck className="h-6 w-6 text-success" />
-          תשלום מאובטח
-        </h1>
-      </header>
+    <JoinFrame branch={branch}>
+      <div className="space-y-6">
+        <header>
+          <p className="text-sm font-medium text-black/60">שלב 2 מתוך 2</p>
+          <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold sm:text-3xl">
+            <ShieldCheck className="h-6 w-6 text-success" />
+            תשלום מאובטח
+          </h1>
+        </header>
 
-      <section className="rounded-2xl border bg-white p-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-          <dt className="text-black/60">מסלול</dt>
-          <dd className="font-medium">{orderPlanName(product?.name_he ?? "מסלול", order)}</dd>
-          <dt className="text-black/60">חניך/ה</dt>
-          <dd className="font-medium">{order.child_name}</dd>
-          <dt className="text-black/60">משלם/ת</dt>
-          <dd className="font-medium">{order.parent_name}</dd>
-          <dt className="text-black/60">לתשלום</dt>
-          <dd className="text-xl font-bold">₪{amount.toLocaleString("he-IL")}</dd>
-        </dl>
-        <p className="mt-3 text-xs text-black/60">
-          המחיר כולל מע&quot;מ. ההסכם נחתם;{" "}
-          {/* A plain link: a client-side navigation would carry this page's strict CSP to /join. */}
-          <a href="/join" className="underline">חזרה לבחירת מסלול</a> מתחילה הרשמה חדשה.
-        </p>
-      </section>
+        <section className="rounded-2xl border bg-white p-4">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-black/60">מסלול</dt>
+            <dd className="font-medium">{orderPlanName(product?.name_he ?? "מסלול", order)}</dd>
+            <dt className="text-black/60">חניך/ה</dt>
+            <dd className="font-medium">{order.child_name}</dd>
+            <dt className="text-black/60">משלם/ת</dt>
+            <dd className="font-medium">{order.parent_name}</dd>
+            <dt className="text-black/60">לתשלום</dt>
+            <dd className="text-xl font-bold">₪{amount.toLocaleString("he-IL")}</dd>
+          </dl>
+          <p className="mt-3 text-xs text-black/60">
+            המחיר כולל מע&quot;מ. ההסכם נחתם;{" "}
+            {/* A plain link: a client-side navigation would carry this page's strict CSP to /join. */}
+            <a href={branch ? joinHref(branch.key) : "/join"} className="underline">
+              חזרה לבחירת מסלול
+            </a>{" "}
+            מתחילה הרשמה חדשה.
+          </p>
+        </section>
 
-      <section className="rounded-2xl border bg-white p-4 sm:p-6">
-        {isOpen ? (
-          <FullLoadGuard>
-            <PaymentForm orderId={order.id} amountIls={amount} maxInstallments={maxInstallments} />
-          </FullLoadGuard>
-        ) : (
-          <PaymentsClosedNotice />
-        )}
-      </section>
-    </div>
+        <section className="rounded-2xl border bg-white p-4 sm:p-6">
+          {isOpen ? (
+            <FullLoadGuard>
+              <PaymentForm orderId={order.id} amountIls={amount} maxInstallments={maxInstallments} />
+            </FullLoadGuard>
+          ) : (
+            <PaymentsClosedNotice />
+          )}
+        </section>
+      </div>
+    </JoinFrame>
   );
 }
