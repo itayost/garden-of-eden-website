@@ -41,7 +41,7 @@ export function paymentPageCsp(nonce: string, { dev }: { dev: boolean }): string
     "img-src 'self' data: blob:",
     "font-src 'self'",
     `connect-src 'self'${dev ? " ws:" : ""}`,
-    "frame-src https://*.pelecard.biz",
+    "frame-src https://pelecard.biz https://*.pelecard.biz",
     // The root layout registers /sw.js; under 'strict-dynamic' workers need their own source.
     "worker-src 'self'",
     "form-action 'self'",

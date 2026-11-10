@@ -94,14 +94,32 @@ export function isRefundFlag(note: string | null): boolean {
 }
 
 /**
- * Orders the admin may check against Pelecard: one held in charging, and
- * an open card order (online or a Payment link), whose payment may have
- * landed while both the redirect and the callback were lost. Staff
+ * Orders the admin may check against Pelecard: one held in charging, an
+ * open card order (online or a Payment link), whose payment may have landed
+ * while both the redirect and the callback were lost, and a link a newer
+ * Payment link closed while the parent may still have been paying it. Staff
  * payments (manual) are paid on the spot and never wait on Pelecard.
  */
-export function canCheckWithPelecard(order: { status: OrderStatus; payment_provider: string }): boolean {
+export function canCheckWithPelecard(order: {
+  status: OrderStatus;
+  payment_provider: string;
+  fulfillment_error?: string | null;
+}): boolean {
   if (order.status === "charging") return true;
+  if (order.status === "failed") return order.fulfillment_error === SUPERSEDED_NOTE;
   return order.status === "pending" && order.payment_provider !== "manual";
+}
+
+/**
+ * The orders list: the most recent orders, plus every order flagged for a
+ * refund however old, so no flag falls off the end of the list. Newest
+ * first, each order once.
+ */
+export function withRefundFlagged<T extends { id: string; created_at: string }>(recent: T[], flagged: T[]): T[] {
+  const shown = new Set(recent.map((order) => order.id));
+  const older = flagged.filter((order) => !shown.has(order.id));
+  if (older.length === 0) return recent;
+  return [...recent, ...older].sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 /**
