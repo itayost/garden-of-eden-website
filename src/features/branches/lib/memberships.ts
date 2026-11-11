@@ -106,19 +106,19 @@ export async function visibleProfileIds(
 }
 
 /**
- * Normalized phones of these profiles. A failed read returns no phones, so a
- * scope built from it shows less, never more.
+ * Normalized own phones of the trainees among these profiles. A failed read
+ * returns no phones, so a scope built from it shows less, never more.
  */
-export async function profilePhones(
+export async function traineePhones(
   db: SupabaseClient,
   ids: readonly string[],
 ): Promise<Set<string>> {
   const { data, error } = await readInChunks<{ phone: string | null }>(ids, "id", () =>
-    typedFrom(db, "profiles").select("phone").not("phone", "is", null),
+    typedFrom(db, "profiles").select("phone").eq("role", "trainee").not("phone", "is", null),
   );
 
   if (error) {
-    console.error("profilePhones error:", error);
+    console.error("traineePhones error:", error);
     return new Set();
   }
 

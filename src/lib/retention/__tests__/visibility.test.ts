@@ -7,7 +7,9 @@ import {
   mayWriteRetentionPhone,
   scopeRetentionNotes,
   scopeRetentionView,
+  traineesListedUnder,
   type RetentionScope,
+  type TraineeIndex,
 } from "../visibility";
 
 const viewEntry = (overrides: Partial<RetentionViewEntry>): RetentionViewEntry => ({
@@ -106,6 +108,41 @@ describe("arboxUserIdsForPhone", () => {
       training_card: [],
     };
     expect(arboxUserIdsForPhone(landline, " 04-8123456 ")).toEqual([21]);
+  });
+});
+
+describe("traineesListedUnder", () => {
+  const october: RetentionReportData = {
+    monthly: [arboxEntry({ user_id: 31, phone: "0521234567" })],
+    pro: [],
+    training_card: [],
+  };
+  const november: RetentionReportData = {
+    monthly: [],
+    pro: [],
+    training_card: [arboxEntry({ user_id: 32, phone: "052-123-4567" }), arboxEntry({ user_id: 99, phone: "0521234567" })],
+  };
+  const index: TraineeIndex = {
+    byArboxId: new Map([
+      [31, "t31"],
+      [32, "t32"],
+    ]),
+    byPhone: new Map([
+      ["+972521234567", "t31"],
+      ["+972507654321", "own"],
+    ]),
+  };
+
+  it("finds the trainees Arbox lists under the phone in any of the given months", () => {
+    expect(traineesListedUnder([october, november], "+972521234567", index)).toEqual(["t31", "t32"]);
+  });
+
+  it("finds the trainee whose own phone it is, with no Arbox row", () => {
+    expect(traineesListedUnder([october], "050-765-4321", index)).toEqual(["own"]);
+  });
+
+  it("finds nobody for a phone no trainee has and no row lists", () => {
+    expect(traineesListedUnder([october, november], "0521111111", index)).toEqual([]);
   });
 });
 
