@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useTransition, useMemo, useCallback } from "react";
+import {
+  useState,
+  useTransition,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -18,6 +25,19 @@ import {
 import { RefreshCw, CalendarPlus, Loader2 } from "lucide-react";
 import { RetentionTable } from "./RetentionTable";
 import { ChurnedCustomersTab } from "./ChurnedCustomersTab";
+import { EndingSoonTab } from "./EndingSoonTab";
+import type {
+  EndingRetention,
+  EndingRetentionResult,
+  EndingRetentionRow,
+} from "@/lib/retention/ending-soon-load";
+import type { RetentionNoteKey } from "@/lib/retention/note-key";
+import {
+  replaceKeyedNote,
+  withNote,
+  withTrainer,
+  type NoteUpdate,
+} from "@/lib/retention/note-change";
 import {
   getRetentionReport,
   getRetentionNotes,
@@ -76,7 +96,10 @@ interface RetentionPageClientProps {
   initialChurned: readonly ChurnedCustomer[];
   traineePositions: Readonly<Record<string, string | null>>;
   trainers: TrainerOption[];
-  /** Phones of trainees the caller may see, or null for no restriction. */
+  /** The ending-soon tab, already scoped to the caller's branches. */
+  initialEnding: EndingRetentionResult;
+  /** The tab to open on: ?tab= on the page, "monthly" by default. */
+  initialTab: string;
 }
 
 export function RetentionPageClient({
@@ -88,6 +111,8 @@ export function RetentionPageClient({
   initialChurned,
   traineePositions,
   trainers,
+  initialEnding,
+  initialTab,
 }: RetentionPageClientProps) {
   const [allMonths, setAllMonths] =
     useState<readonly RetentionReportMonth[]>(initialMonths);
@@ -97,6 +122,16 @@ export function RetentionPageClient({
     useState<ReadonlyMap<string, RetentionNote>>(initialNotes);
   const [churned, setChurned] =
     useState<readonly ChurnedCustomer[]>(initialChurned);
+  const [ending, setEnding] = useState<EndingRetention | null>(
+    initialEnding.success ? initialEnding.data : null,
+  );
+  const endingError = initialEnding.success ? null : initialEnding.error;
+  // The month on screen when a save returns, not when it started: a save
+  // still in flight after a month switch must not land in the new month.
+  const selectedMonthRef = useRef(initialMonth);
+  useEffect(() => {
+    selectedMonthRef.current = selectedMonth;
+  }, [selectedMonth]);
   const [isPending, startTransition] = useTransition();
   const [isRefreshing, startRefreshTransition] = useTransition();
 
@@ -119,7 +154,7 @@ export function RetentionPageClient({
 
   const handleMoveToChurned = useCallback(
     async (
-      entry: RetentionEntry,
+      entry: Pick<RetentionEntry, "name" | "end_date">,
       note: string,
       noteColor: NoteColor,
       assignedTrainerId: string | null,
@@ -191,16 +226,39 @@ export function RetentionPageClient({
     [selectedMonth],
   );
 
-  const handleSaveNote = useCallback(
+  // One note record can show in the month's report and in the ending-soon
+  // tab; a saved change is applied to both copies.
+  const applyNoteChange = useCallback(
+    (key: RetentionNoteKey, update: NoteUpdate) => {
+      setEnding(
+        (prev) =>
+          prev && {
+            ending: replaceKeyedNote(prev.ending, key, update),
+            expired: replaceKeyedNote(prev.expired, key, update),
+          },
+      );
+      if (key.reportMonth !== selectedMonthRef.current) return;
+      setNotes((prev) => {
+        const next = new Map(prev);
+        const value = update(prev.get(key.phone));
+        if (value) next.set(key.phone, value);
+        else next.delete(key.phone);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const saveNote = useCallback(
     async (
-      traineePhone: string,
+      key: RetentionNoteKey,
       traineeName: string,
       note: string,
       noteColor: NoteColor,
     ) => {
       const { error } = await upsertRetentionNote(
-        selectedMonth,
-        traineePhone,
+        key.reportMonth,
+        key.phone,
         traineeName,
         note,
         noteColor,
@@ -209,37 +267,22 @@ export function RetentionPageClient({
         toast.error(error);
         return;
       }
-      // Optimistic update — keep any existing trainer assignment.
-      setNotes((prev) => {
-        const next = new Map(prev);
-        const existing = prev.get(traineePhone);
-        const trainerId = existing?.assigned_trainer_id ?? null;
-        if (!note.trim() && noteColor === "none" && trainerId == null) {
-          next.delete(traineePhone);
-        } else {
-          next.set(traineePhone, {
-            note: note.trim(),
-            note_color: noteColor,
-            author_id: existing?.author_id ?? "",
-            updated_at: new Date().toISOString(),
-            assigned_trainer_id: trainerId,
-          });
-        }
-        return next;
-      });
+      applyNoteChange(key, (existing) =>
+        withNote(existing, note, noteColor, new Date().toISOString()),
+      );
     },
-    [selectedMonth],
+    [applyNoteChange],
   );
 
-  const handleAssignTrainer = useCallback(
+  const assignTrainer = useCallback(
     async (
-      traineePhone: string,
+      key: RetentionNoteKey,
       traineeName: string,
       trainerId: string | null,
     ) => {
       const { error } = await setRetentionTrainer(
-        selectedMonth,
-        traineePhone,
+        key.reportMonth,
+        key.phone,
         traineeName,
         trainerId,
       );
@@ -247,27 +290,65 @@ export function RetentionPageClient({
         toast.error(error);
         return;
       }
-      // Optimistic update — keep any existing note/color.
-      setNotes((prev) => {
-        const next = new Map(prev);
-        const existing = prev.get(traineePhone);
-        const noteText = existing?.note ?? "";
-        const color: NoteColor = existing?.note_color ?? "none";
-        if (trainerId == null && !noteText.trim() && color === "none") {
-          next.delete(traineePhone);
-        } else {
-          next.set(traineePhone, {
-            note: noteText,
-            note_color: color,
-            author_id: existing?.author_id ?? "",
-            updated_at: new Date().toISOString(),
-            assigned_trainer_id: trainerId,
-          });
-        }
-        return next;
-      });
+      applyNoteChange(key, (existing) =>
+        withTrainer(existing, trainerId, new Date().toISOString()),
+      );
     },
-    [selectedMonth],
+    [applyNoteChange],
+  );
+
+  const handleSaveNote = useCallback(
+    (
+      traineePhone: string,
+      traineeName: string,
+      note: string,
+      noteColor: NoteColor,
+    ) =>
+      saveNote(
+        { reportMonth: selectedMonth, phone: traineePhone },
+        traineeName,
+        note,
+        noteColor,
+      ),
+    [saveNote, selectedMonth],
+  );
+
+  const handleAssignTrainer = useCallback(
+    (traineePhone: string, traineeName: string, trainerId: string | null) =>
+      assignTrainer(
+        { reportMonth: selectedMonth, phone: traineePhone },
+        traineeName,
+        trainerId,
+      ),
+    [assignTrainer, selectedMonth],
+  );
+
+  const handleEndingNote = useCallback(
+    (row: EndingRetentionRow, note: string, noteColor: NoteColor) =>
+      saveNote(row.noteKey, row.traineeName, note, noteColor),
+    [saveNote],
+  );
+
+  const handleEndingTrainer = useCallback(
+    (row: EndingRetentionRow, trainerId: string | null) =>
+      assignTrainer(row.noteKey, row.traineeName, trainerId),
+    [assignTrainer],
+  );
+
+  const handleEndingMove = useCallback(
+    (
+      row: EndingRetentionRow,
+      note: string,
+      noteColor: NoteColor,
+      trainerId: string | null,
+    ) =>
+      handleMoveToChurned(
+        { name: row.moveAs.name, end_date: row.moveAs.endDate },
+        note,
+        noteColor,
+        trainerId,
+      ),
+    [handleMoveToChurned],
   );
 
   const monthKeys = useMemo(
@@ -280,6 +361,10 @@ export function RetentionPageClient({
   // live Arbox data whose end-dates have since moved forward.
   const isLocked = selectedMonth < currentMonth;
   const refreshDisabled = isRefreshing || isPending || isLocked;
+
+  const loadingText = (
+    <p className="text-center text-muted-foreground py-8">טוען...</p>
+  );
 
   const generateCta = isLocked ? (
     <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
@@ -359,8 +444,8 @@ export function RetentionPageClient({
         )}
       </div>
 
-      <Tabs defaultValue="monthly" dir="rtl">
-        <TabsList className="flex w-full justify-start md:grid md:grid-cols-4">
+      <Tabs defaultValue={initialTab} dir="rtl">
+        <TabsList className="flex w-full justify-start overflow-x-auto md:grid md:grid-cols-5">
           <TabsTrigger value="monthly">
             מנוי חודשי{data ? ` (${data.monthly.length})` : ""}
           </TabsTrigger>
@@ -370,42 +455,59 @@ export function RetentionPageClient({
           <TabsTrigger value="training_card">
             כרטיסת אימונים{data ? ` (${data.training_card.length})` : ""}
           </TabsTrigger>
+          <TabsTrigger value="ending">
+            מסתיימים בקרוב{ending ? ` (${ending.ending.length})` : ""}
+          </TabsTrigger>
           <TabsTrigger value="churned">לקוחות שעזבו</TabsTrigger>
         </TabsList>
 
-        {isPending ? (
-          <p className="text-center text-muted-foreground py-8">טוען...</p>
-        ) : (
-          <>
-            {(["monthly", "pro", "training_card"] as const).map((category) => (
-              <TabsContent key={category} value={category} className="mt-4">
-                {hasData ? (
-                  <RetentionTable
-                    reportMonth={selectedMonth}
-                    entries={data[category]}
-                    monthKeys={monthKeys}
-                    notes={notes}
-                    onSaveNote={handleSaveNote}
-                    traineePositions={traineePositions}
-                    trainers={trainers}
-                    onAssignTrainer={handleAssignTrainer}
-                    movedKeys={movedKeys}
-                    onMoveToChurned={handleMoveToChurned}
-                  />
-                ) : (
-                  generateCta
-                )}
-              </TabsContent>
-            ))}
-            <TabsContent value="churned" className="mt-4">
-              <ChurnedCustomersTab
-                rows={churned}
-                setRows={setChurned}
+        {/* Not tied to the month picker, so a month load leaves it in place. */}
+        <TabsContent value="ending" className="mt-4">
+          <EndingSoonTab
+            data={ending}
+            error={endingError}
+            trainers={trainers}
+            traineePositions={traineePositions}
+            movedKeys={movedKeys}
+            onSaveNote={handleEndingNote}
+            onAssignTrainer={handleEndingTrainer}
+            onMoveToChurned={handleEndingMove}
+          />
+        </TabsContent>
+
+        {(["monthly", "pro", "training_card"] as const).map((category) => (
+          <TabsContent key={category} value={category} className="mt-4">
+            {isPending ? (
+              loadingText
+            ) : hasData ? (
+              <RetentionTable
+                reportMonth={selectedMonth}
+                entries={data[category]}
+                monthKeys={monthKeys}
+                notes={notes}
+                onSaveNote={handleSaveNote}
+                traineePositions={traineePositions}
                 trainers={trainers}
+                onAssignTrainer={handleAssignTrainer}
+                movedKeys={movedKeys}
+                onMoveToChurned={handleMoveToChurned}
               />
-            </TabsContent>
-          </>
-        )}
+            ) : (
+              generateCta
+            )}
+          </TabsContent>
+        ))}
+        <TabsContent value="churned" className="mt-4">
+          {isPending ? (
+            loadingText
+          ) : (
+            <ChurnedCustomersTab
+              rows={churned}
+              setRows={setChurned}
+              trainers={trainers}
+            />
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );

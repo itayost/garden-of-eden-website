@@ -7,7 +7,10 @@ import {
 import { listChurnedCustomers } from "@/lib/actions/admin-churned-customers";
 import { listTrainersForAssignmentAction } from "@/lib/actions/admin-trainers-list";
 import { RetentionPageClient } from "@/components/admin/retention/RetentionPageClient";
+import { loadEndingRetentionForCaller } from "@/lib/retention/ending-soon-load";
+import { callerRetentionScope } from "@/lib/retention/scope";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readAllPages } from "@/lib/supabase/in-chunks";
 import { normalizePhoneIL } from "@/lib/validations/common";
 import {
   buildRetentionMonthOptions,
@@ -18,11 +21,21 @@ export const metadata: Metadata = {
   title: "שימור לקוחות | Garden of Eden",
 };
 
-export default async function RetentionPage() {
-  const [storedMonths, initialChurned, trainersRes] = await Promise.all([
+const TABS = ["monthly", "pro", "training_card", "ending", "churned"] as const;
+
+interface PageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function RetentionPage({ searchParams }: PageProps) {
+  const { tab } = await searchParams;
+  const initialTab = TABS.find((t) => t === tab) ?? "monthly";
+
+  const [storedMonths, initialChurned, trainersRes, initialEnding] = await Promise.all([
     getRetentionReportMonths(),
     listChurnedCustomers(),
     listTrainersForAssignmentAction(),
+    loadEndingRetentionForCaller(),
   ]);
 
   const trainers =
@@ -36,11 +49,14 @@ export default async function RetentionPage() {
   );
 
   const adminClient = createAdminClient();
-  const traineeRowsPromise = adminClient
-    .from("profiles")
-    .select("id, phone, position")
-    .eq("role", "trainee")
-    .not("phone", "is", null);
+  const traineeRowsPromise = readAllPages(() =>
+    adminClient
+      .from("profiles")
+      .select("id, phone, position")
+      .eq("role", "trainee")
+      .not("phone", "is", null)
+      .order("id"),
+  );
 
   const [initialData, initialNotes, traineeRowsResult] = hasStoredRow
     ? await Promise.all([
@@ -54,13 +70,18 @@ export default async function RetentionPage() {
         await traineeRowsPromise,
       ];
 
-  const traineeRows = traineeRowsResult.data;
+  // Positions feed the עמדה filter. Keyed by phone, so a trainer gets only
+  // the trainees in their branches, as with every other row on the page.
+  const scope = await callerRetentionScope();
+  const traineeRows = (traineeRowsResult.data ?? []).filter(
+    (row) => scope === null || (!("error" in scope) && scope.profileIds.has(row.id)),
+  );
 
   // Branch scope is applied on the server, by getRetentionReport and the
   // refresh action; the report the client gets holds only the caller's rows.
 
   const traineePositions: Record<string, string | null> = {};
-  for (const row of traineeRows ?? []) {
+  for (const row of traineeRows) {
     const normalized = normalizePhoneIL(row.phone);
     if (normalized) {
       traineePositions[normalized] = row.position ?? null;
@@ -79,6 +100,8 @@ export default async function RetentionPage() {
         initialChurned={initialChurned}
         traineePositions={traineePositions}
         trainers={trainers}
+        initialEnding={initialEnding}
+        initialTab={initialTab}
       />
     </div>
   );

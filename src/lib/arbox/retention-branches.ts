@@ -120,21 +120,34 @@ export interface BranchAttendanceInput {
 
 const sortByEndDate = (a: RetentionEntry, b: RetentionEntry) => b.end_date.localeCompare(a.end_date);
 
-export function withBranchAttendance(report: RetentionReportData, input: BranchAttendanceInput): RetentionViewData {
-  const byArboxId = new Map<number, RetentionProfile>();
-  const byPhone = new Map<string, RetentionProfile>();
-  for (const p of input.profiles) {
+/** What matching an Arbox row to a trainee needs; phone already normalized. */
+export type MatchableProfile = Pick<RetentionProfile, "id" | "phone" | "arboxUserId">;
+
+/**
+ * The trainee an Arbox row belongs to: by Arbox id, then by phone. The one
+ * rule for the report view and for anything that must land on the same row,
+ * such as the ending-soon tab's shared notes.
+ */
+export function retentionProfileMatcher<P extends MatchableProfile>(
+  profiles: readonly P[],
+): (entry: RetentionEntry) => P | undefined {
+  const byArboxId = new Map<number, P>();
+  const byPhone = new Map<string, P>();
+  for (const p of profiles) {
     if (p.arboxUserId !== null) byArboxId.set(p.arboxUserId, p);
     if (p.phone) byPhone.set(p.phone, p);
   }
-  const profileById = new Map(input.profiles.map((p) => [p.id, p]));
-
-  const matchProfile = (entry: RetentionEntry): RetentionProfile | undefined => {
+  return (entry) => {
     const byId = entry.user_id != null ? byArboxId.get(entry.user_id) : undefined;
     if (byId) return byId;
     const phone = normalizePhoneIL(entry.phone);
     return phone ? byPhone.get(phone) : undefined;
   };
+}
+
+export function withBranchAttendance(report: RetentionReportData, input: BranchAttendanceInput): RetentionViewData {
+  const profileById = new Map(input.profiles.map((p) => [p.id, p]));
+  const matchProfile = retentionProfileMatcher(input.profiles);
 
   const monthCount = input.monthKeys.length;
   const listed = new Set<string>();

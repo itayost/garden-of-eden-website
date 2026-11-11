@@ -5,6 +5,7 @@ import {
   branchAttendance,
   calendarMonthCounts,
   calendarRetentionCategory,
+  retentionProfileMatcher,
   withBranchAttendance,
   type CalendarPlanEnd,
   type RetentionProfile,
@@ -176,5 +177,24 @@ describe("withBranchAttendance", () => {
       reportMonth: "2026-10-01",
     });
     expect(view.training_card.map((e) => e.end_date)).toEqual(["2026-10-28", "2026-10-10"]);
+  });
+});
+
+describe("retentionProfileMatcher", () => {
+  const match = retentionProfileMatcher([
+    profile({ id: "by-id", arboxUserId: 5550001 }),
+    profile({ id: "by-phone", phone: normalizePhoneIL("0521234567") }),
+  ]);
+
+  it("matches by Arbox id before phone", () => {
+    expect(match(entry({ user_id: 5550001, phone: "0521234567" }))?.id).toBe("by-id");
+  });
+
+  it("falls back to the normalized phone", () => {
+    expect(match(entry({ user_id: 5550009, phone: "0521234567" }))?.id).toBe("by-phone");
+  });
+
+  it("matches nobody on an unknown id and phone", () => {
+    expect(match(entry({ user_id: null, phone: "0507654321" }))).toBeUndefined();
   });
 });

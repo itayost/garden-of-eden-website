@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhoneIL } from "@/lib/validations/common";
@@ -16,6 +17,7 @@ import {
   type BranchAttendanceInput,
   type CalendarPlanEnd,
   type CalendarSession,
+  type MatchableProfile,
   type RetentionProfile,
   type RetentionViewData,
 } from "./retention-branches";
@@ -94,11 +96,38 @@ async function loadBranchSessions(
   });
 }
 
+interface TraineeProfileRow {
+  id: string;
+  phone: string | null;
+  arbox_user_id: number | null;
+}
+
+/** Every trainee profile, read once per request: the report view and the ending-soon tab both match against it. */
+export const readTraineeProfiles = cache(
+  async (): Promise<TraineeProfileRow[]> => {
+    const db = createAdminClient();
+    return readAll<TraineeProfileRow>((lo, hi) =>
+      db.from("profiles").select("id, phone, arbox_user_id").eq("role", "trainee").order("id").range(lo, hi),
+    );
+  },
+);
+
+export function toMatchableProfile(row: TraineeProfileRow): MatchableProfile {
+  return { id: row.id, phone: normalizePhoneIL(row.phone), arboxUserId: row.arbox_user_id };
+}
+
+/** The חיפה and קריית אתא branch ids, by name; null where a branch is missing. */
+export const retentionBranchIds = cache(async (): Promise<{ haifaId: string | null; kiryatId: string | null }> => {
+  const branches = await loadAllBranches(createAdminClient());
+  return {
+    haifaId: branches.find((b) => b.name_he.trim() === HAIFA_BRANCH)?.id ?? null,
+    kiryatId: branches.find((b) => b.name_he.trim() === KIRYAT_ATA_BRANCH)?.id ?? null,
+  };
+});
+
 async function loadInput(reportMonth: string): Promise<BranchAttendanceInput | null> {
   const db = createAdminClient();
-  const branches = await loadAllBranches(db);
-  const haifaId = branches.find((b) => b.name_he.trim() === HAIFA_BRANCH)?.id ?? null;
-  const kiryatId = branches.find((b) => b.name_he.trim() === KIRYAT_ATA_BRANCH)?.id ?? null;
+  const { haifaId, kiryatId } = await retentionBranchIds();
   if (!kiryatId) {
     console.warn("[RetentionBranches] No קריית אתא branch; the split is skipped.");
     return null;
@@ -111,9 +140,7 @@ async function loadInput(reportMonth: string): Promise<BranchAttendanceInput | n
   const branchIds = haifaId ? [haifaId, kiryatId] : [kiryatId];
 
   const [profileRows, memberships, sessions, ending] = await Promise.all([
-    readAll<{ id: string; phone: string | null; arbox_user_id: number | null }>((lo, hi) =>
-      db.from("profiles").select("id, phone, arbox_user_id").eq("role", "trainee").order("id").range(lo, hi),
-    ),
+    readTraineeProfiles(),
     readAll<{ profile_id: string; branch_id: string }>((lo, hi) =>
       db
         .from("profile_branches")
@@ -132,9 +159,7 @@ async function loadInput(reportMonth: string): Promise<BranchAttendanceInput | n
   const kiryat = inBranch(kiryatId);
 
   const profiles: RetentionProfile[] = profileRows.map((row) => ({
-    id: row.id,
-    phone: normalizePhoneIL(row.phone),
-    arboxUserId: row.arbox_user_id,
+    ...toMatchableProfile(row),
     haifa: haifa.has(row.id),
     kiryat: kiryat.has(row.id),
   }));

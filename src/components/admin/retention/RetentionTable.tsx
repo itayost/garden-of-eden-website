@@ -29,6 +29,7 @@ import {
   type NoteColor,
 } from "@/lib/validations/churned-customers";
 import { buildChurnedKey } from "@/lib/utils/churned-key";
+import { retentionNoteKey } from "@/lib/retention/note-key";
 import { HEBREW_MONTHS } from "@/lib/constants/hebrew-months";
 import { Clock } from "lucide-react";
 import { normalizePhoneIL } from "@/lib/validations/common";
@@ -48,11 +49,6 @@ function formatDate(dateStr: string): string {
   if (!dateStr) return "\u2014";
   const [year, month, day] = dateStr.split("-");
   return `${parseInt(day, 10)}/${parseInt(month, 10)}/${year}`;
-}
-
-/** Get a stable key for notes lookup: phone or "no-phone:<name>" */
-function getNoteKey(entry: RetentionEntry): string {
-  return entry.phone ?? `no-phone:${entry.name.trim().toLowerCase()}`;
 }
 
 /** A month's count for one branch: 0 is shown, null (not assigned, nothing there) is a dash. */
@@ -188,7 +184,7 @@ export function RetentionTable({
             </TableHeader>
             <TableBody>
               {filtered.map((entry, i) => {
-                const noteKey = getNoteKey(entry);
+                const noteKey = retentionNoteKey(entry);
                 const existingNoteRecord = notes.get(noteKey);
                 const existingNote = existingNoteRecord?.note ?? "";
                 const existingColor: NoteColor =
