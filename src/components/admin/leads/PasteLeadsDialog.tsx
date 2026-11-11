@@ -75,7 +75,7 @@ export function PasteLeadsDialog({ tabs, activeTabId }: PasteLeadsDialogProps) {
     }
 
     if (result.inserted > 0) toast.success(`נוספו ${result.inserted} לידים`);
-    if (result.skipped > 0) toast.warning(`${result.skipped} כפולים דולגו`);
+    if (result.skipped > 0) toast.warning(`${result.skipped} כבר קיימים בטאב הזה ודולגו`);
     if (result.errors.length > 0) toast.warning(`${result.errors.length} שורות שגויות`);
 
     router.refresh();
