@@ -65,7 +65,7 @@ export function RetentionCallDialog({
   const loadHistory = useCallback(async () => {
     setHistory({ state: "loading" });
     try {
-      const result = await getRetentionCallLogAction(phone);
+      const result = await getRetentionCallLogAction(phone, reportMonth);
       setHistory(
         "error" in result
           ? { state: "error", message: result.error }
@@ -74,7 +74,7 @@ export function RetentionCallDialog({
     } catch {
       setHistory({ state: "error", message: "שגיאה בטעינת היסטוריית השיחות" });
     }
-  }, [phone]);
+  }, [phone, reportMonth]);
 
   useEffect(() => {
     if (open) void loadHistory();

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import {
   getRetentionReportMonths,
   getRetentionReport,
@@ -10,8 +9,6 @@ import { listTrainersForAssignmentAction } from "@/lib/actions/admin-trainers-li
 import { RetentionPageClient } from "@/components/admin/retention/RetentionPageClient";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhoneIL } from "@/lib/validations/common";
-import { getBranchScopeAction } from "@/lib/actions/shared";
-import { scopedProfileIds } from "@/features/branches/lib/memberships";
 import {
   buildRetentionMonthOptions,
   getCurrentCalendarMonth,
@@ -59,21 +56,8 @@ export default async function RetentionPage() {
 
   const traineeRows = traineeRowsResult.data;
 
-  // Retention rows come from Arbox keyed by phone, so a trainer's scope maps
-  // their visible trainees to phones and the client filters the entries.
-  const scopeResult = await getBranchScopeAction();
-  // A failed scope read must not widen a trainer's view to the whole academy.
-  if ("error" in scopeResult) redirect("/dashboard");
-  const scope = scopeResult.data.scope;
-  const scopedIds = await scopedProfileIds(adminClient, scope);
-  const scopedIdSet = scopedIds === null ? null : new Set(scopedIds);
-  const visiblePhones =
-    scopedIdSet === null
-      ? null
-      : (traineeRows ?? [])
-          .filter((row) => scopedIdSet.has(row.id))
-          .map((row) => normalizePhoneIL(row.phone))
-          .filter((phone): phone is string => phone !== null);
+  // Branch scope is applied on the server, by getRetentionReport and the
+  // refresh action; the report the client gets holds only the caller's rows.
 
   const traineePositions: Record<string, string | null> = {};
   for (const row of traineeRows ?? []) {
@@ -87,7 +71,6 @@ export default async function RetentionPage() {
     <div className="container mx-auto px-4 py-6 space-y-6">
       <h1 className="text-2xl font-bold">שימור לקוחות</h1>
       <RetentionPageClient
-        visiblePhones={visiblePhones}
         months={months}
         initialMonth={initialMonth}
         currentMonth={currentCalendarMonth}

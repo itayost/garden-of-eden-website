@@ -2,7 +2,7 @@ import { z } from "zod";
 import { normalizePhoneIL } from "@/lib/validations/common";
 import { LEAD_CONTACT_OUTCOMES } from "@/types/leads";
 
-const reportMonthSchema = z.string().regex(/^\d{4}-\d{2}-01$/, "פורמט חודש לא תקין");
+export const reportMonthSchema = z.string().regex(/^\d{4}-\d{2}-01$/, "פורמט חודש לא תקין");
 
 /** Any Israeli format in, E.164 out; anything unreadable is refused. */
 const phoneSchema = z

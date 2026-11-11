@@ -1,31 +1,19 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
-import { normalizePhoneIL } from "@/lib/validations/common";
-import { assertPhoneInScope, callerVisiblePhones } from "@/lib/retention/scope";
+import {
+  assertRetentionPhoneInScope,
+  callerRetentionScope,
+  loadListedTrainees,
+} from "@/lib/retention/scope";
+import { scopeRetentionNotes, scopeRetentionView } from "@/lib/retention/visibility";
 import type { RetentionReportData } from "@/lib/arbox/retention";
-import type { RetentionViewData, RetentionViewEntry } from "@/lib/arbox/retention-branches";
+import type { RetentionViewData } from "@/lib/arbox/retention-branches";
 import { loadRetentionView } from "@/lib/arbox/retention-branches-load";
 import { persistRetentionReport } from "@/lib/arbox/persist-retention-report";
-
-function scopeReport(
-  report: RetentionViewData,
-  visible: Set<string> | null,
-): RetentionViewData {
-  if (visible === null) return report;
-  const keep = (entry: RetentionViewEntry) => {
-    const phone = normalizePhoneIL(entry.phone);
-    return phone !== null && visible.has(phone);
-  };
-  return {
-    monthly: report.monthly.filter(keep),
-    pro: report.pro.filter(keep),
-    training_card: report.training_card.filter(keep),
-  };
-}
 
 import { isPastReportMonth } from "@/lib/utils/retention-month-list";
 import { checkRateLimit, isAdminExempt } from "@/lib/rate-limit";
@@ -57,7 +45,7 @@ export async function getRetentionReportMonths(): Promise<
   const { error } = await verifyAdminOrTrainer();
   if (error) return [];
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data } = await typedFrom(supabase, "retention_reports")
     .select("report_month, created_at")
     .order("report_month", { ascending: false });
@@ -72,7 +60,7 @@ export async function getRetentionReport(
   if (error) return null;
   if (!reportMonthSchema.safeParse(reportMonth).success) return null;
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data } = await typedFrom(supabase, "retention_reports")
     .select("data")
     .eq("report_month", reportMonth)
@@ -80,11 +68,11 @@ export async function getRetentionReport(
 
   if (!data) return null;
 
-  const visible = await callerVisiblePhones();
-  if (!(visible instanceof Set) && visible !== null) return null;
+  const scope = await callerRetentionScope();
+  if (scope !== null && "error" in scope) return null;
 
   const view = await loadRetentionView(data.data as unknown as RetentionReportData, reportMonth);
-  return scopeReport(view, visible);
+  return scopeRetentionView(view, scope);
 }
 
 export async function getRetentionNotes(
@@ -92,8 +80,12 @@ export async function getRetentionNotes(
 ): Promise<ReadonlyMap<string, RetentionNote>> {
   const { error } = await verifyAdminOrTrainer();
   if (error) return new Map();
+  if (!reportMonthSchema.safeParse(reportMonth).success) return new Map();
 
-  const supabase = await createClient();
+  const scope = await callerRetentionScope();
+  if (scope !== null && "error" in scope) return new Map();
+
+  const supabase = createAdminClient();
   const { data } = await typedFrom(supabase, "retention_notes")
     .select(
       "trainee_phone, note, note_color, author_id, updated_at, assigned_trainer_id",
@@ -110,7 +102,8 @@ export async function getRetentionNotes(
       assigned_trainer_id: (row.assigned_trainer_id ?? null) as string | null,
     });
   }
-  return map;
+  if (scope === null) return map;
+  return scopeRetentionNotes(map, await loadListedTrainees(reportMonth), scope);
 }
 
 const upsertNoteSchema = z.object({
@@ -131,9 +124,6 @@ export async function upsertRetentionNote(
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
-  const scopeError = await assertPhoneInScope(traineePhone);
-  if (scopeError) return { error: scopeError };
-
   const parsed = upsertNoteSchema.safeParse({
     reportMonth,
     traineePhone,
@@ -143,7 +133,10 @@ export async function upsertRetentionNote(
   });
   if (!parsed.success) return { error: "קלט לא תקין" };
 
-  const supabase = await createClient();
+  const scopeError = await assertRetentionPhoneInScope(traineePhone, reportMonth);
+  if (scopeError) return { error: scopeError };
+
+  const supabase = createAdminClient();
 
   // Empty note + no color: delete the row only if no trainer is assigned —
   // otherwise keep the row so the assignment survives a cleared note.
@@ -205,9 +198,6 @@ export async function setRetentionTrainer(
   const { error: authError, user } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
-  const scopeError = await assertPhoneInScope(traineePhone);
-  if (scopeError) return { error: scopeError };
-
   const parsed = setTrainerSchema.safeParse({
     reportMonth,
     traineePhone,
@@ -216,7 +206,10 @@ export async function setRetentionTrainer(
   });
   if (!parsed.success) return { error: "קלט לא תקין" };
 
-  const supabase = await createClient();
+  const scopeError = await assertRetentionPhoneInScope(traineePhone, reportMonth);
+  if (scopeError) return { error: scopeError };
+
+  const supabase = createAdminClient();
 
   // Clearing the trainer with no note/color left: remove the row entirely.
   if (trainerId === null) {
@@ -303,12 +296,12 @@ export async function refreshRetentionReport(
 
   try {
     const { data, refreshedAt } = await persistRetentionReport(parsed.data);
-    const visible = await callerVisiblePhones();
-    if (!(visible instanceof Set) && visible !== null) {
-      return { error: visible.error, data: null, refreshedAt: null };
+    const scope = await callerRetentionScope();
+    if (scope !== null && "error" in scope) {
+      return { error: scope.error, data: null, refreshedAt: null };
     }
     const view = await loadRetentionView(data, parsed.data);
-    return { error: null, data: scopeReport(view, visible), refreshedAt };
+    return { error: null, data: scopeRetentionView(view, scope), refreshedAt };
   } catch (err) {
     console.error("[RetentionRefresh] Failed:", err);
     const message = err instanceof Error ? err.message : "";
