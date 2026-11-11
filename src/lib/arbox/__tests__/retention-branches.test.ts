@@ -114,6 +114,28 @@ describe("withBranchAttendance", () => {
     expect(view.monthly.every((e) => e.source === "arbox")).toBe(true);
   });
 
+  it("links each row to the profile it matched, so branch scope can follow the trainee", () => {
+    const view = withBranchAttendance(
+      report([
+        entry({ user_id: 7, phone: "052-123-4567", end_date: "2026-10-23" }),
+        entry({ phone: "050-222-2222", end_date: "2026-10-22" }),
+        entry({ phone: "050-999-9999", end_date: "2026-10-21" }),
+      ]),
+      {
+        monthKeys: MONTHS,
+        profiles: [
+          profile({ id: "a", arboxUserId: 7, phone: normalizePhoneIL("0507654321") }),
+          profile({ id: "b", phone: normalizePhoneIL("0502222222") }),
+          profile({ id: "k1", kiryat: true }),
+        ],
+        calendarCounts: new Map(),
+        calendarPlanEnds: [calendarEnd({ profileId: "k1", endsOn: "2026-10-01" })],
+        reportMonth: "2026-10-01",
+      },
+    );
+    expect(view.monthly.map((e) => e.profile_id)).toEqual(["a", "b", null, "k1"]);
+  });
+
   it("adds a Kiryat Ata trainee whose plan ends this month, even with no sessions", () => {
     const view = withBranchAttendance(report([]), {
       monthKeys: MONTHS,

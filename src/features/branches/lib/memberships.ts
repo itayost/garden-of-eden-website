@@ -106,21 +106,19 @@ export async function visibleProfileIds(
 }
 
 /**
- * Normalized phones of the trainees a scope may see, or null for no
- * restriction. Retention rows come from Arbox keyed by phone, not profile id.
+ * Normalized phones of these profiles. A failed read returns no phones, so a
+ * scope built from it shows less, never more.
  */
-export async function visibleTraineePhones(
+export async function profilePhones(
   db: SupabaseClient,
-  scope: BranchScope,
-): Promise<Set<string> | null> {
-  const ids = await scopedProfileIds(db, scope);
-  if (ids === null) return null;
+  ids: readonly string[],
+): Promise<Set<string>> {
   const { data, error } = await readInChunks<{ phone: string | null }>(ids, "id", () =>
     typedFrom(db, "profiles").select("phone").not("phone", "is", null),
   );
 
   if (error) {
-    console.error("visibleTraineePhones error:", error);
+    console.error("profilePhones error:", error);
     return new Set();
   }
 

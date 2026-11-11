@@ -3,10 +3,10 @@
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhoneIL } from "@/lib/validations/common";
-import { assertPhoneInScope } from "@/lib/retention/scope";
+import { assertRetentionPhoneInScope } from "@/lib/retention/scope";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { LeadContactOutcome } from "@/types/leads";
-import { retentionCallLogSchema, type RetentionCallLogInput } from "../validations";
+import { reportMonthSchema, retentionCallLogSchema, type RetentionCallLogInput } from "../validations";
 
 /** A phone's call history is short; 50 entries covers years of retention calls. */
 const MAX_HISTORY = 50;
@@ -39,7 +39,7 @@ export async function addRetentionCallLogAction(
   const limit = await checkRateLimit(`retention-call-log:${user!.id}`, "general");
   if (limit.rateLimited) return { error: "יותר מדי בקשות, נסו שוב בעוד דקה" };
 
-  const scopeError = await assertPhoneInScope(phone);
+  const scopeError = await assertRetentionPhoneInScope(phone, reportMonth);
   if (scopeError) return { error: scopeError };
 
   const { error } = await createAdminClient().from("retention_call_log").insert({
@@ -60,13 +60,16 @@ export async function addRetentionCallLogAction(
 /** A retention customer's calls, newest first, for staff who may see that customer. */
 export async function getRetentionCallLogAction(
   rawPhone: string,
+  rawReportMonth: string,
 ): Promise<{ success: true; data: readonly RetentionCallEntry[] } | { error: string }> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
   const phone = normalizePhoneIL(rawPhone);
   if (!phone) return { error: "מספר טלפון לא תקין" };
-  const scopeError = await assertPhoneInScope(phone);
+  const reportMonth = reportMonthSchema.safeParse(rawReportMonth);
+  if (!reportMonth.success) return { error: "פורמט חודש לא תקין" };
+  const scopeError = await assertRetentionPhoneInScope(phone, reportMonth.data);
   if (scopeError) return { error: scopeError };
 
   const { data, error } = await createAdminClient()

@@ -29,6 +29,12 @@ export interface RetentionViewEntry extends RetentionEntry {
   readonly branch_attendance: BranchAttendance;
   /** arbox: from the Arbox expiring reports; calendar: a קריית אתא plan queue ending this month. */
   readonly source: "arbox" | "calendar";
+  /**
+   * The trainee profile this row belongs to: matched by Arbox id, then phone,
+   * for Arbox rows; the plan's trainee for calendar rows. Null when no profile
+   * matched. Branch scope follows it, since Arbox may list another phone.
+   */
+  readonly profile_id: string | null;
 }
 
 export interface RetentionViewData {
@@ -139,6 +145,7 @@ export function withBranchAttendance(report: RetentionReportData, input: BranchA
     return {
       ...entry,
       source: "arbox",
+      profile_id: match?.id ?? null,
       branch_attendance: branchAttendance(
         entry.attendance,
         match ? input.calendarCounts.get(match.id) : undefined,
@@ -166,6 +173,7 @@ export function withBranchAttendance(report: RetentionReportData, input: BranchA
         membership_type_name: end.planName,
         attendance: input.monthKeys.map(() => null),
         source: "calendar",
+        profile_id: end.profileId,
         branch_attendance: branchAttendance(
           [],
           input.calendarCounts.get(end.profileId),

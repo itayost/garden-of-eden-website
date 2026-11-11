@@ -28,7 +28,6 @@ import {
 import { createChurnedCustomer } from "@/lib/actions/admin-churned-customers";
 import type { TrainerOption } from "@/lib/actions/admin-trainers-list";
 import { getAttendanceMonthKeys } from "@/lib/arbox/retention";
-import { normalizePhoneIL } from "@/lib/validations/common";
 import type { RetentionEntry } from "@/lib/arbox/retention";
 import type { RetentionViewData } from "@/lib/arbox/retention-branches";
 import type {
@@ -78,7 +77,6 @@ interface RetentionPageClientProps {
   traineePositions: Readonly<Record<string, string | null>>;
   trainers: TrainerOption[];
   /** Phones of trainees the caller may see, or null for no restriction. */
-  visiblePhones: readonly string[] | null;
 }
 
 export function RetentionPageClient({
@@ -90,20 +88,7 @@ export function RetentionPageClient({
   initialChurned,
   traineePositions,
   trainers,
-  visiblePhones,
 }: RetentionPageClientProps) {
-  const visibleSet = useMemo(
-    () => (visiblePhones === null ? null : new Set(visiblePhones)),
-    [visiblePhones],
-  );
-  const inScope = useCallback(
-    (entry: RetentionEntry) => {
-      if (visibleSet === null) return true;
-      const phone = normalizePhoneIL(entry.phone);
-      return phone !== null && visibleSet.has(phone);
-    },
-    [visibleSet],
-  );
   const [allMonths, setAllMonths] =
     useState<readonly RetentionReportMonth[]>(initialMonths);
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
@@ -377,13 +362,13 @@ export function RetentionPageClient({
       <Tabs defaultValue="monthly" dir="rtl">
         <TabsList className="flex w-full justify-start md:grid md:grid-cols-4">
           <TabsTrigger value="monthly">
-            מנוי חודשי{data ? ` (${data.monthly.filter(inScope).length})` : ""}
+            מנוי חודשי{data ? ` (${data.monthly.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="pro">
-            מנוי PRO{data ? ` (${data.pro.filter(inScope).length})` : ""}
+            מנוי PRO{data ? ` (${data.pro.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="training_card">
-            כרטיסת אימונים{data ? ` (${data.training_card.filter(inScope).length})` : ""}
+            כרטיסת אימונים{data ? ` (${data.training_card.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="churned">לקוחות שעזבו</TabsTrigger>
         </TabsList>
@@ -397,7 +382,7 @@ export function RetentionPageClient({
                 {hasData ? (
                   <RetentionTable
                     reportMonth={selectedMonth}
-                    entries={data[category].filter(inScope)}
+                    entries={data[category]}
                     monthKeys={monthKeys}
                     notes={notes}
                     onSaveNote={handleSaveNote}
