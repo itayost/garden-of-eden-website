@@ -103,7 +103,9 @@ export async function getRetentionNotes(
     });
   }
   if (scope === null) return map;
-  return scopeRetentionNotes(map, await loadListedTrainees(reportMonth), scope);
+  const listed = await loadListedTrainees(reportMonth, [...map.keys()]);
+  if (listed === null) return new Map();
+  return scopeRetentionNotes(map, listed, scope);
 }
 
 const upsertNoteSchema = z.object({

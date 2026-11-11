@@ -59,12 +59,39 @@ export function arboxUserIdsForPhone(report: RetentionReportData, rawPhone: stri
   );
 }
 
+/** Trainee profiles by Arbox id and by own phone (E.164, unique among active profiles). */
+export interface TraineeIndex {
+  readonly byArboxId: ReadonlyMap<number, string>;
+  readonly byPhone: ReadonlyMap<string, string>;
+}
+
+/**
+ * The trainees a phone stands for in these reports, matched the way the
+ * report view matches rows: by the Arbox id of every row listing the phone,
+ * and by the trainee whose own phone it is. Each trainee once.
+ */
+export function traineesListedUnder(
+  reports: readonly RetentionReportData[],
+  rawPhone: string,
+  index: TraineeIndex,
+): string[] {
+  const byArbox = reports.flatMap((report) =>
+    arboxUserIdsForPhone(report, rawPhone).flatMap((id) => {
+      const trainee = index.byArboxId.get(id);
+      return trainee ? [trainee] : [];
+    }),
+  );
+  const phone = normalizePhoneIL(rawPhone);
+  const owner = phone !== null ? index.byPhone.get(phone) : undefined;
+  return [...new Set(owner ? [...byArbox, owner] : byArbox)];
+}
+
 /**
  * Whether a scoped trainer may write a note, trainer, or call under a phone.
- * listedTrainees are the trainees the month's report lists under it. A phone
- * shared with a trainee outside the trainer's branches is refused, since the
- * note on it is shared too; with nobody listed, the phone must be a trainee's
- * own phone in scope (a calendar row, or a row that matched no trainee).
+ * listedTrainees are the trainees the phone stands for (traineesListedUnder).
+ * A phone shared with a trainee outside the trainer's branches is refused,
+ * since the note on it is shared too; with nobody listed, only a trainee phone
+ * in scope passes.
  */
 export function mayWriteRetentionPhone(
   rawPhone: string,

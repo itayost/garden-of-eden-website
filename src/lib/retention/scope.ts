@@ -1,12 +1,21 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { profilePhones, scopedProfileIds } from "@/features/branches/lib/memberships";
+import { scopedProfileIds, traineePhones } from "@/features/branches/lib/memberships";
+import { normalizePhoneIL } from "@/lib/validations/common";
 import type { RetentionReportData } from "@/lib/arbox/retention";
-import { arboxUserIdsForPhone, mayWriteRetentionPhone, type RetentionScope } from "./visibility";
+import {
+  arboxUserIdsForPhone,
+  mayWriteRetentionPhone,
+  traineesListedUnder,
+  type RetentionScope,
+  type TraineeIndex,
+} from "./visibility";
 
 const OUT_OF_SCOPE = "הלקוח אינו בסניף שלך";
+const CHECK_FAILED = "לא ניתן לבדוק את הסניף של הלקוח, נסו שוב";
 
 /**
  * The trainees in the caller's branches, as ids and as phones. Null means no
@@ -19,63 +28,99 @@ export async function callerRetentionScope(): Promise<RetentionScope | null | { 
   const db = createAdminClient();
   const ids = await scopedProfileIds(db, scopeResult.data.scope);
   if (ids === null) return null;
-  return { profileIds: new Set(ids), phones: await profilePhones(db, ids) };
+  return { profileIds: new Set(ids), phones: await traineePhones(db, ids) };
 }
 
-/** Who a month's report lists under a phone, as trainee profile ids. */
+/** Who the reports list under a phone, as trainee profile ids (traineesListedUnder). */
 export type ListedTrainees = (phone: string) => readonly string[];
 
-const NOBODY: ListedTrainees = () => [];
-
-/**
- * Reads the month's report once and resolves its Arbox ids to trainees, so
- * any phone can then be checked: Arbox may list a phone that is not the
- * profile's. A failed read lists nobody, which leaves only a trainee's own
- * phone in scope to pass.
- */
-export async function loadListedTrainees(reportMonth: string): Promise<ListedTrainees> {
-  const db = createAdminClient();
-  const { data: row, error } = await db
-    .from("retention_reports")
-    .select("data")
-    .eq("report_month", reportMonth)
-    .maybeSingle();
+/** One month's stored report, or every month's when reportMonth is null. Null on a failed read. */
+async function readReports(db: SupabaseClient, reportMonth: string | null): Promise<RetentionReportData[] | null> {
+  const query = db.from("retention_reports").select("data");
+  const { data, error } = reportMonth === null ? await query : await query.eq("report_month", reportMonth);
   if (error) {
     console.error("[RetentionScope] report read failed:", error.message);
-    return NOBODY;
+    return null;
   }
-  if (!row) return NOBODY;
+  return (data ?? []).map((row) => row.data as unknown as RetentionReportData);
+}
 
-  const report = row.data as unknown as RetentionReportData;
-  const entries = [...(report.monthly ?? []), ...(report.pro ?? []), ...(report.training_card ?? [])];
-  const arboxIds = [...new Set(entries.flatMap((e) => (e.user_id !== null ? [e.user_id] : [])))];
-  if (arboxIds.length === 0) return NOBODY;
-
-  const { data: profiles, error: profileError } = await db
-    .from("profiles")
-    .select("id, arbox_user_id")
-    .in("arbox_user_id", arboxIds)
-    .eq("role", "trainee");
-  if (profileError) {
-    console.error("[RetentionScope] profile read failed:", profileError.message);
-    return NOBODY;
+/** The trainees behind these phones: by the Arbox ids the reports list them under, and by own phone. */
+async function readTraineeIndex(
+  db: SupabaseClient,
+  reports: readonly RetentionReportData[],
+  phones: readonly string[],
+): Promise<TraineeIndex | null> {
+  const arboxIds = [...new Set(phones.flatMap((phone) => reports.flatMap((r) => arboxUserIdsForPhone(r, phone))))];
+  const ownPhones = [
+    ...new Set(phones.map((phone) => normalizePhoneIL(phone)).filter((p): p is string => p !== null)),
+  ];
+  const none = { data: [], error: null };
+  const [byArbox, byPhone] = await Promise.all([
+    arboxIds.length === 0
+      ? none
+      : db.from("profiles").select("id, arbox_user_id").in("arbox_user_id", arboxIds).eq("role", "trainee"),
+    ownPhones.length === 0
+      ? none
+      : db
+          .from("profiles")
+          .select("id, phone")
+          .in("phone", ownPhones)
+          .eq("role", "trainee")
+          .is("deleted_at", null),
+  ]);
+  const failed = byArbox.error ?? byPhone.error;
+  if (failed) {
+    console.error("[RetentionScope] profile read failed:", failed.message);
+    return null;
   }
-  const traineeByArboxId = new Map((profiles ?? []).map((p) => [p.arbox_user_id, p.id]));
-  return (phone) => arboxUserIdsForPhone(report, phone).flatMap((id) => traineeByArboxId.get(id) ?? []);
+  const rows = (data: { id: string; [key: string]: unknown }[] | null) => data ?? [];
+  return {
+    byArboxId: new Map(rows(byArbox.data).map((p) => [p.arbox_user_id as number, p.id])),
+    byPhone: new Map(rows(byPhone.data).map((p) => [p.phone as string, p.id])),
+  };
 }
 
 /**
- * Trainers may annotate, reassign or call only customers inside their
- * branches (mayWriteRetentionPhone). If the report or profiles cannot be read,
- * nobody counts as listed and only a trainee's own phone in scope passes.
+ * Resolves the given phones to trainees in one month's report, or across
+ * every stored month when reportMonth is null. Null when a read failed:
+ * callers then refuse rather than guess.
  */
-export async function assertRetentionPhoneInScope(
-  traineePhone: string,
-  reportMonth: string,
-): Promise<string | null> {
+export async function loadListedTrainees(
+  reportMonth: string | null,
+  phones: readonly string[],
+): Promise<ListedTrainees | null> {
+  const db = createAdminClient();
+  const reports = await readReports(db, reportMonth);
+  if (reports === null) return null;
+  const index = await readTraineeIndex(db, reports, phones);
+  if (index === null) return null;
+  return (phone) => traineesListedUnder(reports, phone, index);
+}
+
+async function assertPhoneInScope(traineePhone: string, reportMonth: string | null): Promise<string | null> {
   const scope = await callerRetentionScope();
   if (scope === null) return null;
   if ("error" in scope) return scope.error;
-  const listed = await loadListedTrainees(reportMonth);
+  const listed = await loadListedTrainees(reportMonth, [traineePhone]);
+  if (listed === null) return CHECK_FAILED;
   return mayWriteRetentionPhone(traineePhone, listed(traineePhone), scope) ? null : OUT_OF_SCOPE;
+}
+
+/**
+ * Trainers may annotate or reassign a month's customer, or call them, only
+ * inside their branches (mayWriteRetentionPhone), judged on that month's
+ * report: notes and trainers are kept per month.
+ */
+export function assertRetentionPhoneInScope(traineePhone: string, reportMonth: string): Promise<string | null> {
+  return assertPhoneInScope(traineePhone, reportMonth);
+}
+
+/**
+ * The call log is one history per phone across all months, so reading or
+ * adding to it is judged on every stored month: a phone ever listed under a
+ * trainee outside the caller's branches is refused.
+ */
+export function assertRetentionPhoneInScopeEveryMonth(traineePhone: string): Promise<string | null> {
+  return assertPhoneInScope(traineePhone, null);
 }
