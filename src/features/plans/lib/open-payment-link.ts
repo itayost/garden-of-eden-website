@@ -75,6 +75,7 @@ export async function openPaymentLink(
 
   const agreement = await insertUnsignedAgreement(db, {
     orderId: order.id,
+    branchId: product.branch_id,
     profileId,
     parent,
     child,

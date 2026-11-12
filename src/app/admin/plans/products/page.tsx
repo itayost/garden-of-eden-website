@@ -15,7 +15,7 @@ export default async function AdminProductsPage() {
       <div>
         <h1 className="text-3xl font-bold mb-2">קטלוג מסלולים</h1>
         <p className="text-muted-foreground">
-          המחירים והתנאים שמוצגים בעמוד ההרשמה של קריית אתא
+          המחירים והתנאים שמוצגים בדפי הנחיתה ובעמוד ההרשמה של כל סניף
         </p>
       </div>
       <ProductsClient initialProducts={products} />

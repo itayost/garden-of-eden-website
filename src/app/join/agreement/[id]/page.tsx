@@ -11,6 +11,8 @@ import { AgreementSignForm } from "@/features/enrollment/components/AgreementSig
 import { awaitsCard, payPath } from "@/lib/plans/payment-link";
 import type { EnrollmentAgreement, Order } from "@/types/plans";
 import { paidNothing } from "@/lib/plans/paid";
+import { landingBranchOf } from "@/features/enrollment/lib/catalog";
+import { JoinFrame } from "@/features/enrollment/components/JoinFrame";
 
 export const metadata: Metadata = { title: "הסכם הרשמה", robots: { index: false, follow: false } };
 
@@ -32,59 +34,73 @@ export default async function AgreementPage({ params, searchParams }: PageProps)
 
   const db = createAdminClient();
   const { data: row } = (await typedFrom(db, "enrollment_agreements")
-    .select("*, order:orders(id, morning_document_url, status, payment_link_by, amount_ils)")
+    .select("*, order:orders(id, morning_document_url, status, payment_link_by, amount_ils, branch_id)")
     .eq("id", id)
     .maybeSingle()) as {
-    data: (EnrollmentAgreement & { order: Pick<Order, "id" | "morning_document_url" | "status" | "payment_link_by" | "amount_ils"> | null }) | null;
+    data:
+      | (EnrollmentAgreement & {
+          order: Pick<Order, "id" | "morning_document_url" | "status" | "payment_link_by" | "amount_ils" | "branch_id"> | null;
+        })
+      | null;
   };
   if (!row) notFound();
   const { order, ...data } = row;
+  const branch = await landingBranchOf(db, order?.branch_id ?? null);
 
   // A Payment link replaced by a newer one (or otherwise closed) is not signed here.
   if (!data.signed_at && order?.payment_link_by && order.status === "failed") {
     return (
-      <section className="space-y-2 rounded-2xl border bg-white p-4 text-sm">
-        <h1 className="text-xl font-bold">הקישור הזה הוחלף</h1>
-        <p className="text-black/60">נשלח אליכם קישור חדש לתשלום. השתמשו בקישור האחרון שקיבלתם בוואטסאפ.</p>
-      </section>
+      <JoinFrame branch={branch}>
+        <section className="space-y-2 rounded-2xl border bg-white p-4 text-sm">
+          <h1 className="text-xl font-bold">הקישור הזה הוחלף</h1>
+          <p className="text-black/60">נשלח אליכם קישור חדש לתשלום. השתמשו בקישור האחרון שקיבלתם בוואטסאפ.</p>
+        </section>
+      </JoinFrame>
     );
   }
 
   if (!data.signed_at) {
-    return <AgreementSignForm agreement={data} token={t} payment={order && awaitsCard(order) ? "card" : order && paidNothing(order) ? "free" : "paid"} />;
+    const payment = order && awaitsCard(order) ? "card" : order && paidNothing(order) ? "free" : "paid";
+    return (
+      <JoinFrame branch={branch}>
+        <AgreementSignForm agreement={data} token={t} payment={payment} branch={branch} />
+      </JoinFrame>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start gap-3 rounded-2xl border border-green-600/40 bg-green-50 p-4 text-sm">
-        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
-        <div>
-          <p className="font-medium">ההסכם חתום ושמור</p>
-          <p className="text-black/60">זה העותק שלכם. אפשר להדפיס או לשמור את הדף.</p>
-          {order && awaitsCard(order) && (
-            // A plain link: the card page needs a full load for its CSP.
-            <a
-              href={payPath(order.id)}
-              className="mt-3 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 font-medium text-white"
-            >
-              <CreditCard className="h-4 w-4" />
-              להמשך לתשלום
-            </a>
-          )}
-          {order?.morning_document_url && (
-            <a
-              href={order.morning_document_url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1 underline"
-            >
-              <FileText className="h-4 w-4" />
-              החשבונית שלכם
-            </a>
-          )}
+    <JoinFrame branch={branch}>
+      <div className="space-y-6">
+        <div className="flex items-start gap-3 rounded-2xl border border-green-600/40 bg-green-50 p-4 text-sm">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
+          <div>
+            <p className="font-medium">ההסכם חתום ושמור</p>
+            <p className="text-black/60">זה העותק שלכם. אפשר להדפיס או לשמור את הדף.</p>
+            {order && awaitsCard(order) && (
+              // A plain link: the card page needs a full load for its CSP.
+              <a
+                href={payPath(order.id)}
+                className="mt-3 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 font-medium text-white"
+              >
+                <CreditCard className="h-4 w-4" />
+                להמשך לתשלום
+              </a>
+            )}
+            {order?.morning_document_url && (
+              <a
+                href={order.morning_document_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 underline"
+              >
+                <FileText className="h-4 w-4" />
+                החשבונית שלכם
+              </a>
+            )}
+          </div>
         </div>
+        <AgreementPrintable agreement={data} />
       </div>
-      <AgreementPrintable agreement={data} />
-    </div>
+    </JoinFrame>
   );
 }

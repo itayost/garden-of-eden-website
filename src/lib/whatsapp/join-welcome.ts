@@ -1,13 +1,14 @@
 import { callWhatsAppAPI, getConfig, type WhatsAppResult } from "./api";
 
 /**
- * The welcome a new קריית אתא trainee gets after paying (issue #162), word
+ * The welcome a new trainee gets after buying on the site, at any branch
+ * (issue #162; Haifa too, owner 2026-11-09), word
  * for word from the client. The Meta template named in
  * WHATSAPP_JOIN_WELCOME_TEMPLATE_NAME must carry exactly this body, with no
  * variables; until it is approved, staff send these same words by hand.
  *
  * Not the Haifa welcome (WHATSAPP_WELCOME_TEMPLATE_NAME): that one sends
- * Arbox accounts to book in Arbox, while קריית אתא books on the site.
+ * Arbox accounts to book in Arbox, while a site sale books on the site.
  */
 export const JOIN_WELCOME_TEXT = [
   "שלום לכולם",

@@ -17,10 +17,11 @@ import type { Order } from "@/types/plans";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.edengarden.co.il";
 
 /**
- * Two messages after fulfillment: the קריית אתא welcome (book on the site) to
- * the child's login phone until one has gone out, and the plan confirmation
- * with the agreement link to the parent. Never the Haifa welcome: that one
- * sends Arbox accounts to Arbox, and its dispatcher covers only them.
+ * Two messages after fulfillment: the site welcome (book on the site) to the
+ * child's login phone until one has gone out, whichever branch sold the Plan
+ * (owner, 2026-11-09), and the plan confirmation with the agreement link to
+ * the parent. Never the Arbox welcome: that one sends Arbox accounts to
+ * Arbox, and its dispatcher covers only them.
  * Best-effort: a failed send is logged, never thrown; the money already landed.
  */
 export interface NotifyOutcome {
@@ -50,7 +51,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
     .maybeSingle()) as { data: Order | null };
   if (!order || !order.profile_id) return NOTHING;
 
-  const [{ data: agreement }, { data: profile }, { data: product }] =
+  const [{ data: agreement }, { data: profile }, { data: product }, { data: branch }] =
     await Promise.all([
       typedFrom(db, "enrollment_agreements")
         .select("id")
@@ -65,6 +66,7 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
         .select("name_he")
         .eq("id", order.product_id)
         .maybeSingle() as Promise<{ data: { name_he: string } | null }>,
+      db.from("branches").select("name_he").eq("id", order.branch_id).maybeSingle(),
     ]);
 
   let welcome: WhatsAppResult | null = null;
@@ -106,7 +108,9 @@ export async function notifyOrderFulfilled(db: SupabaseClient, orderId: string):
     console.error(`[notify] plan confirmed failed for order ${order.id}:`, confirmed.error);
   }
   // Until Meta approves the template, the same words go out by hand.
-  const shareUrl = templateMissing(confirmed) ? waShareUrl(order.payer_phone, planConfirmedText(message)) : null;
+  const shareUrl = templateMissing(confirmed)
+    ? waShareUrl(order.payer_phone, planConfirmedText({ ...message, branchName: branch?.name_he ?? null }))
+    : null;
   const welcomeShareUrl = templateMissing(welcome) ? waShareUrl(order.login_phone, JOIN_WELCOME_TEXT) : null;
   return {
     welcome,

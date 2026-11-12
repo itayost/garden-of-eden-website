@@ -38,8 +38,11 @@ export type StaffPaymentOutcome =
 /**
  * A product the caller may sell. managed: the caller is an Admin or the
  * branch's manager, so may also give a Discount or record an Arbox repair.
+ * branchName: where it is sold, for a list that spans branches.
  */
-export type SellableProduct = PlanProduct & { managed: boolean };
+export type SellableProduct = PlanProduct & { managed: boolean; branchName: string };
+
+type ProductWithBranch = PlanProduct & { branch: { name_he: string; order_index: number } | null };
 
 export interface StaffPaymentContext {
   traineeName: string;
@@ -80,19 +83,23 @@ async function sellableProducts(
   const [scopeResult, { data }] = await Promise.all([
     getBranchScopeAction(),
     typedFrom(db, "plan_products")
-      .select("*")
+      .select("*, branch:branches(name_he, order_index)")
       .or("is_active.eq.true,staff_terms.eq.true")
-      .order("order_index") as unknown as Promise<{ data: PlanProduct[] | null }>,
+      .order("order_index") as unknown as Promise<{ data: ProductWithBranch[] | null }>,
   ]);
   if ("error" in scopeResult) return { catalog: [], manualCards: [] };
   const { scope, managedBranchIds } = scopeResult.data;
-  const visible = (data ?? [])
+  const branchOrder = (p: ProductWithBranch) => p.branch?.order_index ?? Number.MAX_SAFE_INTEGER;
+  // Branch by branch (a stable sort keeps each branch's display order).
+  const visible = [...(data ?? [])]
+    .sort((a, b) => branchOrder(a) - branchOrder(b))
     .filter((p) => isInBranchScope(scope, [p.branch_id]))
     .filter((p) => traineeBranchIds === null || traineeBranchIds.includes(p.branch_id))
-    .map((p) => ({
+    .map(({ branch, ...p }) => ({
       ...p,
       price_ils: Number(p.price_ils),
       managed: canManageBranches(role, managedBranchIds, [p.branch_id]),
+      branchName: branch?.name_he ?? "",
     }));
   return {
     catalog: visible.filter((p) => !p.staff_terms),

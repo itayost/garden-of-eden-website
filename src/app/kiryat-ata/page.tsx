@@ -3,7 +3,7 @@ import {
   Navbar,
   Hero,
   About,
-  KiryatAtaServices,
+  BranchServices,
   Staff,
   Testimonials,
   FAQ,
@@ -11,7 +11,7 @@ import {
   Footer,
 } from "@/components/landing";
 import { MotionProvider } from "@/components/MotionProvider";
-import { loadKiryatAtaCatalog } from "@/features/enrollment/lib/catalog";
+import { loadLandingCatalog } from "@/features/enrollment/lib/catalog";
 import { KIRYAT_ATA_LANDING } from "../../../content/landing-kiryat-ata";
 import { BRANCH_SEO, branchMetadata } from "../../../content/seo";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
@@ -31,8 +31,8 @@ export const revalidate = 3600;
  * prices from plan_products, and every "הצטרפו" leading to /join.
  */
 export default async function KiryatAtaPage() {
-  const products = await loadKiryatAtaCatalog();
-  const { hero, about, location, faqOverrides, faqOmit } = KIRYAT_ATA_LANDING;
+  const products = await loadLandingCatalog("kiryat_ata");
+  const { hero, about, services, location, branchName, faqOverrides, faqOmit } = KIRYAT_ATA_LANDING;
 
   return (
     <MotionProvider>
@@ -57,7 +57,18 @@ export default async function KiryatAtaPage() {
           imageSrc={hero.imageSrc}
         />
         <About featureImages={about.featureImages} videoPoster={about.videoPoster} />
-        <KiryatAtaServices products={products} />
+        <BranchServices
+          branch="kiryat_ata"
+          products={products}
+          copy={{
+            branchName,
+            intro: services.subtitle,
+            highlightedSlug: services.highlightedSlug,
+            address: location.address,
+            whatsapp: location.whatsapp,
+            phoneDisplay: location.phoneDisplay,
+          }}
+        />
         <Staff />
         <Testimonials />
         <FAQ overrides={faqOverrides} omit={faqOmit} />

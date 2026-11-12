@@ -9,16 +9,22 @@ export function waShareUrl(phoneE164: string, text: string): string {
   return `https://wa.me/${phoneE164.replace(/^\+/, "")}?text=${encodeURIComponent(text)}`;
 }
 
-/** The plan_confirmation template's words, for sending by hand. */
+/**
+ * The plan_confirmation template's words, for sending by hand, naming the
+ * branch the Plan was sold at (the template itself was written for קריית אתא).
+ */
 export function planConfirmedText(params: {
   parentName: string;
   childName: string;
   planName: string;
   validity: string;
   agreementUrl: string;
+  /** branches.name_he, or null when it could not be read. */
+  branchName: string | null;
 }): string {
+  const academy = params.branchName ? `גארדן אוף עדן ${params.branchName}` : "גארדן אוף עדן";
   return [
-    `היי ${params.parentName}, הרישום של ${params.childName} למסלול ${params.planName} בגארדן אוף עדן קריית אתא נקלט.`,
+    `היי ${params.parentName}, הרישום של ${params.childName} למסלול ${params.planName} ב${academy} נקלט.`,
     params.validity ? `המסלול בתוקף עד ${params.validity}.` : "",
     `לצפייה ולחתימה על הסכם ההרשמה: ${params.agreementUrl}`,
     "צוות גארדן אוף עדן",

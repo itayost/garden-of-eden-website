@@ -12,7 +12,11 @@ function whatsapp(label: string, message: string): PosterPlan["cta"] {
   return { kind: "whatsapp", label, href: buildWhatsAppUrl(message) };
 }
 
-/** The Haifa price list, in the order and wording of the branch's published poster. */
+/**
+ * The Haifa price list, in the order and wording of the branch's published
+ * poster, with WhatsApp buttons. The Haifa page shows it only while Haifa has
+ * no active products in plan_products; otherwise BranchServices sells them.
+ */
 const plans: PosterPlan[] = [
   {
     icon: Users,

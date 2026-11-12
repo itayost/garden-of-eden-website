@@ -11,6 +11,7 @@ import { isActiveTrainee, renewalLocks, usableAccount, type RenewalLocks } from 
 import { alreadyRenewedUntil } from "@/lib/plans/plan-queue";
 import { israelToday } from "@/lib/utils/tasks";
 import { loadPlanQueues } from "../queries";
+import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
 
 export interface RenewalPrefill {
@@ -21,6 +22,11 @@ export interface RenewalPrefill {
   locks: RenewalLocks;
   /** The last day already paid for when a Plan is waiting in the queue: warn, never block. */
   renewedUntil: string | null;
+  /**
+   * The branches whose catalog the link opens, strongest first: the renewed
+   * Plan's branch, else (a link bound to the trainee) the trainee's branches.
+   */
+  branchIds: string[];
 }
 
 /**
@@ -39,9 +45,9 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
   if (!subject || "error" in subject) return null;
   const { profileId } = subject;
 
-  const [{ data: product }, { data: agreement }, { data: profile }, queues] = (await Promise.all([
+  const [{ data: product }, { data: agreement }, { data: profile }, queues, memberships] = (await Promise.all([
     subject.productId
-      ? typedFrom(db, "plan_products").select("id, is_active, once_per_trainee").eq("id", subject.productId).maybeSingle()
+      ? typedFrom(db, "plan_products").select("id, branch_id, is_active, once_per_trainee").eq("id", subject.productId).maybeSingle()
       : Promise.resolve({ data: null }),
     typedFrom(db, "enrollment_agreements")
       .select("*")
@@ -56,8 +62,9 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
       .eq("id", profileId)
       .maybeSingle(),
     loadPlanQueues(db, [profileId], israelToday()),
+    subject.productId ? Promise.resolve(new Map<string, string[]>()) : loadBranchIdsByProfile(db, [profileId]),
   ])) as [
-    { data: Pick<PlanProduct, "id" | "is_active" | "once_per_trainee"> | null },
+    { data: Pick<PlanProduct, "id" | "branch_id" | "is_active" | "once_per_trainee"> | null },
     { data: EnrollmentAgreement | null },
     {
       data: {
@@ -71,6 +78,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
       } | null;
     },
     Awaited<ReturnType<typeof loadPlanQueues>>,
+    Map<string, string[]>,
   ];
   // Checkout binds only an active trainee; the form must not lock fields the
   // server will not honour.
@@ -94,5 +102,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
   const queue = queues.get(profileId)?.queue;
   const renewedUntil = queue ? alreadyRenewedUntil(queue) : null;
 
-  return { productId, prefill, locks: renewalLocks(usable), renewedUntil };
+  const branchIds = product ? [product.branch_id] : (memberships.get(profileId) ?? []);
+
+  return { productId, prefill, locks: renewalLocks(usable), renewedUntil, branchIds };
 }

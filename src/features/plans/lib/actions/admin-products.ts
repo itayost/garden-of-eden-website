@@ -7,6 +7,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID, UUID_REGEX } from "@/lib/validations/common";
 import { productSchema, type ProductInput } from "@/lib/validations/plans-admin";
 import type { PlanProduct } from "@/types/plans";
+import { LANDING_BRANCHES } from "@/lib/branches/landing-branches";
 
 type ActionResult =
   | { success: true }
@@ -16,20 +17,23 @@ function revalidate(): void {
   revalidatePath("/admin/plans/products");
   revalidatePath("/admin/plans");
   revalidatePath("/join");
-  // The קריית אתא landing page prints these prices and is statically
-  // generated, so without this a price change is invisible to the public
-  // until the next deployment.
-  revalidatePath("/kiryat-ata");
+  // The landing pages print these prices and are statically generated, so
+  // without this a price change is invisible to the public until the next
+  // deployment.
+  for (const branch of LANDING_BRANCHES) revalidatePath(branch.path);
 }
 
-export async function listProductsAction(): Promise<PlanProduct[]> {
+/** A catalog entry with the branch it is sold at, for the admin list. */
+export type CatalogProduct = PlanProduct & { branch: { name_he: string; order_index: number } | null };
+
+export async function listProductsAction(): Promise<CatalogProduct[]> {
   const { error } = await verifyAdmin();
   if (error) return [];
   const { data } = (await typedFrom(createAdminClient(), "plan_products")
-    .select("*")
+    .select("*, branch:branches(name_he, order_index)")
     // A manual Card's placeholder is not a catalog entry.
     .eq("staff_terms", false)
-    .order("order_index")) as { data: PlanProduct[] | null };
+    .order("order_index")) as { data: CatalogProduct[] | null };
   return (data ?? []).map((p) => ({ ...p, price_ils: Number(p.price_ils) }));
 }
 
