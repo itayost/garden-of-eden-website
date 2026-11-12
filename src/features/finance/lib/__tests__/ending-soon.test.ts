@@ -3,7 +3,6 @@ import {
   endingCounts,
   endingSoonCount,
   filterEnding,
-  parseEndingFilter,
   splitEnding,
   type EndingInput,
 } from "../ending-soon";
@@ -117,11 +116,6 @@ describe("filters", () => {
     expect(filterEnding(split, "arbox").map((e) => e.profileId)).toEqual(["arbox"]);
     expect(filterEnding(split, "expired").map((e) => e.profileId)).toEqual(["gone"]);
     expect(filterEnding(split, "all")).toHaveLength(3);
-  });
-  test("an unknown ?show= is all", () => {
-    expect(parseEndingFilter("nope")).toBe("all");
-    expect(parseEndingFilter(undefined)).toBe("all");
-    expect(parseEndingFilter("expired")).toBe("expired");
   });
 });
 

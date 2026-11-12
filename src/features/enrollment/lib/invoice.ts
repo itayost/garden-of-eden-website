@@ -11,6 +11,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import type { Order, PlanProduct } from "@/types/plans";
 import { orderPlanName } from "@/lib/plans/manual-card";
 import { paidNothing } from "@/lib/plans/paid";
+import { KEEP_REFUND_FLAG_FILTER } from "@/lib/payments/page-settlement";
 
 export type InvoiceOutcome =
   | { ok: true; url: string | null; alreadyIssued: boolean }
@@ -88,9 +89,11 @@ export async function issueOrderInvoice(
   });
 
   if (!doc.ok) {
+    // Never over a refund flag (a second card charge to refund); the failure is logged by the caller.
     await typedFrom(db, "orders")
       .update({ fulfillment_error: `invoice: ${doc.error}` })
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .or(KEEP_REFUND_FLAG_FILTER);
     return { ok: false, error: doc.error, skipped: false };
   }
 

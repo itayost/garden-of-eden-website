@@ -1,23 +1,24 @@
 import "server-only";
 
-import type { CardChargeRequest, CardChargeResult } from "./provider";
-import {
-  buildDebitRequest,
-  parseDebitResponse,
-  pelecardParamX,
-  toAgorot,
-  type PelecardCredentials,
-} from "./pelecard-mapping";
+import { pelecardParamX, toAgorot, type PelecardCredentials } from "./pelecard-mapping";
 import { lookupWindow, parseCompleteTransData, parseTrxLookUp, type LookupOutcome } from "./pelecard-lookup";
+import {
+  buildInitRequest,
+  parseInitResponse,
+  parsePageTransaction,
+  parseValidateResponse,
+  type InitResult,
+  type PageOrder,
+  type PageTransaction,
+  type PageValidation,
+} from "./pelecard-page-mapping";
 
 /**
- * Pelecard adapter: the site's card page charges through Pelecard's Services
- * API on the academy's website terminal, and Isracard settles. Until the
- * terminal settings exist the page renders and validates, and a submit is
- * refused here with the card details discarded.
- *
- * Card data is only in the request body sent to Pelecard. Nothing here logs a
- * body or puts one in an error message.
+ * Pelecard adapter for the academy's website terminal (Isracard settles).
+ * The parent pays on Pelecard's own payment page (PaymentGW), framed in the
+ * card page: this module opens that page, asks what happened on it, and
+ * looks up a charge for the admin check (Services API). No card data ever
+ * passes through here. Nothing here logs a request or response body.
  */
 
 const DEFAULT_API_URL = "https://gateway21.pelecard.biz";
@@ -39,46 +40,80 @@ function apiUrl(): string {
   return (process.env.PELECARD_API_URL?.trim() || DEFAULT_API_URL).replace(/\/+$/, "");
 }
 
+function siteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.edengarden.co.il";
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message || error.name : "request failed";
+}
+
+/** POSTs JSON to Pelecard's payment page API and returns the body as text (it answers JSON as text/html). */
+async function postPaymentGW(path: string, body: Record<string, string>): Promise<string> {
+  const response = await fetch(`${apiUrl()}/PaymentGW/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.text();
+}
+
 /**
- * Charges the card once. Returns a decline or a failure when nothing was
- * charged, and throws when the outcome is unknown (timeout, network error, an
- * unreadable or ambiguous answer): the caller then keeps the order claimed
- * for an admin to reconcile rather than let the parent retry.
+ * Opens a Pelecard payment page for one order and returns its URL. No card
+ * data is involved: the parent types the card on that page. Never throws.
  */
-export async function chargeCard(request: CardChargeRequest): Promise<CardChargeResult> {
+export async function openPelecardPage(order: PageOrder): Promise<InitResult> {
   const creds = credentials();
-  if (!creds) {
-    return {
-      ok: false,
-      code: "not_configured",
-      message: "התשלום באתר ייפתח בקרוב. בינתיים אפשר להשלים את ההרשמה בוואטסאפ 052-577-9446.",
-    };
-  }
-
-  const { path, body } = buildDebitRequest(request, creds);
-  let json: unknown;
+  if (!creds) return { ok: false, reason: "not configured" };
   try {
-    json = await postService(path, body);
+    const request = buildInitRequest(
+      order,
+      { terminal: creds.terminalNumber, user: creds.user, password: creds.password },
+      siteUrl(),
+    );
+    return parseInitResponse(await postPaymentGW("init", request));
   } catch (error) {
-    throw new Error(`Pelecard ${path} failed: ${error instanceof Error ? error.message || error.name : "request error"}`);
+    return { ok: false, reason: `init failed: ${errorText(error)}` };
   }
+}
 
-  const outcome = parseDebitResponse(json, toAgorot(request.amountIls));
-  switch (outcome.kind) {
-    case "approved":
-      return { ok: true, transactionId: outcome.transactionId, approvalNumber: outcome.approvalNumber, raw: outcome.raw };
-    case "declined":
-      console.warn(
-        `[pelecard] order ${request.orderId} ${path} declined, status ${outcome.statusCode}: ${outcome.providerMessage}`,
-      );
-      return { ok: false, code: "declined", message: outcome.message };
-    case "failed":
-      console.error(
-        `[pelecard] order ${request.orderId} ${path} failed, status ${outcome.statusCode}: ${outcome.providerMessage}`,
-      );
-      return { ok: false, code: "error", message: outcome.message };
-    case "unknown":
-      throw new Error(`Pelecard ${path} outcome unknown: ${outcome.reason}`);
+/** Asks Pelecard what happened on a payment page. Never throws. */
+export async function getPageTransaction(
+  transactionId: string,
+): Promise<{ ok: true; tx: PageTransaction } | { ok: false; reason: string }> {
+  const creds = credentials();
+  if (!creds) return { ok: false, reason: "not configured" };
+  try {
+    const text = await postPaymentGW("GetTransaction", {
+      terminal: creds.terminalNumber,
+      user: creds.user,
+      password: creds.password,
+      TransactionId: transactionId,
+    });
+    return parsePageTransaction(JSON.parse(text));
+  } catch (error) {
+    return { ok: false, reason: `GetTransaction failed: ${errorText(error)}` };
+  }
+}
+
+/** Confirms a transaction belongs to this order and amount (ValidateByUniqueKey). Never throws. */
+export async function validatePagePayment(
+  confirmationKey: string,
+  orderId: string,
+  totalAgorot: number,
+): Promise<PageValidation> {
+  try {
+    const text = await postPaymentGW("ValidateByUniqueKey", {
+      ConfirmationKey: confirmationKey,
+      UniqueKey: orderId,
+      TotalX100: String(totalAgorot),
+    });
+    return parseValidateResponse(text);
+  } catch {
+    return "error";
   }
 }
 

@@ -12,6 +12,7 @@ import { issueOrderInvoice } from "@/features/enrollment/lib/invoice";
 import type { MorningWebhookEvent, Order } from "@/types/plans";
 import { orderPlanName } from "@/lib/plans/manual-card";
 import { paidNothing } from "@/lib/plans/paid";
+import { REFUND_FLAG_PREFIX, withRefundFlagged } from "@/lib/payments/page-settlement";
 
 export type AdminOrderRow = Order & {
   productName: string;
@@ -78,17 +79,24 @@ export async function listOrdersAction(): Promise<AdminOrderRow[]> {
   }
   const db = createAdminClient();
 
-  let query = typedFrom(db, "orders")
+  let recentQuery = typedFrom(db, "orders")
     .select(ORDER_SELECT)
     .order("created_at", { ascending: false })
     .limit(ORDERS_LIMIT);
-  if (managed) query = query.in("branch_id", managed);
-  const { data, error: readError } = (await query) as {
-    data: OrderJoinRow[] | null;
-    error: { message: string } | null;
-  };
-  if (readError) console.error("[admin-orders] list failed:", readError.message);
-  return (data ?? []).map(toAdminOrderRow);
+  // A payment flagged for a refund in Pelecard stays listed however old it is.
+  let flaggedQuery = typedFrom(db, "orders")
+    .select(ORDER_SELECT)
+    .like("fulfillment_error", `${REFUND_FLAG_PREFIX}%`)
+    .limit(ORDERS_LIMIT);
+  if (managed) {
+    recentQuery = recentQuery.in("branch_id", managed);
+    flaggedQuery = flaggedQuery.in("branch_id", managed);
+  }
+  type ListResult = { data: OrderJoinRow[] | null; error: { message: string } | null };
+  const [recent, flagged] = (await Promise.all([recentQuery, flaggedQuery])) as [ListResult, ListResult];
+  if (recent.error) console.error("[admin-orders] list failed:", recent.error.message);
+  if (flagged.error) console.error("[admin-orders] refund-flag list failed:", flagged.error.message);
+  return withRefundFlagged(recent.data ?? [], flagged.data ?? []).map(toAdminOrderRow);
 }
 
 /** A sale below list price, for the Admins' list. */

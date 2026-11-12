@@ -11,6 +11,7 @@ import { PAYMENT_METHOD_LABELS_HE, type PlanProduct } from "@/types/plans";
 import { insertUnsignedAgreement, type UnsignedAgreementInput } from "./unsigned-agreement";
 import { revalidateStaffSurfaces } from "./revalidate-staff";
 import { staffOrderColumns } from "./staff-order";
+import { SUPERSEDED_NOTE } from "@/lib/payments/page-settlement";
 
 export interface PaymentLinkResult {
   ok: true;
@@ -95,7 +96,7 @@ export async function openPaymentLink(
   // mean two charges. One being charged right now (charging) is left to
   // finish. If they cannot be closed, this link is not sent at all.
   const { error: supersedeError } = await typedFrom(db, "orders")
-    .update({ status: "failed", fulfillment_error: "replaced by a newer Payment link" })
+    .update({ status: "failed", fulfillment_error: SUPERSEDED_NOTE })
     .eq("profile_id", profileId)
     .not("payment_link_by", "is", null)
     .in("status", ["pending", "expired"])

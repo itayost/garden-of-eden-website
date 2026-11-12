@@ -86,12 +86,8 @@ export function endingSoonCount(inputs: readonly EndingInput[], today: string): 
   return splitEnding(inputs, today).ending.length;
 }
 
-export type EndingFilter = "all" | "link" | "reminded" | "arbox" | "expired";
-const FILTERS: readonly EndingFilter[] = ["all", "link", "reminded", "arbox", "expired"];
-
-export function parseEndingFilter(value: string | undefined): EndingFilter {
-  return FILTERS.find((f) => f === value) ?? "all";
-}
+export const ENDING_FILTERS = ["all", "link", "reminded", "arbox", "expired"] as const;
+export type EndingFilter = (typeof ENDING_FILTERS)[number];
 
 export interface EndingCounts {
   all: number;

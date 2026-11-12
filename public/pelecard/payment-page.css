@@ -1,0 +1,45 @@
+/*
+ * Pelecard's payment page (CssURL) in the academy's colors. Pelecard's own
+ * Hebrew stylesheet stays the base; only the button, the fields and the
+ * font change. #006911 is the site's --primary token (oklch 0.45 0.15 145).
+ *
+ * Every override is !important: Pelecard may load its default stylesheet
+ * after this one, and its rules have the same specificity, so without it
+ * the first live page (2026-11-09) kept the orange button.
+ */
+@import url("https://gateway20.pelecard.biz/Content/Css/variant-he-1.css");
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif !important;
+  background: #ffffff !important;
+}
+
+.form-control {
+  border-radius: 0.75rem !important;
+}
+
+.form-control:hover,
+.form-control:focus {
+  border-color: #006911 !important;
+}
+
+.form-control:focus {
+  outline: 2px solid #006911 !important;
+  outline-offset: 1px !important;
+  box-shadow: none !important;
+}
+
+.btn-submit {
+  border-color: #006911 !important;
+  border-radius: 0.75rem !important;
+  background: #006911 !important;
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+.btn-submit:hover,
+.btn-submit:focus {
+  border-color: #005a0e !important;
+  background: #005a0e !important;
+  color: #ffffff !important;
+}

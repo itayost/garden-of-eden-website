@@ -60,7 +60,7 @@ export default async function AdminLayout({
         ? countsResult.data.overdue + countsResult.data.awaitingReview
         : countsResult.data.open
       : 0;
-  const navBadges = { "/admin/tasks": taskBadge, "/admin/finance/ending-soon": endingSoon };
+  const navBadges = { "/admin/tasks": taskBadge, "/admin/retention": endingSoon };
   // The header tile stands in for every row while the drawer is shut.
   const menuBadge = Object.values(navBadges).reduce((sum, n) => sum + n, 0);
 

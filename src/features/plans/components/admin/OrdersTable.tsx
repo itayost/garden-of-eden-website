@@ -22,6 +22,7 @@ import { CreditNoteField } from "./CreditNoteField";
 import { PAYMENT_METHOD_LABELS_HE, type OrderStatus } from "@/types/plans";
 import { DiscountNote } from "./DiscountNote";
 import { paidNothing } from "@/lib/plans/paid";
+import { canCheckWithPelecard, isRefundFlag } from "@/lib/payments/page-settlement";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   pending: "ממתין לתשלום",
@@ -66,7 +67,10 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
         toast.error(result.error);
         return;
       }
-      if (result.outcome === "released") toast.success("לא נמצא חיוב. ההזמנה חזרה לתשלום");
+      if (result.outcome === "not_found") toast.info("לא נמצא חיוב בפלאקארד להזמנה הזו");
+      else if (result.outcome === "refund_flagged")
+        toast.warning("החיוב נמצא, אבל קישור אחר של החניך כבר שולם. ההזמנה סומנה להחזר בפלאקארד");
+      else if (result.outcome === "released") toast.success("לא נמצא חיוב. ההזמנה חזרה לתשלום");
       else if (result.note) toast.warning(result.note);
       else toast.success("החיוב נמצא וההזמנה הושלמה");
       router.refresh();
@@ -137,11 +141,18 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                     </Button>
                   </div>
                 )}
-                {order.status === "charging" && (
+                {isRefundFlag(order.fulfillment_error) && !(order.status === "paid" && !order.fulfilled_at) && (
+                  <p className="mt-1 text-xs font-medium text-destructive">
+                    להחזר בפלאקארד: <bdi dir="ltr">{order.fulfillment_error}</bdi>
+                  </p>
+                )}
+                {canCheckWithPelecard(order) && (
                   <div className="mt-1 space-y-1">
-                    <p className="text-xs text-destructive">
-                      {order.fulfillment_error ?? "החיוב לא הסתיים"}
-                    </p>
+                    {order.status === "charging" && (
+                      <p className="text-xs text-destructive">
+                        {order.fulfillment_error ?? "החיוב לא הסתיים"}
+                      </p>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"

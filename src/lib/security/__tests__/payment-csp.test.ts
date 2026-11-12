@@ -29,7 +29,13 @@ describe("paymentPageCsp", () => {
     expect(csp.get("script-src")).toContain("'unsafe-eval'");
   });
 
-  it("keeps card data from leaving for another origin", () => {
+  it("lets only Pelecard's payment page into a frame", () => {
+    const csp = directives(paymentPageCsp("abc123", { dev: false }));
+    // The bare host too: isPelecardPageUrl accepts it.
+    expect(csp.get("frame-src")).toBe("https://pelecard.biz https://*.pelecard.biz");
+  });
+
+  it("sends nothing to another origin", () => {
     const csp = directives(paymentPageCsp("abc123", { dev: false }));
     expect(csp.get("form-action")).toBe("'self'");
     expect(csp.get("connect-src")?.split(" ")).not.toContain("*");

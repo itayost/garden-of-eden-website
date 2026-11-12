@@ -29,6 +29,12 @@ export interface RetentionViewEntry extends RetentionEntry {
   readonly branch_attendance: BranchAttendance;
   /** arbox: from the Arbox expiring reports; calendar: a קריית אתא plan queue ending this month. */
   readonly source: "arbox" | "calendar";
+  /**
+   * The trainee profile this row belongs to: matched by Arbox id, then phone,
+   * for Arbox rows; the plan's trainee for calendar rows. Null when no profile
+   * matched. Branch scope follows it, since Arbox may list another phone.
+   */
+  readonly profile_id: string | null;
 }
 
 export interface RetentionViewData {
@@ -114,21 +120,34 @@ export interface BranchAttendanceInput {
 
 const sortByEndDate = (a: RetentionEntry, b: RetentionEntry) => b.end_date.localeCompare(a.end_date);
 
-export function withBranchAttendance(report: RetentionReportData, input: BranchAttendanceInput): RetentionViewData {
-  const byArboxId = new Map<number, RetentionProfile>();
-  const byPhone = new Map<string, RetentionProfile>();
-  for (const p of input.profiles) {
+/** What matching an Arbox row to a trainee needs; phone already normalized. */
+export type MatchableProfile = Pick<RetentionProfile, "id" | "phone" | "arboxUserId">;
+
+/**
+ * The trainee an Arbox row belongs to: by Arbox id, then by phone. The one
+ * rule for the report view and for anything that must land on the same row,
+ * such as the ending-soon tab's shared notes.
+ */
+export function retentionProfileMatcher<P extends MatchableProfile>(
+  profiles: readonly P[],
+): (entry: RetentionEntry) => P | undefined {
+  const byArboxId = new Map<number, P>();
+  const byPhone = new Map<string, P>();
+  for (const p of profiles) {
     if (p.arboxUserId !== null) byArboxId.set(p.arboxUserId, p);
     if (p.phone) byPhone.set(p.phone, p);
   }
-  const profileById = new Map(input.profiles.map((p) => [p.id, p]));
-
-  const matchProfile = (entry: RetentionEntry): RetentionProfile | undefined => {
+  return (entry) => {
     const byId = entry.user_id != null ? byArboxId.get(entry.user_id) : undefined;
     if (byId) return byId;
     const phone = normalizePhoneIL(entry.phone);
     return phone ? byPhone.get(phone) : undefined;
   };
+}
+
+export function withBranchAttendance(report: RetentionReportData, input: BranchAttendanceInput): RetentionViewData {
+  const profileById = new Map(input.profiles.map((p) => [p.id, p]));
+  const matchProfile = retentionProfileMatcher(input.profiles);
 
   const monthCount = input.monthKeys.length;
   const listed = new Set<string>();
@@ -139,6 +158,7 @@ export function withBranchAttendance(report: RetentionReportData, input: BranchA
     return {
       ...entry,
       source: "arbox",
+      profile_id: match?.id ?? null,
       branch_attendance: branchAttendance(
         entry.attendance,
         match ? input.calendarCounts.get(match.id) : undefined,
@@ -166,6 +186,7 @@ export function withBranchAttendance(report: RetentionReportData, input: BranchA
         membership_type_name: end.planName,
         attendance: input.monthKeys.map(() => null),
         source: "calendar",
+        profile_id: end.profileId,
         branch_attendance: branchAttendance(
           [],
           input.calendarCounts.get(end.profileId),
