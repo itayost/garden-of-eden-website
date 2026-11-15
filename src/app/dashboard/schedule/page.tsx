@@ -17,7 +17,7 @@ export default async function TraineeSchedulePage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <header>
         <h1 className="text-2xl font-bold">אימונים</h1>
-        <p className="text-sm text-muted-foreground">הרשמה לאימונים בסניף קריית אתא, עד שבועיים קדימה.</p>
+        <p className="text-sm text-muted-foreground">הרשמה לאימונים, עד שבועיים קדימה.</p>
       </header>
       <TraineeNotices notices={notices} />
       <PlanStrip plan={view.plan} block={view.block} canAskParent={view.canAskParent} />

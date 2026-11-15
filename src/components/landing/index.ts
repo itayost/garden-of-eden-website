@@ -2,7 +2,7 @@ export { Navbar } from "./Navbar";
 export { Hero } from "./Hero";
 export { About } from "./About";
 export { Services } from "./Services";
-export { KiryatAtaServices } from "./KiryatAtaServices";
+export { BranchServices } from "./BranchServices";
 export { Programs } from "./Programs";
 export { Staff } from "./Staff";
 export { Testimonials } from "./Testimonials";

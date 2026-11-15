@@ -10,7 +10,7 @@ import { sendFlowTemplate } from "@/lib/whatsapp/client";
  *
  * External webhook for lead creation from Zapier, landing pages, etc.
  * Authenticates via x-api-key header, validates payload with Zod,
- * checks phone uniqueness, and inserts into the leads table.
+ * refuses a phone already in any tab, and inserts into the leads table.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -85,10 +85,13 @@ export async function POST(request: NextRequest) {
       tab_id = defaultTab.id as string;
     }
 
-    // Check phone uniqueness
+    // An ad lead whose phone is already in any tab is not added again. Staff
+    // may keep one phone in several tabs, so take the first match.
     const { data: existing } = await typedFrom(supabase, "leads")
       .select("id")
       .eq("phone", phone)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (existing) {

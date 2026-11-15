@@ -215,4 +215,15 @@ describe("parseLeadsPaste", () => {
     expect(result.valid.map((r) => r.name)).toEqual(["טל", "דני", "נועה"]);
     expect(result.errors).toEqual([]);
   });
+  it("keeps an unrecognised column in additional_info under its header", () => {
+    const input = "שם\tטלפון\tתאריך סיום\nדני כהן\t0541234567\t03/12/2026";
+    const result = parseLeadsPaste(input);
+    expect(result.valid[0]).toMatchObject({ name: "דני כהן", additional_info: "תאריך סיום: 03/12/2026" });
+  });
+
+  it("adds unrecognised columns after a mapped additional_info", () => {
+    const input = "שם\tמידע נוסף\tתאריך סיום\nדני\tחבר של יוסי\t03/12/2026";
+    const result = parseLeadsPaste(input);
+    expect(result.valid[0].additional_info).toBe("חבר של יוסי · תאריך סיום: 03/12/2026");
+  });
 });

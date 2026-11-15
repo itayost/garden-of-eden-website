@@ -143,9 +143,12 @@ async function handleInit(
   if (isLeadPhone(phone)) {
     try {
       const supabase = createAdminClient();
+      // One phone may sit in several tabs; the newest lead is the one the flow went to.
       const { data: lead } = await typedFrom(supabase, "leads")
         .select("name")
         .eq("phone", phone)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (lead?.name) customerName = lead.name;
     } catch {
@@ -252,7 +255,9 @@ function extractPhoneFromToken(flowToken: string): string | null {
 }
 
 /**
- * Save a single flow field to the lead record (incremental update)
+ * Save a single flow field to the lead record (incremental update). A phone
+ * may sit in several tabs; every lead with it is the same person, so each
+ * gets the answer.
  */
 async function saveFlowField(
   phone: string,
@@ -310,10 +315,13 @@ async function saveFlowResponse(
   try {
     const supabase = createAdminClient();
 
+    // One phone may sit in several tabs; the newest lead is the one the flow went to.
     const { data: lead } = await typedFrom(supabase, "leads")
       .select("id")
       .eq("phone", phone)
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!lead) return;
 

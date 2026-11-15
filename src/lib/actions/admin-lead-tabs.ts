@@ -20,9 +20,13 @@ import {
 } from "@/lib/validations/lead-tabs";
 import { toLeadTabColor, type LeadTab } from "@/types/lead-tabs";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { chunk, readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
+import { partitionTabMove } from "@/lib/utils/plan-lead-import";
 
 type ActionResult<T> = { success: true; data: T } | { error: string };
 type VoidResult = { success: true } | { error: string };
+/** kept: leads left with the deleted tab because the destination already has their phone. */
+type DeleteTabResult = { success: true; kept: number } | { error: string };
 
 interface LeadTabRow {
   id: string;
@@ -240,7 +244,7 @@ export async function reorderLeadTabsAction(
 
 export async function deleteLeadTabAction(
   input: LeadTabDeleteInput,
-): Promise<VoidResult> {
+): Promise<DeleteTabResult> {
   const { error: authError } = await verifyAdminOrTrainer();
   if (authError) return { error: authError };
 
@@ -281,11 +285,9 @@ export async function deleteLeadTabAction(
     }
   }
 
-  const { error: moveErr } = await typedFrom(supabase, "leads")
-    .update({ tab_id: move_to_tab_id })
-    .eq("tab_id", id);
-  if (moveErr) {
-    console.error("Move leads to destination tab error:", moveErr);
+  const moved = await moveTabLeads(supabase, id, move_to_tab_id);
+  if ("error" in moved) {
+    console.error("Move leads to destination tab error:", moved.error);
     return { error: "שגיאה בהעברת הלידים" };
   }
 
@@ -298,7 +300,47 @@ export async function deleteLeadTabAction(
   }
 
   revalidatePath("/admin/leads");
-  return { success: true };
+  return { success: true, kept: moved.kept };
+}
+
+/**
+ * Moves a tab's leads to another tab. A phone is unique within a tab, so a
+ * lead whose phone the destination already has stays where it is
+ * (partitionTabMove) instead of failing the whole move.
+ */
+async function moveTabLeads(
+  supabase: SupabaseClient,
+  fromTabId: string,
+  toTabId: string,
+): Promise<{ kept: number } | { error: string }> {
+  const source = await readAllPages<{ id: string; phone: string }>(() =>
+    typedFrom(supabase, "leads").select("id, phone").eq("tab_id", fromTabId).not("phone", "is", null).order("id"),
+  );
+  if (source.error) return { error: source.error.message };
+  const sourcePhones = source.data.map((row) => row.phone);
+
+  const inDestination = await readInChunks<{ phone: string }>(sourcePhones, "phone", () =>
+    typedFrom(supabase, "leads").select("phone").eq("tab_id", toTabId),
+  );
+  if (inDestination.error) return { error: inDestination.error.message };
+  const { move, keep } = partitionTabMove(sourcePhones, new Set(inDestination.data.map((row) => row.phone)));
+
+  const phoneless = await typedFrom(supabase, "leads")
+    .update({ tab_id: toTabId })
+    .eq("tab_id", fromTabId)
+    .is("phone", null);
+  if (phoneless.error) return { error: phoneless.error.message };
+
+  for (const phones of chunk(move)) {
+    const { error } = await typedFrom(supabase, "leads")
+      .update({ tab_id: toTabId })
+      .eq("tab_id", fromTabId)
+      .in("phone", phones);
+    if (error) return { error: error.message };
+  }
+
+  const keepSet = new Set(keep);
+  return { kept: source.data.filter((row) => keepSet.has(row.phone)).length };
 }
 
 export async function assignLeadToTabAction(
@@ -327,6 +369,8 @@ export async function assignLeadToTabAction(
     .update({ tab_id: tabId })
     .eq("id", leadId);
   if (error) {
+    // 23505: a phone is unique within a tab, and the destination has this one.
+    if (error.code === "23505") return { error: "מספר הטלפון של הליד כבר קיים בטאב היעד" };
     console.error("Assign lead to tab error:", error);
     return { error: "שגיאה בשיוך הליד לטאב" };
   }

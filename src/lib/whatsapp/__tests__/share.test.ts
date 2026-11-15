@@ -15,12 +15,19 @@ describe("planConfirmedText", () => {
       planName: "כרטיסייה 10",
       validity: "9.1.2027",
       agreementUrl: "https://www.edengarden.co.il/join/agreement/x?t=y",
+      branchName: "קריית אתא",
     });
     expect(text).toContain("רונית");
     expect(text).toContain("דני");
     expect(text).toContain("כרטיסייה 10");
     expect(text).toContain("בתוקף עד 9.1.2027");
     expect(text).toContain("https://www.edengarden.co.il/join/agreement/x?t=y");
+  });
+
+  it("names the branch the Plan was sold at, or none when it is unknown", () => {
+    const base = { parentName: "רונית", childName: "דני", planName: "ללא הגבלה", validity: "", agreementUrl: "https://x" };
+    expect(planConfirmedText({ ...base, branchName: "חיפה" })).toContain("בגארדן אוף עדן חיפה נקלט");
+    expect(planConfirmedText({ ...base, branchName: null })).toContain("בגארדן אוף עדן נקלט");
   });
 });
 

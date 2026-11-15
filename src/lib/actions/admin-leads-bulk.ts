@@ -10,6 +10,7 @@ import {
   type BulkLeadImportSettings,
 } from "@/lib/validations/leads";
 import type { ParsedLeadRow } from "@/lib/utils/parse-leads-paste";
+import { leadNameKey, planLeadImport } from "@/lib/utils/plan-lead-import";
 
 export interface BulkLeadsResult {
   readonly inserted: number;
@@ -20,9 +21,10 @@ export interface BulkLeadsResult {
 const BATCH_SIZE = 100;
 
 /**
- * Bulk-create leads pasted from a spreadsheet. Each row is validated; rows whose
- * phone already exists (in the DB or earlier in the same paste) are skipped and
- * counted; the rest are inserted in batches under the chosen tab/source/status.
+ * Bulk-create leads pasted from a spreadsheet. Each row is validated; rows the
+ * target tab already holds, or that repeat earlier in the paste, are skipped
+ * and counted (planLeadImport); the rest are inserted in batches under the
+ * chosen tab/source/status.
  */
 export async function createLeadsBulk(
   rows: readonly ParsedLeadRow[],
@@ -65,44 +67,39 @@ export async function createLeadsBulk(
     return { inserted: 0, skipped: 0, errors };
   }
 
-  // Dedup against existing DB phones (one query) and within the batch.
-  const phones = validRows
-    .map((v) => v.row.phone)
-    .filter((p): p is string => p !== null);
-
-  const seen = new Set<string>();
-  if (phones.length > 0) {
-    const { data: existingRows } = await typedFrom(supabase, "leads")
-      .select("phone")
-      .in("phone", phones);
-    for (const r of existingRows ?? []) {
-      if (r.phone) seen.add(r.phone as string);
-    }
+  // Duplicates are checked against the target tab only: the same phone may
+  // sit in another tab (a monthly list pasted again into a new tab).
+  const rowsToCheck = validRows.map((v) => v.row);
+  const phones = [...new Set(rowsToCheck.map((r) => r.phone).filter((p): p is string => p !== null))];
+  const [phoneRead, nameRead] = await Promise.all([
+    phones.length > 0
+      ? typedFrom(supabase, "leads").select("phone").eq("tab_id", tab_id).in("phone", phones)
+      : Promise.resolve({ data: [], error: null }),
+    typedFrom(supabase, "leads").select("name").eq("tab_id", tab_id).is("phone", null),
+  ]);
+  if (phoneRead.error || nameRead.error) {
+    console.error("Bulk leads duplicate check error:", phoneRead.error ?? nameRead.error);
+    return { inserted: 0, skipped: 0, errors: [{ index: -1, message: "שגיאה בבדיקת כפילויות" }] };
   }
 
-  let skipped = 0;
-  const payloads: Record<string, unknown>[] = [];
-  for (const { row } of validRows) {
-    if (row.phone) {
-      if (seen.has(row.phone)) {
-        skipped++;
-        continue;
-      }
-      seen.add(row.phone);
-    }
-    payloads.push({
-      phone: row.phone,
-      name: row.name,
-      is_from_haifa: row.is_from_haifa,
-      status,
-      source,
-      tab_id,
-      note: row.note,
-      club: row.club,
-      birth_year: row.birth_year,
-      additional_info: row.additional_info,
-    });
-  }
+  const plan = planLeadImport(rowsToCheck, {
+    phones: new Set((phoneRead.data ?? []).map((r: { phone: string }) => r.phone)),
+    phonelessNames: new Set((nameRead.data ?? []).map((r: { name: string }) => leadNameKey(r.name))),
+  });
+
+  let skipped = plan.skipped;
+  const payloads: Record<string, unknown>[] = plan.insert.map((row) => ({
+    phone: row.phone,
+    name: row.name,
+    is_from_haifa: row.is_from_haifa,
+    status,
+    source,
+    tab_id,
+    note: row.note,
+    club: row.club,
+    birth_year: row.birth_year,
+    additional_info: row.additional_info,
+  }));
 
   let inserted = 0;
   for (let i = 0; i < payloads.length; i += BATCH_SIZE) {
@@ -113,7 +110,7 @@ export async function createLeadsBulk(
       continue;
     }
 
-    // A single bad row (e.g. a duplicate phone that slipped past dedup) fails
+    // A single bad row (e.g. a duplicate phone added since the check) fails
     // the whole atomic chunk — retry row-by-row so the rest still save.
     console.error("Bulk leads insert error, retrying per-row:", error);
     for (const payload of batch) {
@@ -123,7 +120,7 @@ export async function createLeadsBulk(
       if (!rowErr) {
         inserted += one?.length ?? 0;
       } else if (rowErr.code === "23505") {
-        skipped++; // unique-violation = duplicate phone
+        skipped++; // unique-violation = phone already in this tab
       } else {
         errors.push({ index: -1, message: rowErr.message });
       }

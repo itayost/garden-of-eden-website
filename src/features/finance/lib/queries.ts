@@ -25,7 +25,7 @@ import {
   type StaffRef,
   UNKNOWN_STAFF,
 } from "./income";
-import { splitEnding, type EndingInput, type EndingSplit } from "./ending-soon";
+import type { EndingInput } from "./ending-soon";
 import type { ReportRange } from "./range";
 
 export type FinanceResult<T> = { success: true; data: T } | { success: false; error: string };
@@ -216,6 +216,8 @@ export interface EndingRow extends EndingInput {
   contactPhone: string | null;
   /** contactPhone is the trainee's own number, not a parent's. */
   contactIsTrainee: boolean;
+  /** profiles.phone as stored: the key of the trainee's calendar row in the retention report. */
+  ownPhone: string | null;
   branchId: string;
   branchName: string;
   planName: string;
@@ -286,21 +288,10 @@ export const loadEndingInputs = cache(async (branchId: string | null): Promise<E
       guardianName: profile?.guardian_name ?? null,
       contactPhone: guardianPhone ?? ownPhone,
       contactIsTrainee: guardianPhone === null && ownPhone !== null,
+      ownPhone,
       branchId: view.plan.branch_id,
       branchName: branchName.get(view.plan.branch_id) ?? "",
       planName: view.product.name_he,
     };
   });
 });
-
-export async function loadEndingSoon(branchId: string | null): Promise<FinanceResult<EndingSplit<EndingRow>>> {
-  const { error } = await verifyAdmin();
-  if (error) return { success: false, error: NO_ACCESS };
-  try {
-    const rows = await loadEndingInputs(branchId);
-    return { success: true, data: splitEnding(rows, israelToday()) };
-  } catch (err) {
-    console.error("loadEndingSoon failed:", err);
-    return { success: false, error: LOAD_FAILED };
-  }
-}

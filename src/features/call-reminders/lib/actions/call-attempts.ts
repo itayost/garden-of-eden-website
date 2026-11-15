@@ -3,7 +3,7 @@
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidUUID } from "@/lib/validations/common";
-import { assertPhoneInScope } from "@/lib/retention/scope";
+import { assertRetentionPhoneInScope } from "@/lib/retention/scope";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { callTargetSchema, contactNameSchema } from "../validations";
 import {
@@ -54,7 +54,7 @@ async function resolveContactName(
     return { name: name.success ? name.data : "ליד" };
   }
 
-  const scopeError = await assertPhoneInScope(target.phone);
+  const scopeError = await assertRetentionPhoneInScope(target.phone, target.reportMonth);
   if (scopeError) return { error: scopeError };
   const name = contactNameSchema.safeParse(rawName);
   return name.success ? { name: name.data } : { error: MESSAGES.invalid };

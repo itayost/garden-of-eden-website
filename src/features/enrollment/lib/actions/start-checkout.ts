@@ -13,8 +13,8 @@ import { verifyRenewalToken } from "@/lib/plans/renewal-token";
 import { bindRenewal, isActiveTrainee, sameTraineeOrders, usableAccount } from "@/lib/plans/bound-renewal";
 import { israelToday } from "@/lib/utils/tasks";
 import { enrollmentSchema, type EnrollmentInput } from "@/lib/validations/enrollment";
-import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
 import { loadProductById } from "../catalog";
+import { termsVersionOf } from "../branch-terms";
 import { resolveRenewalSubject } from "@/features/plans/lib/renewal-subject";
 
 /**
@@ -177,6 +177,15 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
     return { error: "חבילת ההיכרות היא לשחקן חדש בלבד. בחרו מסלול אחר." };
   }
 
+  // The parent signs the תקנון of the branch the product is sold at.
+  let termsVersion: string;
+  try {
+    termsVersion = await termsVersionOf(db, product.branch_id);
+  } catch (error) {
+    console.error("startCheckout terms version lookup failed:", error);
+    return { error: "שגיאה בשמירת ההזמנה" };
+  }
+
   const { data: order, error: orderError } = (await typedFrom(db, "orders")
     .insert({
       product_id: product.id,
@@ -201,7 +210,7 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
 
   const { error: agreementError } = await typedFrom(db, "enrollment_agreements").insert({
     order_id: order.id,
-    agreement_version: TERMS_VERSION,
+    agreement_version: termsVersion,
     parent_name: data.parentName,
     parent_id_number: data.parentIdNumber.replace(/\s+/g, ""),
     parent_phone: data.payerPhone,

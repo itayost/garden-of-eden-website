@@ -9,7 +9,6 @@ import {
   Dumbbell,
   FileText,
   GraduationCap,
-  Hourglass,
   LayoutDashboard,
   ListChecks,
   MapPin,
@@ -68,7 +67,6 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     label: "דוחות כספיים",
     items: [
       { href: "/admin/finance", label: "הכנסות", icon: Wallet, exact: true, adminOnly: true },
-      { href: "/admin/finance/ending-soon", label: "מסתיימים בקרוב", icon: Hourglass, adminOnly: true },
       { href: "/admin/orders", label: "הזמנות", icon: Receipt, adminOnly: true },
     ],
   },

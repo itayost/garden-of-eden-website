@@ -48,7 +48,7 @@ export const BRANCH_SEO: Record<BranchSeo["key"], BranchSeo> = {
     phone: "+972-52-577-9446",
     email: "gardenofeden22250@gmail.com",
     openingHours: ["Su-Th 08:00-21:00", "Fr 08:00-15:00"],
-    joinUrl: "https://wa.me/972525779446",
+    joinUrl: `${SITE_URL}/join?branch=haifa`,
   },
   kiryat_ata: {
     key: "kiryat_ata",
@@ -71,7 +71,7 @@ export const BRANCH_SEO: Record<BranchSeo["key"], BranchSeo> = {
     phone: "+972-52-577-9446",
     email: "Gardenkrayot@gmail.com",
     openingHours: null,
-    joinUrl: `${SITE_URL}/join`,
+    joinUrl: `${SITE_URL}/join?branch=kiryat_ata`,
   },
 };
 

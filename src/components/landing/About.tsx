@@ -62,7 +62,7 @@ export interface AboutProps {
   videoPoster?: string;
 }
 
-export function About({ featureImages, videoPoster = "/landing/athletic.webp" }: AboutProps = {}) {
+export function About({ featureImages, videoPoster = "/landing/promo-2026-11-poster.webp" }: AboutProps = {}) {
   const [activeCategory, setActiveCategory] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
@@ -106,7 +106,8 @@ export function About({ featureImages, videoPoster = "/landing/athletic.webp" }:
                   preload="none"
                   poster={videoPoster}
                 >
-                  <source src="/landing/promo-video-720.mp4" type="video/mp4" />
+                  <source src="/landing/promo-2026-11.webm" type='video/webm; codecs="vp9, opus"' />
+                  <source src="/landing/promo-2026-11.mp4" type="video/mp4" />
                 </video>
 
                 {/* Mute/Unmute button */}

@@ -5,6 +5,7 @@ import {
   branchAttendance,
   calendarMonthCounts,
   calendarRetentionCategory,
+  retentionProfileMatcher,
   withBranchAttendance,
   type CalendarPlanEnd,
   type RetentionProfile,
@@ -114,6 +115,28 @@ describe("withBranchAttendance", () => {
     expect(view.monthly.every((e) => e.source === "arbox")).toBe(true);
   });
 
+  it("links each row to the profile it matched, so branch scope can follow the trainee", () => {
+    const view = withBranchAttendance(
+      report([
+        entry({ user_id: 7, phone: "052-123-4567", end_date: "2026-10-23" }),
+        entry({ phone: "050-222-2222", end_date: "2026-10-22" }),
+        entry({ phone: "050-999-9999", end_date: "2026-10-21" }),
+      ]),
+      {
+        monthKeys: MONTHS,
+        profiles: [
+          profile({ id: "a", arboxUserId: 7, phone: normalizePhoneIL("0507654321") }),
+          profile({ id: "b", phone: normalizePhoneIL("0502222222") }),
+          profile({ id: "k1", kiryat: true }),
+        ],
+        calendarCounts: new Map(),
+        calendarPlanEnds: [calendarEnd({ profileId: "k1", endsOn: "2026-10-01" })],
+        reportMonth: "2026-10-01",
+      },
+    );
+    expect(view.monthly.map((e) => e.profile_id)).toEqual(["a", "b", null, "k1"]);
+  });
+
   it("adds a Kiryat Ata trainee whose plan ends this month, even with no sessions", () => {
     const view = withBranchAttendance(report([]), {
       monthKeys: MONTHS,
@@ -154,5 +177,24 @@ describe("withBranchAttendance", () => {
       reportMonth: "2026-10-01",
     });
     expect(view.training_card.map((e) => e.end_date)).toEqual(["2026-10-28", "2026-10-10"]);
+  });
+});
+
+describe("retentionProfileMatcher", () => {
+  const match = retentionProfileMatcher([
+    profile({ id: "by-id", arboxUserId: 5550001 }),
+    profile({ id: "by-phone", phone: normalizePhoneIL("0521234567") }),
+  ]);
+
+  it("matches by Arbox id before phone", () => {
+    expect(match(entry({ user_id: 5550001, phone: "0521234567" }))?.id).toBe("by-id");
+  });
+
+  it("falls back to the normalized phone", () => {
+    expect(match(entry({ user_id: 5550009, phone: "0521234567" }))?.id).toBe("by-phone");
+  });
+
+  it("matches nobody on an unknown id and phone", () => {
+    expect(match(entry({ user_id: null, phone: "0507654321" }))).toBeUndefined();
   });
 });

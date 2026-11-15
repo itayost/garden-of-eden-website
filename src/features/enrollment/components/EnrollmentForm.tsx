@@ -23,9 +23,12 @@ import type { PlanProduct } from "@/types/plans";
 import type { RenewalLocks } from "@/lib/plans/bound-renewal";
 import { AgreementDeclarations } from "./AgreementDeclarations";
 import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
+import type { LandingBranchKey } from "@/lib/branches/landing-branches";
 
 interface EnrollmentFormProps {
   product: PlanProduct;
+  /** The branch the product is sold at, for its תקנון. */
+  branch: LandingBranchKey;
   prefill?: Partial<EnrollmentInput>;
   /** Renewal: child fields taken from the account, shown read-only. */
   locks?: RenewalLocks;
@@ -57,7 +60,7 @@ function loginPhoneNote(locks: RenewalLocks | undefined): string {
   return "קוד ההתחברות נשלח למספר הזה בוואטסאפ";
 }
 
-export function EnrollmentForm({ product, prefill, locks, renewalToken, onSubmit }: EnrollmentFormProps) {
+export function EnrollmentForm({ product, branch, prefill, locks, renewalToken, onSubmit }: EnrollmentFormProps) {
   const [loading, setLoading] = useState(false);
 
   // Back from the card page can restore this page from the back/forward
@@ -298,7 +301,7 @@ export function EnrollmentForm({ product, prefill, locks, renewalToken, onSubmit
 
         <Section>
           <SectionTitle step={5}>הצהרות ואישורים</SectionTitle>
-          <AgreementDeclarations control={form.control} disabled={loading} />
+          <AgreementDeclarations control={form.control} disabled={loading} termsBranch={branch} />
         </Section>
 
         <Section>

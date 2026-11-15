@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatPhoneToLocal } from "@/lib/validations/common";
 import { signAgreementSchema, type SignAgreementInput } from "@/lib/validations/agreement-sign";
 import type { EnrollmentAgreement } from "@/types/plans";
+import type { LandingBranch } from "@/lib/branches/landing-branches";
 import { signAgreementAction } from "../lib/actions/sign-agreement";
 import { AgreementDeclarations } from "./AgreementDeclarations";
 import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
@@ -53,9 +54,12 @@ export function AgreementSignForm({
   agreement,
   token,
   payment,
+  branch,
 }: {
   agreement: EnrollmentAgreement;
   token: string;
+  /** The branch the Plan is sold at, or null when its branch has no landing page. */
+  branch: LandingBranch | null;
   /**
    * paid: taken by staff. card: a Payment link, the card comes after signing.
    * free: given without charging, nothing is paid or authorized.
@@ -108,7 +112,7 @@ export function AgreementSignForm({
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-medium text-black/60">סניף קריית אתא</p>
+        {branch && <p className="text-sm font-medium text-black/60">סניף {branch.nameHe}</p>}
         <h1 className="mt-1 text-2xl font-bold sm:text-3xl">חתימה על הסכם ההרשמה</h1>
         <p className="mt-2 text-sm text-black/60">
           {INTRO[payment]}
@@ -170,7 +174,12 @@ export function AgreementSignForm({
           </Section>
 
           <Section title="הצהרות ואישורים">
-            <AgreementDeclarations control={form.control} disabled={loading} showPayment={payment !== "free"} />
+            <AgreementDeclarations
+              control={form.control}
+              disabled={loading}
+              showPayment={payment !== "free"}
+              termsBranch={branch?.key ?? null}
+            />
           </Section>
 
           <Section title="חתימה">

@@ -59,6 +59,9 @@ function DeleteBody({ tab, otherTabs, onOpenChange }: DeleteBodyProps) {
         return;
       }
       toast.success("הטאב נמחק");
+      if (result.kept > 0) {
+        toast.warning(`${result.kept} לידים לא הועברו: הטלפון שלהם כבר קיים בטאב היעד`);
+      }
       onOpenChange(false);
       router.refresh();
     });

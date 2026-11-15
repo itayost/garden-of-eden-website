@@ -7,12 +7,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { TERMS_SECTIONS, TERMS_VERSION } from "../../../../content/terms-kiryat-ata";
+import type { LandingBranchKey } from "@/lib/branches/landing-branches";
+import { termsFor } from "../../../../content/terms";
 
-export function TermsBody() {
+/** A branch's תקנון; with no branch, the קריית אתא one (termsFor). */
+export function TermsBody({ branch }: { branch: LandingBranchKey | null }) {
+  const { sections, version } = termsFor(branch);
   return (
     <div className="space-y-6 text-sm leading-6">
-      {TERMS_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <section key={section.title}>
           <h3 className="mb-2 font-bold">{section.title}</h3>
           <ul className="list-disc space-y-1 ps-5">
@@ -22,13 +25,13 @@ export function TermsBody() {
           </ul>
         </section>
       ))}
-      <p className="text-xs text-muted-foreground">גרסה {TERMS_VERSION}</p>
+      <p className="text-xs text-muted-foreground">גרסה {version}</p>
     </div>
   );
 }
 
-/** The תקנון, opened from the declaration checkbox without leaving the form. */
-export function TermsSheet() {
+/** The branch's תקנון, opened from the declaration checkbox without leaving the form. */
+export function TermsSheet({ branch }: { branch: LandingBranchKey | null }) {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -38,10 +41,10 @@ export function TermsSheet() {
       </SheetTrigger>
       <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto" dir="rtl" aria-describedby={undefined}>
         <SheetHeader>
-          <SheetTitle>תקנון סניף קריית אתא</SheetTitle>
+          <SheetTitle>{termsFor(branch).title}</SheetTitle>
         </SheetHeader>
         <div className="py-4">
-          <TermsBody />
+          <TermsBody branch={branch} />
         </div>
       </SheetContent>
     </Sheet>

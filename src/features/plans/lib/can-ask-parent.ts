@@ -7,8 +7,9 @@ import { KIRYAT_ATA_BRANCH_NAME } from "@/features/enrollment/lib/catalog";
 
 /**
  * Whether a trainee may ask the parent to buy a Plan from the app: online
- * payments are open and one of the trainee's branches sells in the /join
- * catalog. The message is a WhatsApp template (Meta approves them fast, so
+ * payments are open and the trainee is in קריית אתא with something on sale.
+ * Haifa sells on /join too since 2026-11-09, but its trainees, mostly Arbox
+ * clients, are not offered this. The message is a WhatsApp template (Meta approves them fast, so
  * nothing waits on it; owner, 2026-10-06).
  * branchIds: the trainee's branches when the caller already has them.
  */

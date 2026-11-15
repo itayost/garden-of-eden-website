@@ -104,10 +104,6 @@ const TRUTHY = new Set(["כן", "yes", "true", "1", "v", "✓"]);
  */
 const POSITIONAL_FIELDS: readonly FieldKey[] = ["name", "phone", "additional_info"];
 
-function normalizeHeaderCell(cell: string): string {
-  return cell.trim().replace(/^["']|["']$/g, "").toLowerCase();
-}
-
 /**
  * Parse a pasted spreadsheet of leads.
  *
@@ -129,7 +125,8 @@ export function parseLeadsPaste(input: string): ParseLeadsResult {
   // contains a tab — guards a single-column header sitting above tabbed data.
   const sep = rawLines.some((l) => l.includes("\t")) ? "\t" : ",";
 
-  const headerCells = rawLines[0].split(sep).map(normalizeHeaderCell);
+  const headerLabels = rawLines[0].split(sep).map((cell) => cell.trim().replace(/^["']|["']$/g, ""));
+  const headerCells = headerLabels.map((label) => label.toLowerCase());
   const mappedHeader = headerCells.map((h) => HEADER_ALIASES[h] ?? null);
 
   // Header mode is used only when row 1 has a recognised NAME column. Requiring
@@ -173,7 +170,16 @@ export function parseLeadsPaste(input: string): ParseLeadsResult {
     }
 
     const note = get("note") || null;
-    const additional_info = get("additional_info") || null;
+    // In header mode, a column we do not recognise (e.g. "תאריך סיום") is kept
+    // in additional_info under its own header instead of being dropped.
+    const extras = hasNameHeader
+      ? columns.flatMap((key, idx) => {
+          const value = key === null && idx < cells.length ? cells[idx].trim() : "";
+          if (value === "") return [];
+          return [headerLabels[idx] ? `${headerLabels[idx]}: ${value}` : value];
+        })
+      : [];
+    const additional_info = [get("additional_info"), ...extras].filter((part) => part !== "").join(" · ") || null;
     const club = get("club") || null;
     // Drop an out-of-range year rather than failing the whole row on the
     // server's birth_year (1990–2030) validation.

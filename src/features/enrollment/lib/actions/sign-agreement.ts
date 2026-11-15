@@ -8,7 +8,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { verifyAgreementToken } from "@/lib/plans/agreement-token";
 import { planTokenSecret } from "@/lib/plans/token-secret";
 import { signAgreementSchema, type SignAgreementInput } from "@/lib/validations/agreement-sign";
-import { TERMS_VERSION } from "../../../../../content/terms-kiryat-ata";
+import { termsVersionOf } from "../branch-terms";
 import { awaitsCard, payPath } from "@/lib/plans/payment-link";
 import type { EnrollmentAgreement, Order } from "@/types/plans";
 import { paidNothing } from "@/lib/plans/paid";
@@ -41,12 +41,12 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
 
   const db = createAdminClient();
   const { data: agreement } = (await typedFrom(db, "enrollment_agreements")
-    .select("id, signed_at, profile_id, order_id, order:orders(status, payment_link_by, amount_ils)")
+    .select("id, signed_at, profile_id, order_id, order:orders(status, payment_link_by, amount_ils, branch_id)")
     .eq("id", data.agreementId)
     .maybeSingle()) as {
     data:
       | (Pick<EnrollmentAgreement, "id" | "signed_at" | "profile_id" | "order_id"> & {
-          order: Pick<Order, "status" | "payment_link_by" | "amount_ils"> | null;
+          order: Pick<Order, "status" | "payment_link_by" | "amount_ils" | "branch_id"> | null;
         })
       | null;
   };
@@ -56,9 +56,20 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
     agreement.order_id && agreement.order && awaitsCard(agreement.order) ? payPath(agreement.order_id) : undefined;
   if (agreement.signed_at) return { ok: true, payUrl };
 
+  // The parent signs the תקנון of the branch the Plan is sold at, as it reads today.
+  let termsVersion: string | null = null;
+  if (agreement.order) {
+    try {
+      termsVersion = await termsVersionOf(db, agreement.order.branch_id);
+    } catch (error) {
+      console.error("[sign-agreement] terms version lookup failed:", error);
+      return { error: "שגיאה בשמירה. נסו שוב." };
+    }
+  }
+
   const { data: signed, error } = (await typedFrom(db, "enrollment_agreements")
     .update({
-      agreement_version: TERMS_VERSION,
+      ...(termsVersion ? { agreement_version: termsVersion } : {}),
       parent_name: data.parentName,
       parent_id_number: data.parentIdNumber,
       parent_email: data.parentEmail,

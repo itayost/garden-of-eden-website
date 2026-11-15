@@ -144,6 +144,7 @@ export async function recordManualPayment(
   // Unsigned: the parent completes and signs it from the WhatsApp link.
   const agreement = await insertUnsignedAgreement(db, {
     orderId: order.id,
+    branchId: product.branch_id,
     profileId: input.trainee.profileId,
     parent: input.parent,
     child: { name: input.trainee.childName, birthdate: input.trainee.childBirthdate },

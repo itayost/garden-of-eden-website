@@ -4,12 +4,15 @@ import { useState } from "react";
 import type { PlanProduct } from "@/types/plans";
 import type { EnrollmentInput } from "@/lib/validations/enrollment";
 import type { RenewalLocks } from "@/lib/plans/bound-renewal";
+import type { LandingBranchKey } from "@/lib/branches/landing-branches";
 import { startCheckoutAction } from "../lib/actions/start-checkout";
 import { AlreadyRenewedNotice } from "./AlreadyRenewedNotice";
 import { EnrollmentForm } from "./EnrollmentForm";
 import { PlanCatalog } from "./PlanCatalog";
 
 interface JoinPageClientProps {
+  /** The branch whose catalog this is; its תקנון is the one signed. */
+  branch: LandingBranchKey;
   products: PlanProduct[];
   initialProductId: string | null;
   renewalToken: string | null;
@@ -20,6 +23,7 @@ interface JoinPageClientProps {
 }
 
 export function JoinPageClient({
+  branch,
   products,
   initialProductId,
   renewalToken,
@@ -112,6 +116,7 @@ export function JoinPageClient({
           <EnrollmentForm
             key={selected.id}
             product={selected}
+            branch={branch}
             prefill={prefill}
             locks={locks}
             renewalToken={renewalToken ?? undefined}

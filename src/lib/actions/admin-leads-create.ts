@@ -15,7 +15,7 @@ type ActionResult =
  * Create a new lead
  *
  * - Validates input with Zod schema
- * - Checks phone uniqueness
+ * - Checks the phone is not already in the target tab
  * - Inserts into leads table
  */
 export async function createLeadAction(input: LeadCreateInput): Promise<ActionResult> {
@@ -57,22 +57,20 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     resolvedTabId = defaultTab.id as string;
   }
 
-  // Check phone uniqueness. The check is global (across all tabs), so surface
-  // where the existing lead lives — otherwise the admin can't find it by
-  // searching the current tab.
+  // A phone is unique within a tab; the same person may sit in another tab.
   const { data: existing } = await typedFrom(supabase, "leads")
-    .select("id, name, tab:lead_tabs!leads_tab_id_fkey(name)")
+    .select("id, name")
+    .eq("tab_id", resolvedTabId)
     .eq("phone", phone)
+    .limit(1)
     .maybeSingle();
 
   if (existing) {
     const existingName = (existing as { name?: string | null }).name;
-    const existingTab = (existing as { tab?: { name?: string | null } | null }).tab?.name;
-    const details = [existingName, existingTab].filter(Boolean).join(" · ");
     return {
-      error: details
-        ? `מספר הטלפון כבר קיים במערכת (${details})`
-        : "מספר הטלפון כבר קיים במערכת",
+      error: existingName
+        ? `מספר הטלפון כבר קיים בטאב הזה (${existingName})`
+        : "מספר הטלפון כבר קיים בטאב הזה",
     };
   }
 
@@ -99,6 +97,8 @@ export async function createLeadAction(input: LeadCreateInput): Promise<ActionRe
     .single();
 
   if (error) {
+    // 23505: the phone is already in this tab (added since the check above).
+    if (error.code === "23505") return { error: "מספר הטלפון כבר קיים בטאב הזה" };
     console.error("Create lead error:", error);
     return { error: "שגיאה ביצירת ליד" };
   }

@@ -19,7 +19,7 @@ const NULLABLE_TEXT_KEYS = new Set(["note", "club", "additional_info"]);
  *
  * - Validates with Zod schema
  * - Only includes defined fields in update
- * - Checks phone uniqueness if phone is being changed
+ * - Checks the phone is not already in the lead's tab when the phone or tab changes
  */
 export async function updateLeadAction(input: LeadUpdateInput): Promise<ActionResult> {
   const { error: authError } = await verifyAdminOrTrainer();
@@ -50,16 +50,25 @@ export async function updateLeadAction(input: LeadUpdateInput): Promise<ActionRe
 
   const updateData: Record<string, unknown> = Object.fromEntries(entries);
 
-  // If phone is changing, check uniqueness
-  if (updateData.phone) {
-    const { data: existing } = await typedFrom(supabase, "leads")
-      .select("id")
-      .eq("phone", updateData.phone)
-      .neq("id", id)
+  // A phone is unique within a tab: check when the phone or the tab changes.
+  if (updateData.phone || updateData.tab_id) {
+    const { data: current } = await typedFrom(supabase, "leads")
+      .select("phone, tab_id")
+      .eq("id", id)
       .maybeSingle();
+    if (!current) return { error: "ליד לא נמצא" };
 
-    if (existing) {
-      return { error: "מספר טלפון כבר קיים במערכת" };
+    const phone = (updateData.phone ?? current.phone) as string | null;
+    const tabId = (updateData.tab_id ?? current.tab_id) as string;
+    if (phone) {
+      const { data: existing } = await typedFrom(supabase, "leads")
+        .select("id")
+        .eq("tab_id", tabId)
+        .eq("phone", phone)
+        .neq("id", id)
+        .limit(1)
+        .maybeSingle();
+      if (existing) return { error: "מספר הטלפון כבר קיים בטאב הזה" };
     }
   }
 
@@ -70,6 +79,7 @@ export async function updateLeadAction(input: LeadUpdateInput): Promise<ActionRe
     .single();
 
   if (error) {
+    if (error.code === "23505") return { error: "מספר הטלפון כבר קיים בטאב הזה" };
     console.error("Update lead error:", error);
     return { error: "שגיאה בעדכון ליד" };
   }

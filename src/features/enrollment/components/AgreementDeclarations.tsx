@@ -4,6 +4,7 @@ import type { Control, FieldValues, Path } from "react-hook-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
+import type { LandingBranchKey } from "@/lib/branches/landing-branches";
 import { TermsSheet } from "./TermsSheet";
 
 /** The four fields every agreement form shares. */
@@ -58,9 +59,12 @@ export function AgreementDeclarations<T extends DeclarationValues>({
   control,
   disabled,
   showPayment = true,
+  termsBranch,
 }: {
   control: Control<T>;
   disabled?: boolean;
+  /** Whose תקנון the parent accepts: the branch the Plan is sold at. */
+  termsBranch: LandingBranchKey | null;
   /** False for a Plan given without charging: there is nothing to authorize. */
   showPayment?: boolean;
 }) {
@@ -71,7 +75,7 @@ export function AgreementDeclarations<T extends DeclarationValues>({
       </DeclarationField>
       <DeclarationField control={control} name="acceptsTerms" disabled={disabled}>
         <span>
-          אני מאשר/ת כי קראתי את <TermsSheet /> ואת{" "}
+          אני מאשר/ת כי קראתי את <TermsSheet branch={termsBranch} /> ואת{" "}
           <a href="/cancellation-policy" target="_blank" rel="noreferrer" className="underline underline-offset-2">
             מדיניות ביטול העסקה
           </a>{" "}

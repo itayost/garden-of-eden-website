@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isPastReportMonth } from "@/lib/utils/retention-month-list";
+import { carryNotesToReport } from "@/lib/retention/note-carry-over";
 import {
   buildRetentionReport,
   mergeRetentionReports,
@@ -63,6 +64,14 @@ export async function persistRetentionReport(
 
   if (error) {
     throw new Error(`Failed to upsert retention report: ${error.message}`);
+  }
+
+  // The report is stored either way; a failed carry-over only leaves a note
+  // where it was.
+  try {
+    await carryNotesToReport(reportMonth, data);
+  } catch (err) {
+    console.error("[RetentionReport] note carry-over failed:", err);
   }
 
   return { data, refreshedAt };
