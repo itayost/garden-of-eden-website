@@ -55,6 +55,8 @@ export async function updateTraineeHealthAction(input: HealthInput): Promise<Act
       medical_notes: parsed.data.medicalNotes,
       emergency_contact_name: parsed.data.emergencyContactName,
       emergency_contact_phone: parsed.data.emergencyContactPhone,
+      guardian_name: parsed.data.guardianName,
+      guardian_phone: parsed.data.guardianPhone,
     })
     .eq("id", parsed.data.traineeId);
   if (error) return { error: "שגיאה בשמירה" };
