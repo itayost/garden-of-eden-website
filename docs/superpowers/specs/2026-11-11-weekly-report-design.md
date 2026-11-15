@@ -141,10 +141,10 @@ Never in the Fact sheet:
 ### Parent phone
 
 - `profiles.guardian_phone` is the one parent number, as for the plan reminders. Fulfillment already copies the agreement's number into it when it is empty.
-- A Trainee under 18 without it sees, once a week until answered, a popup: why we ask (the weekly report) and a phone field. It is mounted in the trainee layout like `SurveyPromptLoader`, waits for the onboarding tour, and never opens on the same page load as a Survey.
-- The number goes through `normalizePhoneIL()` and is saved by a server action for the Trainee's own profile.
-- Staff can set or fix it: no screen edits `guardian_phone` today, so it is added to the trainee page's health sheet (`trainee-health.ts`, branch scoped) and to the admin user form.
-- A Trainee with no birthdate is asked; the popup offers "אני מעל 18", which records that no parent is needed.
+- A Trainee under 18 without it sees a card at the top of the dashboard: why we ask and a phone field. A card, not a popup, so it never competes with the Survey popup. "לא עכשיו" hides it for 7 days.
+- The number goes through `normalizePhoneIL()` and is saved by a server action for the Trainee's own profile. The Trainee's own login phone is refused, and a number already stored is never overwritten from this card.
+- Staff can set or fix it: no screen edits `guardian_phone` today, so it is added to the trainee page's "בריאות וחירום" card (`trainee-health.ts`, branch scoped).
+- A Trainee with no birthdate is asked; the card offers "אני מעל 18", which records that no parent is needed.
 
 ### Gender
 
@@ -214,9 +214,11 @@ New tables in migrations applied before the code that uses them (`npm run db:typ
 
 - **weekly_reports**: Trainee, Report week start, kind (`report` or `missed_you`), status (`pending`, `held`, `approved`, `sent`, `not_sent`), hold reasons, the Fact sheet, model, prompt version, the model's original output, the current player and parent texts, chosen drills, who edited and when, edit ratio, who approved and when (or automatic), sent at, the WhatsApp message id or skip reason, parent first opened at, player first opened at, flagged wrong (by, at, reason), sample flag. Unique (Trainee, week start).
 - **weekly_report_settings**: branch, mode (`off`, `approval`, `automatic`), birth years, changed by and at.
-- **slot_trainee_tags**: Slot, Trainee, tag, note, created by and at. Unique (Slot, Trainee, tag).
+- **slot_trainee_tags**: Slot, Trainee, tag, created by and at. Unique (Slot, Trainee, tag).
+- **slot_trainee_notes**: the one note per Slot and Trainee, who wrote it and when.
 - **trainee_checkins**: Trainee, Israel date, sleep hours, energy, soreness, created and updated at. Unique (Trainee, date).
-- **profiles**: `gender`; `guardian_not_needed` (the "אני מעל 18" answer); `guardian_prompt_seen_at`.
+- **profiles**: `gender`; `guardian_not_needed` (the "אני מעל 18" answer); `guardian_prompt_dismissed_at`.
+- **orders**: `child_gender`, from `/join`, copied to the profile by fulfillment when it has none.
 - Phase 3: **goal_proposals** (Assessment, Trainee, metric, baseline, target, reason, drills, status, decided by and at) and **book_parameter_metrics** (parameter, metric key).
 
 ## What already exists
@@ -237,7 +239,7 @@ Checked on 2026-11-11. Most ingredients are computed by pure, tested functions; 
 | Plan state | `loadPlanQueues(db, ids, today)`: `queue.current`, `queue.frozen`, `sessionsLeft`, `endsOn`; `buildRenewalUrl()`, `buildTraineePurchaseUrl()` | Nothing. |
 | Staff scope | `verifyAdminOrTrainer()`, `getBranchScopeAction()`, `visibleProfileIds()`, `readInChunks()`; `/admin/plans` is the model page | The menu badge cache must be keyed by the staff member's scope (the ending-soon badge cache is global because it is Admin only). |
 | Roster sheet | `RosterSheet.tsx`, `RosterRow.tsx` (`src/components/admin/calendar/`); `loadWritableSlot()` and `mayCorrect()` in `daily-schedule-roster.ts` | The tag chips and their action. |
-| Dashboard | `src/app/dashboard/page.tsx` card stack; `SurveyPromptLoader` and its snooze in the trainee layout | The report card (after `TraineeNotices`), the Check-in card (near `NextTrainingCard`), the parent phone popup. |
+| Dashboard | `src/app/dashboard/page.tsx` card stack; `OpenSurveysSection` as the model of a self-loading card | The report card and the parent phone card (after `TraineeNotices`), the Check-in card (before `NextTrainingCard`). |
 | Cron | `src/app/api/cron/plan-reminders/route.ts` (secret check, Israel-hour gate, stamps); crons in `vercel.json` are UTC, so each Israel time takes two entries and an hour check | The write and send routes. |
 | WhatsApp | `src/lib/whatsapp/plan-templates.ts` senders (unset template name returns an error, no throw), `templateMissing()`, `waShareUrl()`; new names go in `optionalServerVars` in `src/lib/env.ts` | Two senders. |
 | Signed link | The HMAC style of `renewal-token.ts` and `agreement-token.ts`, the secret from `planTokenSecret()` | A report token over `report.<id>.<expiry>`. Never the `t-` subject, which `verifyRenewalToken()` would accept as a purchase link. |
