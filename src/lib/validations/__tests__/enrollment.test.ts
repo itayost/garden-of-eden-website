@@ -67,8 +67,7 @@ describe("enrollmentSchema", () => {
 
 describe("enrollmentSchema gender", () => {
   it("asks for בן or בת", () => {
-    const { childGender: _omitted, ...withoutGender } = valid;
-    const result = enrollmentSchema.safeParse(withoutGender);
+    const result = enrollmentSchema.safeParse({ ...valid, childGender: undefined });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues.find((issue) => issue.path[0] === "childGender")?.message).toBe("יש לבחור בן או בת");

@@ -47,8 +47,7 @@ describe("signAgreementSchema", () => {
 
 describe("signAgreementSchema gender", () => {
   it("asks for בן or בת", () => {
-    const { childGender: _omitted, ...withoutGender } = valid;
-    const result = signAgreementSchema.safeParse(withoutGender);
+    const result = signAgreementSchema.safeParse({ ...valid, childGender: undefined });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.issues[0]?.message).toBe("יש לבחור בן או בת");
   });
