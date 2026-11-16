@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { allowedNumbers, foreignDigitsIn, normalizeNumber, numbersIn } from "../allowed-numbers";
+import { allowedNumbers, allowedNumbersIn, foreignDigitsIn, normalizeNumber, numbersIn } from "../allowed-numbers";
 import { buildFactSheet } from "../build";
 import { emptyWeek } from "./fixtures";
 
@@ -60,7 +60,14 @@ describe("allowedNumbers", () => {
       ],
       tags: [{ slotId: "slot-1", date: "2026-11-17", tag: "effort" }],
       notes: [{ slotId: "slot-1", date: "2026-11-17", note: "3 סטים" }],
-      drillCandidates: [{ id: "4b3f9a21-0c55-4e77-9d1e-777777777777", name: "קפיצות", why: null }],
+      drillCandidates: [
+        {
+          id: "4b3f9a21-0c55-4e77-9d1e-777777777777",
+          name: "סט של 65 קפיצות",
+          why: "בונה 35 אחוז יותר כוח",
+          goal: "ספרינט 10 מטר",
+        },
+      ],
     }),
   );
   const allowed = allowedNumbers(sheet);
@@ -91,5 +98,28 @@ describe("allowedNumbers", () => {
 
   test("the age group's number is a fact too", () => {
     expect(allowed.has("12")).toBe(true);
+  });
+
+  test("a number that appears only in a drill's name or 'למה' line is not allowed", () => {
+    expect(allowed.has("65")).toBe(false);
+    expect(allowed.has("35")).toBe(false);
+    expect(allowed.has(String(sheet.drills.length))).toBe(true);
+  });
+
+  test("a number that appears only in a drill's Goal label is not allowed", () => {
+    expect(allowed.has("10")).toBe(false);
+  });
+});
+
+describe("allowedNumbersIn", () => {
+  test("every number in a value, fields named id skipped", () => {
+    const allowed = allowedNumbersIn({ id: "7", value: 2.05 });
+    expect(allowed.has("2.05")).toBe(true);
+    expect(allowed.has("7")).toBe(false);
+  });
+
+  test("numbers inside nested strings and arrays count", () => {
+    const allowed = allowedNumbersIn({ facts: ["ממוצע 7,5 שעות"], nested: { count: 3 } });
+    expect([...allowed].sort()).toEqual(["3", "7.5"]);
   });
 });

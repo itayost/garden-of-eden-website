@@ -45,7 +45,7 @@ export function buildFactSheet(input: TraineeWeekInput): BuiltSheet {
     habits: habitsFacts(input.checkins, input.preForms, input.postForms),
     assessment: assessmentFacts(input.assessment),
     goals: goalFacts(input.goals),
-    drills: input.drillCandidates.map(({ id, name, why }) => ({ id, name, why })),
+    drills: input.drillCandidates.map(({ id, name, why, goal }) => ({ id, name, why, goal })),
     nextGame: input.nextGame ? { date: input.nextGame.date, opponent: input.nextGame.opponent } : null,
     hasNewMeasurement: body !== null,
     hasDietitianNote: body?.dietitianNote != null,

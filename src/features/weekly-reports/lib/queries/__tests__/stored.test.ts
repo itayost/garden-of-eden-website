@@ -89,7 +89,7 @@ describe("holdReasonsOf", () => {
 describe("offeredDrillIds", () => {
   test("keeps only the offered drills, once each, in the model's order", () => {
     const { sheet } = builtWeek();
-    const offered = { ...sheet, drills: [{ id: DRILL, name: "קפיצות", why: null }] };
+    const offered = { ...sheet, drills: [{ id: DRILL, name: "קפיצות", why: null, goal: "ספרינט 10 מטר" }] };
     expect(offeredDrillIds(offered, ["made-up", DRILL, DRILL])).toEqual([DRILL]);
     expect(offeredDrillIds(sheet, [DRILL])).toEqual([]);
   });

@@ -1,15 +1,19 @@
 /**
  * The player's side of a sent Weekly report: the dashboard card of the current
  * Report week. Read with the service role (the table has no policies) for the
- * signed-in Trainee's own id, which the dashboard got from the session.
+ * signed-in Trainee's own id, which the dashboard got from the session. The
+ * chosen drills come from the Development book by the report's ids, as on the
+ * parent page.
  */
 import "server-only";
 
+import { readDrillsByIds } from "@/features/development-book/lib/queries/drill-pool";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { BodyFacts, GoalFact } from "../fact-sheet/types";
+import type { BodyFacts, DrillCandidate, FactSheet, GoalFact } from "../fact-sheet/types";
 import { fillName, firstNameOf } from "../fill-name";
 import { lastCompletedWeekStart } from "../report-week";
-import { storedSheetOf } from "./stored";
+import type { Db } from "./read";
+import { offeredDrillIds, storedSheetOf } from "./stored";
 
 export type PlayerReport =
   | {
@@ -20,6 +24,8 @@ export type PlayerReport =
       text: string;
       goals: GoalFact[];
       body: BodyFacts | null;
+      /** The drills chosen for the report, in its order; each links to its book page. */
+      drills: DrillCandidate[];
       /** The player opened it before: no need to stamp it again. */
       opened: boolean;
     }
@@ -33,6 +39,18 @@ export type PlayerReport =
 
 const SHOWN_KINDS = ["report", "missed_you"];
 
+/** The chosen drills that the sheet offered; a failed read is logged and shows none. */
+async function readChosenDrills(db: Db, sheet: FactSheet, chosen: readonly string[]): Promise<DrillCandidate[]> {
+  const ids = offeredDrillIds(sheet, chosen);
+  if (ids.length === 0) return [];
+  try {
+    return await readDrillsByIds(db, ids);
+  } catch (error) {
+    console.error("[weekly-reports] player report drills unavailable:", error instanceof Error ? error.message : error);
+    return [];
+  }
+}
+
 /**
  * The Trainee's sent report or "התגעגענו" of the current Report week, or null.
  * An approved report that was not sent yet is not shown. A failed read is
@@ -40,10 +58,11 @@ const SHOWN_KINDS = ["report", "missed_you"];
  */
 export async function loadPlayerReport(userId: string, today: string): Promise<PlayerReport | null> {
   try {
-    const { data: row, error } = await createAdminClient()
+    const db = createAdminClient();
+    const { data: row, error } = await db
       .from("weekly_reports")
       .select(
-        "id, kind, week_start, player_text, fact_sheet, player_first_opened_at, trainee:profiles!weekly_reports_trainee_id_fkey(full_name)",
+        "id, kind, week_start, player_text, fact_sheet, drill_ids, player_first_opened_at, trainee:profiles!weekly_reports_trainee_id_fkey(full_name)",
       )
       .eq("trainee_id", userId)
       .eq("week_start", lastCompletedWeekStart(today))
@@ -73,6 +92,7 @@ export async function loadPlayerReport(userId: string, today: string): Promise<P
       text: fillName(text, firstNameOf(fullName)),
       goals: stored?.sheet.goals ?? [],
       body: stored?.body ?? null,
+      drills: stored ? await readChosenDrills(db, stored.sheet, row.drill_ids) : [],
       opened: row.player_first_opened_at !== null,
     };
   } catch (error) {

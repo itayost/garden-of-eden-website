@@ -173,7 +173,7 @@ export function FactSheetView({ sheet, body }: FactSheetViewProps) {
       <Goals goals={sheet.goals} />
       {sheet.drills.length > 0 && (
         <Section title="תרגילים מוצעים">
-          <Lines lines={sheet.drills.map((drill) => drill.name)} />
+          <Lines lines={sheet.drills.map((drill) => (drill.goal ? `${drill.name} (ליעד: ${drill.goal})` : drill.name))} />
         </Section>
       )}
       <Section title="משחק קרוב">

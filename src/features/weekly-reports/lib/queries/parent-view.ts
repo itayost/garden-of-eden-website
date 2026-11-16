@@ -10,6 +10,7 @@
  */
 import "server-only";
 
+import { readDrillsByIds } from "@/features/development-book/lib/queries/drill-pool";
 import { loadPlanQueues } from "@/features/plans/lib/queries";
 import { buildRenewalUrl } from "@/features/plans/lib/renewal-link";
 import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
@@ -45,17 +46,12 @@ function errorText(error: unknown): string {
 async function readDrills(db: Db, sheet: FactSheet | null, chosen: readonly string[]): Promise<DrillCandidate[]> {
   const ids = sheet ? offeredDrillIds(sheet, chosen) : [];
   if (ids.length === 0) return [];
-  const { data, error } = await db.from("book_drills").select("id, name_he, name_en, why_he").in("id", ids);
-  if (error) {
-    console.error(`${LOG}: book_drills read failed:`, error.message);
+  try {
+    return await readDrillsByIds(db, ids);
+  } catch (error) {
+    console.error(`${LOG}: drills read failed:`, errorText(error));
     return [];
   }
-  const byId = new Map(data.map((drill) => [drill.id, drill]));
-  return ids.flatMap((id) => {
-    const drill = byId.get(id);
-    const name = drill?.name_he?.trim() || drill?.name_en?.trim();
-    return drill && name ? [{ id, name, why: drill.why_he?.trim() || null }] : [];
-  });
 }
 
 /**

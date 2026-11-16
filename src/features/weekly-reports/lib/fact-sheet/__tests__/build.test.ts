@@ -56,7 +56,7 @@ function fullWeek(overrides: Partial<TraineeWeekInput> = {}): TraineeWeekInput {
     dietitianNote: "PLANTED-DIETITIAN להוסיף ירקות",
     goals: [goal()],
     nextGame: { date: "2026-11-22", opponent: "מכבי חיפה" },
-    drillCandidates: [{ id: "drill-1", name: "קפיצות צד", why: "זריזות" }],
+    drillCandidates: [{ id: "drill-1", name: "קפיצות צד", why: "זריזות", goal: "ספרינט 10 מטר" }],
     ...overrides,
   };
 }
@@ -76,7 +76,7 @@ describe("buildFactSheet", () => {
     expect(sheet.habits?.sleepAverage).toBe(7.5);
     expect(sheet.assessment?.improvements).toHaveLength(1);
     expect(sheet.goals).toHaveLength(1);
-    expect(sheet.drills).toEqual([{ id: "drill-1", name: "קפיצות צד", why: "זריזות" }]);
+    expect(sheet.drills).toEqual([{ id: "drill-1", name: "קפיצות צד", why: "זריזות", goal: "ספרינט 10 מטר" }]);
     expect(sheet.nextGame).toEqual({ date: "2026-11-22", opponent: "מכבי חיפה" });
     expect(sheet.hasNewMeasurement).toBe(true);
     expect(sheet.hasDietitianNote).toBe(true);
