@@ -10,6 +10,7 @@ const valid = {
   email: "dana@example.com",
   childName: "יובל כהן",
   childBirthdate: "2015-04-03",
+  childGender: "male",
   medicalNotes: "",
   emergencyContactName: "רון כהן",
   emergencyContactPhone: "0531234567",
@@ -61,5 +62,21 @@ describe("enrollmentSchema", () => {
   it("allows an empty email", () => {
     const result = enrollmentSchema.safeParse({ ...valid, email: "" });
     expect(result.success && result.data.email === null).toBe(true);
+  });
+});
+
+describe("enrollmentSchema gender", () => {
+  it("asks for בן or בת", () => {
+    const { childGender: _omitted, ...withoutGender } = valid;
+    const result = enrollmentSchema.safeParse(withoutGender);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.find((issue) => issue.path[0] === "childGender")?.message).toBe("יש לבחור בן או בת");
+    }
+  });
+
+  it("keeps the choice", () => {
+    const result = enrollmentSchema.safeParse({ ...valid, childGender: "female" });
+    expect(result.success && result.data.childGender).toBe("female");
   });
 });

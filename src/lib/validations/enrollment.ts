@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { genderField } from "@/lib/validations/gender";
 import {
   UUID_REGEX,
   formatPhoneToInternational,
@@ -71,6 +72,7 @@ export const enrollmentSchema = z
 
     childName: childNameField,
     childBirthdate: childBirthdateField,
+    childGender: genderField,
     medicalNotes: optionalText(500),
 
     emergencyContactName: z

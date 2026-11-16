@@ -99,7 +99,7 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
   if (agreement.profile_id) {
     const { data: profile } = await db
       .from("profiles")
-      .select("birthdate, guardian_name, medical_notes, emergency_contact_name, emergency_contact_phone, photo_consent")
+      .select("birthdate, gender, guardian_name, medical_notes, emergency_contact_name, emergency_contact_phone, photo_consent")
       .eq("id", agreement.profile_id)
       .maybeSingle();
     if (profile) {
@@ -111,6 +111,7 @@ export async function signAgreementAction(input: SignAgreementInput): Promise<Si
         .from("profiles")
         .update({
           birthdate: profile.birthdate ?? data.childBirthdate,
+          gender: profile.gender ?? data.childGender,
           guardian_name: placeholderGuardian ? data.parentName : profile.guardian_name,
           medical_notes: profile.medical_notes || data.medicalNotes,
           emergency_contact_name: profile.emergency_contact_name || data.emergencyContactName,

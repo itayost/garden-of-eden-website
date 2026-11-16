@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { UUID_REGEX } from "@/lib/validations/common";
 import { isValidIsraeliId } from "@/lib/validations/israeli-id";
+import { genderField } from "@/lib/validations/gender";
 import {
   childBirthdateField,
   emailOrEmpty,
@@ -28,6 +29,7 @@ export const signAgreementSchema = z.object({
     .refine(isValidIsraeliId, "מספר תעודת זהות לא תקין"),
   parentEmail: emailOrEmpty,
   childBirthdate: childBirthdateField,
+  childGender: genderField,
   medicalNotes: optionalText(500),
   emergencyContactName: name("נדרש שם איש קשר לחירום"),
   emergencyContactPhone: phoneField,

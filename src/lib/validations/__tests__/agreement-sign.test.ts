@@ -11,6 +11,7 @@ const valid = {
   parentIdNumber: "123456782",
   parentEmail: "",
   childBirthdate: "2016-05-01",
+  childGender: "female" as const,
   medicalNotes: "",
   emergencyContactName: "יוסי לוי",
   emergencyContactPhone: "0501234567",
@@ -41,5 +42,18 @@ describe("signAgreementSchema", () => {
 
   it("rejects a malformed token", () => {
     expect(signAgreementSchema.safeParse({ ...valid, token: "abc" }).success).toBe(false);
+  });
+});
+
+describe("signAgreementSchema gender", () => {
+  it("asks for בן or בת", () => {
+    const { childGender: _omitted, ...withoutGender } = valid;
+    const result = signAgreementSchema.safeParse(withoutGender);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0]?.message).toBe("יש לבחור בן או בת");
+  });
+
+  it("keeps the choice", () => {
+    expect(signAgreementSchema.parse(valid).childGender).toBe("female");
   });
 });

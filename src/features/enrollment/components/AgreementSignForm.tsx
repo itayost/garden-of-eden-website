@@ -25,6 +25,7 @@ import type { EnrollmentAgreement } from "@/types/plans";
 import type { LandingBranch } from "@/lib/branches/landing-branches";
 import { signAgreementAction } from "../lib/actions/sign-agreement";
 import { AgreementDeclarations } from "./AgreementDeclarations";
+import { GenderChoice } from "@/components/forms/GenderChoice";
 import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 
 const field = "h-12 rounded-xl text-base";
@@ -86,6 +87,7 @@ export function AgreementSignForm({
       // Nothing is charged on a free Plan: the box is hidden and the server stores false.
       authorizesPayment: payment === "free",
       photoConsent: undefined,
+      childGender: undefined,
       signatureName: "",
     },
   });
@@ -155,6 +157,9 @@ export function AgreementSignForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField control={form.control} name="childBirthdate" render={({ field: f }) => (
                 <FormItem><FormLabel required>תאריך לידה</FormLabel><FormControl><Input {...f} type="date" max={today} className={field} autoComplete="section-child bday" disabled={loading} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="childGender" render={({ field: f }) => (
+                <FormItem><FormLabel required>בן או בת</FormLabel><FormControl><GenderChoice value={f.value} onChange={f.onChange} disabled={loading} idPrefix="sign-gender" /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="medicalNotes" render={({ field: f }) => (
                 <FormItem className="sm:col-span-2"><FormLabel>אלרגיות / מגבלות רפואיות ידועות (אם קיימות)</FormLabel><FormControl><Textarea {...f} value={f.value ?? ""} rows={2} className="rounded-xl text-base" disabled={loading} /></FormControl><FormMessage /></FormItem>
