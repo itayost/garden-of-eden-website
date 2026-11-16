@@ -3,6 +3,8 @@ import { branchIdListSchema } from "@/lib/validations/branch";
 import { requireBranchForNonAdmin } from "@/lib/validations/user-create";
 import type { Profile } from "@/types/database";
 import type { FieldChange } from "@/types/activity-log";
+import { parseGender } from "@/lib/profile/gender";
+import { optionalGenderField } from "@/lib/validations/gender";
 import {
   formatPhoneToInternational,
   formatPhoneToLocal,
@@ -45,6 +47,9 @@ export const userEditSchema = z.object({
 
   club: z.string().max(100).optional().or(z.literal("")),
 
+  /** "" is not set and is stored as null; absent leaves the stored value alone. */
+  gender: optionalGenderField.optional(),
+
   role: z.enum(["trainee", "trainer", "admin"]),
 
   is_active: z.boolean(),
@@ -79,6 +84,7 @@ export function getUserEditDefaults(
     phone: formatPhoneToLocal(profile.phone),
     birthdate: profile.birthdate || "",
     club: profile.club || "",
+    gender: parseGender(profile.gender) ?? "",
     role: profile.role ?? "trainee", // the column default; the column has no NOT NULL yet
     is_active: profile.is_active, // No fallback - DB enforces NOT NULL DEFAULT TRUE
     branch_ids: [...branchIds],
@@ -134,6 +140,16 @@ export function getFieldChanges(
       field: "club",
       old_value: original.club,
       new_value: updated.club || null,
+    });
+  }
+
+  const originalGender = original.gender ?? null;
+  const updatedGender = updated.gender || null;
+  if (updated.gender !== undefined && originalGender !== updatedGender) {
+    changes.push({
+      field: "gender",
+      old_value: originalGender,
+      new_value: updatedGender,
     });
   }
 

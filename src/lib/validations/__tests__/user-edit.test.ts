@@ -97,3 +97,27 @@ describe("userEditSchema branch membership", () => {
     expect(getUserEditDefaults(PROFILE, [BRANCH]).managed_branch_ids).toEqual([]);
   });
 });
+
+describe("userEditSchema gender", () => {
+  it("defaults to no choice when the profile has none", () => {
+    expect(getUserEditDefaults(PROFILE).gender).toBe("");
+    expect(getUserEditDefaults({ ...PROFILE, gender: "female" } as Profile).gender).toBe("female");
+  });
+
+  it("records setting a gender, and nothing when it stays the same", () => {
+    const set = userEditSchema.parse({ ...getUserEditDefaults(PROFILE, [A_BRANCH]), gender: "male" });
+    expect(getFieldChanges(PROFILE, set).find((change) => change.field === "gender")).toEqual({
+      field: "gender",
+      old_value: null,
+      new_value: "male",
+    });
+    const female = { ...PROFILE, gender: "female" } as Profile;
+    const same = userEditSchema.parse(getUserEditDefaults(female, [A_BRANCH]));
+    expect(getFieldChanges(female, same).some((change) => change.field === "gender")).toBe(false);
+  });
+
+  it("refuses an unknown value", () => {
+    const result = userEditSchema.safeParse({ ...getUserEditDefaults(PROFILE, [A_BRANCH]), gender: "other" });
+    expect(result.success).toBe(false);
+  });
+});
