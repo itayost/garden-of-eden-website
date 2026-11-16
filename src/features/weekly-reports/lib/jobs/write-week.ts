@@ -29,6 +29,7 @@ import { writeDirect } from "../writer/direct";
 import type { WriteOutcome } from "../writer/output";
 import { writerModel, type WriterModel } from "../writer/request";
 import { PROMPT_VERSION } from "../writer/style-guide";
+import { runUntil } from "./run-until";
 import { buildSheets, planWeek } from "./week-plan";
 import { countRows, weekRows, type RowCounts } from "./week-rows";
 
@@ -128,31 +129,6 @@ function refreshQueue(): void {
   } catch (error) {
     console.error(`${LOG} revalidate failed:`, error);
   }
-}
-
-/**
- * Runs `work` over the items, `limit` at a time, starting an item only while
- * the clock is before `deadline` (epoch ms). Returns the results of the items
- * started; the rest are left for the next run.
- */
-async function runUntil<T, R>(
-  items: readonly T[],
-  limit: number,
-  deadline: number,
-  work: (item: T) => Promise<R>,
-): Promise<R[]> {
-  let next = 0;
-  const lane = async (): Promise<R[]> => {
-    let done: R[] = [];
-    while (next < items.length && Date.now() < deadline) {
-      const item = items[next];
-      next += 1;
-      done = [...done, await work(item)];
-    }
-    return done;
-  };
-  const lanes = await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
-  return lanes.flat();
 }
 
 // ---------------------------------------------------------------------------
