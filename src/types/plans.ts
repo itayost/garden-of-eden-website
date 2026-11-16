@@ -62,6 +62,8 @@ export interface Order {
   child_name: string;
   /** ISO YYYY-MM-DD; null for a staff signup until the parent signs. */
   child_birthdate: string | null;
+  /** What /join recorded; null for staff sales and orders before 2026-11. */
+  child_gender: "male" | "female" | null;
   email: string | null;
   profile_id: string | null;
   renewal_of_plan_id: string | null;

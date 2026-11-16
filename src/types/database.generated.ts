@@ -2133,6 +2133,7 @@ export type Database = {
           cheque_bank: string | null
           cheque_branch: string | null
           child_birthdate: string | null
+          child_gender: string | null
           child_name: string
           created_at: string
           currency: string
@@ -2179,6 +2180,7 @@ export type Database = {
           cheque_bank?: string | null
           cheque_branch?: string | null
           child_birthdate?: string | null
+          child_gender?: string | null
           child_name: string
           created_at?: string
           currency?: string
@@ -2225,6 +2227,7 @@ export type Database = {
           cheque_bank?: string | null
           cheque_branch?: string | null
           child_birthdate?: string | null
+          child_gender?: string | null
           child_name?: string
           created_at?: string
           currency?: string
@@ -3323,8 +3326,11 @@ export type Database = {
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           full_name: string | null
+          gender: string | null
           guardian_name: string | null
+          guardian_not_needed: boolean
           guardian_phone: string | null
+          guardian_prompt_dismissed_at: string | null
           id: string
           is_active: boolean
           medical_notes: string | null
@@ -3357,8 +3363,11 @@ export type Database = {
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           full_name?: string | null
+          gender?: string | null
           guardian_name?: string | null
+          guardian_not_needed?: boolean
           guardian_phone?: string | null
+          guardian_prompt_dismissed_at?: string | null
           id: string
           is_active?: boolean
           medical_notes?: string | null
@@ -3391,8 +3400,11 @@ export type Database = {
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           full_name?: string | null
+          gender?: string | null
           guardian_name?: string | null
+          guardian_not_needed?: boolean
           guardian_phone?: string | null
+          guardian_prompt_dismissed_at?: string | null
           id?: string
           is_active?: boolean
           medical_notes?: string | null
@@ -3691,6 +3703,101 @@ export type Database = {
             columns: ["target_shift_id"]
             isOneToOne: false
             referencedRelation: "trainer_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slot_trainee_notes: {
+        Row: {
+          note: string
+          slot_id: string
+          trainee_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          note: string
+          slot_id: string
+          trainee_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          note?: string
+          slot_id?: string
+          trainee_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slot_trainee_notes_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "daily_schedule_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slot_trainee_notes_trainee_id_fkey"
+            columns: ["trainee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slot_trainee_notes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slot_trainee_tags: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          slot_id: string
+          tag: string
+          trainee_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          slot_id: string
+          tag: string
+          trainee_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          slot_id?: string
+          tag?: string
+          trainee_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slot_trainee_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slot_trainee_tags_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "daily_schedule_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slot_trainee_tags_trainee_id_fkey"
+            columns: ["trainee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4040,6 +4147,47 @@ export type Database = {
           {
             foreignKeyName: "surveys_published_by_fkey"
             columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainee_checkins: {
+        Row: {
+          checkin_date: string
+          created_at: string
+          energy: number
+          id: string
+          sleep_hours: number
+          soreness: boolean
+          trainee_id: string
+          updated_at: string
+        }
+        Insert: {
+          checkin_date: string
+          created_at?: string
+          energy: number
+          id?: string
+          sleep_hours: number
+          soreness: boolean
+          trainee_id: string
+          updated_at?: string
+        }
+        Update: {
+          checkin_date?: string
+          created_at?: string
+          energy?: number
+          id?: string
+          sleep_hours?: number
+          soreness?: boolean
+          trainee_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainee_checkins_trainee_id_fkey"
+            columns: ["trainee_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
