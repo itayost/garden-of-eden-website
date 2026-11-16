@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Dumbbell, MapPin, Pencil, Trash2, Users } from "lucide-react";
+import { Dumbbell, MapPin, Pencil, Tags, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -49,6 +49,9 @@ import { rosterRemovalMode } from "@/lib/schedule/roster-entry";
 import { israelMinutesOfDay } from "@/lib/utils/israel-time";
 import { israelToday } from "@/lib/utils/tasks";
 import { PastSlotPanel } from "./PastSlotPanel";
+import { QuickTagChips } from "@/features/quick-tags/components/QuickTagChips";
+import { useSlotTags } from "@/features/quick-tags/hooks/useSlotTags";
+import { tagWindowRefusal } from "@/features/quick-tags/lib/tags";
 import { rosterName } from "@/lib/schedule/roster-name";
 
 interface RosterSheetProps {
@@ -96,6 +99,9 @@ export function RosterSheet({
   const [sessions, setSessions] = useState<Record<string, RosterSession>>({});
   const [sessionsState, setSessionsState] = useState<"loading" | "ready" | "error">("loading");
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
+  // Quick tags: the sheet loads them only while tag mode is on.
+  const [tagMode, setTagMode] = useState(false);
+  const slotTags = useSlotTags(slot?.id ?? null, tagMode);
   // Removing from an hour that already happened is recorded, with a reason.
   const [removalFor, setRemovalFor] = useState<SlotTrainee | null>(null);
   const [removalReason, setRemovalReason] = useState("");
@@ -169,6 +175,7 @@ export function RosterSheet({
   };
 
   const started = slot ? rosterRemovalMode(slot, { date: israelToday(), minutes: israelMinutesOfDay(new Date()) }) === "record" : false;
+  const tagsOpen = tagWindowRefusal(slot, { date: israelToday(), minutes: israelMinutesOfDay(new Date()) }) === null;
 
   const remove = async (entry: SlotTrainee, reason?: string) => {
     if (started && reason === undefined) {
@@ -357,6 +364,19 @@ export function RosterSheet({
               </span>
             </Link>
 
+            {tagsOpen && active.some((t) => t.trainee_id !== null) && (
+              <Button
+                variant={tagMode ? "default" : "outline"}
+                size="sm"
+                className="self-start"
+                aria-pressed={tagMode}
+                onClick={() => setTagMode((on) => !on)}
+              >
+                <Tags className="h-4 w-4" />
+                תגיות
+              </Button>
+            )}
+
             {active.length === 0 ? (
               <p className="rounded-xl border border-dashed py-6 text-center text-sm text-muted-foreground">
                 אין רשומים לסלוט הזה
@@ -378,6 +398,18 @@ export function RosterSheet({
                     onOpenPlan={() => setPlanFor({ id: entry.trainee_id!, name: entry.trainee_name })}
                     onOpenHealth={() => setHealthFor({ id: entry.trainee_id!, name: entry.trainee_name })}
                     builderHref={`/admin/schedule/session/${entry.trainee_id}?date=${slot.schedule_date}&slot=${slot.id}&branch=${branchId}`}
+                    tagsSlot={
+                      tagMode && tagsOpen && entry.trainee_id ? (
+                        <QuickTagChips
+                          key={`${entry.trainee_id}-${slotTags.state}`}
+                          value={slotTags.tags[entry.trainee_id]}
+                          onToggle={(tag) => slotTags.toggle(entry.trainee_id!, tag)}
+                          onSaveNote={(note) => slotTags.saveNote(entry.trainee_id!, note)}
+                          disabled={slotTags.state !== "ready"}
+                          traineeName={entry.trainee_name}
+                        />
+                      ) : undefined
+                    }
                   />
                 ))}
               </ul>
