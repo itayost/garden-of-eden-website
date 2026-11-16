@@ -140,6 +140,20 @@ const arboxSyncLimiter = redis
   : null;
 
 /**
+ * "כתוב מחדש" in the weekly report queue: 20 rewrites per hour per staff
+ * member. A rewrite costs a little API credit, not money or a message, so it
+ * fails open like the general limiter.
+ */
+const weeklyRewriteLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(20, "1 h"),
+      prefix: "goe:weekly-rewrite",
+      analytics: true,
+    })
+  : null;
+
+/**
  * General rate limiter: 100 requests per minute
  * Used for standard API endpoints
  */
@@ -181,6 +195,7 @@ const LIMITERS = {
   booking: bookingLimiter,
   purchase_request: purchaseRequestLimiter,
   arbox_sync: arboxSyncLimiter,
+  weekly_rewrite: weeklyRewriteLimiter,
   general: generalLimiter,
 } as const;
 

@@ -5188,6 +5188,228 @@ export type Database = {
           },
         ]
       }
+      weekly_report_runs: {
+        Row: {
+          batch_collected_at: string | null
+          batch_id: string | null
+          finished_at: string | null
+          model: string
+          prompt_version: string
+          started_at: string
+          week_start: string
+        }
+        Insert: {
+          batch_collected_at?: string | null
+          batch_id?: string | null
+          finished_at?: string | null
+          model: string
+          prompt_version: string
+          started_at?: string
+          week_start: string
+        }
+        Update: {
+          batch_collected_at?: string | null
+          batch_id?: string | null
+          finished_at?: string | null
+          model?: string
+          prompt_version?: string
+          started_at?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
+      weekly_report_settings: {
+        Row: {
+          birth_years: number[] | null
+          branch_id: string
+          changed_at: string
+          changed_by: string | null
+          missed_you: boolean
+          mode: string
+        }
+        Insert: {
+          birth_years?: number[] | null
+          branch_id: string
+          changed_at?: string
+          changed_by?: string | null
+          missed_you?: boolean
+          mode?: string
+        }
+        Update: {
+          birth_years?: number[] | null
+          branch_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          missed_you?: boolean
+          mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_report_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_report_settings_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_reports: {
+        Row: {
+          approved_at: string | null
+          approved_automatically: boolean
+          approved_by: string | null
+          branch_ids: string[]
+          created_at: string
+          drill_ids: string[]
+          edit_ratio: number | null
+          edited_at: string | null
+          edited_by: string | null
+          fact_sheet: Json | null
+          flagged_wrong_at: string | null
+          flagged_wrong_by: string | null
+          flagged_wrong_reason: string | null
+          held_at: string | null
+          held_by: string | null
+          hold_reasons: Json
+          id: string
+          kind: string
+          model: string | null
+          original_output: Json | null
+          parent_first_opened_at: string | null
+          parent_message_id: string | null
+          parent_skip_reason: string | null
+          parent_text: string | null
+          player_first_opened_at: string | null
+          player_text: string | null
+          prompt_version: string | null
+          sampled: boolean
+          sent_at: string | null
+          status: string
+          trainee_id: string
+          updated_at: string
+          usage: Json | null
+          week_start: string
+          written_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_automatically?: boolean
+          approved_by?: string | null
+          branch_ids: string[]
+          created_at?: string
+          drill_ids?: string[]
+          edit_ratio?: number | null
+          edited_at?: string | null
+          edited_by?: string | null
+          fact_sheet?: Json | null
+          flagged_wrong_at?: string | null
+          flagged_wrong_by?: string | null
+          flagged_wrong_reason?: string | null
+          held_at?: string | null
+          held_by?: string | null
+          hold_reasons?: Json
+          id?: string
+          kind: string
+          model?: string | null
+          original_output?: Json | null
+          parent_first_opened_at?: string | null
+          parent_message_id?: string | null
+          parent_skip_reason?: string | null
+          parent_text?: string | null
+          player_first_opened_at?: string | null
+          player_text?: string | null
+          prompt_version?: string | null
+          sampled?: boolean
+          sent_at?: string | null
+          status: string
+          trainee_id: string
+          updated_at?: string
+          usage?: Json | null
+          week_start: string
+          written_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_automatically?: boolean
+          approved_by?: string | null
+          branch_ids?: string[]
+          created_at?: string
+          drill_ids?: string[]
+          edit_ratio?: number | null
+          edited_at?: string | null
+          edited_by?: string | null
+          fact_sheet?: Json | null
+          flagged_wrong_at?: string | null
+          flagged_wrong_by?: string | null
+          flagged_wrong_reason?: string | null
+          held_at?: string | null
+          held_by?: string | null
+          hold_reasons?: Json
+          id?: string
+          kind?: string
+          model?: string | null
+          original_output?: Json | null
+          parent_first_opened_at?: string | null
+          parent_message_id?: string | null
+          parent_skip_reason?: string | null
+          parent_text?: string | null
+          player_first_opened_at?: string | null
+          player_text?: string | null
+          prompt_version?: string | null
+          sampled?: boolean
+          sent_at?: string | null
+          status?: string
+          trainee_id?: string
+          updated_at?: string
+          usage?: Json | null
+          week_start?: string
+          written_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reports_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_reports_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_reports_flagged_wrong_by_fkey"
+            columns: ["flagged_wrong_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_reports_held_by_fkey"
+            columns: ["held_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_reports_trainee_id_fkey"
+            columns: ["trainee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weekly_schedule_band_trainers: {
         Row: {
           band_id: string

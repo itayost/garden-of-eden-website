@@ -165,3 +165,47 @@ export async function sendPurchaseRequest(
   const { token, phoneNumberId } = getConfig();
   return callWhatsAppAPI(phoneNumberId, token, templateMessage(phone, templateName, [params.parentName, params.childName, params.url]));
 }
+
+const weeklyReportTemplateName = () => process.env.WHATSAPP_WEEKLY_REPORT_TEMPLATE_NAME?.trim() || null;
+const missedYouTemplateName = () => process.env.WHATSAPP_MISSED_YOU_TEMPLATE_NAME?.trim() || null;
+
+/**
+ * Whether the template a sent Weekly report ("report") or "התגעגענו"
+ * ("missed_you") goes to the parent on is named. Until Meta approves it the
+ * send job skips the parent part and the queue says why.
+ */
+export function weeklyTemplateConfigured(kind: "report" | "missed_you"): boolean {
+  const name = kind === "report" ? weeklyReportTemplateName() : missedYouTemplateName();
+  return name !== null;
+}
+
+/**
+ * A Weekly report was sent: Meta-approved template
+ * WHATSAPP_WEEKLY_REPORT_TEMPLATE_NAME with body parameters {{1}} the
+ * child's first name, {{2}} the report link.
+ */
+export async function sendWeeklyReport(
+  phone: string,
+  params: { childName: string; reportUrl: string },
+): Promise<WhatsAppResult> {
+  const templateName = weeklyReportTemplateName();
+  if (!templateName) {
+    return { success: false, error: "WHATSAPP_WEEKLY_REPORT_TEMPLATE_NAME not configured" };
+  }
+  const { token, phoneNumberId } = getConfig();
+  return callWhatsAppAPI(phoneNumberId, token, templateMessage(phone, templateName, [params.childName, params.reportUrl]));
+}
+
+/**
+ * "התגעגענו" to the parent of a Trainee who stopped coming: Meta-approved
+ * template WHATSAPP_MISSED_YOU_TEMPLATE_NAME with body parameter {{1}} the
+ * child's first name.
+ */
+export async function sendMissedYou(phone: string, params: { childName: string }): Promise<WhatsAppResult> {
+  const templateName = missedYouTemplateName();
+  if (!templateName) {
+    return { success: false, error: "WHATSAPP_MISSED_YOU_TEMPLATE_NAME not configured" };
+  }
+  const { token, phoneNumberId } = getConfig();
+  return callWhatsAppAPI(phoneNumberId, token, templateMessage(phone, templateName, [params.childName]));
+}
