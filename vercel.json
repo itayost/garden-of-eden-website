@@ -59,6 +59,10 @@
     {
       "path": "/api/cron/weekly-reports-write",
       "schedule": "*/30 4-9 * * 5"
+    },
+    {
+      "path": "/api/cron/goal-proposals",
+      "schedule": "15 4 * * *"
     }
   ]
 }
