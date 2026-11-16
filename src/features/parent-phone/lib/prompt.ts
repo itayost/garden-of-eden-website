@@ -34,7 +34,11 @@ export function shouldAskParentPhone(profile: ParentPromptProfile, today: string
   if (profile.guardianPhone?.trim()) return false;
   if (profile.guardianNotNeeded) return false;
   if (profile.birthdate && ageOn(profile.birthdate, today) >= ADULT_AGE) return false;
-  if (profile.dismissedOn && daysBetween(profile.dismissedOn, today) < PARENT_PROMPT_SNOOZE_DAYS) return false;
+  if (profile.dismissedOn) {
+    // A date in the future (a wrong clock) must not hide the card for good.
+    const days = daysBetween(profile.dismissedOn, today);
+    if (days >= 0 && days < PARENT_PROMPT_SNOOZE_DAYS) return false;
+  }
   return true;
 }
 

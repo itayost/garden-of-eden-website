@@ -59,6 +59,10 @@ describe("shouldAskParentPhone", () => {
     expect(shouldAskParentPhone({ ...CHILD, birthdate: "2008-11-15" }, TODAY)).toBe(false);
   });
 
+  it("does not let a 'not now' dated in the future hide the card for good", () => {
+    expect(shouldAskParentPhone({ ...CHILD, dismissedOn: "2026-12-01" }, TODAY)).toBe(true);
+  });
+
   it("waits 7 days after 'not now'", () => {
     expect(shouldAskParentPhone({ ...CHILD, dismissedOn: "2026-11-09" }, TODAY)).toBe(false);
     expect(shouldAskParentPhone({ ...CHILD, dismissedOn: "2026-11-08" }, TODAY)).toBe(true);

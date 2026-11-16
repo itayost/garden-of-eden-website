@@ -46,11 +46,19 @@ export async function saveParentPhoneAction(input: ParentPhoneInput): Promise<Re
   const refusal = parentPhoneRefusal(parsed.data.phone, profile.phone);
   if (refusal) return { error: refusal };
 
-  const { error } = await db.from("profiles").update({ guardian_phone: parsed.data.phone }).eq("id", userId);
+  // Only fills an empty number: a staff save that lands between the read above
+  // and this write must win, so a changed row means there is nothing to do.
+  const { data: written, error } = await db
+    .from("profiles")
+    .update({ guardian_phone: parsed.data.phone })
+    .eq("id", userId)
+    .or("guardian_phone.is.null,guardian_phone.eq.")
+    .select("id");
   if (error) {
     console.error("[parent-phone] save failed:", error.message);
     return { error: "שגיאה בשמירה. נסו שוב." };
   }
+  if (!written || written.length === 0) return { success: true };
 
   await db.from("activity_logs").insert({
     user_id: userId,
