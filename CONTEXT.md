@@ -307,6 +307,10 @@ _Avoid_: Context, prompt data
 A Weekly report kept from sending, by a person or by a guardrail, with its reasons. A text problem (a number not in the Fact sheet, a forbidden word, a missing gender) must be fixed before approval; a sensitive entry or a staff member's reason only needs a person to open the report and approve it.
 _Avoid_: Block, reject
 
+**Goal proposal** (הצעת יעד):
+A Goal the system suggests after an Assessment, with a target code set from the academy's own history and drills from the Development book, waiting for staff to accept, change or reject.
+_Avoid_: Recommendation
+
 **Quick tag** (תגית):
 One of a fixed set of words a Trainer taps for a Trainee after a Slot, with an optional short note. Six are positive and feed the weekly report; two (כאב או פציעה, התנהגות) are for staff only and hold a report for a person.
 _Avoid_: Note (notes are the Shift report's), comment, label
