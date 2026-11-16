@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import Link from "next/link";
 import { isValidUUID } from "@/lib/utils/uuid";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,9 +24,37 @@ import { GoalManagementPanel, type PhysicalMetricKey } from "@/features/goals";
 import { AssessmentExportButton } from "@/components/admin/exports/AssessmentExportButton";
 import { AssessmentPdfButton } from "@/components/admin/exports/AssessmentPdfButton";
 import { resolveAgeGroup } from "@/lib/age-group-override";
+import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isTraineeInScope } from "@/features/branches/lib/memberships";
+import { ProposalList } from "@/features/goal-proposals/components/ProposalList";
+import { loadTraineeProposals } from "@/features/goal-proposals/lib/queries/views";
+import type { ProposalView } from "@/features/goal-proposals/lib/proposal-view";
 
 interface PageProps {
   params: Promise<{ userId: string }>;
+}
+
+/**
+ * The Trainee's open Goal proposals, only when the caller may see this
+ * Trainee (the page itself has no branch check yet). A failed read is logged
+ * and shows no proposal: the rest of the page still works.
+ */
+async function visibleProposals(userId: string): Promise<ProposalView[]> {
+  try {
+    const { error } = await verifyAdminOrTrainer();
+    if (error) return [];
+    const scopeResult = await getBranchScopeAction();
+    if ("error" in scopeResult) return [];
+    const { scope } = scopeResult.data;
+    const db = createAdminClient();
+    if (!(await isTraineeInScope(db, scope, userId))) return [];
+    return await loadTraineeProposals(db, userId, scope.kind === "all" ? null : scope.ids);
+  } catch (failure) {
+    unstable_rethrow(failure);
+    console.error("[goal-proposals] loading the Goals card's proposals failed:", failure);
+    return [];
+  }
 }
 
 export default async function PlayerAssessmentsPage({ params }: PageProps) {
@@ -38,6 +66,7 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
   }
 
   const supabase = await createClient();
+  const proposalsRead = visibleProposals(userId);
 
   // Fetch profile, assessments, and goals in parallel
   const [
@@ -62,6 +91,9 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
       .eq("user_id", userId)
       .order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
   ]);
+
+  // Awaited before notFound(), so the read is never left unhandled.
+  const proposals = await proposalsRead;
 
   if (!profile) {
     notFound();
@@ -233,7 +265,9 @@ export default async function PlayerAssessmentsPage({ params }: PageProps) {
             playerName={profile.full_name || "שחקן"}
             currentMetrics={currentMetrics}
             existingGoals={goalsData || []}
-          />
+          >
+            {proposals.length > 0 && <ProposalList proposals={proposals} />}
+          </GoalManagementPanel>
         </div>
 
         {/* Right Column - Assessment History */}

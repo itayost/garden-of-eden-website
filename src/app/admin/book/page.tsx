@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, Dumbbell } from "lucide-react";
+import { BookOpen, Dumbbell, Link2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,29 +11,41 @@ import {
 import { Button } from "@/components/ui/button";
 import { listBookAdminTree } from "@/features/development-book/lib/actions/admin-book-categories";
 import { BookCategoryClient } from "@/components/admin/book/BookCategoryClient";
+import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 
 export const metadata: Metadata = {
   title: "ספר פיתוח שחקן | Garden of Eden",
 };
 
 export default async function AdminBookPage() {
-  const categories = await listBookAdminTree();
+  const [categories, { profile }] = await Promise.all([listBookAdminTree(), verifyAdminOrTrainer()]);
+  const isAdmin = profile?.role === "admin";
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-2">ספר פיתוח שחקן</h1>
           <p className="text-muted-foreground">
             ניהול קטגוריות ופרמטרים של ספר הפיתוח
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/admin/book/muscles">
-            <Dumbbell className="h-4 w-4 ms-2" />
-            ניהול שרירים
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/book/muscles">
+              <Dumbbell className="h-4 w-4 ms-2" />
+              ניהול שרירים
+            </Link>
+          </Button>
+          {isAdmin && (
+            <Button asChild variant="outline">
+              <Link href="/admin/book/metrics">
+                <Link2 className="h-4 w-4 ms-2" />
+                מיפוי מדדים
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>

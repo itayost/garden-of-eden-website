@@ -7,11 +7,15 @@ import { isValidDateString } from "@/lib/validations/common";
 import { skipLabel } from "./delivery";
 import { reportWeekStart } from "./report-week";
 
-export type QueueTab = "held" | "pending" | "approved" | "sent" | "missed_you" | "absent";
+/**
+ * "proposals" is the Goal proposals (הצעות יעד): open proposals of every
+ * Assessment, not of the week, and never a report's tab (`tabOf`).
+ */
+export type QueueTab = "held" | "pending" | "approved" | "sent" | "missed_you" | "absent" | "proposals";
 
 export type TabCounts = Record<QueueTab, number>;
 
-/** The tabs in the order the page shows them: what needs a person first. */
+/** The tabs in the order the page shows them: what needs a person first, the Goal proposals last. */
 export const QUEUE_TABS: readonly { tab: QueueTab; label: string }[] = [
   { tab: "held", label: "מעוכבים" },
   { tab: "pending", label: "ממתינים לאישור" },
@@ -19,6 +23,7 @@ export const QUEUE_TABS: readonly { tab: QueueTab; label: string }[] = [
   { tab: "sent", label: "נשלחו" },
   { tab: "missed_you", label: "התגעגענו" },
   { tab: "absent", label: "לא הגיעו 3 שבועות" },
+  { tab: "proposals", label: "הצעות יעד" },
 ];
 
 const REPORT_TABS: Readonly<Record<string, QueueTab>> = {
@@ -42,7 +47,7 @@ export function tabOf(kind: string, status: string): QueueTab | null {
 }
 
 export function tabCounts(tabs: readonly QueueTab[]): TabCounts {
-  const zero: TabCounts = { held: 0, pending: 0, approved: 0, sent: 0, missed_you: 0, absent: 0 };
+  const zero: TabCounts = { held: 0, pending: 0, approved: 0, sent: 0, missed_you: 0, absent: 0, proposals: 0 };
   return tabs.reduce((counts, tab) => ({ ...counts, [tab]: counts[tab] + 1 }), zero);
 }
 

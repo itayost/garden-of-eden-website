@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseWriterOutput, replyOutcome, WRITER_JSON_SCHEMA, writerOutputSchema } from "../output";
+import { finishedText, parseWriterOutput, replyOutcome, WRITER_JSON_SCHEMA, writerOutputSchema } from "../output";
 
 const VALID = {
   player_text: "{שם}, השבוע הגעת לשני אימונים ועבדת על מסירות.",
@@ -55,6 +55,40 @@ describe("WRITER_JSON_SCHEMA", () => {
     const zodKeys = Object.keys(writerOutputSchema.shape).sort();
     expect(Object.keys(WRITER_JSON_SCHEMA.properties).sort()).toEqual(zodKeys);
     expect([...WRITER_JSON_SCHEMA.required].sort()).toEqual(zodKeys);
+  });
+});
+
+describe("finishedText", () => {
+  const reply = (stopReason: string | null, text: string | null) => ({
+    stopReason,
+    text,
+    usage: { input_tokens: 10, output_tokens: 20 },
+    model: "claude-opus-5-5",
+  });
+
+  it("a reply that ran to its end gives its text", () => {
+    expect(finishedText(reply("end_turn", "תשובה"))).toEqual({ ok: true, text: "תשובה" });
+    expect(finishedText(reply("stop_sequence", "תשובה"))).toEqual({ ok: true, text: "תשובה" });
+  });
+
+  it("a refusal is refused with its stop reason, even with text", () => {
+    expect(finishedText(reply("refusal", "תשובה"))).toEqual({ ok: false, reason: "refusal" });
+  });
+
+  it("a reply cut short is refused with its stop reason, even with text", () => {
+    expect(finishedText(reply("max_tokens", "תשובה"))).toEqual({ ok: false, reason: "max_tokens" });
+  });
+
+  it("no stop reason is refused as no_stop_reason", () => {
+    expect(finishedText(reply(null, "תשובה"))).toEqual({ ok: false, reason: "no_stop_reason" });
+  });
+
+  it("a finished reply with no text block is unparsable", () => {
+    expect(finishedText(reply("end_turn", null))).toEqual({ ok: false, reason: "unparsable" });
+  });
+
+  it("the stop reason is checked before the text", () => {
+    expect(finishedText(reply("refusal", null))).toEqual({ ok: false, reason: "refusal" });
   });
 });
 

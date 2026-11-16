@@ -5,8 +5,14 @@
 import type { PhysicalMetricKey, GoalCelebration } from "../../types";
 import { ASSESSMENT_LABELS_HE, ASSESSMENT_UNITS, DRIBBLING_TEST_KEYS, isLowerBetter } from "@/types/assessment";
 
+/**
+ * A metric a Goal can be set on: every numeric Assessment metric but the
+ * retired `kick_power_kaiser` (exactly the 18 entries of GOAL_METRICS).
+ */
+export type GoalMetric = Exclude<PhysicalMetricKey, "kick_power_kaiser">;
+
 /** Metrics that can have new goals set. */
-export const GOAL_METRICS: PhysicalMetricKey[] = [
+export const GOAL_METRICS: readonly GoalMetric[] = [
   "sprint_5m",
   "sprint_10m",
   "sprint_20m",
@@ -22,6 +28,11 @@ export const GOAL_METRICS: PhysicalMetricKey[] = [
   "kick_power_left_foot",
   ...DRIBBLING_TEST_KEYS,
 ];
+
+/** Whether a key is one of the Goal metrics. */
+export function isGoalMetric(value: string): value is GoalMetric {
+  return (GOAL_METRICS as readonly string[]).includes(value);
+}
 
 /** Storage key for tracking celebrated goals */
 export const GOAL_CELEBRATION_STORAGE_KEY = "goe_goal_celebrated";

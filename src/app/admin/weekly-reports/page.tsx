@@ -19,6 +19,8 @@ import { QueueTabs } from "@/features/weekly-reports/components/admin/QueueTabs"
 import { ReportSettingsCard } from "@/features/weekly-reports/components/admin/ReportSettingsCard";
 import { ReportSheet } from "@/features/weekly-reports/components/admin/ReportSheet";
 import { WeekPicker } from "@/features/weekly-reports/components/admin/WeekPicker";
+import { ProposalQueue } from "@/features/goal-proposals/components/ProposalQueue";
+import { loadOpenProposals } from "@/features/goal-proposals/lib/queries/views";
 
 export const metadata: Metadata = { title: "דוחות שבועיים | Garden of Eden" };
 
@@ -32,6 +34,7 @@ const EMPTY_TEXT: Record<QueueTab, string> = {
   sent: "עוד לא נשלחו דוחות השבוע",
   missed_you: "אין הודעות התגעגענו השבוע",
   absent: "אין חניכים שלא הגיעו 3 שבועות",
+  proposals: "אין הצעות יעד פתוחות",
 };
 
 interface PageProps {
@@ -68,12 +71,16 @@ export default async function WeeklyReportsPage({ searchParams }: PageProps) {
   const branch = branches.some((b) => b.id === params.branch) ? params.branch : undefined;
 
   // A failed read throws on purpose: the admin error page, not an empty queue.
-  const [queue, report, settings] = await Promise.all([
-    loadQueue(db, { weekStart: week, scopeBranchIds: scope.kind === "all" ? null : scope.ids, filterBranchId: branch }),
+  const scopeBranchIds = scope.kind === "all" ? null : scope.ids;
+  const [queue, proposals, report, settings] = await Promise.all([
+    loadQueue(db, { weekStart: week, scopeBranchIds, filterBranchId: branch }),
+    loadOpenProposals(db, { scopeBranchIds, filterBranchId: branch }),
     visibleReport(params.report, scope),
     isAdmin ? listReportSettingsAction() : Promise.resolve(null),
   ]);
-  const tab = pickTab(params.tab, queue.counts);
+  // The proposals are of every week, so their count stays out of the counts line.
+  const counts = { ...queue.counts, proposals: proposals.length };
+  const tab = pickTab(params.tab, counts);
   const rows = queue.rows.filter((row) => row.tab === tab);
   const approvable = rows.filter((row) => row.tab === "pending" && row.writtenAt !== null).length;
   const location = { week, branch, tab };
@@ -91,11 +98,18 @@ export default async function WeeklyReportsPage({ searchParams }: PageProps) {
         {branches.length > 1 && <BranchUrlFilter branches={branches} className="w-full sm:w-48" />}
       </div>
 
-      <QueueTabs active={tab} counts={queue.counts} location={{ week, branch }} />
+      <QueueTabs active={tab} counts={counts} location={{ week, branch }} />
 
       {tab === "pending" && <ApproveAllButton weekStart={week} branchId={branch} count={approvable} />}
 
-      <QueueTable rows={rows} location={location} emptyText={EMPTY_TEXT[tab]} />
+      {tab === "proposals" ? (
+        <section className="space-y-4" aria-label="הצעות יעד">
+          <p className="text-sm text-muted-foreground">הצעות פתוחות מכל המבדקים, לא לפי שבוע</p>
+          <ProposalQueue proposals={proposals} emptyText={EMPTY_TEXT.proposals} />
+        </section>
+      ) : (
+        <QueueTable rows={rows} location={location} emptyText={EMPTY_TEXT[tab]} />
+      )}
 
       {settings && "success" in settings && <ReportSettingsCard settings={settings.data} />}
 

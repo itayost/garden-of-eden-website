@@ -13,13 +13,15 @@ import { SetGoalDialog } from "./SetGoalDialog";
 
 /**
  * Panel for trainers to manage a player's goals
- * Used on the admin player detail page
+ * Used on the admin player detail page. `children` (the Goal proposals) come
+ * first, above the open Goals.
  */
 export function GoalManagementPanel({
   userId,
   playerName,
   currentMetrics,
   existingGoals,
+  children,
 }: GoalManagementPanelProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
@@ -72,6 +74,8 @@ export function GoalManagementPanel({
           </Button>
         </CardHeader>
         <CardContent className="space-y-6">
+          {children}
+
           {/* Active Goals */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">

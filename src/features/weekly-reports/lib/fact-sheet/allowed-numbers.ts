@@ -42,9 +42,10 @@ export function numbersIn(text: string): string[] {
 }
 
 /**
- * Every number value in the sheet and every number inside its strings, walked
- * recursively. Fields named `id` are skipped: a drill id is a key for the
- * model to choose by, and its digits are not facts.
+ * Every number value in a value (a sheet, a Goal proposal's candidate) and
+ * every number inside its strings, walked recursively. Fields named `id` are
+ * skipped: a drill id is a key for the model to choose by, and its digits are
+ * not facts.
  */
 function numbersOf(value: unknown): string[] {
   if (typeof value === "number") return Number.isFinite(value) ? numbersIn(String(value)) : [];
@@ -56,6 +57,18 @@ function numbersOf(value: unknown): string[] {
   return [];
 }
 
+/** Every number in a value, as `numbersOf()` walks it, once each. */
+export function allowedNumbersIn(value: unknown): Set<string> {
+  return new Set(numbersOf(value));
+}
+
+/**
+ * The sheet's numbers without its drills, plus the drill count. A drill's
+ * name and "למה" line are the book's text, not facts about the Trainee, so a
+ * set count, a time or a percentage in them never becomes a number the texts
+ * may use. (A drill's `goal` label repeats `goals[].metric`, which stays in
+ * the walk.)
+ */
 export function allowedNumbers(sheet: FactSheet): Set<string> {
-  return new Set([...numbersOf(sheet), normalizeNumber(String(sheet.drills.length))]);
+  return new Set([...allowedNumbersIn({ ...sheet, drills: [] }), normalizeNumber(String(sheet.drills.length))]);
 }

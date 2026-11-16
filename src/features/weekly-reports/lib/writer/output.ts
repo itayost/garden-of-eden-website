@@ -68,15 +68,24 @@ export interface WriterReply {
 const FINISHED = ["end_turn", "stop_sequence"];
 
 /**
- * The outcome of a reply. The stop reason is checked before the text: a
- * refusal (the whole fallback chain declined) or a reply cut short is never
- * written, even when its text happens to parse.
+ * The text of a reply that ran to its end. The stop reason is checked before
+ * the text: a refusal (the whole fallback chain declined) or a reply cut short
+ * is never read, even when its text happens to parse. Shared with the Goal
+ * proposal writer, which reads its own output from the same kind of reply.
  */
-export function replyOutcome(reply: WriterReply): WriteOutcome {
+export function finishedText(reply: WriterReply): { ok: true; text: string } | { ok: false; reason: string } {
   if (reply.stopReason === null || !FINISHED.includes(reply.stopReason)) {
     return { ok: false, reason: reply.stopReason ?? "no_stop_reason" };
   }
-  const output = reply.text === null ? null : parseWriterOutput(reply.text);
+  if (reply.text === null) return { ok: false, reason: "unparsable" };
+  return { ok: true, text: reply.text };
+}
+
+/** The outcome of a reply: its finished text (finishedText) parsed as the writer's output. */
+export function replyOutcome(reply: WriterReply): WriteOutcome {
+  const finished = finishedText(reply);
+  if (!finished.ok) return finished;
+  const output = parseWriterOutput(finished.text);
   if (output === null) return { ok: false, reason: "unparsable" };
   return { ok: true, output, usage: reply.usage, model: reply.model };
 }

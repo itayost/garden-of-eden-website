@@ -12,7 +12,7 @@ const week = emptyWeek({
     { date: "2026-11-14", sleepHours: 7, energy: 3, soreness: false },
     { date: "2026-11-15", sleepHours: 8, energy: 4, soreness: false },
   ],
-  drillCandidates: ["d1", "d2", "d3", "d4"].map((id) => ({ id, name: `תרגיל ${id}`, why: null })),
+  drillCandidates: ["d1", "d2", "d3", "d4"].map((id) => ({ id, name: `תרגיל ${id}`, why: null, goal: "ספרינט 10 מטר" })),
 });
 const { sheet } = buildFactSheet(week);
 

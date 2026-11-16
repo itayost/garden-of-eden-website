@@ -631,6 +631,42 @@ export type Database = {
         }
         Relationships: []
       }
+      book_parameter_metrics: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          metric_key: string
+          parameter_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          metric_key: string
+          parameter_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          metric_key?: string
+          parameter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_parameter_metrics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_parameter_metrics_parameter_id_fkey"
+            columns: ["parameter_id"]
+            isOneToOne: false
+            referencedRelation: "book_parameters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       book_parameter_positions: {
         Row: {
           parameter_id: string
@@ -1608,6 +1644,158 @@ export type Database = {
           trainer_name?: string
         }
         Relationships: []
+      }
+      goal_proposal_checks: {
+        Row: {
+          assessment_id: string
+          attempts: number
+          checked_at: string
+          model: string | null
+          outcome: string
+          prompt_version: string | null
+          trainee_id: string
+          usage: Json | null
+        }
+        Insert: {
+          assessment_id: string
+          attempts?: number
+          checked_at?: string
+          model?: string | null
+          outcome: string
+          prompt_version?: string | null
+          trainee_id: string
+          usage?: Json | null
+        }
+        Update: {
+          assessment_id?: string
+          attempts?: number
+          checked_at?: string
+          model?: string | null
+          outcome?: string
+          prompt_version?: string | null
+          trainee_id?: string
+          usage?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_proposal_checks_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: true
+            referencedRelation: "player_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_proposal_checks_trainee_id_fkey"
+            columns: ["trainee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goal_proposals: {
+        Row: {
+          accepted_target: number | null
+          assessment_id: string
+          baseline_value: number
+          branch_ids: string[]
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          drill_ids: string[]
+          facts: Json
+          goal_id: string | null
+          id: string
+          metric_key: string
+          model: string
+          problems: Json
+          prompt_version: string
+          rank: number
+          reason: string | null
+          reject_reason: string | null
+          status: string
+          target_value: number
+          trainee_id: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_target?: number | null
+          assessment_id: string
+          baseline_value: number
+          branch_ids: string[]
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          drill_ids?: string[]
+          facts: Json
+          goal_id?: string | null
+          id?: string
+          metric_key: string
+          model: string
+          problems?: Json
+          prompt_version: string
+          rank: number
+          reason?: string | null
+          reject_reason?: string | null
+          status?: string
+          target_value: number
+          trainee_id: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_target?: number | null
+          assessment_id?: string
+          baseline_value?: number
+          branch_ids?: string[]
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          drill_ids?: string[]
+          facts?: Json
+          goal_id?: string | null
+          id?: string
+          metric_key?: string
+          model?: string
+          problems?: Json
+          prompt_version?: string
+          rank?: number
+          reason?: string | null
+          reject_reason?: string | null
+          status?: string
+          target_value?: number
+          trainee_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_proposals_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "player_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_proposals_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_proposals_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "player_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_proposals_trainee_id_fkey"
+            columns: ["trainee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lead_contact_log: {
         Row: {
@@ -5821,6 +6009,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_goal_proposal: {
+        Args: {
+          p_actor: string
+          p_expected_updated_at: string
+          p_is_lower_better: boolean
+          p_proposal_id: string
+          p_target: number
+        }
+        Returns: string
+      }
       adjust_plan_end_date: {
         Args: {
           p_actor: string

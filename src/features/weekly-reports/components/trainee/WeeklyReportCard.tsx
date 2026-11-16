@@ -8,6 +8,7 @@ import { markReportReadAction } from "../../lib/actions/player";
 import type { PlayerReport } from "../../lib/queries/player";
 import { reportWeekLabel } from "../../lib/report-week";
 import { BodyBlock } from "../report/BodyBlock";
+import { DrillList } from "../report/DrillList";
 import { GoalProgressList } from "../report/GoalProgressList";
 
 type SentReport = Extract<PlayerReport, { kind: "report" }>;
@@ -34,7 +35,8 @@ function useClamped(ref: React.RefObject<HTMLElement | null>, expanded: boolean)
 
 /**
  * The player's sent Weekly report on the dashboard: the week's text, the
- * Goals and the measurement when there was one. On a phone the text starts at
+ * Goals, the chosen drills (each linking to its book page) and the
+ * measurement when there was one. On a phone the text starts at
  * four lines with "קרא עוד". Opening the dashboard records the first read.
  */
 export function WeeklyReportCard({ report }: { report: SentReport }) {
@@ -82,6 +84,7 @@ export function WeeklyReportCard({ report }: { report: SentReport }) {
         </div>
 
         <GoalProgressList goals={report.goals} title="היעדים שלך" />
+        <DrillList drills={report.drills} linkToBook />
         {report.body && <BodyBlock body={report.body} />}
       </CardContent>
     </Card>

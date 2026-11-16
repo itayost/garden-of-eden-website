@@ -99,11 +99,20 @@ export type NutritionMeasurement = Pick<
   "measurement_date" | "weight_kg" | "height_cm" | "bmi" | "bmi_percentile" | "height_percentile"
 >;
 
-/** A Development book drill offered to the model. Always empty until step 3. */
+/** A Development book drill as readers show it: the same shape as the book's `DrillLine`. */
 export interface DrillCandidate {
   id: string;
   name: string;
   why: string | null;
+}
+
+/**
+ * A drill offered to the model in the Fact sheet, with `goal`: the Hebrew
+ * label of the open Goal it serves, the same text as that Goal's
+ * `goals[].metric`, so the model can match drills to Goals.
+ */
+export interface SheetDrill extends DrillCandidate {
+  goal: string;
 }
 
 export interface TraineeWeekInput {
@@ -137,7 +146,8 @@ export interface TraineeWeekInput {
   /** Open Goals (achieved_at is null). */
   goals: PlayerGoalRow[];
   nextGame: { date: string; opponent: string } | null;
-  drillCandidates: DrillCandidate[];
+  /** Up to 6 drills for the open Goals, chosen by `sheetDrills()`. */
+  drillCandidates: SheetDrill[];
 }
 
 // ---------------------------------------------------------------------------
@@ -207,7 +217,7 @@ export interface FactSheet {
   habits: Habits | null;
   assessment: AssessmentFacts | null;
   goals: GoalFact[];
-  drills: DrillCandidate[];
+  drills: SheetDrill[];
   nextGame: { date: string; opponent: string } | null;
   hasNewMeasurement: boolean;
   hasDietitianNote: boolean;

@@ -6,10 +6,14 @@
  */
 import "server-only";
 
+import { loadDrillPool, readDrillsDone } from "@/features/development-book/lib/queries/drill-pool";
 import { resolveAgeGroup } from "@/lib/age-group-override";
+import { addDays } from "@/lib/utils/iso-date";
 import { CATEGORY_COLUMNS, type ShiftReportForNotes } from "@/lib/utils/trainee-notes";
+import { sheetDrills } from "../fact-sheet/drills";
 import type { ArboxEntrance, TraineeWeekInput, WeekRosterRow } from "../fact-sheet/types";
 import { reportWeekEnd } from "../report-week";
+import { readGoalDrills } from "./goal-drills";
 import {
   readAssessments,
   readBranchNames,
@@ -79,7 +83,13 @@ function attendedSessions(sessions: readonly SessionRead[], roster: readonly Wee
   return sessions.filter((s) => s.slotId === null || attended.has(s.slotId)).map((s) => s.session);
 }
 
-type WeekParts = Awaited<ReturnType<typeof readWeekParts>>;
+/** Drills marked done in these many days up to the Report week's Thursday are not offered. */
+const DRILL_DONE_DAYS = 30;
+
+type WeekParts = Awaited<ReturnType<typeof readWeekParts>> & {
+  /** Goal id to the drills of the accepted Goal proposal behind it. */
+  goalDrills: ReadonlyMap<string, readonly string[]>;
+};
 
 async function readWeekParts(db: Db, ids: readonly string[], branchIds: readonly string[], range: DayRange, today: string) {
   const [
@@ -97,6 +107,8 @@ async function readWeekParts(db: Db, ids: readonly string[], branchIds: readonly
     dietitianNotes,
     goals,
     nextGames,
+    drillPool,
+    drillsDone,
   ] = await Promise.all([
     readProfiles(db, ids),
     readBranchNames(db, branchIds),
@@ -112,6 +124,8 @@ async function readWeekParts(db: Db, ids: readonly string[], branchIds: readonly
     readDietitianNotes(db, ids),
     readOpenGoals(db, ids),
     readNextGames(db, ids, today),
+    loadDrillPool(db),
+    readDrillsDone(db, ids, addDays(range.to, -(DRILL_DONE_DAYS - 1)), range.to),
   ]);
   return {
     profiles,
@@ -128,6 +142,8 @@ async function readWeekParts(db: Db, ids: readonly string[], branchIds: readonly
     dietitianNotes,
     goals,
     nextGames,
+    drillPool,
+    drillsDone,
   };
 }
 
@@ -143,6 +159,7 @@ function inputOf(
   const ageGroup = resolveAgeGroup(profile, range.to);
   const roster = (training.roster.get(id) ?? []).filter(inRange(range));
   const assessment = parts.assessments.get(id) ?? { inWeek: null, previous: null };
+  const goals = parts.goals.get(id) ?? [];
   return {
     traineeId: id,
     weekStart: range.from,
@@ -172,17 +189,30 @@ function inputOf(
     },
     measurement: parts.measurements.get(id) ?? { inWeek: null, previous: null },
     dietitianNote: parts.dietitianNotes.get(id) ?? null,
-    goals: parts.goals.get(id) ?? [],
+    goals,
     nextGame: parts.nextGames.get(id) ?? null,
-    drillCandidates: [],
+    drillCandidates: sheetDrills(parts.drillPool, {
+      goals,
+      birthdate: profile.birthdate,
+      position: profile.position,
+      weekEnd: range.to,
+      doneIds: parts.drillsDone.get(id) ?? new Set<string>(),
+      goalDrills: parts.goalDrills,
+    }),
   };
 }
 
 /**
  * One TraineeWeekInput per Trainee for the Report week starting `weekStart`
  * (Friday to Thursday). `today` bounds the next game. A Trainee whose profile
- * is gone is left out and logged. Drill candidates stay empty until the
- * metric-to-book map exists.
+ * is gone is left out and logged.
+ *
+ * Drills come from the Trainee's open Goals only (`sheetDrills`): oldest Goal
+ * first, one drill per Goal in turn until 6, through the metric-to-book map,
+ * the book age group on the week's Thursday and the position, leaving out
+ * drills marked done in the 30 days up to that Thursday (so a rebuilt sheet
+ * gets the same drills). The drills of the accepted Goal proposal behind a
+ * Goal come first for that Goal. No open Goal, no drills.
  */
 export async function loadWeekInputs(
   db: Db,
@@ -194,14 +224,19 @@ export async function loadWeekInputs(
   if (trainees.length === 0) return new Map();
   const range: DayRange = { from: weekStart, to: reportWeekEnd(weekStart) };
   const ids = unique(trainees.map((t) => t.id));
-  const parts = await readWeekParts(db, ids, trainees.flatMap((t) => t.branchIds), range, today);
+  const read = await readWeekParts(db, ids, trainees.flatMap((t) => t.branchIds), range, today);
 
   const assessedGroups = ids.flatMap((id) => {
-    const profile = parts.profiles.get(id);
+    const profile = read.profiles.get(id);
     const group = profile ? resolveAgeGroup(profile, range.to) : null;
-    return parts.assessments.get(id)?.inWeek && group ? [group.id] : [];
+    return read.assessments.get(id)?.inWeek && group ? [group.id] : [];
   });
-  const groupStats = await readGroupStats(db, assessedGroups);
+  const openGoalIds = [...read.goals.values()].flatMap((goals) => goals.map((goal) => goal.id));
+  const [groupStats, goalDrills] = await Promise.all([
+    readGroupStats(db, assessedGroups),
+    readGoalDrills(db, openGoalIds),
+  ]);
+  const parts: WeekParts = { ...read, goalDrills };
 
   const missing = trainees.filter((t) => !parts.profiles.has(t.id)).map((t) => t.id);
   if (missing.length > 0) console.warn(`[weekly-reports] ${missing.length} trainees have no profile:`, missing);
