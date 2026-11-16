@@ -288,3 +288,13 @@ _Avoid_: Submission (the word the fixed forms use), reply
 
 **Audience**:
 The Trainees a Survey is for, described by branches and birth years, never a stored list of names.
+
+### Weekly report
+
+**Quick tag** (תגית):
+One of a fixed set of words a Trainer taps for a Trainee after a Slot, with an optional short note. Six are positive and feed the weekly report; two (כאב או פציעה, התנהגות) are for staff only and hold a report for a person.
+_Avoid_: Note (notes are the Shift report's), comment, label
+
+**Check-in** (צ׳ק-אין):
+A Trainee's three answers for one Israel day: hours slept, energy from 1 to 5, and whether their muscles are sore. A second answer the same day replaces the first.
+_Avoid_: Questionnaire, שאלון (the fixed forms), survey

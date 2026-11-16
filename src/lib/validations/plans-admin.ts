@@ -220,6 +220,9 @@ export const healthSchema = z.object({
   medicalNotes: optionalText(500),
   emergencyContactName: optionalText(100),
   emergencyContactPhone: optionalPhone,
+  /** The parent the weekly report and the reminders reach. */
+  guardianName: optionalText(100),
+  guardianPhone: optionalPhone,
 });
 export type HealthInput = z.input<typeof healthSchema>;
 

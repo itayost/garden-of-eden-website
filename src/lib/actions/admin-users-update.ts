@@ -51,7 +51,7 @@ export async function updateUserAction(
     };
   }
 
-  const { full_name, phone, birthdate, club, role, is_active, branch_ids, managed_branch_ids } = validated.data;
+  const { full_name, phone, birthdate, club, gender, role, is_active, branch_ids, managed_branch_ids } = validated.data;
   const adminClient = createAdminClient();
 
   try {
@@ -166,6 +166,7 @@ export async function updateUserAction(
         phone: formattedPhone,
         birthdate: birthdate || null,
         club: club || null,
+        ...(gender !== undefined ? { gender: gender || null } : {}),
         role,
         is_active,
         updated_at: new Date().toISOString(),

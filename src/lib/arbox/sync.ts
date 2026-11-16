@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAllArboxUsers, fetchArboxBirthdays, type ArboxUser } from "./client";
 import { normalizePhoneIL } from "@/lib/validations/common";
+import { parseGender } from "@/lib/profile/gender";
 import { arboxBranchFor } from "@/lib/branches/arbox-branch-match";
 import {
   loadAllBranches,
@@ -79,7 +80,7 @@ async function processArboxUser(
 
   const { data: existing, error: lookupError } = await supabase
     .from("profiles")
-    .select("id, full_name, arbox_user_id, branches_set_by_admin_at, role")
+    .select("id, full_name, arbox_user_id, branches_set_by_admin_at, role, gender")
     .or(orClause)
     .maybeSingle();
 
@@ -96,6 +97,8 @@ async function processArboxUser(
     const updates: Record<string, unknown> = {};
     if (!existing.arbox_user_id) updates.arbox_user_id = arboxUser.user_id;
     if (!existing.full_name && arboxUser.full_name) updates.full_name = arboxUser.full_name;
+    const arboxGender = parseGender(arboxUser.gender);
+    if (!existing.gender && arboxGender) updates.gender = arboxGender;
 
     await applyArboxBranch(
       supabase,
@@ -148,6 +151,7 @@ async function processArboxUser(
     .update({
       arbox_user_id: arboxUser.user_id,
       full_name: arboxUser.full_name ?? null,
+      gender: parseGender(arboxUser.gender),
     })
     .eq("id", authData.user.id);
 

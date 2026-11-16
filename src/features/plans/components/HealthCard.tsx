@@ -20,6 +20,8 @@ export function HealthCard({ traineeId, health }: { traineeId: string; health: T
   const [medical, setMedical] = useState(health.medicalNotes ?? "");
   const [name, setName] = useState(health.emergencyContactName ?? "");
   const [phone, setPhone] = useState(formatPhoneToLocal(health.emergencyContactPhone));
+  const [guardianName, setGuardianName] = useState(health.guardianName ?? "");
+  const [guardianPhone, setGuardianPhone] = useState(formatPhoneToLocal(health.guardianPhone));
 
   const save = () =>
     startTransition(async () => {
@@ -28,6 +30,8 @@ export function HealthCard({ traineeId, health }: { traineeId: string; health: T
         medicalNotes: medical,
         emergencyContactName: name,
         emergencyContactPhone: phone,
+        guardianName,
+        guardianPhone,
       });
       if ("error" in result) {
         toast.error(result.error);
@@ -61,6 +65,14 @@ export function HealthCard({ traineeId, health }: { traineeId: string; health: T
               <Label htmlFor="h-phone">טלפון לחירום</Label>
               <Input id="h-phone" type="tel" inputMode="tel" dir="ltr" className="text-right" placeholder="0501234567" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={pending} />
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="h-guardian-name">שם ההורה</Label>
+              <Input id="h-guardian-name" value={guardianName} onChange={(e) => setGuardianName(e.target.value)} disabled={pending} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="h-guardian-phone">טלפון ההורה</Label>
+              <Input id="h-guardian-phone" type="tel" inputMode="tel" dir="ltr" className="text-right" placeholder="0501234567" value={guardianPhone} onChange={(e) => setGuardianPhone(e.target.value)} disabled={pending} />
+            </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={save} disabled={pending}>
                 {pending ? <Loader2 className="h-3 w-3 me-1 animate-spin" /> : null}
@@ -90,15 +102,18 @@ export function HealthCard({ traineeId, health }: { traineeId: string; health: T
                 <div>לא צוין</div>
               )}
             </div>
-            {health.guardianPhone && (
-              <div>
-                <div className="text-muted-foreground">הורה משלם</div>
+            <div>
+              <div className="text-muted-foreground">הורה</div>
+              {health.guardianPhone ? (
                 <a href={`tel:${health.guardianPhone}`} className="inline-flex items-center gap-1 underline">
                   <Phone className="h-3 w-3" />
-                  {health.guardianName} · {formatPhoneToLocal(health.guardianPhone)}
+                  {health.guardianName ? `${health.guardianName} · ` : ""}
+                  {formatPhoneToLocal(health.guardianPhone)}
                 </a>
-              </div>
-            )}
+              ) : (
+                <div>לא צוין</div>
+              )}
+            </div>
             <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
               עריכה
             </Button>

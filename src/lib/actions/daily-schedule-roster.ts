@@ -1,13 +1,10 @@
 "use server";
 
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
-import { assertBranchWritable } from "@/lib/actions/shared/assert-branch";
 import { revalidateScheduleSurfaces } from "@/lib/actions/shared/revalidate-schedule";
 import { verifyRosterTrainees } from "@/lib/actions/shared/verify-roster-trainees";
-import { getBranchScopeAction } from "@/lib/actions/shared/branch-scope";
-import { mayCorrectPastSlot, planRosterAdd, planRosterRemove, rosterRemovalMode } from "@/lib/schedule/roster-entry";
-import { israelMinutesOfDay } from "@/lib/utils/israel-time";
-import { israelToday } from "@/lib/utils/tasks";
+import { planRosterAdd, planRosterRemove, rosterRemovalMode } from "@/lib/schedule/roster-entry";
+import { israelNow, loadWritableSlot, mayCorrect, type ServerClient } from "@/lib/actions/shared/roster-slot";
 import { revalidateStaffSurfaces } from "@/features/plans/lib/revalidate-staff";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +15,7 @@ import {
   type RosterAddInput,
   type RosterRemoveInput,
 } from "@/lib/validations/schedule";
-import { SLOT_SELECT_WITH_TRAINEES, type ScheduleSlot, type SlotTrainee } from "@/types/schedule";
+import type { ScheduleSlot, SlotTrainee } from "@/types/schedule";
 
 /**
  * Roster edits one entry at a time.
@@ -40,23 +37,6 @@ type RemoveResult = { success: true } | { error: string; needsReason?: true };
 /** The audit snapshot of a name fits its column. */
 const NAME_SNAPSHOT_MAX = 100;
 
-/**
- * Whether the caller may correct the Roster of this Slot once it happened:
- * the Trainers who ran it, and Admins and Branch managers of its branch.
- */
-async function mayCorrect(
-  loaded: { slot: ScheduleSlot; branchId: string },
-  actor: { userId: string; role: string },
-): Promise<boolean> {
-  const scope = await getBranchScopeAction();
-  const managesBranch = "error" in scope ? false : scope.data.managedBranchIds.includes(loaded.branchId);
-  const trainerIds = loaded.slot.trainers.map((t) => t.trainer_id).filter((id): id is string => id !== null);
-  return mayCorrectPastSlot({ role: actor.role, userId: actor.userId, managesBranch }, { trainerIds });
-}
-
-const israelNow = () => ({ date: israelToday(), minutes: israelMinutesOfDay(new Date()) });
-
-type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
 /** Postgres unique_violation: a concurrent add of the same trainee won the race. */
 const UNIQUE_VIOLATION = "23505";
@@ -91,30 +71,6 @@ async function syncSlotWorkout(
     p_trainee_id: traineeId,
   });
   if (error) console.error(`${fn} failed:`, error);
-}
-
-async function loadWritableSlot(
-  supabase: ServerClient,
-  slotId: string,
-): Promise<{ slot: ScheduleSlot; branchId: string } | { error: string }> {
-  const { data, error } = (await typedFrom(supabase, "daily_schedule_slots")
-    .select(SLOT_SELECT_WITH_TRAINEES)
-    .eq("id", slotId)
-    .maybeSingle()) as { data: ScheduleSlot | null; error: { message: string } | null };
-
-  if (error) {
-    console.error("Load slot for roster error:", error);
-    return { error: "שגיאה בטעינת הסלוט" };
-  }
-  if (!data) return { error: "הסלוט לא נמצא" };
-  // Every slot written since branches shipped carries one; a legacy row
-  // without it cannot be scope-checked, so it is not edited from here.
-  if (!data.branch_id) return { error: "הסלוט אינו משויך לסניף" };
-
-  const branchCheck = await assertBranchWritable(data.branch_id);
-  if (branchCheck.error) return { error: branchCheck.error };
-
-  return { slot: data, branchId: data.branch_id };
 }
 
 export async function addSlotTraineeAction(input: RosterAddInput): Promise<AddResult> {

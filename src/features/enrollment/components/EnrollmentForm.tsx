@@ -24,6 +24,7 @@ import type { RenewalLocks } from "@/lib/plans/bound-renewal";
 import { AgreementDeclarations } from "./AgreementDeclarations";
 import { ddmmyyyy } from "@/lib/plans/confirmation-copy";
 import type { LandingBranchKey } from "@/lib/branches/landing-branches";
+import { GenderChoice } from "@/components/forms/GenderChoice";
 
 interface EnrollmentFormProps {
   product: PlanProduct;
@@ -99,6 +100,7 @@ export function EnrollmentForm({ product, branch, prefill, locks, renewalToken, 
       acceptsTerms: false,
       authorizesPayment: false,
       photoConsent: undefined,
+      childGender: undefined,
       signatureName: "",
       ...prefill,
     },
@@ -224,6 +226,19 @@ export function EnrollmentForm({ product, branch, prefill, locks, renewalToken, 
                   <FormLabel required>תאריך לידה</FormLabel>
                   <FormControl>
                     <Input {...field} autoComplete="section-child bday" className="h-12 rounded-xl text-base read-only:bg-muted" type="date" max={today} disabled={loading} readOnly={locks?.childBirthdate} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="childGender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>בן או בת</FormLabel>
+                  <FormControl>
+                    <GenderChoice value={field.value} onChange={field.onChange} disabled={loading} idPrefix="child-gender" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

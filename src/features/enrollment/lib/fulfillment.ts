@@ -47,7 +47,7 @@ export async function fulfillFromInput(
     const { data: profile } = await db
       .from("profiles")
       .select(
-        "full_name, birthdate, role, guardian_name, guardian_phone, medical_notes, emergency_contact_name, emergency_contact_phone, photo_consent",
+        "full_name, birthdate, gender, role, guardian_name, guardian_phone, medical_notes, emergency_contact_name, emergency_contact_phone, photo_consent",
       )
       .eq("id", profileId)
       .single();
@@ -66,6 +66,7 @@ export async function fulfillFromInput(
       .update({
         full_name: profile?.full_name || order.child_name,
         birthdate: profile?.birthdate || order.child_birthdate,
+        gender: profile?.gender ?? order.child_gender ?? null,
         role: "trainee",
         // A staff signup carries no birthdate until the parent signs; leave the
         // app's onboarding to ask for what is still missing.

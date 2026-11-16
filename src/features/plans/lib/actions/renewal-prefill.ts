@@ -13,6 +13,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import { loadPlanQueues } from "../queries";
 import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import type { EnrollmentAgreement, PlanProduct } from "@/types/plans";
+import { parseGender } from "@/lib/profile/gender";
 
 export interface RenewalPrefill {
   /** Null when the old product cannot be bought again: the catalog opens instead. */
@@ -58,7 +59,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
       .maybeSingle(),
     db
       .from("profiles")
-      .select("phone, full_name, birthdate, guardian_name, guardian_phone, role, deleted_at")
+      .select("phone, full_name, birthdate, gender, guardian_name, guardian_phone, role, deleted_at")
       .eq("id", profileId)
       .maybeSingle(),
     loadPlanQueues(db, [profileId], israelToday()),
@@ -71,6 +72,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
         phone: string | null;
         full_name: string | null;
         birthdate: string | null;
+        gender: string | null;
         guardian_name: string | null;
         guardian_phone: string | null;
         role: string;
@@ -94,6 +96,7 @@ export async function loadRenewalPrefill(token: string): Promise<RenewalPrefill 
     // The account wins over the last agreement: the purchase lands on it.
     childName: usable.fullName ?? agreement?.child_name ?? "",
     childBirthdate: usable.birthdate ?? agreement?.child_birthdate ?? "",
+    childGender: parseGender(profile.gender) ?? undefined,
     medicalNotes: agreement?.medical_notes ?? "",
     emergencyContactName: agreement?.emergency_contact_name ?? "",
     emergencyContactPhone: formatPhoneToLocal(agreement?.emergency_contact_phone),

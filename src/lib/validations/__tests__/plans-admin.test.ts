@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arboxPlanSchema, newTraineeSchema, staffPaymentSchema } from "../plans-admin";
+import { arboxPlanSchema, healthSchema, newTraineeSchema, staffPaymentSchema } from "../plans-admin";
 
 const UUID = "11111111-2222-4333-8444-555555555555";
 
@@ -171,5 +171,34 @@ describe("arboxPlanSchema", () => {
 
   it("refuses a malformed date", () => {
     expect(arboxPlanSchema.safeParse({ ...valid, startsOn: "24/09/2026" }).success).toBe(false);
+  });
+});
+
+describe("healthSchema", () => {
+  const VALID = {
+    traineeId: UUID,
+    medicalNotes: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    guardianName: "דנה כהן",
+    guardianPhone: "0501234567",
+  };
+
+  it("normalizes the parent phone and keeps the name", () => {
+    const parsed = healthSchema.parse(VALID);
+    expect(parsed.guardianPhone).toBe("+972501234567");
+    expect(parsed.guardianName).toBe("דנה כהן");
+  });
+
+  it("stores an empty parent name and phone as null", () => {
+    const parsed = healthSchema.parse({ ...VALID, guardianName: " ", guardianPhone: "" });
+    expect(parsed.guardianName).toBeNull();
+    expect(parsed.guardianPhone).toBeNull();
+  });
+
+  it("refuses a bad parent phone", () => {
+    const result = healthSchema.safeParse({ ...VALID, guardianPhone: "123" });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0]?.message).toBe("מספר טלפון לא תקין");
   });
 });

@@ -36,6 +36,7 @@ import { BranchCheckboxGroup } from "@/features/branches/components/BranchCheckb
 import type { BranchOption } from "@/types/branches";
 import { AgeGroupPicker } from "@/components/admin/users/AgeGroupPicker";
 import { PlaysUpToggle } from "@/components/admin/users/PlaysUpToggle";
+import { GenderChoice } from "@/components/forms/GenderChoice";
 
 interface UserEditFormProps {
   user: Profile;
@@ -165,6 +166,28 @@ export function UserEditForm({
             </FormItem>
           )}
         />
+
+        {/* Gender: how Hebrew text addresses a trainee */}
+        {form.watch("role") === "trainee" && (
+          <FormField
+            control={form.control}
+            name="gender"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>בן או בת</FormLabel>
+                <FormControl>
+                  <GenderChoice
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={loading}
+                    idPrefix="user-gender"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* Club */}
         <FormField

@@ -196,6 +196,7 @@ export async function startCheckoutAction(input: EnrollmentInput): Promise<Start
       login_phone: purchaser.loginPhone,
       child_name: purchaser.childName,
       child_birthdate: purchaser.childBirthdate,
+      child_gender: data.childGender,
       email: data.email,
       profile_id: purchaser.profileId,
       renewal_of_plan_id: purchaser.renewalOfPlanId,

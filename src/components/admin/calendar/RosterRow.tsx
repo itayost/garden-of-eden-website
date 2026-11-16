@@ -52,6 +52,8 @@ interface RosterRowProps {
   onOpenHealth: () => void;
   /** The session builder for this trainee on this day and slot. */
   builderHref: string;
+  /** Quick tag chips, shown under the row while the sheet is in tag mode. */
+  tagsSlot?: React.ReactNode;
 }
 
 /**
@@ -72,6 +74,7 @@ export function RosterRow({
   onOpenPlan,
   onOpenHealth,
   builderHref,
+  tagsSlot,
 }: RosterRowProps) {
   const chip = badge?.endsOn ? STAFF_PLAN_CHIP[badge.status] : undefined;
   const status = STATUS[statusKey(session)];
@@ -169,6 +172,8 @@ export function RosterRow({
           {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
         </Button>
       </div>
+
+      {tagsSlot && <div className="pb-3 pe-2 ps-8">{tagsSlot}</div>}
 
       {linked && expanded && (
         <div id={panelId} className="space-y-2 pb-3 pe-3 ps-8">
