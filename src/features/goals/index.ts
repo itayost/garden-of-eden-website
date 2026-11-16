@@ -11,8 +11,13 @@ export {
   GOAL_METRICS,
   METRIC_LABELS_HE,
   METRIC_UNITS,
+  isGoalMetric,
   isLowerBetterMetric,
 } from "./lib/config/goal-config";
+export type { GoalMetric } from "./lib/config/goal-config";
+
+// Rules
+export { goalRefusal } from "./lib/utils/goal-rules";
 
 // Utils
 export {

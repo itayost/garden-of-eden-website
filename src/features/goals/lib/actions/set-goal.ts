@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { PhysicalMetricKey } from "../../types";
 import type { Profile, PlayerGoalRow } from "@/types/database";
-import { isLowerBetterMetric, GOAL_METRICS } from "../config/goal-config";
+import { isLowerBetterMetric } from "../config/goal-config";
+import { goalRefusal } from "../utils/goal-rules";
 import { isValidUUID } from "@/lib/validations/common";
 
 interface SetGoalParams {
@@ -64,32 +65,17 @@ export async function setGoal(params: SetGoalParams): Promise<SetGoalResult> {
     return { success: false, error: "ניתן להגדיר יעדים רק לחניכים" };
   }
 
-  // Validate metric
-  if (!GOAL_METRICS.includes(params.metricKey)) {
-    return { success: false, error: "מדד לא תקין" };
+  // Validate the metric, the target and its side of the baseline
+  const refusal = goalRefusal({
+    metricKey: params.metricKey,
+    targetValue: params.targetValue,
+    baselineValue: params.baselineValue ?? null,
+  });
+  if (refusal) {
+    return { success: false, error: refusal };
   }
 
-  // Validate target value
-  if (params.targetValue <= 0) {
-    return { success: false, error: "ערך היעד חייב להיות חיובי" };
-  }
-
-  // Validate that goal makes sense relative to baseline
   const isLowerBetter = isLowerBetterMetric(params.metricKey);
-  if (params.baselineValue != null && params.baselineValue > 0) {
-    if (isLowerBetter && params.targetValue >= params.baselineValue) {
-      return {
-        success: false,
-        error: "עבור מדד זה, היעד צריך להיות נמוך מהערך הנוכחי",
-      };
-    }
-    if (!isLowerBetter && params.targetValue <= params.baselineValue) {
-      return {
-        success: false,
-        error: "עבור מדד זה, היעד צריך להיות גבוה מהערך הנוכחי",
-      };
-    }
-  }
 
   // Check if there's already an active goal for this metric
   const { data: existingGoal } = (await supabase
