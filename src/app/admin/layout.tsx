@@ -6,6 +6,7 @@ import { getTaskCountsAction } from "@/lib/actions/admin-tasks";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { isBranchManager } from "@/lib/branches/branch-scope";
 import { endingSoonBadgeCount } from "@/features/finance/lib/ending-soon-count";
+import { weeklyReportsBadgeCount } from "@/features/weekly-reports/lib/badge";
 import { ADMIN_PAGE_TITLES } from "@/lib/navigation/admin-nav";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -48,11 +49,13 @@ export default async function AdminLayout({
   // Task attention count for the nav badge. An admin is nudged by work that
   // needs their judgement (overdue, or closed and unreviewed); a trainer is
   // nudged by their own outstanding work.
-  const [countsResult, endingSoon, managesBranch] = await Promise.all([
+  const [countsResult, endingSoon, managesBranch, weeklyReports] = await Promise.all([
     getTaskCountsAction(),
     isAdmin ? endingSoonBadgeCount() : Promise.resolve(0),
     // Admins see every item already, so only a Trainer needs the lookup.
     isAdmin ? Promise.resolve(false) : managesAnyBranch(profile?.role ?? ""),
+    // Pending weekly reports of the current Report week in the caller's branches.
+    weeklyReportsBadgeCount(),
   ]);
   const taskBadge =
     "success" in countsResult
@@ -60,7 +63,11 @@ export default async function AdminLayout({
         ? countsResult.data.overdue + countsResult.data.awaitingReview
         : countsResult.data.open
       : 0;
-  const navBadges = { "/admin/tasks": taskBadge, "/admin/retention": endingSoon };
+  const navBadges = {
+    "/admin/tasks": taskBadge,
+    "/admin/retention": endingSoon,
+    "/admin/weekly-reports": weeklyReports,
+  };
   // The header tile stands in for every row while the drawer is shut.
   const menuBadge = Object.values(navBadges).reduce((sum, n) => sum + n, 0);
 

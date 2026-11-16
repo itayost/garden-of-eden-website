@@ -18,6 +18,7 @@ export default function robots(): MetadataRoute.Robots {
           "/join/success",
           "/join/failed",
           "/join/agreement",
+          "/report/",
         ],
       },
     ],

@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   ListChecks,
   MapPin,
+  Newspaper,
   Receipt,
   RefreshCw,
   ShieldAlert,
@@ -40,6 +41,7 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
       { href: "/admin/nutrition", label: "תזונה", icon: Utensils },
       { href: "/admin/submissions", label: "שאלונים", icon: FileText },
       { href: "/admin/surveys", label: "סקרים", icon: ClipboardList, adminOrManager: true },
+      { href: "/admin/weekly-reports", label: "דוחות שבועיים", icon: Newspaper },
     ],
   },
   {

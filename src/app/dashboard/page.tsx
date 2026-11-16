@@ -35,6 +35,7 @@ import { canAskParentToBuy } from "@/features/plans/lib/can-ask-parent";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TraineeNotices } from "@/features/notices/components/TraineeNotices";
 import { ParentPhoneSection } from "@/features/parent-phone/components/ParentPhoneSection";
+import { WeeklyReportSection } from "@/features/weekly-reports/components/trainee/WeeklyReportSection";
 import { CheckinSection } from "@/features/checkins/components/CheckinSection";
 import { OpenSurveysSection } from "@/features/surveys/components/trainee/OpenSurveysSection";
 import { getMyNoticesAction } from "@/features/notices/lib/notices";
@@ -164,6 +165,9 @@ export default async function DashboardPage() {
       <TraineeNotices notices={notices} />
       <Suspense fallback={null}>
         <ParentPhoneSection userId={user.id} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <WeeklyReportSection userId={user.id} canBook={canBook} />
       </Suspense>
       <Suspense fallback={null}>
         <OpenSurveysSection userId={user.id} firstName={firstName} />

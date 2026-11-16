@@ -50,6 +50,12 @@ const optionalServerVars = [
   "WHATSAPP_PAYMENT_LINK_TEMPLATE_NAME",
   "WHATSAPP_PURCHASE_REQUEST_TEMPLATE_NAME",
   "WHATSAPP_JOIN_WELCOME_TEMPLATE_NAME",
+  "WHATSAPP_WEEKLY_REPORT_TEMPLATE_NAME",
+  "WHATSAPP_MISSED_YOU_TEMPLATE_NAME",
+  // The weekly report writer. Without the key the write job logs and stops;
+  // the model falls back to claude-opus-5-5 for any value it does not know.
+  "ANTHROPIC_API_KEY",
+  "WEEKLY_REPORT_MODEL",
 ] as const;
 
 /**
