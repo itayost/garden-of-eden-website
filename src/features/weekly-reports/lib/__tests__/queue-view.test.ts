@@ -14,7 +14,7 @@ import {
   wordCount,
 } from "../queue-view";
 
-const EMPTY = { held: 0, pending: 0, approved: 0, sent: 0, missed_you: 0, absent: 0 };
+const EMPTY = { held: 0, pending: 0, approved: 0, sent: 0, missed_you: 0, absent: 0, proposals: 0 };
 
 describe("tabOf", () => {
   it("puts a report in the tab of its status, sent and not sent together", () => {
@@ -36,11 +36,25 @@ describe("tabOf", () => {
     expect(tabOf("report", "listed")).toBeNull();
     expect(tabOf("other", "pending")).toBeNull();
   });
+
+  it("never puts a report in the Goal proposals tab", () => {
+    expect(tabOf("proposals", "proposed")).toBeNull();
+    expect(tabOf("report", "proposals")).toBeNull();
+    expect(tabOf("report", "proposed")).toBeNull();
+  });
 });
 
 describe("the tabs", () => {
-  it("run held first, then pending, approved, sent, missed you and absent", () => {
-    expect(QUEUE_TABS.map((t) => t.tab)).toEqual(["held", "pending", "approved", "sent", "missed_you", "absent"]);
+  it("run held first, then pending, approved, sent, missed you, absent and the Goal proposals last", () => {
+    expect(QUEUE_TABS.map((t) => t.tab)).toEqual([
+      "held",
+      "pending",
+      "approved",
+      "sent",
+      "missed_you",
+      "absent",
+      "proposals",
+    ]);
     expect(QUEUE_TABS.map((t) => t.label)).toEqual([
       "מעוכבים",
       "ממתינים לאישור",
@@ -48,6 +62,7 @@ describe("the tabs", () => {
       "נשלחו",
       "התגעגענו",
       "לא הגיעו 3 שבועות",
+      "הצעות יעד",
     ]);
   });
 
@@ -62,6 +77,12 @@ describe("the tabs", () => {
     expect(pickTab(undefined, counts)).toBe("approved");
     expect(pickTab("nonsense", counts)).toBe("approved");
     expect(pickTab(undefined, EMPTY)).toBe("held");
+  });
+
+  it("take the Goal proposals tab when asked, or when only it has rows", () => {
+    expect(pickTab("proposals", { ...EMPTY, pending: 3 })).toBe("proposals");
+    expect(pickTab("proposals", EMPTY)).toBe("proposals");
+    expect(pickTab(undefined, { ...EMPTY, proposals: 2 })).toBe("proposals");
   });
 });
 
@@ -80,6 +101,11 @@ describe("countsLine", () => {
 
   it("says so when the week has no report", () => {
     expect(countsLine({ ...EMPTY, absent: 2 })).toBe("אין דוחות בשבוע הזה");
+  });
+
+  it("leaves the Goal proposals out: they are not reports", () => {
+    expect(countsLine({ ...EMPTY, proposals: 4 })).toBe("אין דוחות בשבוע הזה");
+    expect(countsLine({ ...EMPTY, pending: 2, proposals: 4 })).toBe("2 ממתינים");
   });
 });
 

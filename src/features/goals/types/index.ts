@@ -2,6 +2,7 @@
  * Goals System Types
  */
 
+import type { ReactNode } from "react";
 import type { NumericMetricKey } from "@/lib/utils/assessment-metrics";
 import type { PlayerGoalRow } from "@/types/database";
 
@@ -81,6 +82,8 @@ export interface GoalManagementPanelProps {
   playerName: string;
   currentMetrics: Partial<Record<PhysicalMetricKey, number | null>>;
   existingGoals: PlayerGoalRow[];
+  /** Shown first in the card, above the open Goals: the Trainee's Goal proposals. */
+  children?: ReactNode;
 }
 
 /**

@@ -9,7 +9,10 @@ interface QueueTabsProps {
   location: Omit<QueueLocation, "tab" | "report">;
 }
 
-/** The six tabs, each with its count; a strip that scrolls sideways on a phone. */
+/**
+ * The seven tabs, each with its count (the last, הצעות יעד, counts the open
+ * Goal proposals of every week); a strip that scrolls sideways on a phone.
+ */
 export function QueueTabs({ active, counts, location }: QueueTabsProps) {
   return (
     <nav aria-label="סטטוס הדוחות" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">

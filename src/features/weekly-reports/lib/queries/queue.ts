@@ -5,7 +5,7 @@
  * row's `branch_ids`, never left to RLS (the table has no policies).
  */
 import "server-only";
-import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
+import { readDrillsByIds } from "@/features/development-book/lib/queries/drill-pool";
 
 import { parseGender, type Gender } from "@/lib/profile/gender";
 import { byFullName, readAllPages } from "@/lib/supabase/in-chunks";
@@ -18,6 +18,7 @@ import { writerOutputSchema, type WriterOutput } from "../writer/output";
 import { readNewDataTimes } from "./queue-new-data";
 import { must, unique, type Db } from "./read";
 import type { ReportKind } from "./rows";
+import { inTraineeScope } from "./scope";
 import { holdReasonsOf, storedSheetOf, type StoredSheet } from "./stored";
 import { loadTrainingRows } from "./training";
 
@@ -152,23 +153,11 @@ function toQueueRow(row: WeekRow, context: RowContext): QueueRow | null {
 
 /**
  * The Report week's rows the caller may see, filtered by the picked branch,
- * sorted by name, with the counts per tab.
+ * sorted by name, with the counts per tab. Besides the row's own branches
+ * (readWeekRows), its Trainee must be in the caller's branches now
+ * (inTraineeScope): the rule every action checks, so the list never shows a
+ * name and its Holds that the caller could not open.
  */
-/**
- * Rows whose Trainee is in the caller's branches now, besides the row's own
- * branches (readWeekRows): the rule every action checks, so the list never
- * shows a name and its Holds that the caller could not open.
- */
-async function inTraineeScope<Row extends { trainee_id: string }>(
-  db: Db,
-  rows: Row[],
-  scopeBranchIds: readonly string[] | null,
-): Promise<Row[]> {
-  if (scopeBranchIds === null) return rows;
-  const memberships = await loadBranchIdsByProfile(db, unique(rows.map((row) => row.trainee_id)));
-  return rows.filter((row) => (memberships.get(row.trainee_id) ?? []).some((id) => scopeBranchIds.includes(id)));
-}
-
 export async function loadQueue(db: Db, query: QueueQuery): Promise<QueueData> {
   if (query.scopeBranchIds !== null && query.scopeBranchIds.length === 0) {
     return { rows: [], counts: tabCounts([]) };
@@ -225,17 +214,6 @@ export interface ReportDetail {
 const DETAIL_SELECT =
   "id, trainee_id, week_start, kind, status, branch_ids, hold_reasons, fact_sheet, original_output, player_text, parent_text, drill_ids, written_at, edited_at, edit_ratio, model, sent_at, parent_message_id, parent_skip_reason, updated_at, trainee:profiles!weekly_reports_trainee_id_fkey(full_name, gender), editor:profiles!weekly_reports_edited_by_fkey(full_name)";
 
-/** The chosen drills in the order chosen, with the book's name and "למה" line. */
-async function readDrills(db: Db, ids: readonly string[]): Promise<DrillCandidate[]> {
-  if (ids.length === 0) return [];
-  const rows =
-    must("book_drills", await db.from("book_drills").select("id, name_he, why_he").in("id", unique(ids))) ?? [];
-  return unique(ids).flatMap((id) => {
-    const drill = rows.find((row) => row.id === id);
-    return drill ? [{ id: drill.id, name: drill.name_he?.trim() || "תרגיל", why: drill.why_he }] : [];
-  });
-}
-
 /** One report with everything its sheet shows, or null when there is no such row. */
 export async function loadReportDetail(db: Db, id: string): Promise<ReportDetail | null> {
   const row = must("weekly_reports", await db.from("weekly_reports").select(DETAIL_SELECT).eq("id", id).maybeSingle());
@@ -243,7 +221,11 @@ export async function loadReportDetail(db: Db, id: string): Promise<ReportDetail
   const kind = kindOf(row.kind);
   if (kind === null) return null;
   const original = writerOutputSchema.safeParse(row.original_output);
-  const [names, drills] = await Promise.all([readBranchNameMap(db, row.branch_ids), readDrills(db, row.drill_ids)]);
+  // The chosen drills in the order chosen, with the book's name and "למה" line.
+  const [names, drills] = await Promise.all([
+    readBranchNameMap(db, row.branch_ids),
+    readDrillsByIds(db, row.drill_ids),
+  ]);
   return {
     id: row.id,
     traineeId: row.trainee_id,
