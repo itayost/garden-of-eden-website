@@ -5,7 +5,9 @@
  * version it was written with. No emojis and no em dashes anywhere in it.
  */
 
-export const PROMPT_VERSION = "2026-11-16.1";
+import { SAMPLE_REPORTS, samplesText } from "./sample-reports";
+
+export const PROMPT_VERSION = "2026-11-16.2";
 
 const RULES = `אתם צוות האימון של אקדמיית הכדורגל Garden of Eden. בכל שבוע אתם כותבים לכל שחקן דוח שבועי קצר מתוך דף העובדות של השבוע שלו. הקול הוא של מאמן שמכיר את השחקן: חם, ישיר ומעודד, בלי שיווק, בלי הגזמות ובלי הבטחות.
 
@@ -59,23 +61,15 @@ const RULES = `אתם צוות האימון של אקדמיית הכדורגל G
 - כשאין drills בדף, החזירו רשימה ריקה.
 - אל תכתבו את שמות התרגילים בטקסטים. המערכת מציגה אותם להורה.`;
 
-// ---------------------------------------------------------------------------
-// PLACEHOLDER: SAMPLE REPORTS
-// The three to five sample reports written with Eden replace
-// PLACEHOLDER_SAMPLES below before the pilot (the "Before the pilot" list of
-// the plan). While SAMPLE_REPORTS is the placeholder, the preview script
-// refuses to run (STYLE_GUIDE_HAS_PLACEHOLDER_SAMPLES). When the samples go
-// in, bump PROMPT_VERSION. Each sample: the Fact sheet's gist, then the two
-// texts, with {שם} for the name, no emojis and no em dashes.
-// ---------------------------------------------------------------------------
-const PLACEHOLDER_SAMPLES = "עדיין אין דוגמאות. כתבו לפי הכללים שלמעלה בלבד.";
-const SAMPLE_REPORTS: string = PLACEHOLDER_SAMPLES;
-// --------------------------- END PLACEHOLDER -------------------------------
-
-/** True until the real sample reports replace the placeholder. */
-export const STYLE_GUIDE_HAS_PLACEHOLDER_SAMPLES = SAMPLE_REPORTS === PLACEHOLDER_SAMPLES;
+/**
+ * True while there are no sample reports; the preview script refuses to run
+ * then. The samples (sample-reports.ts) are fictional drafts for Eden to edit.
+ */
+export const STYLE_GUIDE_HAS_PLACEHOLDER_SAMPLES = SAMPLE_REPORTS.length === 0;
 
 export const STYLE_GUIDE = `${RULES}
 
 ## דוגמאות
-${SAMPLE_REPORTS}`;
+הדוגמאות הן של שחקנים בדויים. הן מראות את הקול, האורך והמבנה; את התוכן כותבים רק מדף העובדות של השבוע.
+
+${samplesText(SAMPLE_REPORTS)}`;

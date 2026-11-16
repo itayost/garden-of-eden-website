@@ -20,7 +20,8 @@ describe("style guide", () => {
     expect(STYLE_GUIDE).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 
-  it("still holds the placeholder samples, which the preview script refuses", () => {
-    expect(STYLE_GUIDE_HAS_PLACEHOLDER_SAMPLES).toBe(true);
+  it("carries the sample reports, so the preview script may run", () => {
+    expect(STYLE_GUIDE_HAS_PLACEHOLDER_SAMPLES).toBe(false);
+    expect(STYLE_GUIDE).toContain("### דוגמה 1");
   });
 });
