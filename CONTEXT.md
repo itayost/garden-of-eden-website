@@ -291,6 +291,22 @@ The Trainees a Survey is for, described by branches and birth years, never a sto
 
 ### Weekly report
 
+**Weekly report** (דוח שבועי):
+The two texts, one for the player and one for the parent, about one Trainee's Report week. Written by the model from the Fact sheet, approved by staff, then shown to the player on the dashboard and sent to the parent as a link. A Trainee who stopped coming gets "התגעגענו" instead, a fixed message no model writes.
+_Avoid_: Summary, newsletter, digest
+
+**Report week**:
+Friday to Thursday, in Israel days, named by its Friday. The current Report week is the last one that has ended: written in the night to Friday, sent from Friday 12:00.
+_Avoid_: Week (bare) when the calendar week is meant
+
+**Fact sheet** (דף עובדות):
+Everything the code computed about one Trainee's Report week: attendance, what was worked on, progress, habits, an Assessment, Goals, the next game. The only thing the model sees; it never holds a full name, a phone number, a medical note or a sensitive Shift report entry, and every number in a text must come from it.
+_Avoid_: Context, prompt data
+
+**Hold** (עיכוב):
+A Weekly report kept from sending, by a person or by a guardrail, with its reasons. A text problem (a number not in the Fact sheet, a forbidden word, a missing gender) must be fixed before approval; a sensitive entry or a staff member's reason only needs a person to open the report and approve it.
+_Avoid_: Block, reject
+
 **Quick tag** (תגית):
 One of a fixed set of words a Trainer taps for a Trainee after a Slot, with an optional short note. Six are positive and feed the weekly report; two (כאב או פציעה, התנהגות) are for staff only and hold a report for a person.
 _Avoid_: Note (notes are the Shift report's), comment, label

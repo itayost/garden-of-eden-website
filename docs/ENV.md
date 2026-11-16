@@ -42,6 +42,10 @@ Warnings logged in development if missing. Features degrade gracefully.
 | `WHATSAPP_FLOW_PRIVATE_KEY` | WhatsApp flow encryption key | WhatsApp flows |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | WhatsApp webhook verify token | WhatsApp webhooks |
 | `LEADS_WEBHOOK_API_KEY` | API key for leads webhook | Lead capture |
+| `ANTHROPIC_API_KEY` | Anthropic API key (server only); unset, the weekly report write job logs and writes nothing | Weekly report writer |
+| `WEEKLY_REPORT_MODEL` | `claude-opus-5-5` (default) or `claude-sonnet-5-5`; any other value falls back to the default | Weekly report writer |
+| `WHATSAPP_WEEKLY_REPORT_TEMPLATE_NAME` | Meta-approved template: `{{1}}` child's first name, `{{2}}` report link; unset, the parent message is skipped | Weekly report sending |
+| `WHATSAPP_MISSED_YOU_TEMPLATE_NAME` | Meta-approved template: `{{1}}` child's first name; unset, the parent message is skipped | Weekly report sending |
 <!-- AUTO-GENERATED:env-optional-end -->
 
 ## Notes
