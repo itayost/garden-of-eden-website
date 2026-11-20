@@ -1,8 +1,6 @@
 import { MAX_CARD_BALANCE, MAX_CARD_DAYS } from "./adjustment";
 import { amountProblem } from "./discount";
-
-/** The longest subject a receipt line takes; orders_invoice_subject_check holds the same bound. */
-export const MAX_INVOICE_SUBJECT = 60;
+import { MAX_INVOICE_SUBJECT } from "./invoice-subject";
 
 /**
  * A manual Card: an Admin or the branch's manager types the sessions, the

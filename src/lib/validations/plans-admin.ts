@@ -6,7 +6,7 @@ import {
   isValidDateString,
 } from "@/lib/validations/common";
 import { MAX_CARD_BALANCE, MAX_CARD_DAYS } from "@/lib/plans/adjustment";
-import { MAX_INVOICE_SUBJECT } from "@/lib/plans/manual-card";
+import { MAX_INVOICE_SUBJECT } from "@/lib/plans/invoice-subject";
 
 const uuid = z.string().regex(UUID_REGEX, "מזהה לא תקין");
 const isoDate = z.string().refine(isValidDateString, "תאריך לא תקין");

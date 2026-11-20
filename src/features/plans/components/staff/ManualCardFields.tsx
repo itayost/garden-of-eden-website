@@ -2,7 +2,8 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MAX_INVOICE_SUBJECT, type ManualCardDraft } from "@/lib/plans/manual-card";
+import { MAX_INVOICE_SUBJECT } from "@/lib/plans/invoice-subject";
+import type { ManualCardDraft } from "@/lib/plans/manual-card";
 
 type NumberField = Exclude<keyof ManualCardDraft, "subject">;
 
