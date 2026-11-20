@@ -39,6 +39,7 @@ export function staffOrderColumns(
       discount_reason: price.reason,
       discounted_by: price.listPrice !== null ? actorId : null,
       terms_sessions_total: sale.manualCard?.sessions ?? null,
+      invoice_subject: sale.manualCard?.subject ?? null,
       terms_duration_days: sale.manualCard?.days ?? null,
       parent_name: parties.parent.name,
       payer_phone: parties.parent.phone,

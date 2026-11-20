@@ -9,7 +9,7 @@ import type { ReceiptPayment } from "@/lib/morning/payment-mapping";
 import type { CardBrand } from "@/lib/payments/card";
 import { israelToday } from "@/lib/utils/tasks";
 import type { Order, PlanProduct } from "@/types/plans";
-import { orderPlanName } from "@/lib/plans/manual-card";
+import { orderReceiptDescription } from "@/lib/plans/manual-card";
 import { paidNothing } from "@/lib/plans/paid";
 import { KEEP_REFUND_FLAG_FILTER } from "@/lib/payments/page-settlement";
 
@@ -81,7 +81,7 @@ export async function issueOrderInvoice(
     .maybeSingle()) as { data: Pick<PlanProduct, "name_he"> | null };
 
   const doc = await createReceiptDocument({
-    description: `${orderPlanName(product?.name_he ?? "מסלול", order)} - ${order.child_name}`,
+    description: orderReceiptDescription(product?.name_he ?? "מסלול", order),
     amountIls: Number(order.amount_ils),
     paidOn: order.paid_at ? order.paid_at.slice(0, 10) : israelToday(),
     client: receiptClient(order),

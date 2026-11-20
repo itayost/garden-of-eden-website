@@ -6,6 +6,7 @@ import {
   isValidDateString,
 } from "@/lib/validations/common";
 import { MAX_CARD_BALANCE, MAX_CARD_DAYS } from "@/lib/plans/adjustment";
+import { MAX_INVOICE_SUBJECT } from "@/lib/plans/manual-card";
 
 const uuid = z.string().regex(UUID_REGEX, "מזהה לא תקין");
 const isoDate = z.string().refine(isValidDateString, "תאריך לא תקין");
@@ -80,6 +81,14 @@ const manualCardSchema = z
     sessions: z.number().int(),
     priceIls: z.number().finite(),
     days: z.number().int(),
+    // Empty or missing (a sheet opened before the field existed) means none.
+    subject: z
+      .string()
+      .trim()
+      .max(MAX_INVOICE_SUBJECT, `נושא עד ${MAX_INVOICE_SUBJECT} תווים`)
+      .transform((v) => (v === "" ? null : v))
+      .nullable()
+      .default(null),
   })
   .nullable()
   .default(null);

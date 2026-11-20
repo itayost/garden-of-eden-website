@@ -105,7 +105,12 @@ export function OrdersTable({ rows }: { rows: AdminOrderRow[] }) {
                   {order.child_name} · {formatPhoneToLocal(order.login_phone)}
                 </div>
               </TableCell>
-              <TableCell>{order.productName}</TableCell>
+              <TableCell>
+                {order.productName}
+                {order.invoice_subject && (
+                  <div className="text-xs text-muted-foreground">נושא: {order.invoice_subject}</div>
+                )}
+              </TableCell>
               <TableCell>
                 ₪{order.amount_ils.toLocaleString("he-IL")}
                 {order.list_price_ils !== null && (

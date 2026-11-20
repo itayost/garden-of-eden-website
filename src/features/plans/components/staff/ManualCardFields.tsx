@@ -2,9 +2,11 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ManualCardDraft } from "@/lib/plans/manual-card";
+import { MAX_INVOICE_SUBJECT, type ManualCardDraft } from "@/lib/plans/manual-card";
 
-const FIELDS: readonly { key: keyof ManualCardDraft; label: string; step: string; inputMode: "numeric" | "decimal" }[] = [
+type NumberField = Exclude<keyof ManualCardDraft, "subject">;
+
+const FIELDS: readonly { key: NumberField; label: string; step: string; inputMode: "numeric" | "decimal" }[] = [
   { key: "sessions", label: "אימונים", step: "1", inputMode: "numeric" },
   { key: "price", label: "מחיר (₪)", step: "0.01", inputMode: "decimal" },
   { key: "days", label: "תוקף (ימים)", step: "1", inputMode: "numeric" },
@@ -42,8 +44,24 @@ export function ManualCardFields({
           </div>
         ))}
       </div>
+      <div className="space-y-1">
+        <Label htmlFor="manual-subject">נושא לחשבונית (לא חובה)</Label>
+        <Input
+          id="manual-subject"
+          type="text"
+          enterKeyHint="done"
+          maxLength={MAX_INVOICE_SUBJECT}
+          placeholder="למשל: מחנה פסח"
+          className="h-12 rounded-xl text-base"
+          value={value.subject}
+          onChange={(e) => onChange({ ...value, subject: e.target.value })}
+          disabled={disabled}
+        />
+      </div>
       {problem && <p className="text-xs text-destructive">{problem}</p>}
-      <p className="text-xs text-muted-foreground">הקבלה וההסכם יציגו את המחיר ואת התנאים שנקבעו כאן.</p>
+      <p className="text-xs text-muted-foreground">
+        הקבלה וההסכם יציגו את המחיר ואת התנאים שנקבעו כאן, והקבלה גם את הנושא.
+      </p>
     </div>
   );
 }

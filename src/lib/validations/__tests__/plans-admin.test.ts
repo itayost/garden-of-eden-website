@@ -27,7 +27,17 @@ describe("staffPaymentSchema", () => {
       freeReason: "",
     });
     expect(parsed.freeReason).toBeNull();
-    expect(parsed.manualCard).toEqual({ sessions: 10, priceIls: 500, days: 90 });
+    // A sheet opened before the subject field sends none.
+    expect(parsed.manualCard).toEqual({ sessions: 10, priceIls: 500, days: 90, subject: null });
+  });
+
+  it("trims a manual Card's subject, reads an empty one as none, and refuses one too long", () => {
+    const base = { traineeId: UUID, productId: UUID, paymentMethod: "cash", reference: "", sendWhatsApp: true };
+    const withSubject = (subject: string | null) => ({ ...base, manualCard: { sessions: 10, priceIls: 500, days: 90, subject } });
+    expect(staffPaymentSchema.parse(withSubject("  מחנה פסח ")).manualCard?.subject).toBe("מחנה פסח");
+    expect(staffPaymentSchema.parse(withSubject("")).manualCard?.subject).toBeNull();
+    expect(staffPaymentSchema.parse(withSubject(null)).manualCard?.subject).toBeNull();
+    expect(staffPaymentSchema.safeParse(withSubject("א".repeat(61))).success).toBe(false);
   });
 
   it("keeps a free reason and refuses one too short to explain anything", () => {
