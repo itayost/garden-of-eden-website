@@ -94,6 +94,8 @@ export interface Order {
   /** A manual Card's terms, as staff typed them; null for a catalog sale. */
   terms_sessions_total: number | null;
   terms_duration_days: number | null;
+  /** What a manual Card sale is for (מחנה פסח), leading its Morning receipt line; null for none. */
+  invoice_subject: string | null;
   /** The list price of a discounted sale; null when sold at list price (amount_ils is what was paid). */
   list_price_ils: number | null;
   discount_reason: string | null;

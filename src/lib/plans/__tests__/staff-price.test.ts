@@ -18,7 +18,7 @@ describe("staffSalePrice", () => {
   });
 
   it("charges a manual Card's typed price", () => {
-    expect(staffSalePrice(1, { ...none, manualCard: { sessions: 8, priceIls: 640, days: 60 } })).toEqual({
+    expect(staffSalePrice(1, { ...none, manualCard: { sessions: 8, priceIls: 640, days: 60, subject: null } })).toEqual({
       ok: true,
       paid: 640,
       listPrice: null,
@@ -33,7 +33,7 @@ describe("staffSalePrice", () => {
       listPrice: 450,
       reason: "שבוע ניסיון",
     });
-    expect(staffSalePrice(1, { ...none, manualCard: { sessions: 8, priceIls: 640, days: 60 }, freeReason: "מלגה" })).toEqual({
+    expect(staffSalePrice(1, { ...none, manualCard: { sessions: 8, priceIls: 640, days: 60, subject: null }, freeReason: "מלגה" })).toEqual({
       ok: true,
       paid: 0,
       listPrice: 640,
@@ -43,7 +43,7 @@ describe("staffSalePrice", () => {
 
   it("refuses a Discount on a manual Card or a free sale, and passes on the rules' refusals", () => {
     expect(staffSalePrice(450, { ...none, freeReason: "x".repeat(2), discount: { amountIls: 400, reason: "אח" } }).ok).toBe(false);
-    expect(staffSalePrice(1, { ...none, manualCard: { sessions: 8, priceIls: 640, days: 60 }, discount: { amountIls: 1, reason: "אח" } }).ok).toBe(false);
+    expect(staffSalePrice(1, { ...none, manualCard: { sessions: 8, priceIls: 640, days: 60, subject: null }, discount: { amountIls: 1, reason: "אח" } }).ok).toBe(false);
     expect(staffSalePrice(450, { ...none, discount: { amountIls: 500, reason: "אח" } })).toEqual({
       ok: false,
       problem: "הסכום לתשלום צריך להיות נמוך ממחיר המחירון",

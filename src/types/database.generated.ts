@@ -2332,6 +2332,7 @@ export type Database = {
           fulfillment_error: string | null
           id: string
           installments: number
+          invoice_subject: string | null
           list_price_ils: number | null
           login_phone: string
           morning_document_id: string | null
@@ -2379,6 +2380,7 @@ export type Database = {
           fulfillment_error?: string | null
           id?: string
           installments?: number
+          invoice_subject?: string | null
           list_price_ils?: number | null
           login_phone: string
           morning_document_id?: string | null
@@ -2426,6 +2428,7 @@ export type Database = {
           fulfillment_error?: string | null
           id?: string
           installments?: number
+          invoice_subject?: string | null
           list_price_ils?: number | null
           login_phone?: string
           morning_document_id?: string | null

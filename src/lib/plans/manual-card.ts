@@ -1,5 +1,6 @@
 import { MAX_CARD_BALANCE, MAX_CARD_DAYS } from "./adjustment";
 import { amountProblem } from "./discount";
+import { MAX_INVOICE_SUBJECT } from "./invoice-subject";
 
 /**
  * A manual Card: an Admin or the branch's manager types the sessions, the
@@ -9,6 +10,14 @@ export interface ManualCardTerms {
   sessions: number;
   priceIls: number;
   days: number;
+  /** What the sale is for (מחנה פסח), leading its Morning receipt line; null for none. */
+  subject: string | null;
+}
+
+/** A subject the receipt line can carry: one line, not blank, within the bound. */
+function subjectFits(subject: string): boolean {
+  const trimmed = subject.trim();
+  return trimmed.length >= 1 && trimmed.length <= MAX_INVOICE_SUBJECT && !/[\r\n\t]/.test(subject);
 }
 
 /** Why these terms cannot be sold, or null. */
@@ -18,6 +27,7 @@ export function manualCardProblem(terms: ManualCardTerms): string | null {
   const price = amountProblem(terms.priceIls);
   if (price) return price;
   if (!whole(terms.days, MAX_CARD_DAYS)) return `תוקף בימים בין 1 ל-${MAX_CARD_DAYS}`;
+  if (terms.subject !== null && !subjectFits(terms.subject)) return `נושא בשורה אחת, עד ${MAX_INVOICE_SUBJECT} תווים`;
   return null;
 }
 
@@ -44,11 +54,30 @@ export function orderPlanName(
   return terms ? manualCardLabel(productName, terms) : productName;
 }
 
+/**
+ * The line an order's Morning receipt shows the customer: the subject staff
+ * typed (מחנה פסח), when there is one, then the plan and the child.
+ */
+export function orderReceiptDescription(
+  productName: string,
+  order: {
+    terms_sessions_total: number | null;
+    terms_duration_days: number | null;
+    invoice_subject: string | null;
+    child_name: string;
+  },
+): string {
+  const line = `${orderPlanName(productName, order)} - ${order.child_name}`;
+  return order.invoice_subject ? `${order.invoice_subject} - ${line}` : line;
+}
+
 /** A staff form's manual Card fields, as typed. */
 export interface ManualCardDraft {
   sessions: string;
   price: string;
   days: string;
+  /** Optional; empty means none. */
+  subject: string;
 }
 
 /** The terms to send, or why the draft cannot be sent yet. */
@@ -56,7 +85,12 @@ export function readManualCard(draft: ManualCardDraft): { terms: ManualCardTerms
   if ([draft.sessions, draft.price, draft.days].some((v) => v.trim() === "")) {
     return { terms: null, problem: "נדרשים אימונים, מחיר ותוקף" };
   }
-  const terms = { sessions: Number(draft.sessions), priceIls: Number(draft.price), days: Number(draft.days) };
+  const terms = {
+    sessions: Number(draft.sessions),
+    priceIls: Number(draft.price),
+    days: Number(draft.days),
+    subject: draft.subject.trim() === "" ? null : draft.subject.trim(),
+  };
   const problem = manualCardProblem(terms);
   return problem ? { terms: null, problem } : { terms, problem: null };
 }
@@ -72,5 +106,6 @@ export function manualCardDraftFrom(
     sessions: String(base?.sessions_total ?? 10),
     price: base ? String(base.price_ils) : "",
     days: String(base?.duration_days ?? 90),
+    subject: "",
   };
 }
