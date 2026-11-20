@@ -24,7 +24,12 @@ jobs:
           node-version: 20
           cache: npm
 
+      # onnxruntime-node (via @huggingface/transformers) downloads CUDA binaries
+      # on Linux x64 during install; the v1.21.0 GPU asset now returns 404 and
+      # nothing here runs on a GPU.
       - run: npm ci
+        env:
+          ONNXRUNTIME_NODE_INSTALL_CUDA: skip
 
       - name: Type check
         run: npx tsc --noEmit
