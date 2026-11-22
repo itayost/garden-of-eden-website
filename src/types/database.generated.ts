@@ -880,6 +880,30 @@ export type Database = {
           },
         ]
       }
+      course_access_sweeps: {
+        Row: {
+          arbox_ids: number
+          created_at: string
+          plan_trainees: number
+          stamped: number
+          swept_on: string
+        }
+        Insert: {
+          arbox_ids: number
+          created_at?: string
+          plan_trainees: number
+          stamped: number
+          swept_on: string
+        }
+        Update: {
+          arbox_ids?: number
+          created_at?: string
+          plan_trainees?: number
+          stamped?: number
+          swept_on?: string
+        }
+        Relationships: []
+      }
       course_chapters: {
         Row: {
           course_id: string
@@ -3512,6 +3536,8 @@ export type Database = {
           birthdate: string | null
           branches_set_by_admin_at: string | null
           club: string | null
+          course_access_until: string | null
+          course_seen_training_on: string | null
           created_at: string | null
           deleted_at: string | null
           emergency_contact_name: string | null
@@ -3549,6 +3575,8 @@ export type Database = {
           birthdate?: string | null
           branches_set_by_admin_at?: string | null
           club?: string | null
+          course_access_until?: string | null
+          course_seen_training_on?: string | null
           created_at?: string | null
           deleted_at?: string | null
           emergency_contact_name?: string | null
@@ -3586,6 +3614,8 @@ export type Database = {
           birthdate?: string | null
           branches_set_by_admin_at?: string | null
           club?: string | null
+          course_access_until?: string | null
+          course_seen_training_on?: string | null
           created_at?: string | null
           deleted_at?: string | null
           emergency_contact_name?: string | null
