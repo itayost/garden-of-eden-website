@@ -41,6 +41,7 @@ export const ACTIVITY_ACTION_LABELS_HE = {
   slot_called_off_cleared: "סימון הביטול הוסר",
   age_group_override_changed: "קבוצת גיל שונתה",
   plays_up_changed: "סימון A שונה",
+  course_access_mark_changed: "סימון גישה לקורסים",
 } as const satisfies Record<string, string>;
 
 export type ActivityAction = keyof typeof ACTIVITY_ACTION_LABELS_HE;
