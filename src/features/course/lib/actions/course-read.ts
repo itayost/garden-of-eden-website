@@ -11,6 +11,7 @@ import type {
   LessonProgressMap,
 } from "../types";
 import type { CourseViewer } from "../course-access-rule";
+import { COURSE_VIEWER_COLUMNS, courseViewerFromProfile } from "../course-viewer";
 
 // --- Raw DB row shapes (snake_case) ---
 
@@ -198,20 +199,6 @@ export async function getMyLessonProgress(): Promise<LessonProgressMap> {
   return map;
 }
 
-/**
- * The signed-in viewer's role and account status, for canOpenCourse. A viewer
- * with no profile row reads as not active. Memoized per request with React
- * `cache()`, like verifyAdmin: a course page and its playback check would
- * otherwise each pay an auth.getUser() plus a profiles read.
- */
-const NO_VIEWER: CourseViewer = {
-  role: null,
-  isActive: false,
-  seenTrainingOn: null,
-  accessUntil: null,
-  boughtCourse: false,
-};
-
 /** The signed-in user's id, or null. Memoized per request so it is read once. */
 export const getCourseUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
@@ -221,21 +208,26 @@ export const getCourseUserId = cache(async (): Promise<string | null> => {
   return user?.id ?? null;
 });
 
+/**
+ * The signed-in viewer as canOpenCourse sees him: role, `is_active` (for the
+ * old rule), the seen-training day, the admin mark, and whether he counts as a
+ * digital course buyer (`arbox_bought_course` or an `access_override` of
+ * course_only; `courseViewerFromProfile`). Nobody signed in, no profile row, a
+ * soft-deleted profile or a failed read reads as a viewer with no role, which
+ * the rule locks once it is on. Memoized per request with React `cache()`, like
+ * verifyAdmin: a course page and its playback check would otherwise each pay an
+ * auth.getUser() plus a profiles read.
+ */
 export const getCourseViewer = cache(async (): Promise<CourseViewer> => {
   const userId = await getCourseUserId();
-  if (!userId) return NO_VIEWER;
+  if (!userId) return courseViewerFromProfile(null);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("role, is_active, course_seen_training_on, course_access_until, arbox_bought_course")
+    .select(COURSE_VIEWER_COLUMNS)
     .eq("id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (error) console.error("getCourseViewer failed:", error);
-  return {
-    role: data?.role ?? null,
-    isActive: data?.is_active === true,
-    seenTrainingOn: data?.course_seen_training_on ?? null,
-    accessUntil: data?.course_access_until ?? null,
-    boughtCourse: data?.arbox_bought_course === true,
-  };
+  return courseViewerFromProfile(data ?? null);
 });

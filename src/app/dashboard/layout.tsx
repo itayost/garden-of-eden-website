@@ -8,6 +8,7 @@ import { DASHBOARD_PAGE_TITLES } from "@/lib/navigation/dashboard-nav";
 import { canBookForUser } from "@/features/booking/lib/can-book";
 import { canOpenCourse } from "@/features/course/lib/course-access-rule";
 import { getCourseAccessContext } from "@/features/course/lib/course-access-context";
+import { courseViewerFromProfile } from "@/features/course/lib/course-viewer";
 import { TACTICAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { MotionProvider } from "@/components/MotionProvider";
@@ -82,17 +83,7 @@ export default async function DashboardLayout({
   ]);
   const canTacticalCourse =
     tacticalCourse !== null &&
-    canOpenCourse(
-      { slug: TACTICAL_COURSE_SLUG, activeOnly: true },
-      {
-        role: profile?.role ?? null,
-        isActive: profile?.is_active === true,
-        seenTrainingOn: profile?.course_seen_training_on ?? null,
-        accessUntil: profile?.course_access_until ?? null,
-        boughtCourse: profile?.arbox_bought_course ?? false,
-      },
-      courseCtx,
-    );
+    canOpenCourse({ slug: TACTICAL_COURSE_SLUG, activeOnly: true }, courseViewerFromProfile(profile ?? null), courseCtx);
   const capabilities = { booking: canBook, tacticalCourse: canTacticalCourse };
   const firstName = firstNameOf(profile?.full_name ?? null);
   const cookieStore = await cookies();

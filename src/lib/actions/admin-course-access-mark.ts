@@ -30,7 +30,7 @@ export async function setCourseAccessMark(
   const db = createAdminClient();
   const { data: trainee, error: readError } = await db
     .from("profiles")
-    .select("role, course_access_until")
+    .select("role, course_access_until, deleted_at")
     .eq("id", userId)
     .maybeSingle();
   if (readError) {
@@ -38,6 +38,7 @@ export async function setCourseAccessMark(
     return { error: "שמירה נכשלה" };
   }
   if (!trainee) return { error: "המשתמש לא נמצא" };
+  if (trainee.deleted_at !== null) return { error: "המשתמש נמחק" };
   if (trainee.role !== "trainee") return { error: "גישה לקורסים נקבעת רק למתאמנים" };
 
   const { error: updateError } = await db
