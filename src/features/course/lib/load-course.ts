@@ -15,7 +15,8 @@ export async function loadCourseForViewer(slug: string): Promise<{
   course: CourseWithChapters | null;
   progress: LessonProgressMap;
   canOpen: boolean;
-  canAskParent: boolean;
+  /** Which "ask the parent" button a locked trainee gets, or null for none. */
+  askParent: AskParent | null;
 }> {
   const [course, progress, viewer, ctx] = await Promise.all([
     getPublishedCourse(slug),
@@ -26,20 +27,31 @@ export async function loadCourseForViewer(slug: string): Promise<{
   const canOpen =
     course !== null &&
     canOpenCourse({ slug: course.slug, activeOnly: course.activeOnly }, viewer, ctx);
-  const canAskParent =
-    course !== null && !canOpen && viewer.role === "trainee"
-      ? await askParentOrFalse()
-      : false;
-  return { course, progress, canOpen, canAskParent };
+  const askParent = course !== null && !canOpen && viewer.role === "trainee" ? await askParentOrNull() : null;
+  return { course, progress, canOpen, askParent };
 }
 
-/** The buy button is a nicety: a failed lookup hides it and never breaks the page. */
-async function askParentOrFalse(): Promise<boolean> {
+export type AskParent = "buy" | "renew";
+
+/**
+ * Whether a locked trainee may ask the parent to buy (no Plan in the app yet)
+ * or renew (one before). The button is a nicety: a failed lookup hides it and
+ * never breaks the page.
+ */
+async function askParentOrNull(): Promise<AskParent | null> {
   try {
     const userId = await getCourseUserId();
-    return userId ? await canAskParentToBuy(createAdminClient(), userId) : false;
+    if (!userId) return null;
+    const db = createAdminClient();
+    if (!(await canAskParentToBuy(db, userId))) return null;
+    const { count, error } = await db
+      .from("trainee_plans")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", userId);
+    if (error) throw new Error(error.message);
+    return (count ?? 0) > 0 ? "renew" : "buy";
   } catch (error) {
     console.error("canAskParentToBuy failed:", error);
-    return false;
+    return null;
   }
 }

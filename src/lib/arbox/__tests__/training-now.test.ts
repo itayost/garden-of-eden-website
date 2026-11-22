@@ -7,7 +7,7 @@ const products: ProductTypes = {
   known: new Set(["מנוי חודשי", "כרטיסייה 10", "קורס דיגיטלי", "שיעור ניסיון"]),
 };
 
-const none = { memberships: [], cards: [], onHold: [], products };
+const none = { memberships: [], cards: [], onHold: [], products, today: "2026-12-01" };
 
 describe("isTrainingMembership", () => {
   test("the row's own type decides when it has one", () => {
@@ -115,5 +115,36 @@ describe("trainingNowFromRows", () => {
     });
     expect(result.rows).toEqual({ memberships: 3, cards: 2, onHold: 3 });
     expect(result.rowsWithId).toEqual({ memberships: 2, cards: 1, onHold: 1 });
+  });
+});
+
+describe("trainingNowFromRows: which cards are live", () => {
+  test("an active card or one with a future cancel counts until its last day", () => {
+    const result = trainingNowFromRows({
+      ...none,
+      cards: [
+        { user_id: 41, status: "active", end_date: "2026-12-01" },
+        { user_id: 42, status: "activeMemberWithFutureCancel", end_date: "2027-01-01" },
+      ],
+    });
+    expect([...result.ids].sort()).toEqual([41, 42]);
+  });
+
+  test("a card that ended or is not active does not count", () => {
+    const result = trainingNowFromRows({
+      ...none,
+      cards: [
+        { user_id: 43, status: "active", end_date: "2026-11-30" },
+        { user_id: 44, status: "expired", end_date: "2027-01-01" },
+        { user_id: 45, status: "cancelled" },
+      ],
+    });
+    expect(result.ids.size).toBe(0);
+    expect(result.rows.cards).toBe(3);
+  });
+
+  test("a card with no status or end day is not dropped, so a thin Arbox row never locks anyone", () => {
+    const result = trainingNowFromRows({ ...none, cards: [{ user_id: 46 }] });
+    expect([...result.ids]).toEqual([46]);
   });
 });

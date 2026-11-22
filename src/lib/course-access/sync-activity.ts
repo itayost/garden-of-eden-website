@@ -120,7 +120,7 @@ async function readLastArboxIds(db: Db): Promise<number | null> {
 
 async function readSweepInputs(db: Db, today: string): Promise<SweepInputs> {
   const [arbox, planTrainingIds, trainees, lastArboxIds] = await Promise.all([
-    fetchTrainingNowUserIds(),
+    fetchTrainingNowUserIds(today),
     readPlanTrainingIds(db, today),
     readLiveTrainees(db),
     readLastArboxIds(db),

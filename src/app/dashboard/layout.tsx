@@ -37,7 +37,7 @@ export default async function DashboardLayout({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override, is_active, course_seen_training_on, course_access_until",
+      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override, is_active, course_seen_training_on, course_access_until, deleted_at",
     )
     .eq("id", user.id)
     .maybeSingle() as unknown as {
@@ -48,6 +48,7 @@ export default async function DashboardLayout({
             access_override: AccessOverride;
             course_seen_training_on: string | null;
             course_access_until: string | null;
+            deleted_at: string | null;
           })
         | null;
     };
@@ -83,7 +84,7 @@ export default async function DashboardLayout({
   ]);
   const canTacticalCourse =
     tacticalCourse !== null &&
-    canOpenCourse({ slug: TACTICAL_COURSE_SLUG, activeOnly: true }, courseViewerFromProfile(profile ?? null), courseCtx);
+    canOpenCourse({ slug: TACTICAL_COURSE_SLUG, activeOnly: true }, courseViewerFromProfile(profile && !profile.deleted_at ? profile : null), courseCtx);
   const capabilities = { booking: canBook, tacticalCourse: canTacticalCourse };
   const firstName = firstNameOf(profile?.full_name ?? null);
   const cookieStore = await cookies();

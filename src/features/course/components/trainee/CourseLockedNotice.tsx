@@ -1,6 +1,7 @@
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COURSE_ACCESS_DENIED } from "@/features/course/lib/course-access-rule";
+import type { AskParent } from "@/features/course/lib/load-course";
 import {
   PurchaseRequestButton,
   REQUEST_LABELS,
@@ -10,7 +11,7 @@ interface CourseLockedNoticeProps {
   titleHe: string;
   descriptionHe: string | null;
   /** Show the "ask the parent to buy" button. */
-  canAskParent: boolean;
+  askParent: AskParent | null;
 }
 
 /**
@@ -20,7 +21,7 @@ interface CourseLockedNoticeProps {
 export function CourseLockedNotice({
   titleHe,
   descriptionHe,
-  canAskParent,
+  askParent,
 }: CourseLockedNoticeProps) {
   return (
     <div
@@ -46,9 +47,9 @@ export function CourseLockedNotice({
           <Lock className="size-4 shrink-0 text-primary" aria-hidden="true" />
           {COURSE_ACCESS_DENIED}
         </p>
-        {canAskParent && (
+        {askParent && (
           <div className="pt-2">
-            <PurchaseRequestButton label={REQUEST_LABELS.renew} />
+            <PurchaseRequestButton label={REQUEST_LABELS[askParent]} />
           </div>
         )}
       </div>

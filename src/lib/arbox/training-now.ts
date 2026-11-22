@@ -6,7 +6,7 @@ import {
   type ProductTypes,
 } from "./access";
 import { fetchArboxReport } from "./fetch";
-import type { SessionsReportRow } from "./purchase-rows";
+import { LIVE_ARBOX_STATUSES, type SessionsReportRow } from "./purchase-rows";
 
 /**
  * Who trains now by Arbox, for the nightly course-access sweep.
@@ -43,18 +43,30 @@ export interface OnHoldRow {
 }
 
 /** The Arbox user ids that train now, from the three reports' rows. Pure. */
+/**
+ * A card still running: a live status and an end day not yet passed, whatever
+ * its sessions left. The cards report also lists ended and cancelled cards. A
+ * row missing either field is kept, so a thin Arbox answer never locks anyone.
+ */
+function isLiveCard(row: SessionsReportRow, today: string): boolean {
+  if (row.status && !LIVE_ARBOX_STATUSES.has(row.status)) return false;
+  return !row.end_date || row.end_date.slice(0, 10) >= today;
+}
+
 export function trainingNowFromRows(input: {
   readonly memberships: readonly MembershipRow[];
   readonly cards: readonly SessionsReportRow[];
   readonly onHold: readonly OnHoldRow[];
   readonly products: ProductTypes;
+  /** Israel day: a card whose end day is earlier no longer counts. */
+  readonly today: string;
 }): TrainingNow {
-  const { memberships, cards, onHold, products } = input;
+  const { memberships, cards, onHold, products, today } = input;
   const withId = (rows: readonly { readonly user_id?: string | number | null }[]): number =>
     rows.filter((row) => toUserId(row.user_id) !== null).length;
   const userIds = [
     ...memberships.filter((row) => isTrainingMembership(row, products)).map((row) => toUserId(row.user_id)),
-    ...cards.map((row) => toUserId(row.user_id)),
+    ...cards.filter((row) => isLiveCard(row, today)).map((row) => toUserId(row.user_id)),
     ...onHold.map((row) => toUserId(row.user_id)),
   ];
   return {
@@ -64,11 +76,11 @@ export function trainingNowFromRows(input: {
   };
 }
 
-export async function fetchTrainingNowUserIds(): Promise<TrainingNow> {
+export async function fetchTrainingNowUserIds(today: string): Promise<TrainingNow> {
   const products = await fetchProductTypes();
   // Serial on purpose, like the access step: Arbox rate-limits bursts.
   const memberships = await fetchArboxReport<MembershipRow>("activeMembershipsReport");
   const cards = await fetchArboxReport<SessionsReportRow>("sessionsReport");
   const onHold = await fetchArboxReport<OnHoldRow>(ON_HOLD_REPORT);
-  return trainingNowFromRows({ memberships, cards, onHold, products });
+  return trainingNowFromRows({ memberships, cards, onHold, products, today });
 }

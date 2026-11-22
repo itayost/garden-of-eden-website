@@ -64,7 +64,7 @@ export function canOpenCourse(
   if (viewer.role === "admin" || viewer.role === "trainer") return true;
   // Until the rule is on (no good sweep a week old yet) keep the old rule.
   if (ctx.lastGoodSweepOn === null) {
-    return !course.activeOnly || (viewer.role === "trainee" && viewer.isActive);
+    return viewer.role === "trainee" && (!course.activeOnly || viewer.isActive);
   }
   if (viewer.role !== "trainee") return false;
   if (isTrainingNow(viewer, ctx)) return true;

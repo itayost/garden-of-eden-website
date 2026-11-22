@@ -25,14 +25,14 @@ export async function CourseLessonPage({
   chapterSlug,
   lessonSlug,
 }: CourseLessonPageProps) {
-  const { course, progress, canOpen, canAskParent } = await loadCourseForViewer(slug);
+  const { course, progress, canOpen, askParent } = await loadCourseForViewer(slug);
   if (!course) notFound();
   if (!canOpen) {
     return (
       <CourseLockedNotice
         titleHe={course.titleHe}
         descriptionHe={course.descriptionHe}
-        canAskParent={canAskParent}
+        askParent={askParent}
       />
     );
   }

@@ -19,7 +19,7 @@ interface CourseHomePageProps {
 
 /** A course's home: cover, resume, progress and chapters. */
 export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
-  const { course, progress, canOpen, canAskParent } = await loadCourseForViewer(slug);
+  const { course, progress, canOpen, askParent } = await loadCourseForViewer(slug);
 
   if (!course) {
     return <CourseNotice message="הקורס עדיין לא פורסם. נעדכן אותך ברגע שהוא יעלה." />;
@@ -30,7 +30,7 @@ export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
       <CourseLockedNotice
         titleHe={course.titleHe}
         descriptionHe={course.descriptionHe}
-        canAskParent={canAskParent}
+        askParent={askParent}
       />
     );
   }

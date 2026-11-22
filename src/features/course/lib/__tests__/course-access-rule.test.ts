@@ -92,3 +92,11 @@ describe("effectiveLastGoodSweep", () => {
     expect(effectiveLastGoodSweep(null, today)).toBeNull();
   });
 });
+
+describe("canOpenCourse before the rule is on", () => {
+  test("a viewer with no role opens nothing, as after the switch", () => {
+    const ctx = { today: "2026-12-01", lastGoodSweepOn: null };
+    const viewer = { role: null, isActive: false, seenTrainingOn: null, accessUntil: null, boughtCourse: false };
+    expect(canOpenCourse({ slug: "eden-player-development", activeOnly: false }, viewer, ctx)).toBe(false);
+  });
+});
