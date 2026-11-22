@@ -9,17 +9,38 @@ export const COURSE_ACCESS_DENIED = "הקורס פתוח למתאמנים פעי
 
 export interface CourseViewer {
   readonly role: string | null;
-  /** profiles.is_active, used only before the first good sweep. */
+  /** profiles.is_active, used only while the old rule holds. */
   readonly isActive: boolean;
   readonly seenTrainingOn: string | null;
   readonly accessUntil: string | null;
-  /** profiles.arbox_bought_course */
+  /** profiles.arbox_bought_course, or an access_override of course_only. */
   readonly boughtCourse: boolean;
 }
 
 export interface CourseAccessContext {
   readonly today: string;
+  /** The newest good sweep once the rule is on; null while the old rule holds. */
   readonly lastGoodSweepOn: string | null;
+}
+
+/** The oldest and newest good sweep days, or null when they could not be read. */
+export interface SweepSpan {
+  readonly oldest: string | null;
+  readonly newest: string | null;
+}
+
+/**
+ * The last good sweep the rule counts from, or null to keep the old rule. The
+ * rule switches on only once the oldest good sweep is COURSE_ACTIVE_GRACE_DAYS
+ * old: the first sweep after the deploy locks nobody that night, staff get a
+ * week to mark the trainees the sweep cannot see, and nobody loses the grace
+ * period the stamps have not had time to build. A failed read keeps the old
+ * rule too.
+ */
+export function effectiveLastGoodSweep(sweeps: SweepSpan | null, today: string): string | null {
+  if (sweeps === null || sweeps.oldest === null || sweeps.newest === null) return null;
+  if (sweeps.oldest > addDays(today, -COURSE_ACTIVE_GRACE_DAYS)) return null;
+  return sweeps.newest;
 }
 
 export function isTrainingNow(viewer: CourseViewer, ctx: CourseAccessContext): boolean {
@@ -41,7 +62,7 @@ export function canOpenCourse(
   ctx: CourseAccessContext,
 ): boolean {
   if (viewer.role === "admin" || viewer.role === "trainer") return true;
-  // Before the first good sweep nothing says who trains, so keep the old rule.
+  // Until the rule is on (no good sweep a week old yet) keep the old rule.
   if (ctx.lastGoodSweepOn === null) {
     return !course.activeOnly || (viewer.role === "trainee" && viewer.isActive);
   }

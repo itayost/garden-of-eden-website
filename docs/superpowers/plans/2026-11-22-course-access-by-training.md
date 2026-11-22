@@ -262,5 +262,5 @@ Expected: FAIL (old signature).
 
 - [ ] **Step 1:** Write the CLAUDE.md paragraph.
 - [ ] **Step 2: Review.** Run the project's `code-reviewer` and `security-reviewer` agents on the branch diff; fix CRITICAL and HIGH findings.
-- [ ] **Step 3: Rollout with Itay.** Push the migration (Task 1) before opening the PR. Run the dry run, show Itay the locked count and list, let staff mark the trainees who train. Only then merge; the first nightly run records the first good sweep and switches the rule on.
+- [ ] **Step 3: Rollout with Itay.** Push the migration (Task 1) before opening the PR. Run the dry run, show Itay the locked count and list, let staff mark the trainees who train. Only then merge; the first nightly run records the first good sweep, and the rule switches on once that sweep is `COURSE_ACTIVE_GRACE_DAYS` (7) days old (final review fix: `effectiveLastGoodSweep()`), so staff keep marking during that week.
 - [ ] **Step 4: Commit** `docs(course): course access by training`.

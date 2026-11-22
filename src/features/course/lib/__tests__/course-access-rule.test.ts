@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   canOpenCourse,
+  effectiveLastGoodSweep,
   type CourseAccessContext,
   type CourseViewer,
 } from "../course-access-rule";
@@ -60,10 +61,34 @@ describe("canOpenCourse", () => {
     expect(canOpenCourse(tactical, viewer, ctx)).toBe(false);
   });
 
-  test("falls back to the old rule before the first good sweep", () => {
+  test("falls back to the old rule while the rule is not on (no last good sweep)", () => {
     const before = { ...ctx, lastGoodSweepOn: null };
     expect(canOpenCourse(digital, base, before)).toBe(true);
     expect(canOpenCourse(tactical, base, before)).toBe(true);
     expect(canOpenCourse(tactical, { ...base, isActive: false }, before)).toBe(false);
+  });
+});
+
+describe("effectiveLastGoodSweep", () => {
+  const today = "2026-12-01";
+
+  test("no sweeps gives null, so the old rule holds", () => {
+    expect(effectiveLastGoodSweep({ oldest: null, newest: null }, today)).toBeNull();
+  });
+
+  test("an oldest sweep 6 days ago gives null: the marking week is not over", () => {
+    expect(effectiveLastGoodSweep({ oldest: "2026-11-25", newest: "2026-12-01" }, today)).toBeNull();
+  });
+
+  test("an oldest sweep exactly 7 days ago gives the newest sweep", () => {
+    expect(effectiveLastGoodSweep({ oldest: "2026-11-24", newest: "2026-11-30" }, today)).toBe("2026-11-30");
+  });
+
+  test("an oldest sweep long ago gives the newest sweep, however old", () => {
+    expect(effectiveLastGoodSweep({ oldest: "2026-10-01", newest: "2026-11-20" }, today)).toBe("2026-11-20");
+  });
+
+  test("a failed read gives null, so the old rule holds", () => {
+    expect(effectiveLastGoodSweep(null, today)).toBeNull();
   });
 });

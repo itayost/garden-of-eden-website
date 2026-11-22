@@ -67,8 +67,8 @@ export function planActivityStamps(input: {
 }
 
 /**
- * Trainees the training rule would lock once this sweep is the last good one:
- * the stamps it writes applied, and today as the sweep day. Ignores the
+ * Trainees the training rule would lock, once it is on, with this sweep as the
+ * last good one: the stamps it writes applied, and today as the sweep day. Ignores the
  * digital course buyers' exception, which keeps only that one course open.
  */
 export function wouldLockAfterSweep<T extends SweptTrainee>(input: {
