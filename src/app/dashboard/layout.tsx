@@ -7,6 +7,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DASHBOARD_PAGE_TITLES } from "@/lib/navigation/dashboard-nav";
 import { canBookForUser } from "@/features/booking/lib/can-book";
 import { canOpenCourse } from "@/features/course/lib/course-access-rule";
+import { getCourseAccessContext } from "@/features/course/lib/course-access-context";
 import { TACTICAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { MotionProvider } from "@/components/MotionProvider";
@@ -35,7 +36,7 @@ export default async function DashboardLayout({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override, is_active",
+      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override, is_active, course_seen_training_on, course_access_until",
     )
     .eq("id", user.id)
     .maybeSingle() as unknown as {
@@ -44,6 +45,8 @@ export default async function DashboardLayout({
             arbox_paid_training: boolean;
             arbox_bought_course: boolean;
             access_override: AccessOverride;
+            course_seen_training_on: string | null;
+            course_access_until: string | null;
           })
         | null;
     };
@@ -67,7 +70,7 @@ export default async function DashboardLayout({
 
   // Independent reads; run together so every dashboard render pays for one.
   // The tactical course is shown only when published and the viewer may open it.
-  const [canBook, { data: tacticalCourse }] = await Promise.all([
+  const [canBook, { data: tacticalCourse }, courseCtx] = await Promise.all([
     profile?.role === "trainee" ? canBookForUser(user.id) : Promise.resolve(false),
     supabase
       .from("courses")
@@ -75,10 +78,21 @@ export default async function DashboardLayout({
       .eq("slug", TACTICAL_COURSE_SLUG)
       .eq("is_published", true)
       .maybeSingle(),
+    getCourseAccessContext(),
   ]);
   const canTacticalCourse =
     tacticalCourse !== null &&
-    canOpenCourse(true, { role: profile?.role ?? null, isActive: profile?.is_active === true });
+    canOpenCourse(
+      { slug: TACTICAL_COURSE_SLUG, activeOnly: true },
+      {
+        role: profile?.role ?? null,
+        isActive: profile?.is_active === true,
+        seenTrainingOn: profile?.course_seen_training_on ?? null,
+        accessUntil: profile?.course_access_until ?? null,
+        boughtCourse: profile?.arbox_bought_course ?? false,
+      },
+      courseCtx,
+    );
   const capabilities = { booking: canBook, tacticalCourse: canTacticalCourse };
   const firstName = firstNameOf(profile?.full_name ?? null);
   const cookieStore = await cookies();

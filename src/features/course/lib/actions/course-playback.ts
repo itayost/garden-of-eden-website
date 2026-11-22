@@ -7,6 +7,7 @@ import { isValidUUID } from "@/lib/validations/common";
 import type { VideoQuality } from "../types";
 import { COURSE_VIDEO_BUCKET, PLAYBACK_URL_TTL_SEC } from "../playback-config";
 import { canOpenCourse, COURSE_ACCESS_DENIED } from "../course-access-rule";
+import { getCourseAccessContext } from "../course-access-context";
 import { getCourseViewer } from "./course-read";
 
 interface PlaybackResult {
@@ -18,7 +19,7 @@ interface PlaybackResult {
 interface LessonVideoRow {
   video_path: string | null;
   video_path_sd: string | null;
-  chapter: { course: { active_only: boolean } | null } | null;
+  chapter: { course: { slug: string; active_only: boolean } | null } | null;
 }
 
 /**
@@ -56,7 +57,7 @@ export async function getLessonPlaybackUrl(
     supabase,
     "course_lessons"
   )
-    .select("video_path, video_path_sd, chapter:course_chapters!inner(course:courses!inner(active_only))")
+    .select("video_path, video_path_sd, chapter:course_chapters!inner(course:courses!inner(slug, active_only))")
     .eq("id", lessonId)
     .maybeSingle()) as { data: LessonVideoRow | null; error: unknown };
 
@@ -68,11 +69,14 @@ export async function getLessonPlaybackUrl(
     return { url: null, quality: null, error: "שיעור לא נמצא" };
   }
 
-  // An active-only course (הקורס הטקטי) signs a URL only for staff and active
-  // trainees. Row-level security lets any signed-in user read a published
-  // lesson row; the video is the protected asset, so the gate is here.
-  const activeOnly = lesson.chapter?.course?.active_only === true;
-  if (activeOnly && !canOpenCourse(activeOnly, await getCourseViewer())) {
+  // Row-level security lets any signed-in user read a published lesson row;
+  // the video is the protected asset, so every course is gated here.
+  const course = lesson.chapter?.course;
+  if (!course) {
+    return { url: null, quality: null, error: "שיעור לא נמצא" };
+  }
+  const [viewer, ctx] = await Promise.all([getCourseViewer(), getCourseAccessContext()]);
+  if (!canOpenCourse({ slug: course.slug, activeOnly: course.active_only === true }, viewer, ctx)) {
     return { url: null, quality: null, error: COURSE_ACCESS_DENIED };
   }
 

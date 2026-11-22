@@ -204,17 +204,31 @@ export async function getMyLessonProgress(): Promise<LessonProgressMap> {
  * `cache()`, like verifyAdmin: a course page and its playback check would
  * otherwise each pay an auth.getUser() plus a profiles read.
  */
+const NO_VIEWER: CourseViewer = {
+  role: null,
+  isActive: false,
+  seenTrainingOn: null,
+  accessUntil: null,
+  boughtCourse: false,
+};
+
 export const getCourseViewer = cache(async (): Promise<CourseViewer> => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { role: null, isActive: false };
+  if (!user) return NO_VIEWER;
   const { data, error } = await supabase
     .from("profiles")
-    .select("role, is_active")
+    .select("role, is_active, course_seen_training_on, course_access_until, arbox_bought_course")
     .eq("id", user.id)
     .maybeSingle();
   if (error) console.error("getCourseViewer failed:", error);
-  return { role: data?.role ?? null, isActive: data?.is_active === true };
+  return {
+    role: data?.role ?? null,
+    isActive: data?.is_active === true,
+    seenTrainingOn: data?.course_seen_training_on ?? null,
+    accessUntil: data?.course_access_until ?? null,
+    boughtCourse: data?.arbox_bought_course === true,
+  };
 });

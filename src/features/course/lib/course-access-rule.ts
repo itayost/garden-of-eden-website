@@ -2,14 +2,6 @@ import { addDays } from "@/lib/utils/iso-date";
 
 import { DIGITAL_COURSE_SLUG } from "./course-slugs";
 
-/**
- * Who may open a course. Staff always may. A trainee opens a course while he
- * trains now: Arbox or the calendar saw him within the grace period of the last
- * good sweep, or an admin marked him until a day that has not passed. Buyers of
- * the digital course keep that course only. Pure, so the pages and the
- * video-URL action cannot disagree.
- */
-
 /** Days back from the last good sweep that still count as training now. */
 export const COURSE_ACTIVE_GRACE_DAYS = 7;
 
@@ -36,6 +28,13 @@ export function isTrainingNow(viewer: CourseViewer, ctx: CourseAccessContext): b
   return viewer.seenTrainingOn >= addDays(ctx.lastGoodSweepOn, -COURSE_ACTIVE_GRACE_DAYS);
 }
 
+/**
+ * Who may open a course. Staff always may. A trainee opens a course while he
+ * trains now: Arbox or the calendar saw him within the grace period of the last
+ * good sweep, or an admin marked him until a day that has not passed. Buyers of
+ * the digital course keep that course only. Pure, so the pages and the
+ * video-URL action cannot disagree.
+ */
 export function canOpenCourse(
   course: { readonly slug: string; readonly activeOnly: boolean },
   viewer: CourseViewer,

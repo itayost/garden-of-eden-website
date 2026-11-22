@@ -7,6 +7,9 @@ import { lessonProgressSchema } from "@/lib/validations/course";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { shouldMarkComplete } from "../progress-utils";
 import { grantCourseBadges } from "../grant-course-badges";
+import { canOpenCourse, COURSE_ACCESS_DENIED } from "../course-access-rule";
+import { getCourseAccessContext } from "../course-access-context";
+import { getCourseViewer } from "./course-read";
 
 interface ProgressResult {
   success: boolean;
@@ -29,10 +32,11 @@ interface ExistingProgress {
 interface LessonWithProgress {
   duration_sec: number;
   course_lesson_progress: ExistingProgress[];
+  chapter: { course: { slug: string; active_only: boolean } | null } | null;
 }
 
 const LESSON_WITH_PROGRESS =
-  "duration_sec, course_lesson_progress(watched_sec, completed_at)";
+  "duration_sec, course_lesson_progress(watched_sec, completed_at), chapter:course_chapters!inner(course:courses!inner(slug, active_only))";
 
 /**
  * Read the lesson and the caller's progress together.
@@ -65,6 +69,15 @@ async function readLessonWithProgress(
   // RLS hides drafts and anything the caller may not read, so a miss here means
   // "no access" just as much as "no such lesson".
   if (!data) return { ok: false, error: "שיעור לא נמצא" };
+
+  // A viewer who may not open the course writes no progress, and no row is read
+  // back or touched.
+  const course = data.chapter?.course;
+  if (!course) return { ok: false, error: "שיעור לא נמצא" };
+  const [viewer, ctx] = await Promise.all([getCourseViewer(), getCourseAccessContext()]);
+  if (!canOpenCourse({ slug: course.slug, activeOnly: course.active_only === true }, viewer, ctx)) {
+    return { ok: false, error: COURSE_ACCESS_DENIED };
+  }
 
   return {
     ok: true,

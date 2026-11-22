@@ -2,6 +2,7 @@ import "server-only";
 
 import { getCourseViewer, getMyLessonProgress, getPublishedCourse } from "./actions/course-read";
 import { canOpenCourse } from "./course-access-rule";
+import { getCourseAccessContext } from "./course-access-context";
 import type { CourseWithChapters, LessonProgressMap } from "./types";
 
 /**
@@ -12,11 +13,17 @@ export async function loadCourseForViewer(slug: string): Promise<{
   course: CourseWithChapters | null;
   progress: LessonProgressMap;
   canOpen: boolean;
+  canAskParent: boolean;
 }> {
-  const [course, progress, viewer] = await Promise.all([
+  const [course, progress, viewer, ctx] = await Promise.all([
     getPublishedCourse(slug),
     getMyLessonProgress(),
     getCourseViewer(),
+    getCourseAccessContext(),
   ]);
-  return { course, progress, canOpen: course !== null && canOpenCourse(course.activeOnly, viewer) };
+  const canOpen =
+    course !== null &&
+    canOpenCourse({ slug: course.slug, activeOnly: course.activeOnly }, viewer, ctx);
+  // Task 7 fills this in.
+  return { course, progress, canOpen, canAskParent: false };
 }
