@@ -70,8 +70,8 @@ async function readLessonWithProgress(
   // "no access" just as much as "no such lesson".
   if (!data) return { ok: false, error: "שיעור לא נמצא" };
 
-  // A viewer who may not open the course writes no progress, and no row is read
-  // back or touched.
+  // A viewer who may not open the course writes no progress: his row, read
+  // above with the lesson, is neither used nor touched.
   const course = data.chapter?.course;
   if (!course) return { ok: false, error: "שיעור לא נמצא" };
   const [viewer, ctx] = await Promise.all([getCourseViewer(), getCourseAccessContext()]);

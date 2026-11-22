@@ -32,7 +32,11 @@ interface LessonVideoRow {
  *      under an unpublished course, simply is not found; staff may preview one,
  *      which they must be able to do since a lesson cannot be published without
  *      a video in the first place. Do not re-add an `is_published` filter here.
- *   3. Only after that does the service-role client sign the URL.
+ *   3. The course gate: canOpenCourse, with the viewer and the last good sweep,
+ *      must let this caller open the lesson's course. RLS lets any signed-in
+ *      user read a published lesson row, so this is what keeps a locked
+ *      trainee from the video (COURSE_ACCESS_DENIED).
+ *   4. Only after that does the service-role client sign the URL.
  *
  * The service-role key never leaves the server, and the returned URL grants
  * access to exactly one object for a bounded time.
