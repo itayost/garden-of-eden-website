@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { israelDateStr } from "@/lib/utils/israel-time";
 import {
@@ -23,14 +24,32 @@ async function readSweepDay(db: Db, ascending: boolean): Promise<string | null> 
   return data?.swept_on ?? null;
 }
 
-/** The first and last good sweep days, or null when the log could not be read. Memoized per request. */
-export const getCourseSweepSpan = cache(async (): Promise<SweepSpan | null> => {
-  try {
+/** Clears the cached sweep span; the sweep calls it after it records a day. */
+export const COURSE_SWEEP_TAG = "course-sweep-span";
+
+/** The span changes once a night, so every page need not read it. */
+const SWEEP_SPAN_SECONDS = 300;
+
+const cachedSweepSpan = unstable_cache(
+  async (): Promise<SweepSpan> => {
     const db = createAdminClient();
     const [oldest, newest] = await Promise.all([readSweepDay(db, true), readSweepDay(db, false)]);
     return { oldest, newest };
+  },
+  [COURSE_SWEEP_TAG],
+  { revalidate: SWEEP_SPAN_SECONDS, tags: [COURSE_SWEEP_TAG] },
+);
+
+/**
+ * The first and last good sweep days, or null when the log could not be read
+ * (a failed read is not cached). Cached for a few minutes across requests and
+ * memoized per request.
+ */
+export const getCourseSweepSpan = cache(async (): Promise<SweepSpan | null> => {
+  try {
+    return await cachedSweepSpan();
   } catch (error) {
-    console.error("getCourseAccessContext failed:", error instanceof Error ? error.message : error);
+    console.error("getCourseSweepSpan failed:", error instanceof Error ? error.message : error);
     return null;
   }
 });

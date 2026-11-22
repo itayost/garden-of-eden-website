@@ -1,7 +1,9 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
+import { revalidateTag } from "next/cache";
+import { COURSE_SWEEP_TAG } from "@/features/course/lib/course-access-context";
+import { loadAllBranches, loadBranchIdsByProfile } from "@/features/branches/lib/memberships";
 import { loadPlanQueues } from "@/features/plans/lib/queries";
 import { fetchTrainingNowUserIds, type TrainingNow } from "@/lib/arbox/training-now";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -80,11 +82,9 @@ async function readPlanTrainingIds(db: Db, today: string): Promise<Set<string>> 
   const { data, error } = await readAllPages(() => db.from("trainee_plans").select("profile_id").order("id"));
   if (error) throw new Error(`trainee_plans: ${error.message}`);
   const holders = [...new Set(data.map((row) => row.profile_id))];
-  const queues = await Promise.all(
-    chunk(holders).map((slice) => loadPlanQueues(db, slice, today, { onError: "throw" })),
-  );
-  const views = queues.flatMap((byProfile) => [...byProfile]);
-  return new Set(views.filter(([, view]) => queueIsTraining(view)).map(([profileId]) => profileId));
+  // The loaders slice the ids themselves (readInChunks), so one call reads them all.
+  const queues = await loadPlanQueues(db, holders, today, { onError: "throw" });
+  return new Set([...queues].filter(([, view]) => queueIsTraining(view)).map(([profileId]) => profileId));
 }
 
 async function readLiveTrainees(db: Db): Promise<LiveTrainee[]> {
@@ -128,14 +128,9 @@ async function readSweepInputs(db: Db, today: string): Promise<SweepInputs> {
   return { arbox, planTrainingIds, trainees, lastArboxIds };
 }
 
-/** Branch id to Hebrew name. Only the locked list uses it, so a failed read shows ids rather than failing the sweep. */
+/** Branch id to Hebrew name. Only the locked list uses it; a failed read shows ids rather than failing the sweep. */
 async function readBranchNames(db: Db): Promise<Map<string, string>> {
-  const { data, error } = await db.from("branches").select("id, name_he");
-  if (error) {
-    console.error("[Course Activity] branch names read failed:", error.message);
-    return new Map();
-  }
-  return new Map((data ?? []).map((branch) => [branch.id, branch.name_he]));
+  return new Map((await loadAllBranches(db)).map((branch) => [branch.id, branch.name_he]));
 }
 
 async function describeLocked(db: Db, locked: readonly LiveTrainee[]): Promise<ActivitySweepResult["wouldLock"]> {
@@ -211,6 +206,7 @@ async function sweep(db: Db, inputs: SweepInputs, today: string, dryRun: boolean
   if (error) return notGood(`stamp_failed: ${error}`, counts, stamped);
   const rowError = await writeSweepRow(db, today, counts, stamped);
   if (rowError) return notGood(`sweep_row_failed: ${rowError}`, counts, stamped);
+  revalidateTag(COURSE_SWEEP_TAG, { expire: 0 });
   return { good: true, reason: null, ...counts, stamped, wouldLock: [], wouldLockCount };
 }
 

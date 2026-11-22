@@ -29,11 +29,7 @@ export async function CourseLessonPage({
   if (!course) notFound();
   if (!canOpen) {
     return (
-      <CourseLockedNotice
-        titleHe={course.titleHe}
-        descriptionHe={course.descriptionHe}
-        askParent={askParent}
-      />
+      <CourseLockedNotice course={course} askParent={askParent} />
     );
   }
 

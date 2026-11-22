@@ -27,11 +27,7 @@ export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
 
   if (!canOpen) {
     return (
-      <CourseLockedNotice
-        titleHe={course.titleHe}
-        descriptionHe={course.descriptionHe}
-        askParent={askParent}
-      />
+      <CourseLockedNotice course={course} askParent={askParent} />
     );
   }
 

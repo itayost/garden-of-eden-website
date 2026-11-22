@@ -43,7 +43,10 @@ export function effectiveLastGoodSweep(sweeps: SweepSpan | null, today: string):
   return sweeps.newest;
 }
 
-export function isTrainingNow(viewer: CourseViewer, ctx: CourseAccessContext): boolean {
+export function isTrainingNow(
+  viewer: Pick<CourseViewer, "seenTrainingOn" | "accessUntil">,
+  ctx: CourseAccessContext,
+): boolean {
   if (viewer.accessUntil !== null && viewer.accessUntil >= ctx.today) return true;
   if (viewer.seenTrainingOn === null || ctx.lastGoodSweepOn === null) return false;
   return viewer.seenTrainingOn >= addDays(ctx.lastGoodSweepOn, -COURSE_ACTIVE_GRACE_DAYS);

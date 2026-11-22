@@ -6,9 +6,9 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import type { VideoQuality } from "../types";
 import { COURSE_VIDEO_BUCKET, PLAYBACK_URL_TTL_SEC } from "../playback-config";
-import { canOpenCourse, COURSE_ACCESS_DENIED } from "../course-access-rule";
-import { getCourseAccessContext } from "../course-access-context";
-import { getCourseViewer } from "./course-read";
+import { COURSE_ACCESS_DENIED } from "../course-access-rule";
+import { mayOpenCourse } from "../course-gate";
+import { getCourseUserId } from "./course-read";
 
 interface PlaybackResult {
   url: string | null;
@@ -49,13 +49,10 @@ export async function getLessonPlaybackUrl(
     return { url: null, quality: null, error: "מזהה שיעור לא תקין" };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  if (!(await getCourseUserId())) {
     return { url: null, quality: null, error: "לא מחובר" };
   }
+  const supabase = await createClient();
 
   const { data: lesson, error: lessonError } = (await typedFrom(
     supabase,
@@ -79,8 +76,7 @@ export async function getLessonPlaybackUrl(
   if (!course) {
     return { url: null, quality: null, error: "שיעור לא נמצא" };
   }
-  const [viewer, ctx] = await Promise.all([getCourseViewer(), getCourseAccessContext()]);
-  if (!canOpenCourse({ slug: course.slug, activeOnly: course.active_only === true }, viewer, ctx)) {
+  if (!(await mayOpenCourse(course))) {
     return { url: null, quality: null, error: COURSE_ACCESS_DENIED };
   }
 

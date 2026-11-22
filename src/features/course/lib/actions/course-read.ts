@@ -171,16 +171,13 @@ function toCourse(row: RawCourse) {
  * RLS restricts this to their own rows, so no user id needs passing in.
  */
 export async function getMyLessonProgress(): Promise<LessonProgressMap> {
+  const userId = await getCourseUserId();
+  if (!userId) return {};
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return {};
 
   const { data, error } = await typedFrom(supabase, "course_lesson_progress")
     .select("lesson_id, last_position_sec, watched_sec, completed_at")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) {
     console.error("getMyLessonProgress failed:", error);

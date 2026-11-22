@@ -42,7 +42,6 @@ export interface OnHoldRow {
   readonly user_id?: string | number | null;
 }
 
-/** The Arbox user ids that train now, from the three reports' rows. Pure. */
 /**
  * A card still running: a live status and an end day not yet passed, whatever
  * its sessions left. The cards report also lists ended and cancelled cards. A
@@ -53,6 +52,7 @@ function isLiveCard(row: SessionsReportRow, today: string): boolean {
   return !row.end_date || row.end_date.slice(0, 10) >= today;
 }
 
+/** The Arbox user ids that train now, from the three reports' rows. Pure. */
 export function trainingNowFromRows(input: {
   readonly memberships: readonly MembershipRow[];
   readonly cards: readonly SessionsReportRow[];

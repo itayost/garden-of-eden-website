@@ -16,24 +16,18 @@ import { setCourseAccessMark } from "@/lib/actions/admin-course-access-mark";
 import { MAX_MARK_DAYS } from "@/lib/course-access/mark";
 import { courseAccessStatusLines } from "@/lib/course-access/status";
 import { addDays } from "@/lib/utils/iso-date";
-import { formatDateShort } from "@/lib/utils/date";
+import { formatIsoDay } from "@/lib/utils/date";
 
 interface CourseAccessCardProps {
   userId: string;
   seenTrainingOn: string | null;
   accessUntil: string | null;
-  trainingNow: boolean;
-  /** The training rule decides; false while the old rule still holds. */
-  ruleOn: boolean;
+  /** The last good sweep the rule counts from; null while the old rule still holds. */
+  lastGoodSweepOn: string | null;
   /** Admins set and end the mark; trainers only see it. */
   canEdit: boolean;
   /** Israel day, from the server. */
   today: string;
-}
-
-/** A bare YYYY-MM-DD for people: read at noon UTC so no zone moves the day. */
-function show(day: string): string {
-  return formatDateShort(new Date(`${day}T12:00:00Z`));
 }
 
 /** Whether this trainee opens the courses that are for active trainees, and the admin's mark. */
@@ -41,12 +35,11 @@ export function CourseAccessCard({
   userId,
   seenTrainingOn,
   accessUntil,
-  trainingNow,
-  ruleOn,
+  lastGoodSweepOn,
   canEdit,
   today,
 }: CourseAccessCardProps) {
-  const lines = courseAccessStatusLines({ ruleOn, trainingNow, seenTrainingOn, accessUntil, today }, show);
+  const lines = courseAccessStatusLines({ lastGoodSweepOn, seenTrainingOn, accessUntil, today }, formatIsoDay);
 
   return (
     <Card>

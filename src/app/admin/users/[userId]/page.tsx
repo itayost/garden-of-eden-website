@@ -18,8 +18,6 @@ import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { AccessTierCard } from "@/components/admin/users/AccessTierCard";
 import { CourseAccessCard } from "@/components/admin/users/CourseAccessCard";
 import { getCourseAccessContext } from "@/features/course/lib/course-access-context";
-import { isTrainingNow } from "@/features/course/lib/course-access-rule";
-import { courseViewerFromProfile } from "@/features/course/lib/course-viewer";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
 import { CommunicationHistoryCard } from "@/components/admin/users/CommunicationHistoryCard";
@@ -113,8 +111,6 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   // Course access, for the card staff see on a trainee. The rule is on once a
   // good sweep is a week old; until then the card says the old rule holds.
   const courseCtx = userToEdit.role === "trainee" ? await getCourseAccessContext() : null;
-  const courseTrainingNow =
-    courseCtx !== null && isTrainingNow(courseViewerFromProfile(userToEdit), courseCtx);
 
   const branches = allowedBranches(scope, activeBranches);
   const initialBranchIds = membershipMap.get(userId) ?? [];
@@ -274,8 +270,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               userId={userId}
               seenTrainingOn={userToEdit.course_seen_training_on}
               accessUntil={userToEdit.course_access_until}
-              trainingNow={courseTrainingNow}
-              ruleOn={courseCtx.lastGoodSweepOn !== null}
+              lastGoodSweepOn={courseCtx.lastGoodSweepOn}
               canEdit={isAdmin}
               today={courseCtx.today}
             />

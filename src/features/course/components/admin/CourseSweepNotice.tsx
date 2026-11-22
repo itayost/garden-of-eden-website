@@ -1,10 +1,8 @@
 import { AlertTriangle, Info } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { formatDateShort } from "@/lib/utils/date";
+import { formatIsoDay } from "@/lib/utils/date";
 import type { CourseSweepNotice as Notice } from "@/lib/course-access/status";
-
-const showDay = (day: string): string => formatDateShort(new Date(`${day}T12:00:00Z`));
 
 function noticeText(notice: Exclude<Notice, { kind: "ok" }>): string {
   switch (notice.kind) {
@@ -13,9 +11,9 @@ function noticeText(notice: Exclude<Notice, { kind: "ok" }>): string {
     case "never":
       return "הבדיקה הלילית של הגישה לקורסים עוד לא הצליחה. עד אז הגישה לפי הכלל הקודם.";
     case "pending":
-      return `הגישה לקורסים לפי אימון פעיל תופעל ב-${showDay(notice.ruleOnFrom)}. עד אז אפשר לסמן מתאמנים פעילים בכרטיס שלהם.`;
+      return `הגישה לקורסים לפי אימון פעיל תופעל ב-${formatIsoDay(notice.ruleOnFrom)}. עד אז אפשר לסמן מתאמנים פעילים בכרטיס שלהם.`;
     case "stale":
-      return `הבדיקה הלילית של הגישה לקורסים לא הצליחה מאז ${showDay(notice.lastGood)}. הגישה נקבעת לפי הבדיקה הזו, כדאי לבדוק את הסנכרון עם Arbox.`;
+      return `הבדיקה הלילית של הגישה לקורסים לא הצליחה מאז ${formatIsoDay(notice.lastGood)}. הגישה נקבעת לפי הבדיקה הזו, כדאי לבדוק את הסנכרון עם Arbox.`;
   }
 }
 

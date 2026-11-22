@@ -8,9 +8,9 @@ import { lessonProgressSchema } from "@/lib/validations/course";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { shouldMarkComplete } from "../progress-utils";
 import { grantCourseBadges } from "../grant-course-badges";
-import { canOpenCourse, COURSE_ACCESS_DENIED } from "../course-access-rule";
-import { getCourseAccessContext } from "../course-access-context";
-import { getCourseViewer } from "./course-read";
+import { COURSE_ACCESS_DENIED } from "../course-access-rule";
+import { mayOpenCourse } from "../course-gate";
+import { getCourseUserId } from "./course-read";
 
 interface ProgressResult {
   success: boolean;
@@ -77,8 +77,7 @@ async function readLessonWithProgress(
   // (20261123100000), so this gate is the only way a row changes.
   const course = data.chapter?.course;
   if (!course) return { ok: false, error: "שיעור לא נמצא" };
-  const [viewer, ctx] = await Promise.all([getCourseViewer(), getCourseAccessContext()]);
-  if (!canOpenCourse({ slug: course.slug, activeOnly: course.active_only === true }, viewer, ctx)) {
+  if (!(await mayOpenCourse(course))) {
     return { ok: false, error: COURSE_ACCESS_DENIED };
   }
 
@@ -113,19 +112,18 @@ export async function updateLessonProgress(
     };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  // One sign-in lookup per call: the course gate reads the same memoized id.
+  const userId = await getCourseUserId();
+  if (!userId) {
     return { success: false, completed: false, error: "לא מחובר" };
   }
+  const supabase = await createClient();
 
   // The player drives this every 15 s, so it is the one write a trainee can
   // trigger at will. The general limiter (100/min) is far above the ~4/min a
   // real player produces and fails open, so a Redis outage cannot stop playback
   // progress being recorded.
-  const rate = await checkRateLimit(user.id, "general");
+  const rate = await checkRateLimit(userId, "general");
   void rate.pending.catch(() => {});
   if (rate.rateLimited) {
     return { success: false, completed: false, error: "יותר מדי בקשות, נסה שוב" };
@@ -134,7 +132,7 @@ export async function updateLessonProgress(
   const read = await readLessonWithProgress(
     supabase,
     parsed.data.lesson_id,
-    user.id
+    userId
   );
   if (!read.ok) {
     return { success: false, completed: false, error: read.error };
@@ -161,7 +159,7 @@ export async function updateLessonProgress(
 
   const { error } = await typedFrom(createAdminClient(), "course_lesson_progress").upsert(
     {
-      user_id: user.id,
+      user_id: userId,
       lesson_id: parsed.data.lesson_id,
       last_position_sec: clampedPosition,
       watched_sec: watchedSec,
@@ -178,7 +176,7 @@ export async function updateLessonProgress(
   // Badges are granted only on the transition, and never allowed to fail the
   // write that triggered them.
   if (stampCompletion) {
-    await grantCourseBadges(supabase, user.id, parsed.data.lesson_id);
+    await grantCourseBadges(supabase, userId, parsed.data.lesson_id);
   }
 
   return { success: true, completed: nowComplete };
@@ -195,23 +193,22 @@ export async function markLessonComplete(
     return { success: false, completed: false, error: "מזהה שיעור לא תקין" };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  // One sign-in lookup per call: the course gate reads the same memoized id.
+  const userId = await getCourseUserId();
+  if (!userId) {
     return { success: false, completed: false, error: "לא מחובר" };
   }
+  const supabase = await createClient();
 
   // Limited for the same reason as updateLessonProgress, and more so: this path
   // costs two reads, an upsert and then the badge sweep.
-  const rate = await checkRateLimit(user.id, "general");
+  const rate = await checkRateLimit(userId, "general");
   void rate.pending.catch(() => {});
   if (rate.rateLimited) {
     return { success: false, completed: false, error: "יותר מדי בקשות, נסה שוב" };
   }
 
-  const read = await readLessonWithProgress(supabase, lessonId, user.id);
+  const read = await readLessonWithProgress(supabase, lessonId, userId);
   if (!read.ok) {
     return { success: false, completed: false, error: read.error };
   }
@@ -224,7 +221,7 @@ export async function markLessonComplete(
 
   const { error } = await typedFrom(createAdminClient(), "course_lesson_progress").upsert(
     {
-      user_id: user.id,
+      user_id: userId,
       lesson_id: lessonId,
       last_position_sec: existing?.watched_sec ?? 0,
       watched_sec: Math.max(existing?.watched_sec ?? 0, durationSec),
@@ -238,7 +235,7 @@ export async function markLessonComplete(
     return { success: false, completed: false, error: "שמירה נכשלה" };
   }
 
-  await grantCourseBadges(supabase, user.id, lessonId);
+  await grantCourseBadges(supabase, userId, lessonId);
 
   return { success: true, completed: true };
 }

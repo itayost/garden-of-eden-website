@@ -80,16 +80,7 @@ export function wouldLockAfterSweep<T extends SweptTrainee>(input: {
   const ctx = { today, lastGoodSweepOn: today };
   return profiles.filter(
     (p) =>
-      !isTrainingNow(
-        {
-          role: "trainee",
-          isActive: true,
-          seenTrainingOn: stampedIds.has(p.id) ? today : p.seenOn,
-          accessUntil: p.accessUntil,
-          boughtCourse: false,
-        },
-        ctx,
-      ),
+      !isTrainingNow({ seenTrainingOn: stampedIds.has(p.id) ? today : p.seenOn, accessUntil: p.accessUntil }, ctx),
   );
 }
 

@@ -1,12 +1,11 @@
 import { addDays } from "@/lib/utils/iso-date";
-import { COURSE_ACTIVE_GRACE_DAYS, type SweepSpan } from "@/features/course/lib/course-access-rule";
+import { COURSE_ACTIVE_GRACE_DAYS, isTrainingNow, type SweepSpan } from "@/features/course/lib/course-access-rule";
 
 export const RULE_NOT_ON_STATUS = "הכלל עוד לא פעיל: הגישה לפי הכלל הקודם";
 
 export interface CourseAccessStatusInput {
-  /** The training rule decides (a good sweep a week old exists); false while the old rule holds. */
-  readonly ruleOn: boolean;
-  readonly trainingNow: boolean;
+  /** The last good sweep the rule counts from; null while the old rule holds. */
+  readonly lastGoodSweepOn: string | null;
   readonly seenTrainingOn: string | null;
   readonly accessUntil: string | null;
   /** Israel day. */
@@ -19,7 +18,9 @@ export interface CourseAccessStatusInput {
  * the switch. `show` formats a bare day for people. Pure.
  */
 export function courseAccessStatusLines(input: CourseAccessStatusInput, show: (day: string) => string): string[] {
-  const { ruleOn, trainingNow, seenTrainingOn, accessUntil, today } = input;
+  const { lastGoodSweepOn, seenTrainingOn, accessUntil, today } = input;
+  const ruleOn = lastGoodSweepOn !== null;
+  const trainingNow = isTrainingNow({ seenTrainingOn, accessUntil }, { today, lastGoodSweepOn });
   const markLine = accessUntil !== null && accessUntil >= today ? `מסומן פעיל עד ${show(accessUntil)}` : null;
 
   if (!ruleOn) return markLine ? [RULE_NOT_ON_STATUS, markLine] : [RULE_NOT_ON_STATUS];

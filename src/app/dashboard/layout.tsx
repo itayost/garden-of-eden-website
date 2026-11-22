@@ -80,11 +80,18 @@ export default async function DashboardLayout({
       .eq("slug", TACTICAL_COURSE_SLUG)
       .eq("is_published", true)
       .maybeSingle(),
-    getCourseAccessContext(),
+    profile?.role === "trainee" ? getCourseAccessContext() : null,
   ]);
+  // Only a trainee needs the rule's sweep context; staff always open courses.
   const canTacticalCourse =
     tacticalCourse !== null &&
-    canOpenCourse({ slug: TACTICAL_COURSE_SLUG, activeOnly: true }, courseViewerFromProfile(profile && !profile.deleted_at ? profile : null), courseCtx);
+    (courseCtx === null
+      ? profile?.role === "admin" || profile?.role === "trainer"
+      : canOpenCourse(
+          { slug: TACTICAL_COURSE_SLUG, activeOnly: true },
+          courseViewerFromProfile(profile && !profile.deleted_at ? profile : null),
+          courseCtx,
+        ));
   const capabilities = { booking: canBook, tacticalCourse: canTacticalCourse };
   const firstName = firstNameOf(profile?.full_name ?? null);
   const cookieStore = await cookies();
