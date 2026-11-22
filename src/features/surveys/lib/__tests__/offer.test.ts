@@ -44,8 +44,7 @@ describe("surveyPromptAllowedOn", () => {
       "/dashboard/workout/session-3",
       "/dashboard/scan/EQ-12",
       "/dashboard/forms/post-workout",
-      "/dashboard/course/ch-1/lesson-2",
-      "/dashboard/tactical-course/ch/l",
+      "/dashboard/courses/tactical/01-x/02-y",
     ];
     for (const path of paths) {
       expect(surveyPromptAllowedOn(path)).toBe(false);
@@ -55,7 +54,7 @@ describe("surveyPromptAllowedOn", () => {
   test("a trailing slash makes no difference to the mid-activity check", () => {
     expect(surveyPromptAllowedOn("/dashboard/workout/")).toBe(false);
     expect(surveyPromptAllowedOn("/dashboard/forms/post-workout/")).toBe(false);
-    expect(surveyPromptAllowedOn("/dashboard/course/ch-1/lesson-2/")).toBe(false);
+    expect(surveyPromptAllowedOn("/dashboard/courses/tactical/01-x/02-y/")).toBe(false);
   });
 
   test("everywhere else, including the forms index and course chapters list", () => {
@@ -63,8 +62,8 @@ describe("surveyPromptAllowedOn", () => {
       "/dashboard",
       "/dashboard/schedule",
       "/dashboard/forms",
-      "/dashboard/course",
-      "/dashboard/course/ch-1",
+      "/dashboard/courses",
+      "/dashboard/courses/tactical",
       "/dashboard/profile",
     ];
     for (const path of paths) {

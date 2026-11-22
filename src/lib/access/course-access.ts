@@ -12,6 +12,8 @@
  * person restricted?") has an auditable answer.
  */
 
+import { courseHref, DIGITAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
+
 export type AccessTier = "full" | "course_only";
 
 /** A manual decision by an admin. Null means "derive it from Arbox". */
@@ -37,15 +39,16 @@ export interface AccessFacts {
 }
 
 /** Where a course-only trainee lands, and where they are sent back to. */
-export const COURSE_ONLY_HOME = "/dashboard/course";
+export const COURSE_ONLY_HOME = courseHref(DIGITAL_COURSE_SLUG);
 
 /**
- * Trainee routes a course-only user may still reach. They need their own
+ * Trainee routes a course-only user may still reach. The course list covers
+ * every course: one they may not open shows locked on its own page. They need their own
  * profile and settings to manage their account and sign out; everything else
  * under /dashboard is members-only.
  */
 const COURSE_ONLY_ALLOWED = [
-  "/dashboard/course",
+  "/dashboard/courses",
   "/dashboard/profile",
   "/dashboard/settings",
 ] as const;
@@ -81,7 +84,7 @@ export function isPathAllowedForTier(
   if (tier === "full") return true;
   if (!isUnder(pathname, "/dashboard")) return true;
 
-  // Normalise a trailing slash so "/dashboard/course/" is not read as a child
+  // Normalise a trailing slash so "/dashboard/courses/" is not read as a child
   // path that happens to be empty.
   const path =
     pathname.length > 1 && pathname.endsWith("/")

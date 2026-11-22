@@ -87,7 +87,7 @@ describe("isPathAllowedForTier", () => {
   test("full access reaches everything", () => {
     for (const path of [
       "/dashboard",
-      "/dashboard/course",
+      "/dashboard/courses",
       "/dashboard/assessments",
       "/dashboard/rankings",
       "/dashboard/book",
@@ -98,8 +98,9 @@ describe("isPathAllowedForTier", () => {
 
   test("course-only reaches the course, profile and settings", () => {
     for (const path of [
-      "/dashboard/course",
-      "/dashboard/course/01-chapter-1/03-lesson-3",
+      "/dashboard/courses",
+      "/dashboard/courses/eden-player-development/01-intro/00-lesson",
+      "/dashboard/courses/tactical",
       "/dashboard/profile",
       "/dashboard/settings",
       "/dashboard/settings/security",
@@ -114,6 +115,7 @@ describe("isPathAllowedForTier", () => {
       "/dashboard/assessments",
       "/dashboard/rankings",
       "/dashboard/book",
+      "/dashboard/schedule",
       "/dashboard/nutrition",
       "/dashboard/workout",
       "/dashboard/videos",
@@ -135,7 +137,7 @@ describe("isPathAllowedForTier", () => {
   });
 
   test("a trailing slash does not change the verdict", () => {
-    expect(isPathAllowedForTier("course_only", "/dashboard/course/")).toBe(true);
+    expect(isPathAllowedForTier("course_only", "/dashboard/courses/")).toBe(true);
     expect(isPathAllowedForTier("course_only", "/dashboard/book/")).toBe(false);
   });
 
@@ -145,6 +147,10 @@ describe("isPathAllowedForTier", () => {
     for (const path of ["/admin", "/auth/login", "/", "/onboarding/profile"]) {
       expect(isPathAllowedForTier("course_only", path)).toBe(true);
     }
+  });
+
+  test("the course-only home is the digital course", () => {
+    expect(COURSE_ONLY_HOME).toBe("/dashboard/courses/eden-player-development");
   });
 
   test("the course-only home is itself allowed", () => {
