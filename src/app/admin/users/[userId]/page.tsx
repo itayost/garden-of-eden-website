@@ -16,6 +16,9 @@ import { UserEditForm } from "@/components/admin/UserEditForm";
 import { ActivityLogTable } from "@/components/admin/ActivityLogTable";
 import { UserActionsCard } from "@/components/admin/users/UserActionsCard";
 import { AccessTierCard } from "@/components/admin/users/AccessTierCard";
+import { CourseAccessCard } from "@/components/admin/users/CourseAccessCard";
+import { getCourseAccessContext } from "@/features/course/lib/course-access-context";
+import { isTrainingNow } from "@/features/course/lib/course-access-rule";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
 import { CommunicationHistoryCard } from "@/components/admin/users/CommunicationHistoryCard";
@@ -84,6 +87,18 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   if (!userToEdit) {
     notFound();
   }
+
+  const courseCtx = await getCourseAccessContext();
+  const courseTrainingNow = isTrainingNow(
+    {
+      role: userToEdit.role,
+      isActive: userToEdit.is_active,
+      seenTrainingOn: userToEdit.course_seen_training_on,
+      accessUntil: userToEdit.course_access_until,
+      boughtCourse: userToEdit.arbox_bought_course,
+    },
+    courseCtx,
+  );
 
   // Trainers can only access trainee profiles
   if (!isAdmin && userToEdit.role !== "trainee") {
@@ -255,6 +270,17 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
               accessOverride={parseAccessOverride(userToEdit.access_override)}
               arboxUserId={userToEdit.arbox_user_id}
               syncedAt={userToEdit.arbox_access_synced_at}
+            />
+          )}
+
+          {/* Whether this trainee trains now, and the admin's mark (admin only) */}
+          {isAdmin && userToEdit.role === "trainee" && (
+            <CourseAccessCard
+              userId={userId}
+              seenTrainingOn={userToEdit.course_seen_training_on}
+              accessUntil={userToEdit.course_access_until}
+              trainingNow={courseTrainingNow}
+              today={courseCtx.today}
             />
           )}
 
