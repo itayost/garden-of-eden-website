@@ -20,8 +20,9 @@ import {
  * The nightly course-access sweep. Who trains now, by Arbox (training-now.ts)
  * and by the app's Plan queues, gets `profiles.course_seen_training_on = today`;
  * then today's `course_access_sweeps` row is written. The newest row is the
- * last good sweep the course gate counts its grace period back from, so it is
- * written last, only after every read worked and every stamp landed. A failed
+ * last good sweep the course gate counts its grace period back from (once the
+ * oldest row is a week old: `effectiveLastGoodSweep`), so it is written last,
+ * only after every read worked and every stamp landed. A failed
  * read, an empty memberships or cards report, or an implausibly small Arbox
  * list (`arboxReadProblem`) writes nothing at all: the gate stays on the
  * previous good sweep and nobody is locked by a bad night.
@@ -36,10 +37,14 @@ export interface ActivitySweepResult {
   good: boolean;
   reason: string | null;
   rows: TrainingNow["rows"];
+  rowsWithId: TrainingNow["rowsWithId"];
   arboxIds: number;
   planTrainees: number;
   stamped: number;
+  /** Who would be locked, with names and branches: filled on a dry run only, empty on the nightly run. */
   wouldLock: { id: string; fullName: string; branches: string[]; linkedToArbox: boolean }[];
+  /** How many would be locked; null when the sweep stopped before working it out. */
+  wouldLockCount: number | null;
 }
 
 interface LiveTrainee extends SweptTrainee {
@@ -53,9 +58,10 @@ interface SweepInputs {
   readonly lastArboxIds: number | null;
 }
 
-type SweepCounts = Pick<ActivitySweepResult, "rows" | "arboxIds" | "planTrainees">;
+type SweepCounts = Pick<ActivitySweepResult, "rows" | "rowsWithId" | "arboxIds" | "planTrainees">;
 
-const NOT_READ: SweepCounts = { rows: { memberships: 0, cards: 0, onHold: 0 }, arboxIds: 0, planTrainees: 0 };
+const NO_ROWS = { memberships: 0, cards: 0, onHold: 0 };
+const NOT_READ: SweepCounts = { rows: NO_ROWS, rowsWithId: NO_ROWS, arboxIds: 0, planTrainees: 0 };
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
@@ -144,7 +150,11 @@ async function describeLocked(db: Db, locked: readonly LiveTrainee[]): Promise<A
   }));
 }
 
-/** Stamps `today` on the ids, 200 per request; stops at the first error. */
+/**
+ * Stamps `today` on the ids, 200 per request; stops at the first error. Stamps
+ * already written by then stay: a stamp only ever opens access, and the caller
+ * writes no sweep row, so the rule's last good sweep does not move.
+ */
 async function writeStamps(db: Db, ids: readonly string[], today: string): Promise<{ stamped: number; error: string | null }> {
   let stamped = 0;
   for (const slice of chunk(ids)) {
@@ -170,32 +180,42 @@ async function writeSweepRow(db: Db, today: string, counts: SweepCounts, stamped
   return error ? error.message : null;
 }
 
-function notGood(reason: string, counts: SweepCounts, stamped = 0, wouldLock: ActivitySweepResult["wouldLock"] = []): ActivitySweepResult {
+function notGood(reason: string, counts: SweepCounts, stamped = 0): ActivitySweepResult {
   console.error(`[Course Activity] sweep not good, no sweep row written: ${reason}`);
-  return { good: false, reason, ...counts, stamped, wouldLock };
+  return { good: false, reason, ...counts, stamped, wouldLock: [], wouldLockCount: null };
 }
 
 async function sweep(db: Db, inputs: SweepInputs, today: string, dryRun: boolean): Promise<ActivitySweepResult> {
   const { arbox, planTrainingIds, trainees, lastArboxIds } = inputs;
-  const counts: SweepCounts = { rows: arbox.rows, arboxIds: arbox.ids.size, planTrainees: planTrainingIds.size };
+  const counts: SweepCounts = {
+    rows: arbox.rows,
+    rowsWithId: arbox.rowsWithId,
+    arboxIds: arbox.ids.size,
+    planTrainees: planTrainingIds.size,
+  };
   const arboxProblem = arboxReadProblem({ rows: counts.rows, arboxIds: counts.arboxIds, lastGoodArboxIds: lastArboxIds });
   if (arboxProblem) return notGood(arboxProblem, counts);
 
   const toStamp = planActivityStamps({ profiles: trainees, arboxTrainingIds: arbox.ids, planTrainingIds, today });
   const locked = wouldLockAfterSweep({ profiles: trainees, stampedIds: new Set(toStamp), today });
-  const wouldLock = await describeLocked(db, locked);
-  if (dryRun) return { good: true, reason: null, ...counts, stamped: toStamp.length, wouldLock };
+  const wouldLockCount = locked.length;
+  // Names and branches only for the dry run's list: the nightly run reports the count.
+  if (dryRun) {
+    const wouldLock = await describeLocked(db, locked);
+    return { good: true, reason: null, ...counts, stamped: toStamp.length, wouldLock, wouldLockCount };
+  }
 
   const { stamped, error } = await writeStamps(db, toStamp, today);
-  if (error) return notGood(`stamp_failed: ${error}`, counts, stamped, wouldLock);
+  if (error) return notGood(`stamp_failed: ${error}`, counts, stamped);
   const rowError = await writeSweepRow(db, today, counts, stamped);
-  if (rowError) return notGood(`sweep_row_failed: ${rowError}`, counts, stamped, wouldLock);
-  return { good: true, reason: null, ...counts, stamped, wouldLock };
+  if (rowError) return notGood(`sweep_row_failed: ${rowError}`, counts, stamped);
+  return { good: true, reason: null, ...counts, stamped, wouldLock: [], wouldLockCount };
 }
 
 /**
  * Runs the sweep. Never throws: anything that goes wrong comes back as
- * `good: false` with its reason. A dry run reads everything and writes nothing.
+ * `good: false` with its reason. A dry run reads everything, writes nothing and
+ * lists who would be locked by name and branch; the nightly run only counts them.
  */
 export async function syncCourseActivity(opts: { dryRun: boolean; today?: string }): Promise<ActivitySweepResult> {
   const today = opts.today ?? israelDateStr(new Date());

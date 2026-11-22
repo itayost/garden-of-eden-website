@@ -101,4 +101,19 @@ describe("trainingNowFromRows", () => {
     });
     expect(result.rows).toEqual({ memberships: 2, cards: 1, onHold: 0 });
   });
+
+  test("rows with a usable user id are counted per report, training or not", () => {
+    const result = trainingNowFromRows({
+      ...none,
+      memberships: [
+        { user_id: 1, membership_type_name: "מנוי חודשי" },
+        { user_id: 2, membership_type_name: "קורס דיגיטלי" },
+        { user_id: null, membership_type_name: "מנוי חודשי" },
+      ],
+      cards: [{ user_id: "3" }, { user_id: "" }],
+      onHold: [{ user_id: "abc" }, {}, { user_id: 4 }],
+    });
+    expect(result.rows).toEqual({ memberships: 3, cards: 2, onHold: 3 });
+    expect(result.rowsWithId).toEqual({ memberships: 2, cards: 1, onHold: 1 });
+  });
 });

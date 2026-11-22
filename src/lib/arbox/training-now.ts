@@ -24,9 +24,18 @@ import type { SessionsReportRow } from "./purchase-rows";
 /** The on-hold report's name, unconfirmed against the live API: the dry run prints its row count. */
 const ON_HOLD_REPORT = "membersOnHoldReport";
 
+interface PerReport {
+  memberships: number;
+  cards: number;
+  onHold: number;
+}
+
 export interface TrainingNow {
   ids: Set<number>;
-  rows: { memberships: number; cards: number; onHold: number };
+  /** Raw report sizes; the sweep's checks (`arboxReadProblem`) read these. */
+  rows: PerReport;
+  /** Rows with a usable user id, training type or not: the dry run shows whether a report links to anyone. */
+  rowsWithId: PerReport;
 }
 
 export interface OnHoldRow {
@@ -41,6 +50,8 @@ export function trainingNowFromRows(input: {
   readonly products: ProductTypes;
 }): TrainingNow {
   const { memberships, cards, onHold, products } = input;
+  const withId = (rows: readonly { readonly user_id?: string | number | null }[]): number =>
+    rows.filter((row) => toUserId(row.user_id) !== null).length;
   const userIds = [
     ...memberships.filter((row) => isTrainingMembership(row, products)).map((row) => toUserId(row.user_id)),
     ...cards.map((row) => toUserId(row.user_id)),
@@ -49,6 +60,7 @@ export function trainingNowFromRows(input: {
   return {
     ids: new Set(userIds.filter((id): id is number => id !== null)),
     rows: { memberships: memberships.length, cards: cards.length, onHold: onHold.length },
+    rowsWithId: { memberships: withId(memberships), cards: withId(cards), onHold: withId(onHold) },
   };
 }
 

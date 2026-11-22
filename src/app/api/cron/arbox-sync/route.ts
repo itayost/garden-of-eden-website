@@ -54,13 +54,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Needs the Arbox links the user step just made. Isolated like the access
-    // step; a sweep that is not good writes nothing and says why. The locked
-    // list stays out of the response (children's names): only its length.
-    let activityResult: (Omit<ActivitySweepResult, "wouldLock"> & { wouldLock: number }) | null = null;
+    // step; a sweep that is not good writes nothing and says why. Only the
+    // dry run names who would be locked (children's names); here, the count.
+    let activityResult:
+      | (Omit<ActivitySweepResult, "wouldLock" | "wouldLockCount"> & { wouldLock: number | null })
+      | null = null;
     let activityError: string | null = null;
     try {
-      const { wouldLock, ...activity } = await syncCourseActivity({ dryRun: false });
-      activityResult = { ...activity, wouldLock: wouldLock.length };
+      const { good, reason, rows, rowsWithId, arboxIds, planTrainees, stamped, wouldLockCount } =
+        await syncCourseActivity({ dryRun: false });
+      activityResult = { good, reason, rows, rowsWithId, arboxIds, planTrainees, stamped, wouldLock: wouldLockCount };
     } catch (error) {
       activityError = error instanceof Error ? error.message : String(error);
       console.error("[Arbox Sync] Course activity sweep failed:", activityError);
