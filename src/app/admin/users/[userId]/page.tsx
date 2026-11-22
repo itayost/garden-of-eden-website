@@ -19,6 +19,7 @@ import { AccessTierCard } from "@/components/admin/users/AccessTierCard";
 import { CourseAccessCard } from "@/components/admin/users/CourseAccessCard";
 import { getCourseAccessContext } from "@/features/course/lib/course-access-context";
 import { isTrainingNow } from "@/features/course/lib/course-access-rule";
+import { courseViewerFromProfile } from "@/features/course/lib/course-viewer";
 import { TraineeImageSection } from "@/components/admin/users/TraineeImageSection";
 import { TraineeNotesCard } from "@/components/admin/users/TraineeNotesCard";
 import { CommunicationHistoryCard } from "@/components/admin/users/CommunicationHistoryCard";
@@ -88,18 +89,6 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     notFound();
   }
 
-  const courseCtx = await getCourseAccessContext();
-  const courseTrainingNow = isTrainingNow(
-    {
-      role: userToEdit.role,
-      isActive: userToEdit.is_active,
-      seenTrainingOn: userToEdit.course_seen_training_on,
-      accessUntil: userToEdit.course_access_until,
-      boughtCourse: userToEdit.arbox_bought_course,
-    },
-    courseCtx,
-  );
-
   // Trainers can only access trainee profiles
   if (!isAdmin && userToEdit.role !== "trainee") {
     redirect("/admin/users");
@@ -121,6 +110,12 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   if (!isAdmin && !(await isTraineeInScope(adminClient, scope, userId))) {
     redirect("/admin/users");
   }
+  // Course access, for the card staff see on a trainee. The rule is on once a
+  // good sweep is a week old; until then the card says the old rule holds.
+  const courseCtx = userToEdit.role === "trainee" ? await getCourseAccessContext() : null;
+  const courseTrainingNow =
+    courseCtx !== null && isTrainingNow(courseViewerFromProfile(userToEdit), courseCtx);
+
   const branches = allowedBranches(scope, activeBranches);
   const initialBranchIds = membershipMap.get(userId) ?? [];
   // Only an Admin sees or sets which branches a trainer manages.
@@ -273,13 +268,15 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
             />
           )}
 
-          {/* Whether this trainee trains now, and the admin's mark (admin only) */}
-          {isAdmin && userToEdit.role === "trainee" && (
+          {/* Whether this trainee trains now, and the admin's mark (set by admins; trainers see it) */}
+          {courseCtx !== null && (
             <CourseAccessCard
               userId={userId}
               seenTrainingOn={userToEdit.course_seen_training_on}
               accessUntil={userToEdit.course_access_until}
               trainingNow={courseTrainingNow}
+              ruleOn={courseCtx.lastGoodSweepOn !== null}
+              canEdit={isAdmin}
               today={courseCtx.today}
             />
           )}

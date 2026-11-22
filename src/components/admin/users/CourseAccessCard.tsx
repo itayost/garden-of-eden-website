@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { setCourseAccessMark } from "@/lib/actions/admin-course-access-mark";
 import { MAX_MARK_DAYS } from "@/lib/course-access/mark";
+import { courseAccessStatusLines } from "@/lib/course-access/status";
 import { addDays } from "@/lib/utils/iso-date";
 import { formatDateShort } from "@/lib/utils/date";
 
@@ -21,6 +23,10 @@ interface CourseAccessCardProps {
   seenTrainingOn: string | null;
   accessUntil: string | null;
   trainingNow: boolean;
+  /** The training rule decides; false while the old rule still holds. */
+  ruleOn: boolean;
+  /** Admins set and end the mark; trainers only see it. */
+  canEdit: boolean;
   /** Israel day, from the server. */
   today: string;
 }
@@ -36,17 +42,42 @@ export function CourseAccessCard({
   seenTrainingOn,
   accessUntil,
   trainingNow,
+  ruleOn,
+  canEdit,
   today,
 }: CourseAccessCardProps) {
+  const lines = courseAccessStatusLines({ ruleOn, trainingNow, seenTrainingOn, accessUntil, today }, show);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CalendarCheck className="h-5 w-5" aria-hidden="true" />
+          גישה לקורסים
+        </CardTitle>
+        <CardDescription>
+          {lines.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
+        </CardDescription>
+      </CardHeader>
+
+      {canEdit && (
+        <CardContent>
+          <MarkControls userId={userId} hasMark={accessUntil !== null} today={today} />
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+/** The admin's date picker and buttons; the action checks the admin again. */
+function MarkControls({ userId, hasMark, today }: { userId: string; hasMark: boolean; today: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [until, setUntil] = useState("");
-
-  const marked = accessUntil !== null && accessUntil >= today;
-
-  let status = "לא פעיל: אין מנוי, כרטיסייה או מסלול פעילים";
-  if (marked) status = `מסומן פעיל עד ${show(accessUntil)}`;
-  else if (trainingNow && seenTrainingOn) status = `פעיל: נראה מתאמן ב-${show(seenTrainingOn)}`;
 
   const apply = (next: string | null) => {
     startTransition(async () => {
@@ -62,49 +93,27 @@ export function CourseAccessCard({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarCheck className="h-5 w-5" aria-hidden="true" />
-          גישה לקורסים
-        </CardTitle>
-        <CardDescription>{status}</CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="space-y-1 text-xs text-muted-foreground">
-            <span>עד תאריך</span>
-            <input
-              type="date"
-              value={until}
-              min={today}
-              max={addDays(today, MAX_MARK_DAYS)}
-              onChange={(e) => setUntil(e.target.value)}
-              disabled={pending}
-              className="block rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => apply(until)}
-            disabled={pending || !until}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-muted disabled:opacity-40"
-          >
-            סמן כפעיל עד
-          </button>
-          {accessUntil !== null && (
-            <button
-              type="button"
-              onClick={() => apply(null)}
-              disabled={pending}
-              className="rounded-md border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              סיים סימון
-            </button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex flex-wrap items-end gap-2">
+      <label className="space-y-1 text-xs text-muted-foreground">
+        <span>עד תאריך</span>
+        <input
+          type="date"
+          value={until}
+          min={today}
+          max={addDays(today, MAX_MARK_DAYS)}
+          onChange={(e) => setUntil(e.target.value)}
+          disabled={pending}
+          className="block rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+        />
+      </label>
+      <Button type="button" variant="outline" size="sm" onClick={() => apply(until)} disabled={pending || !until}>
+        סמן כפעיל עד
+      </Button>
+      {hasMark && (
+        <Button type="button" variant="outline" size="sm" onClick={() => apply(null)} disabled={pending}>
+          סיים סימון
+        </Button>
+      )}
+    </div>
   );
 }
