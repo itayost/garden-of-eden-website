@@ -1,4 +1,5 @@
 {
+  "installCommand": "ONNXRUNTIME_NODE_INSTALL_CUDA=skip npm install",
   "crons": [
     {
       "path": "/api/cron/auto-clockout",
