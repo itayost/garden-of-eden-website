@@ -21,7 +21,7 @@ import { LIVE_ARBOX_STATUSES, type SessionsReportRow } from "./purchase-rows";
  * so the caller can treat the whole read as failed and write nothing.
  */
 
-/** The on-hold report's name, unconfirmed against the live API: the dry run prints its row count. */
+/** The on-hold report (confirmed 2026-11-23: it needs a fromDate/toDate range). */
 const ON_HOLD_REPORT = "membersOnHoldReport";
 
 interface PerReport {
@@ -81,6 +81,7 @@ export async function fetchTrainingNowUserIds(today: string): Promise<TrainingNo
   // Serial on purpose, like the access step: Arbox rate-limits bursts.
   const memberships = await fetchArboxReport<MembershipRow>("activeMembershipsReport");
   const cards = await fetchArboxReport<SessionsReportRow>("sessionsReport");
-  const onHold = await fetchArboxReport<OnHoldRow>(ON_HOLD_REPORT);
+  // Arbox refuses this report without a range (400); today..today lists who is on hold today.
+  const onHold = await fetchArboxReport<OnHoldRow>(ON_HOLD_REPORT, { fromDate: today, toDate: today });
   return trainingNowFromRows({ memberships, cards, onHold, products, today });
 }
