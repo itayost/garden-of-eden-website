@@ -61,3 +61,20 @@ export function deleteCourseProblem(chapters: number): string | null {
 export function deleteChapterProblem(lessons: number): string | null {
   return lessons > 0 ? "אפשר למחוק רק פרק ריק" : null;
 }
+
+export function validateTitle(title: string): string | null {
+  const trimmed = title.trim();
+  if (trimmed.length === 0) return "נדרשת כותרת";
+  if (trimmed.length > 160) return "כותרת ארוכה מדי";
+  return null;
+}
+
+/** Optional prose: trimmed, empty becomes null, refused past `max`. */
+export function cleanOptionalText(
+  value: string | null,
+  max: number
+): { value: string | null } | { error: string } {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.length > max) return { error: "הטקסט ארוך מדי" };
+  return { value: trimmed.length > 0 ? trimmed : null };
+}

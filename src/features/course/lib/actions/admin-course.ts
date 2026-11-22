@@ -1,14 +1,18 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import { lessonVideoSchema, reorderSchema } from "@/lib/validations/course";
+import { revalidateCourse } from "../course-revalidate";
 import { COURSE_VIDEO_BUCKET } from "../playback-config";
-import { positionalSlug } from "../course-admin-rules";
+import {
+  positionalSlug,
+  publishCourseProblem,
+  validateTitle,
+} from "../course-admin-rules";
 
 // ---------------------------------------------------------------------------
 // Result and view types
@@ -63,14 +67,6 @@ interface RawLesson {
   needs_title: boolean;
   is_published: boolean;
   order_index: number;
-}
-
-const ADMIN_PATH = "/admin/course";
-const TRAINEE_PATH = "/dashboard/course";
-
-function revalidateCourse(): void {
-  revalidatePath(ADMIN_PATH);
-  revalidatePath(TRAINEE_PATH);
 }
 
 // ---------------------------------------------------------------------------
@@ -181,13 +177,6 @@ export async function listCourseAdminTree(slug: string): Promise<AdminCourse | n
 // ---------------------------------------------------------------------------
 // Titles
 // ---------------------------------------------------------------------------
-
-function validateTitle(title: string): string | null {
-  const trimmed = title.trim();
-  if (trimmed.length === 0) return "נדרשת כותרת";
-  if (trimmed.length > 160) return "כותרת ארוכה מדי";
-  return null;
-}
 
 /**
  * Optional secondary text (a chapter subtitle, a lesson or course description).
@@ -365,6 +354,37 @@ export async function setCoursePublished(
   const { error: authError } = await verifyAdmin();
   if (authError) return { error: authError };
   if (!isValidUUID(courseId)) return { error: "מזהה קורס לא תקין" };
+
+  if (isPublished) {
+    const db = createAdminClient();
+    const { data: course, error: courseError } = await typedFrom(db, "courses")
+      .select("needs_title")
+      .eq("id", courseId)
+      .maybeSingle();
+    if (courseError) {
+      console.error("setCoursePublished read course failed:", courseError);
+      return { error: "שמירה נכשלה" };
+    }
+    if (!course) return { error: "הקורס לא נמצא" };
+
+    const { count, error: countError } = await typedFrom(db, "course_lessons")
+      .select("id, course_chapters!inner(course_id)", {
+        count: "exact",
+        head: true,
+      })
+      .eq("course_chapters.course_id", courseId)
+      .eq("is_published", true);
+    if (countError) {
+      console.error("setCoursePublished count lessons failed:", countError);
+      return { error: "שמירה נכשלה" };
+    }
+
+    const problem = publishCourseProblem({
+      needsTitle: course.needs_title === true,
+      publishedLessons: count ?? 0,
+    });
+    if (problem) return { error: problem };
+  }
 
   return updateOneRow(
     "courses",

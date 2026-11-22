@@ -5,6 +5,8 @@ import {
   deleteCourseProblem,
   positionalSlug,
   publishCourseProblem,
+  cleanOptionalText,
+  validateTitle,
 } from "../course-admin-rules";
 
 describe("positionalSlug", () => {
@@ -60,5 +62,25 @@ describe("delete rules", () => {
   it("chapter", () => {
     expect(deleteChapterProblem(0)).toBeNull();
     expect(deleteChapterProblem(2)).toBe("אפשר למחוק רק פרק ריק");
+  });
+});
+
+describe("validateTitle", () => {
+  it("refuses blank and overlong titles", () => {
+    expect(validateTitle("   ")).not.toBeNull();
+    expect(validateTitle("x".repeat(161))).not.toBeNull();
+    expect(validateTitle(" שם ")).toBeNull();
+  });
+});
+
+describe("cleanOptionalText", () => {
+  it("trims and turns empty into null", () => {
+    expect(cleanOptionalText("  hi ", 10)).toEqual({ value: "hi" });
+    expect(cleanOptionalText("   ", 10)).toEqual({ value: null });
+    expect(cleanOptionalText(null, 10)).toEqual({ value: null });
+  });
+
+  it("refuses text over the limit", () => {
+    expect("error" in cleanOptionalText("x".repeat(11), 10)).toBe(true);
   });
 });
