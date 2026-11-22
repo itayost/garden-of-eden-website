@@ -1,7 +1,6 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdmin } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import {
@@ -19,11 +18,6 @@ const MAX_DESCRIPTION = 500;
 const MAX_SUBTITLE = 200;
 const SAVE_FAILED = "שמירה נכשלה";
 const DELETE_FAILED = "המחיקה נכשלה";
-
-interface OrderedRow {
-  id: string;
-  order_index: number;
-}
 
 function nextIndexAfter(rows: readonly { order_index: number }[]): number {
   return rows.reduce((max, row) => Math.max(max, row.order_index), -1) + 1;
@@ -43,7 +37,7 @@ export async function createCourse(
   if ("error" in description) return { error: description.error };
 
   const db = createAdminClient();
-  const { data, error: readError } = await typedFrom(db, "courses").select(
+  const { data, error: readError } = await db.from("courses").select(
     "slug, order_index"
   );
   if (readError) {
@@ -51,13 +45,13 @@ export async function createCourse(
     return { error: SAVE_FAILED };
   }
 
-  const existing = (data ?? []) as { slug: string; order_index: number }[];
+  const existing = data ?? [];
   const slug = courseSlugFor(
     titleHe,
     new Set(existing.map((row) => row.slug))
   );
 
-  const { error } = await typedFrom(db, "courses").insert({
+  const { error } = await db.from("courses").insert({
     slug,
     title_he: titleHe.trim(),
     description_he: description.value,
@@ -89,7 +83,7 @@ export async function updateCourseDetails(
   if ("error" in description) return { error: description.error };
 
   const db = createAdminClient();
-  const { data, error } = await typedFrom(db, "courses")
+  const { data, error } = await db.from("courses")
     .update({
       title_he: details.titleHe.trim(),
       description_he: description.value,
@@ -126,7 +120,7 @@ export async function moveCourse(
   }
 
   const db = createAdminClient();
-  const { data, error: readError } = await typedFrom(db, "courses")
+  const { data, error: readError } = await db.from("courses")
     .select("id, order_index")
     .order("order_index", { ascending: true })
     .order("id", { ascending: true });
@@ -135,7 +129,7 @@ export async function moveCourse(
     return { error: SAVE_FAILED };
   }
 
-  const rows = (data ?? []) as OrderedRow[];
+  const rows = data ?? [];
   const at = rows.findIndex((row) => row.id === courseId);
   if (at === -1) return { error: "הקורס לא נמצא" };
 
@@ -152,12 +146,12 @@ export async function moveCourse(
         : current.order_index - 1
       : current.order_index;
 
-  const first = await typedFrom(db, "courses")
+  const first = await db.from("courses")
     .update({ order_index: currentNext })
     .eq("id", current.id);
   const second = first.error
     ? first
-    : await typedFrom(db, "courses")
+    : await db.from("courses")
         .update({ order_index: neighbourNext })
         .eq("id", neighbour.id);
   if (first.error || second.error) {
@@ -178,7 +172,7 @@ export async function deleteCourse(
   if (!isValidUUID(courseId)) return { error: "מזהה קורס לא תקין" };
 
   const db = createAdminClient();
-  const { count, error: countError } = await typedFrom(db, "course_chapters")
+  const { count, error: countError } = await db.from("course_chapters")
     .select("id", { count: "exact", head: true })
     .eq("course_id", courseId);
   if (countError) {
@@ -188,7 +182,7 @@ export async function deleteCourse(
   const problem = deleteCourseProblem(count ?? 0);
   if (problem) return { error: problem };
 
-  const { data, error } = await typedFrom(db, "courses")
+  const { data, error } = await db.from("courses")
     .delete()
     .eq("id", courseId)
     .select("id");
@@ -220,7 +214,7 @@ export async function createChapter(
   if ("error" in subtitle) return { error: subtitle.error };
 
   const db = createAdminClient();
-  const { data, error: readError } = await typedFrom(db, "course_chapters")
+  const { data, error: readError } = await db.from("course_chapters")
     .select("slug, order_index")
     .eq("course_id", courseId);
   if (readError) {
@@ -228,7 +222,7 @@ export async function createChapter(
     return { error: SAVE_FAILED };
   }
 
-  const existing = (data ?? []) as { slug: string; order_index: number }[];
+  const existing = data ?? [];
   const nextIndex = nextIndexAfter(existing);
 
   // Unique within the course; nudge past a collision instead of failing.
@@ -237,7 +231,7 @@ export async function createChapter(
   let slug = base;
   for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
 
-  const { data: created, error } = await typedFrom(db, "course_chapters")
+  const { data: created, error } = await db.from("course_chapters")
     .insert({
       course_id: courseId,
       slug,
@@ -266,7 +260,7 @@ export async function deleteChapter(
   if (!isValidUUID(chapterId)) return { error: "מזהה פרק לא תקין" };
 
   const db = createAdminClient();
-  const { count, error: countError } = await typedFrom(db, "course_lessons")
+  const { count, error: countError } = await db.from("course_lessons")
     .select("id", { count: "exact", head: true })
     .eq("chapter_id", chapterId);
   if (countError) {
@@ -276,7 +270,7 @@ export async function deleteChapter(
   const problem = deleteChapterProblem(count ?? 0);
   if (problem) return { error: problem };
 
-  const { data, error } = await typedFrom(db, "course_chapters")
+  const { data, error } = await db.from("course_chapters")
     .delete()
     .eq("id", chapterId)
     .select("id");

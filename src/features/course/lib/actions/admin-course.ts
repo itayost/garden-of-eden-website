@@ -357,7 +357,7 @@ export async function setCoursePublished(
 
   if (isPublished) {
     const db = createAdminClient();
-    const { data: course, error: courseError } = await typedFrom(db, "courses")
+    const { data: course, error: courseError } = await db.from("courses")
       .select("needs_title")
       .eq("id", courseId)
       .maybeSingle();
@@ -367,7 +367,7 @@ export async function setCoursePublished(
     }
     if (!course) return { error: "הקורס לא נמצא" };
 
-    const { count, error: countError } = await typedFrom(db, "course_lessons")
+    const { count, error: countError } = await db.from("course_lessons")
       .select("id, course_chapters!inner(course_id)", {
         count: "exact",
         head: true,
