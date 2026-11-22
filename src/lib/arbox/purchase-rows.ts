@@ -175,3 +175,6 @@ export function purchasesFromReports(input: {
 
   return { purchases: [...cards, ...memberships], unmatchedCards };
 }
+
+/** Arbox statuses of a membership or card that is still running. */
+export const LIVE_ARBOX_STATUSES: ReadonlySet<string> = new Set(["active", "activeMemberWithFutureCancel"]);

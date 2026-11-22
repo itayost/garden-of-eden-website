@@ -99,3 +99,11 @@ export function formatRelativeTime(date: string | Date): string {
   // Fall back to full date for older dates
   return formatDate(d);
 }
+
+/**
+ * A bare YYYY-MM-DD day as DD/MM/YYYY. Read at noon UTC so no time zone moves
+ * it to the day before or after.
+ */
+export function formatIsoDay(day: string): string {
+  return formatDateShort(new Date(`${day}T12:00:00Z`));
+}

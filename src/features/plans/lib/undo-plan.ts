@@ -3,6 +3,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/types/database";
 import type { QueueRow } from "@/lib/plans/plan-queue";
+import { clearSeenTrainingAfterUndo } from "@/lib/course-access/sync-activity";
+import { israelToday } from "@/lib/utils/tasks";
 import { guardedShrinkArgs } from "./apply-shrink";
 import { actFailure, type PlanContext } from "./plan-context";
 
@@ -66,5 +68,7 @@ export async function undoPlan(
     ...guardedShrinkArgs(ctx, undo.cancelled),
   });
   if (error || !refundId) return { error: actFailure("undo", error, "הפעולה נכשלה. נסו שוב.") };
+  // An undone sale should not leave a week of course access behind it.
+  await clearSeenTrainingAfterUndo(db, ctx.plan.profile_id, israelToday());
   return { refundId };
 }

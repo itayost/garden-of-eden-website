@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/features/course/lib/progress-utils";
 import type { CourseChapterWithLessons } from "@/features/course/lib/types";
@@ -5,7 +6,10 @@ import type { CourseChapterWithLessons } from "@/features/course/lib/types";
 interface CourseCoverProps {
   titleHe: string;
   descriptionHe: string | null;
-  chapters: CourseChapterWithLessons[];
+  /** Shows the chapters, lessons and watch time line; a locked course has none. */
+  chapters?: CourseChapterWithLessons[];
+  /** Under the rule, in place of the stats line (the locked course's notice). */
+  children?: ReactNode;
 }
 
 /**
@@ -16,13 +20,15 @@ export function CourseCover({
   titleHe,
   descriptionHe,
   chapters,
+  children,
 }: CourseCoverProps) {
-  const lessonCount = chapters.reduce((n, c) => n + c.lessons.length, 0);
-  const totalSeconds = chapters.reduce(
-    (sum, chapter) =>
-      sum + chapter.lessons.reduce((n, lesson) => n + lesson.durationSec, 0),
-    0
-  );
+  const lessonCount = chapters?.reduce((n, c) => n + c.lessons.length, 0) ?? 0;
+  const totalSeconds =
+    chapters?.reduce(
+      (sum, chapter) =>
+        sum + chapter.lessons.reduce((n, lesson) => n + lesson.durationSec, 0),
+      0
+    ) ?? 0;
 
   return (
     <div
@@ -61,10 +67,14 @@ export function CourseCover({
           aria-hidden="true"
         />
 
-        <p className="text-sm text-muted-foreground tabular-nums">
-          {chapters.length} פרקים · {lessonCount} שיעורים ·{" "}
-          {formatDuration(totalSeconds)} זמן צפייה
-        </p>
+        {chapters && (
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {chapters.length} פרקים · {lessonCount} שיעורים ·{" "}
+            {formatDuration(totalSeconds)} זמן צפייה
+          </p>
+        )}
+
+        {children}
       </div>
     </div>
   );

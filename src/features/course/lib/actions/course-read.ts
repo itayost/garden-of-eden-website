@@ -11,6 +11,7 @@ import type {
   LessonProgressMap,
 } from "../types";
 import type { CourseViewer } from "../course-access-rule";
+import { COURSE_VIEWER_COLUMNS, courseViewerFromProfile } from "../course-viewer";
 
 // --- Raw DB row shapes (snake_case) ---
 
@@ -170,16 +171,13 @@ function toCourse(row: RawCourse) {
  * RLS restricts this to their own rows, so no user id needs passing in.
  */
 export async function getMyLessonProgress(): Promise<LessonProgressMap> {
+  const userId = await getCourseUserId();
+  if (!userId) return {};
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return {};
 
   const { data, error } = await typedFrom(supabase, "course_lesson_progress")
     .select("lesson_id, last_position_sec, watched_sec, completed_at")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) {
     console.error("getMyLessonProgress failed:", error);
@@ -198,23 +196,35 @@ export async function getMyLessonProgress(): Promise<LessonProgressMap> {
   return map;
 }
 
-/**
- * The signed-in viewer's role and account status, for canOpenCourse. A viewer
- * with no profile row reads as not active. Memoized per request with React
- * `cache()`, like verifyAdmin: a course page and its playback check would
- * otherwise each pay an auth.getUser() plus a profiles read.
- */
-export const getCourseViewer = cache(async (): Promise<CourseViewer> => {
+/** The signed-in user's id, or null. Memoized per request so it is read once. */
+export const getCourseUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { role: null, isActive: false };
+  return user?.id ?? null;
+});
+
+/**
+ * The signed-in viewer as canOpenCourse sees him: role, `is_active` (for the
+ * old rule), the seen-training day, the admin mark, and whether he counts as a
+ * digital course buyer (`arbox_bought_course` or an `access_override` of
+ * course_only; `courseViewerFromProfile`). Nobody signed in, no profile row, a
+ * soft-deleted profile or a failed read reads as a viewer with no role, which
+ * the rule locks once it is on. Memoized per request with React `cache()`, like
+ * verifyAdmin: a course page and its playback check would otherwise each pay an
+ * auth.getUser() plus a profiles read.
+ */
+export const getCourseViewer = cache(async (): Promise<CourseViewer> => {
+  const userId = await getCourseUserId();
+  if (!userId) return courseViewerFromProfile(null);
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("role, is_active")
-    .eq("id", user.id)
+    .select(COURSE_VIEWER_COLUMNS)
+    .eq("id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (error) console.error("getCourseViewer failed:", error);
-  return { role: data?.role ?? null, isActive: data?.is_active === true };
+  return courseViewerFromProfile(data ?? null);
 });

@@ -6,8 +6,9 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import type { VideoQuality } from "../types";
 import { COURSE_VIDEO_BUCKET, PLAYBACK_URL_TTL_SEC } from "../playback-config";
-import { canOpenCourse, COURSE_ACCESS_DENIED } from "../course-access-rule";
-import { getCourseViewer } from "./course-read";
+import { COURSE_ACCESS_DENIED } from "../course-access-rule";
+import { mayOpenCourse } from "../course-gate";
+import { getCourseUserId } from "./course-read";
 
 interface PlaybackResult {
   url: string | null;
@@ -18,7 +19,7 @@ interface PlaybackResult {
 interface LessonVideoRow {
   video_path: string | null;
   video_path_sd: string | null;
-  chapter: { course: { active_only: boolean } | null } | null;
+  chapter: { course: { slug: string; active_only: boolean } | null } | null;
 }
 
 /**
@@ -31,7 +32,11 @@ interface LessonVideoRow {
  *      under an unpublished course, simply is not found; staff may preview one,
  *      which they must be able to do since a lesson cannot be published without
  *      a video in the first place. Do not re-add an `is_published` filter here.
- *   3. Only after that does the service-role client sign the URL.
+ *   3. The course gate: canOpenCourse, with the viewer and the last good sweep,
+ *      must let this caller open the lesson's course. RLS lets any signed-in
+ *      user read a published lesson row, so this is what keeps a locked
+ *      trainee from the video (COURSE_ACCESS_DENIED).
+ *   4. Only after that does the service-role client sign the URL.
  *
  * The service-role key never leaves the server, and the returned URL grants
  * access to exactly one object for a bounded time.
@@ -44,19 +49,16 @@ export async function getLessonPlaybackUrl(
     return { url: null, quality: null, error: "מזהה שיעור לא תקין" };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  if (!(await getCourseUserId())) {
     return { url: null, quality: null, error: "לא מחובר" };
   }
+  const supabase = await createClient();
 
   const { data: lesson, error: lessonError } = (await typedFrom(
     supabase,
     "course_lessons"
   )
-    .select("video_path, video_path_sd, chapter:course_chapters!inner(course:courses!inner(active_only))")
+    .select("video_path, video_path_sd, chapter:course_chapters!inner(course:courses!inner(slug, active_only))")
     .eq("id", lessonId)
     .maybeSingle()) as { data: LessonVideoRow | null; error: unknown };
 
@@ -68,11 +70,13 @@ export async function getLessonPlaybackUrl(
     return { url: null, quality: null, error: "שיעור לא נמצא" };
   }
 
-  // An active-only course (הקורס הטקטי) signs a URL only for staff and active
-  // trainees. Row-level security lets any signed-in user read a published
-  // lesson row; the video is the protected asset, so the gate is here.
-  const activeOnly = lesson.chapter?.course?.active_only === true;
-  if (activeOnly && !canOpenCourse(activeOnly, await getCourseViewer())) {
+  // Row-level security lets any signed-in user read a published lesson row;
+  // the video is the protected asset, so every course is gated here.
+  const course = lesson.chapter?.course;
+  if (!course) {
+    return { url: null, quality: null, error: "שיעור לא נמצא" };
+  }
+  if (!(await mayOpenCourse(course))) {
     return { url: null, quality: null, error: COURSE_ACCESS_DENIED };
   }
 

@@ -10,6 +10,7 @@ import { israelToday } from "@/lib/utils/tasks";
 import type { EnrollmentAgreement, Order, PlanProduct } from "@/types/plans";
 import { ensureBranchMembership, findOrCreateAccount } from "./trainee-account";
 import { KEEP_REFUND_FLAG_FILTER } from "@/lib/payments/page-settlement";
+import { stampSeenTraining } from "@/lib/course-access/sync-activity";
 
 export type FulfillResult =
   | { ok: true; profileId: string; planId: string }
@@ -138,6 +139,9 @@ export async function fulfillFromInput(
       if (planError || !plan) throw new Error(`plan insert failed: ${planError?.message}`);
       planId = plan.id;
       startsOn = placed.startsOn;
+      // A new Plan counts as training today, so the course opens at once, not
+      // at the next nightly sweep. Never throws: it cannot fail the sale.
+      await stampSeenTraining(db, profileId, today);
     }
 
     // The agreement names the Trainee and states the Plan's start, which the queue decides at the sale.

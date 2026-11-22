@@ -1,12 +1,16 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { lessonProgressSchema } from "@/lib/validations/course";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { shouldMarkComplete } from "../progress-utils";
 import { grantCourseBadges } from "../grant-course-badges";
+import { COURSE_ACCESS_DENIED } from "../course-access-rule";
+import { mayOpenCourse } from "../course-gate";
+import { getCourseUserId } from "./course-read";
 
 interface ProgressResult {
   success: boolean;
@@ -29,10 +33,11 @@ interface ExistingProgress {
 interface LessonWithProgress {
   duration_sec: number;
   course_lesson_progress: ExistingProgress[];
+  chapter: { course: { slug: string; active_only: boolean } | null } | null;
 }
 
 const LESSON_WITH_PROGRESS =
-  "duration_sec, course_lesson_progress(watched_sec, completed_at)";
+  "duration_sec, course_lesson_progress(watched_sec, completed_at), chapter:course_chapters!inner(course:courses!inner(slug, active_only))";
 
 /**
  * Read the lesson and the caller's progress together.
@@ -66,6 +71,16 @@ async function readLessonWithProgress(
   // "no access" just as much as "no such lesson".
   if (!data) return { ok: false, error: "שיעור לא נמצא" };
 
+  // A viewer who may not open the course writes no progress: his row, read
+  // above with the lesson, is neither used nor touched. The writes after this
+  // gate use the service role, because RLS gives the browser read access only
+  // (20261123100000), so this gate is the only way a row changes.
+  const course = data.chapter?.course;
+  if (!course) return { ok: false, error: "שיעור לא נמצא" };
+  if (!(await mayOpenCourse(course))) {
+    return { ok: false, error: COURSE_ACCESS_DENIED };
+  }
+
   return {
     ok: true,
     durationSec: data.duration_sec ?? 0,
@@ -97,19 +112,18 @@ export async function updateLessonProgress(
     };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  // One sign-in lookup per call: the course gate reads the same memoized id.
+  const userId = await getCourseUserId();
+  if (!userId) {
     return { success: false, completed: false, error: "לא מחובר" };
   }
+  const supabase = await createClient();
 
   // The player drives this every 15 s, so it is the one write a trainee can
   // trigger at will. The general limiter (100/min) is far above the ~4/min a
   // real player produces and fails open, so a Redis outage cannot stop playback
   // progress being recorded.
-  const rate = await checkRateLimit(user.id, "general");
+  const rate = await checkRateLimit(userId, "general");
   void rate.pending.catch(() => {});
   if (rate.rateLimited) {
     return { success: false, completed: false, error: "יותר מדי בקשות, נסה שוב" };
@@ -118,7 +132,7 @@ export async function updateLessonProgress(
   const read = await readLessonWithProgress(
     supabase,
     parsed.data.lesson_id,
-    user.id
+    userId
   );
   if (!read.ok) {
     return { success: false, completed: false, error: read.error };
@@ -143,9 +157,9 @@ export async function updateLessonProgress(
   // whose read predates a concurrent "סיימתי" cannot wipe the stamp.
   const stampCompletion = nowComplete && !alreadyComplete;
 
-  const { error } = await typedFrom(supabase, "course_lesson_progress").upsert(
+  const { error } = await typedFrom(createAdminClient(), "course_lesson_progress").upsert(
     {
-      user_id: user.id,
+      user_id: userId,
       lesson_id: parsed.data.lesson_id,
       last_position_sec: clampedPosition,
       watched_sec: watchedSec,
@@ -162,7 +176,7 @@ export async function updateLessonProgress(
   // Badges are granted only on the transition, and never allowed to fail the
   // write that triggered them.
   if (stampCompletion) {
-    await grantCourseBadges(supabase, user.id, parsed.data.lesson_id);
+    await grantCourseBadges(supabase, userId, parsed.data.lesson_id);
   }
 
   return { success: true, completed: nowComplete };
@@ -179,23 +193,22 @@ export async function markLessonComplete(
     return { success: false, completed: false, error: "מזהה שיעור לא תקין" };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  // One sign-in lookup per call: the course gate reads the same memoized id.
+  const userId = await getCourseUserId();
+  if (!userId) {
     return { success: false, completed: false, error: "לא מחובר" };
   }
+  const supabase = await createClient();
 
   // Limited for the same reason as updateLessonProgress, and more so: this path
   // costs two reads, an upsert and then the badge sweep.
-  const rate = await checkRateLimit(user.id, "general");
+  const rate = await checkRateLimit(userId, "general");
   void rate.pending.catch(() => {});
   if (rate.rateLimited) {
     return { success: false, completed: false, error: "יותר מדי בקשות, נסה שוב" };
   }
 
-  const read = await readLessonWithProgress(supabase, lessonId, user.id);
+  const read = await readLessonWithProgress(supabase, lessonId, userId);
   if (!read.ok) {
     return { success: false, completed: false, error: read.error };
   }
@@ -206,9 +219,9 @@ export async function markLessonComplete(
     return { success: true, completed: true };
   }
 
-  const { error } = await typedFrom(supabase, "course_lesson_progress").upsert(
+  const { error } = await typedFrom(createAdminClient(), "course_lesson_progress").upsert(
     {
-      user_id: user.id,
+      user_id: userId,
       lesson_id: lessonId,
       last_position_sec: existing?.watched_sec ?? 0,
       watched_sec: Math.max(existing?.watched_sec ?? 0, durationSec),
@@ -222,7 +235,7 @@ export async function markLessonComplete(
     return { success: false, completed: false, error: "שמירה נכשלה" };
   }
 
-  await grantCourseBadges(supabase, user.id, lessonId);
+  await grantCourseBadges(supabase, userId, lessonId);
 
   return { success: true, completed: true };
 }

@@ -8,6 +8,10 @@ import { CourseSwitcher } from "@/features/course/components/admin/CourseSwitche
 import { CourseNotice } from "@/features/course/components/CourseNotice";
 import { DIGITAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { CourseAdminClient } from "@/features/course/components/admin/CourseAdminClient";
+import { CourseSweepNotice } from "@/features/course/components/admin/CourseSweepNotice";
+import { getCourseSweepSpan } from "@/features/course/lib/course-access-context";
+import { courseSweepNotice } from "@/lib/course-access/status";
+import { israelDateStr } from "@/lib/utils/israel-time";
 
 export const metadata: Metadata = {
   title: "קורסים | Garden of Eden",
@@ -27,9 +31,10 @@ export default async function AdminCoursePage({ searchParams }: AdminCoursePageP
   // advice for them.
   const { profile } = await verifyAdminOrTrainer();
   const isAdmin = profile?.role === "admin";
-  const [course, courses] = await Promise.all([
+  const [course, courses, sweepSpan] = await Promise.all([
     isAdmin ? listCourseAdminTree(slug) : Promise.resolve(null),
     listCourses(),
+    isAdmin ? getCourseSweepSpan() : Promise.resolve(null),
   ]);
 
   return (
@@ -53,6 +58,8 @@ export default async function AdminCoursePage({ searchParams }: AdminCoursePageP
           </Link>
         </Button>
       </div>
+
+      {isAdmin && <CourseSweepNotice notice={courseSweepNotice(sweepSpan, israelDateStr(new Date()))} />}
 
       <CourseSwitcher courses={courses} current={slug} basePath="/admin/course" />
 

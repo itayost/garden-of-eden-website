@@ -9,12 +9,11 @@
  * keeps the end date Arbox gave it, so a Plan that waits in line has less
  * time. The queue resolver dates it; the start here is only a forecast.
  */
-import type { ArboxPurchase } from "@/lib/arbox/purchase-rows";
+import { LIVE_ARBOX_STATUSES, type ArboxPurchase } from "@/lib/arbox/purchase-rows";
 import { daysBetween, shortDate } from "@/lib/utils/iso-date";
 import type { PlanKind } from "@/types/plans";
 import { placeNewPlan, type NewPlanTerms, type QueuePlan, type QueueRow } from "./plan-queue";
 
-const IMPORTABLE_STATUSES: ReadonlySet<string> = new Set(["active", "activeMemberWithFutureCancel"]);
 const LONG_MEMBERSHIP_DAYS = 45;
 const CARD_10_MAX_SESSIONS = 10;
 const E164_IL = /^\+972\d{9}$/;
@@ -136,7 +135,7 @@ function skipReason(
   input: PlanArboxImportsInput,
 ): ImportSkipReason | null {
   if (!trainee) return "not_linked";
-  if (!IMPORTABLE_STATUSES.has(p.status)) return "inactive_status";
+  if (!LIVE_ARBOX_STATUSES.has(p.status)) return "inactive_status";
   if (p.endDate === null) return "no_end_date";
   if (p.endDate < input.today) return "ended";
   if (p.startDate > p.endDate) return "ends_before_start";
