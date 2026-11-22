@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { loadCourseForViewer } from "@/features/course/lib/load-course";
-import { CourseNotice } from "../CourseNotice";
+import { CourseLockedNotice } from "./CourseLockedNotice";
 import {
   countChapterProgress,
   isLessonDone,
@@ -25,9 +25,17 @@ export async function CourseLessonPage({
   chapterSlug,
   lessonSlug,
 }: CourseLessonPageProps) {
-  const { course, progress, canOpen } = await loadCourseForViewer(slug);
+  const { course, progress, canOpen, canAskParent } = await loadCourseForViewer(slug);
   if (!course) notFound();
-  if (!canOpen) return <CourseNotice />;
+  if (!canOpen) {
+    return (
+      <CourseLockedNotice
+        titleHe={course.titleHe}
+        descriptionHe={course.descriptionHe}
+        canAskParent={canAskParent}
+      />
+    );
+  }
 
   const chapters = course.chapters.filter((c) => c.lessons.length > 0);
   const chapterIndex = chapters.findIndex((c) => c.slug === chapterSlug);

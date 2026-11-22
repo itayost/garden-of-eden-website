@@ -212,16 +212,23 @@ const NO_VIEWER: CourseViewer = {
   boughtCourse: false,
 };
 
-export const getCourseViewer = cache(async (): Promise<CourseViewer> => {
+/** The signed-in user's id, or null. Memoized per request so it is read once. */
+export const getCourseUserId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NO_VIEWER;
+  return user?.id ?? null;
+});
+
+export const getCourseViewer = cache(async (): Promise<CourseViewer> => {
+  const userId = await getCourseUserId();
+  if (!userId) return NO_VIEWER;
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("role, is_active, course_seen_training_on, course_access_until, arbox_bought_course")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle();
   if (error) console.error("getCourseViewer failed:", error);
   return {

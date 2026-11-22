@@ -1,6 +1,8 @@
 import "server-only";
 
-import { getCourseViewer, getMyLessonProgress, getPublishedCourse } from "./actions/course-read";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { canAskParentToBuy } from "@/features/plans/lib/can-ask-parent";
+import { getCourseUserId, getCourseViewer, getMyLessonProgress, getPublishedCourse } from "./actions/course-read";
 import { canOpenCourse } from "./course-access-rule";
 import { getCourseAccessContext } from "./course-access-context";
 import type { CourseWithChapters, LessonProgressMap } from "./types";
@@ -24,6 +26,20 @@ export async function loadCourseForViewer(slug: string): Promise<{
   const canOpen =
     course !== null &&
     canOpenCourse({ slug: course.slug, activeOnly: course.activeOnly }, viewer, ctx);
-  // Task 7 fills this in.
-  return { course, progress, canOpen, canAskParent: false };
+  const canAskParent =
+    course !== null && !canOpen && viewer.role === "trainee"
+      ? await askParentOrFalse()
+      : false;
+  return { course, progress, canOpen, canAskParent };
+}
+
+/** The buy button is a nicety: a failed lookup hides it and never breaks the page. */
+async function askParentOrFalse(): Promise<boolean> {
+  try {
+    const userId = await getCourseUserId();
+    return userId ? await canAskParentToBuy(createAdminClient(), userId) : false;
+  } catch (error) {
+    console.error("canAskParentToBuy failed:", error);
+    return false;
+  }
 }

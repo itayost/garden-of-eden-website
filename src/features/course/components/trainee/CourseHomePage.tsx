@@ -1,5 +1,6 @@
 import { loadCourseForViewer } from "@/features/course/lib/load-course";
 import { CourseNotice } from "../CourseNotice";
+import { CourseLockedNotice } from "./CourseLockedNotice";
 import {
   countCourseProgress,
   findResumePoint,
@@ -18,13 +19,21 @@ interface CourseHomePageProps {
 
 /** A course's home: cover, resume, progress and chapters. */
 export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
-  const { course, progress, canOpen } = await loadCourseForViewer(slug);
+  const { course, progress, canOpen, canAskParent } = await loadCourseForViewer(slug);
 
   if (!course) {
     return <CourseNotice message="הקורס עדיין לא פורסם. נעדכן אותך ברגע שהוא יעלה." />;
   }
 
-  if (!canOpen) return <CourseNotice />;
+  if (!canOpen) {
+    return (
+      <CourseLockedNotice
+        titleHe={course.titleHe}
+        descriptionHe={course.descriptionHe}
+        canAskParent={canAskParent}
+      />
+    );
+  }
 
   const chapters = course.chapters.filter(
     (chapter) => chapter.lessons.length > 0
