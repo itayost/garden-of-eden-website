@@ -1,5 +1,6 @@
 import type { PlanQueueView } from "@/features/plans/lib/queries";
 import { isTrainingNow } from "@/features/course/lib/course-access-rule";
+import type { TrainingNow } from "@/lib/arbox/training-now";
 
 /** A sweep with fewer Arbox ids than this share of the last good one is treated as a failed read. */
 export const MIN_SWEEP_SHARE = 0.5;
@@ -29,6 +30,24 @@ export function isBelievableSweep(arboxIds: number, lastGoodArboxIds: number | n
   return arboxIds >= Math.ceil(lastGoodArboxIds * MIN_SWEEP_SHARE);
 }
 
+/**
+ * Why an Arbox read cannot be trusted, or null when it can. Arbox answers a
+ * report with no `data` as zero rows, so an empty memberships or cards report
+ * is a failed read, even on the first sweep: it would lock every member it
+ * left out. The on-hold report may be empty.
+ */
+export function arboxReadProblem(input: {
+  readonly rows: TrainingNow["rows"];
+  readonly arboxIds: number;
+  readonly lastGoodArboxIds: number | null;
+}): string | null {
+  const { rows, arboxIds, lastGoodArboxIds } = input;
+  if (rows.memberships <= 0) return "memberships_report_empty";
+  if (rows.cards <= 0) return "cards_report_empty";
+  if (!isBelievableSweep(arboxIds, lastGoodArboxIds)) return "arbox_rows_too_few";
+  return null;
+}
+
 /** Ids to stamp with today. Never moves a stamp back: a later run may have written a later day. */
 export function planActivityStamps(input: {
   readonly profiles: readonly ActivityProfile[];
@@ -45,14 +64,6 @@ export function planActivityStamps(input: {
         planTrainingIds.has(p.id),
     )
     .map((p) => p.id);
-}
-
-/**
- * Plan holders but not one queue back: loadPlanQueues logs its own read
- * errors and returns nothing, so this is how the sweep sees a failed read.
- */
-export function planQueuesLookUnread(planHolders: number, queuesRead: number): boolean {
-  return planHolders > 0 && queuesRead === 0;
 }
 
 /**

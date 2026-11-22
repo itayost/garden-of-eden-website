@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import type { PlanQueueView } from "@/features/plans/lib/queries";
 import {
+  arboxReadProblem,
   isBelievableSweep,
   planActivityStamps,
-  planQueuesLookUnread,
   queueIsTraining,
   wouldLockAfterSweep,
   type ActivityProfile,
@@ -87,15 +87,31 @@ describe("planActivityStamps", () => {
   });
 });
 
-describe("planQueuesLookUnread", () => {
-  test("nothing to read is not a failure", () => {
-    expect(planQueuesLookUnread(0, 0)).toBe(false);
+describe("arboxReadProblem", () => {
+  const rows = { memberships: 400, cards: 80, onHold: 5 };
+  const problem = (over: Partial<Parameters<typeof arboxReadProblem>[0]>) =>
+    arboxReadProblem({ rows, arboxIds: 450, lastGoodArboxIds: null, ...over });
+
+  test("a full read with no earlier sweep is good", () => {
+    expect(problem({})).toBeNull();
   });
-  test("Plan holders with no queue at all back means the read failed", () => {
-    expect(planQueuesLookUnread(300, 0)).toBe(true);
+  test("an empty memberships report is not good, even on the first sweep", () => {
+    expect(problem({ rows: { ...rows, memberships: 0 } })).toBe("memberships_report_empty");
   });
-  test("any queue back is a read that worked", () => {
-    expect(planQueuesLookUnread(300, 1)).toBe(false);
+  test("an empty cards report is not good", () => {
+    expect(problem({ rows: { ...rows, cards: 0 } })).toBe("cards_report_empty");
+  });
+  test("an empty on-hold report is still good", () => {
+    expect(problem({ rows: { ...rows, onHold: 0 } })).toBeNull();
+  });
+  test("no Arbox ids at all is not good", () => {
+    expect(problem({ arboxIds: 0 })).toBe("arbox_rows_too_few");
+  });
+  test("fewer than half of the last good count is not good", () => {
+    expect(problem({ arboxIds: 249, lastGoodArboxIds: 500 })).toBe("arbox_rows_too_few");
+  });
+  test("half of the last good count is good", () => {
+    expect(problem({ arboxIds: 250, lastGoodArboxIds: 500 })).toBeNull();
   });
 });
 

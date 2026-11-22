@@ -55,10 +55,24 @@ function planName(
     : orderPlanName(product.name_he, order);
 }
 
+/**
+ * What a loader does with a failed read. Screens log it and show nothing
+ * (the default); a job that must not act on half an answer asks it to throw.
+ */
+export interface LoadOptions {
+  readonly onError?: "log" | "throw";
+}
+
+function readFailed(loader: string, error: { message: string }, options: LoadOptions): void {
+  if (options.onError === "throw") throw new Error(`${loader}: ${error.message}`);
+  console.error(`${loader} error:`, error);
+}
+
 /** Every Plan of these Trainees with its product, grouped by Trainee. */
 export async function loadStoredPlans(
   db: SupabaseClient,
   profileIds: readonly string[],
+  options: LoadOptions = {},
 ): Promise<Map<string, StoredPlan[]>> {
   const result = new Map<string, StoredPlan[]>();
   // A staff list asks for every trainee at once: a slice of ids per request.
@@ -76,7 +90,7 @@ export async function loadStoredPlans(
       .order("id"),
   );
   if (error) {
-    console.error("loadStoredPlans error:", error);
+    readFailed("loadStoredPlans", error, options);
     return result;
   }
   for (const { order, product, ...row } of data) {
@@ -106,6 +120,7 @@ interface RosterRow {
 export async function loadQueueRows(
   db: SupabaseClient,
   profileIds: readonly string[],
+  options: LoadOptions = {},
 ): Promise<Map<string, QueueRow[]>> {
   const result = new Map<string, QueueRow[]>();
   const { data, error } = await readInChunks<RosterRow>(profileIds, "trainee_id", () =>
@@ -116,7 +131,7 @@ export async function loadQueueRows(
       .order("id"),
   );
   if (error) {
-    console.error("loadQueueRows error:", error);
+    readFailed("loadQueueRows", error, options);
     return result;
   }
   for (const row of data) {
@@ -154,16 +169,18 @@ export function toPlanQueueView(queue: PlanQueue<StoredPlan>): PlanQueueView | n
  *
  * Takes the service-role client: trainee_plans is readable by its owner, but
  * the roster tables are staff-only, so the count needs the admin client for
- * everyone. Callers gate on the session first.
+ * everyone. Callers gate on the session first. `onError: "throw"` makes a
+ * failed read of either table throw instead of reading as fewer queues.
  */
 export async function loadPlanQueues(
   db: SupabaseClient,
   profileIds: readonly string[],
   today: string,
+  options: LoadOptions = {},
 ): Promise<Map<string, PlanQueueView>> {
   const result = new Map<string, PlanQueueView>();
-  const plans = await loadStoredPlans(db, profileIds);
-  const rows = await loadQueueRows(db, [...plans.keys()]);
+  const plans = await loadStoredPlans(db, profileIds, options);
+  const rows = await loadQueueRows(db, [...plans.keys()], options);
   for (const [profileId, own] of plans) {
     const view = toPlanQueueView(resolvePlanQueue(own, rows.get(profileId) ?? [], today));
     if (view) result.set(profileId, view);

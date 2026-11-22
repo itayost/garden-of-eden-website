@@ -9,9 +9,8 @@ import { chunk, readAllPages } from "@/lib/supabase/in-chunks";
 import { israelDateStr } from "@/lib/utils/israel-time";
 import { isValidDateString, isValidUUID } from "@/lib/validations/common";
 import {
-  isBelievableSweep,
+  arboxReadProblem,
   planActivityStamps,
-  planQueuesLookUnread,
   queueIsTraining,
   wouldLockAfterSweep,
   type SweptTrainee,
@@ -23,8 +22,9 @@ import {
  * then today's `course_access_sweeps` row is written. The newest row is the
  * last good sweep the course gate counts its grace period back from, so it is
  * written last, only after every read worked and every stamp landed. A failed
- * read or an unbelievably small Arbox list writes nothing at all: the gate
- * stays on the previous good sweep and nobody is locked by a bad night.
+ * read, an empty memberships or cards report, or an implausibly small Arbox
+ * list (`arboxReadProblem`) writes nothing at all: the gate stays on the
+ * previous good sweep and nobody is locked by a bad night.
  *
  * Stamps only move forward, in the database too (`earlierStampFilter`), so a
  * rerun or a fulfillment stamp on the same day never moves one back.
@@ -63,16 +63,19 @@ const messageOf = (error: unknown): string => (error instanceof Error ? error.me
 const earlierStampFilter = (day: string): string =>
   `course_seen_training_on.is.null,course_seen_training_on.lt.${day}`;
 
-/** Trainees whose Plan queue is running, waiting or frozen today. */
+/**
+ * Trainees whose Plan queue is running, waiting or frozen today. The queue
+ * loaders throw here: a failed slice of Plans would leave its holders
+ * unstamped, and a failed slice of rosters would make used-up Cards look live.
+ */
 async function readPlanTrainingIds(db: Db, today: string): Promise<Set<string>> {
   const { data, error } = await readAllPages(() => db.from("trainee_plans").select("profile_id").order("id"));
   if (error) throw new Error(`trainee_plans: ${error.message}`);
   const holders = [...new Set(data.map((row) => row.profile_id))];
-  const queues = await Promise.all(chunk(holders).map((slice) => loadPlanQueues(db, slice, today)));
+  const queues = await Promise.all(
+    chunk(holders).map((slice) => loadPlanQueues(db, slice, today, { onError: "throw" })),
+  );
   const views = queues.flatMap((byProfile) => [...byProfile]);
-  if (planQueuesLookUnread(holders.length, views.length)) {
-    throw new Error(`plan queues: none came back for ${holders.length} Plan holders`);
-  }
   return new Set(views.filter(([, view]) => queueIsTraining(view)).map(([profileId]) => profileId));
 }
 
@@ -175,9 +178,8 @@ function notGood(reason: string, counts: SweepCounts, stamped = 0, wouldLock: Ac
 async function sweep(db: Db, inputs: SweepInputs, today: string, dryRun: boolean): Promise<ActivitySweepResult> {
   const { arbox, planTrainingIds, trainees, lastArboxIds } = inputs;
   const counts: SweepCounts = { rows: arbox.rows, arboxIds: arbox.ids.size, planTrainees: planTrainingIds.size };
-  if (!isBelievableSweep(counts.arboxIds, lastArboxIds)) {
-    return notGood("arbox_rows_too_few", counts);
-  }
+  const arboxProblem = arboxReadProblem({ rows: counts.rows, arboxIds: counts.arboxIds, lastGoodArboxIds: lastArboxIds });
+  if (arboxProblem) return notGood(arboxProblem, counts);
 
   const toStamp = planActivityStamps({ profiles: trainees, arboxTrainingIds: arbox.ids, planTrainingIds, today });
   const locked = wouldLockAfterSweep({ profiles: trainees, stampedIds: new Set(toStamp), today });
