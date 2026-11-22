@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { lessonProgressSchema } from "@/lib/validations/course";
@@ -71,7 +72,9 @@ async function readLessonWithProgress(
   if (!data) return { ok: false, error: "שיעור לא נמצא" };
 
   // A viewer who may not open the course writes no progress: his row, read
-  // above with the lesson, is neither used nor touched.
+  // above with the lesson, is neither used nor touched. The writes after this
+  // gate use the service role, because RLS gives the browser read access only
+  // (20261123100000), so this gate is the only way a row changes.
   const course = data.chapter?.course;
   if (!course) return { ok: false, error: "שיעור לא נמצא" };
   const [viewer, ctx] = await Promise.all([getCourseViewer(), getCourseAccessContext()]);
@@ -156,7 +159,7 @@ export async function updateLessonProgress(
   // whose read predates a concurrent "סיימתי" cannot wipe the stamp.
   const stampCompletion = nowComplete && !alreadyComplete;
 
-  const { error } = await typedFrom(supabase, "course_lesson_progress").upsert(
+  const { error } = await typedFrom(createAdminClient(), "course_lesson_progress").upsert(
     {
       user_id: user.id,
       lesson_id: parsed.data.lesson_id,
@@ -219,7 +222,7 @@ export async function markLessonComplete(
     return { success: true, completed: true };
   }
 
-  const { error } = await typedFrom(supabase, "course_lesson_progress").upsert(
+  const { error } = await typedFrom(createAdminClient(), "course_lesson_progress").upsert(
     {
       user_id: user.id,
       lesson_id: lessonId,

@@ -92,3 +92,18 @@ export function wouldLockAfterSweep<T extends SweptTrainee>(input: {
       ),
   );
 }
+
+/**
+ * Whether a Void or Cancellation should wipe a trainee's seen-training day, so
+ * a sale undone within days does not leave a week of course access behind it.
+ * Only for a trainee with no Arbox link and no Plan running or queued after
+ * today: an Arbox-linked trainee may be training there, and clearing him would
+ * lock him until the next good sweep re-stamps him.
+ */
+export function shouldClearSeenTraining(input: {
+  readonly seenOn: string | null;
+  readonly linkedToArbox: boolean;
+  readonly trainingAfterToday: boolean;
+}): boolean {
+  return input.seenOn !== null && !input.linkedToArbox && !input.trainingAfterToday;
+}

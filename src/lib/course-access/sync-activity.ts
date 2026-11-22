@@ -6,12 +6,14 @@ import { loadPlanQueues } from "@/features/plans/lib/queries";
 import { fetchTrainingNowUserIds, type TrainingNow } from "@/lib/arbox/training-now";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chunk, readAllPages } from "@/lib/supabase/in-chunks";
+import { addDays } from "@/lib/utils/iso-date";
 import { israelDateStr } from "@/lib/utils/israel-time";
 import { isValidDateString, isValidUUID } from "@/lib/validations/common";
 import {
   arboxReadProblem,
   planActivityStamps,
   queueIsTraining,
+  shouldClearSeenTraining,
   wouldLockAfterSweep,
   type SweptTrainee,
 } from "./activity";
@@ -248,5 +250,46 @@ export async function stampSeenTraining(db: SupabaseClient, profileId: string, t
     if (error) console.error(`[Course Activity] stamp ${profileId} failed:`, error.message);
   } catch (error) {
     console.error(`[Course Activity] stamp ${profileId} failed:`, messageOf(error));
+  }
+}
+
+/**
+ * After a Void or Cancellation, wipes the trainee's seen-training day when
+ * nothing else keeps it (shouldClearSeenTraining): an app-only trainee with no
+ * Plan running or queued after today. Only the day read here is cleared, so a
+ * stamp a concurrent sale wrote meanwhile stays. Logs and never throws, so it
+ * can never fail the undo it follows.
+ */
+export async function clearSeenTrainingAfterUndo(db: SupabaseClient, profileId: string, today: string): Promise<void> {
+  if (!isValidUUID(profileId) || !isValidDateString(today)) {
+    console.error("[Course Activity] clearSeenTrainingAfterUndo refused a bad profile id or day");
+    return;
+  }
+  try {
+    const { data: profile, error: readError } = await db
+      .from("profiles")
+      .select("arbox_user_id, course_seen_training_on")
+      .eq("id", profileId)
+      .maybeSingle();
+    if (readError) throw new Error(readError.message);
+    if (!profile) return;
+
+    const queues = await loadPlanQueues(db, [profileId], addDays(today, 1), { onError: "throw" });
+    const seenOn: string | null = profile.course_seen_training_on;
+    const clear = shouldClearSeenTraining({
+      seenOn,
+      linkedToArbox: profile.arbox_user_id !== null,
+      trainingAfterToday: queueIsTraining(queues.get(profileId)),
+    });
+    if (!clear || seenOn === null) return;
+
+    const { error } = await db
+      .from("profiles")
+      .update({ course_seen_training_on: null })
+      .eq("id", profileId)
+      .eq("course_seen_training_on", seenOn);
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    console.error(`[Course Activity] clear after undo ${profileId} failed:`, messageOf(error));
   }
 }

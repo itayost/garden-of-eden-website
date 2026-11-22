@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { PlanQueueView } from "@/features/plans/lib/queries";
 import {
+  shouldClearSeenTraining,
   arboxReadProblem,
   isBelievableSweep,
   planActivityStamps,
@@ -148,5 +149,25 @@ describe("wouldLockAfterSweep", () => {
     const b = trainee({ id: "b", arboxUserId: 4 });
     const a = trainee({ id: "a" });
     expect(wouldLockAfterSweep({ profiles: [b, trainee({ id: "c" }), a], stampedIds: new Set(["c"]), today })).toEqual([b, a]);
+  });
+});
+
+describe("shouldClearSeenTraining", () => {
+  const base = { seenOn: "2026-11-20", linkedToArbox: false, trainingAfterToday: false };
+
+  test("clears an app-only trainee left with no Plan running after today", () => {
+    expect(shouldClearSeenTraining(base)).toBe(true);
+  });
+
+  test("keeps the stamp while another Plan runs or waits after today", () => {
+    expect(shouldClearSeenTraining({ ...base, trainingAfterToday: true })).toBe(false);
+  });
+
+  test("keeps the stamp of a trainee Arbox may still see training", () => {
+    expect(shouldClearSeenTraining({ ...base, linkedToArbox: true })).toBe(false);
+  });
+
+  test("has nothing to clear without a stamp", () => {
+    expect(shouldClearSeenTraining({ ...base, seenOn: null })).toBe(false);
   });
 });

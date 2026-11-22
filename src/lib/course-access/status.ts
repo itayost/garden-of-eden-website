@@ -1,3 +1,6 @@
+import { addDays } from "@/lib/utils/iso-date";
+import { COURSE_ACTIVE_GRACE_DAYS, type SweepSpan } from "@/features/course/lib/course-access-rule";
+
 export const RULE_NOT_ON_STATUS = "הכלל עוד לא פעיל: הגישה לפי הכלל הקודם";
 
 export interface CourseAccessStatusInput {
@@ -23,4 +26,30 @@ export function courseAccessStatusLines(input: CourseAccessStatusInput, show: (d
   if (markLine) return [markLine];
   if (trainingNow && seenTrainingOn) return [`פעיל: נראה מתאמן ב-${show(seenTrainingOn)}`];
   return ["לא פעיל: אין מנוי, כרטיסייה או מסלול פעילים"];
+}
+
+/** A last good sweep older than this many days is worth an admin's attention. */
+export const STALE_SWEEP_DAYS = 3;
+
+export type CourseSweepNotice =
+  | { readonly kind: "unread" }
+  | { readonly kind: "never" }
+  | { readonly kind: "pending"; readonly ruleOnFrom: string }
+  | { readonly kind: "stale"; readonly lastGood: string }
+  | { readonly kind: "ok" };
+
+/**
+ * What the admins' course page says about the nightly course-access sweep: a
+ * failed read of the log, no good sweep yet, the day the rule switches on, or
+ * a last good sweep more than STALE_SWEEP_DAYS old (everyone seen before it
+ * then stays open, so someone should look). A stale sweep outranks the switch
+ * day. Pure.
+ */
+export function courseSweepNotice(span: SweepSpan | null, today: string): CourseSweepNotice {
+  if (span === null) return { kind: "unread" };
+  if (span.oldest === null || span.newest === null) return { kind: "never" };
+  if (span.newest < addDays(today, -STALE_SWEEP_DAYS)) return { kind: "stale", lastGood: span.newest };
+  const ruleOnFrom = addDays(span.oldest, COURSE_ACTIVE_GRACE_DAYS);
+  if (ruleOnFrom > today) return { kind: "pending", ruleOnFrom };
+  return { kind: "ok" };
 }

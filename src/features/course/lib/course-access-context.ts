@@ -23,7 +23,8 @@ async function readSweepDay(db: Db, ascending: boolean): Promise<string | null> 
   return data?.swept_on ?? null;
 }
 
-async function readSweepSpan(): Promise<SweepSpan | null> {
+/** The first and last good sweep days, or null when the log could not be read. Memoized per request. */
+export const getCourseSweepSpan = cache(async (): Promise<SweepSpan | null> => {
   try {
     const db = createAdminClient();
     const [oldest, newest] = await Promise.all([readSweepDay(db, true), readSweepDay(db, false)]);
@@ -32,7 +33,7 @@ async function readSweepSpan(): Promise<SweepSpan | null> {
     console.error("getCourseAccessContext failed:", error instanceof Error ? error.message : error);
     return null;
   }
-}
+});
 
 /**
  * Today (Israel) and the last good sweep the course rule counts from, read with
@@ -43,5 +44,5 @@ async function readSweepSpan(): Promise<SweepSpan | null> {
  */
 export const getCourseAccessContext = cache(async (): Promise<CourseAccessContext> => {
   const today = israelDateStr(new Date());
-  return { today, lastGoodSweepOn: effectiveLastGoodSweep(await readSweepSpan(), today) };
+  return { today, lastGoodSweepOn: effectiveLastGoodSweep(await getCourseSweepSpan(), today) };
 });
