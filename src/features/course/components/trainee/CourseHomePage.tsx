@@ -42,6 +42,7 @@ export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
       <CourseCover
         titleHe={course.titleHe}
         descriptionHe={course.descriptionHe}
+        coverUrl={course.coverUrl}
         chapters={chapters}
       />
 

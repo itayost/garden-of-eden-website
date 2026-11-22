@@ -50,6 +50,7 @@ export interface AdminCourse {
   slug: string;
   titleHe: string;
   descriptionHe: string | null;
+  coverUrl: string | null;
   isPublished: boolean;
   needsTitle: boolean;
   chapters: AdminCourseChapter[];
@@ -151,6 +152,7 @@ export async function listCourseAdminTree(slug: string): Promise<AdminCourse | n
     slug: course.slug,
     titleHe: course.title_he,
     descriptionHe: course.description_he,
+    coverUrl: course.cover_url ?? null,
     isPublished: course.is_published,
     needsTitle: course.needs_title,
     chapters: chapterRows.map(

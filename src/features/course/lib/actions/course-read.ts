@@ -20,6 +20,7 @@ interface RawCourse {
   slug: string;
   title_he: string;
   description_he: string | null;
+  cover_url: string | null;
   is_published: boolean;
   needs_title: boolean;
   order_index: number;
@@ -159,6 +160,7 @@ function toCourse(row: RawCourse) {
     slug: row.slug,
     titleHe: row.title_he,
     descriptionHe: row.description_he,
+    coverUrl: row.cover_url ?? null,
     isPublished: row.is_published,
     needsTitle: row.needs_title,
     orderIndex: row.order_index,

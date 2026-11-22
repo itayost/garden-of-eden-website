@@ -170,6 +170,7 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
           courseId={course.id}
           titleHe={course.titleHe}
           descriptionHe={course.descriptionHe}
+          coverUrl={course.coverUrl}
           canDelete={course.chapters.length === 0}
         />
       </div>

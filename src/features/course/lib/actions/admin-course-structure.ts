@@ -11,6 +11,7 @@ import {
   positionalSlug,
   validateTitle,
 } from "../course-admin-rules";
+import { isAllowedCoverUrl } from "../course-cover-rules";
 import { revalidateCourse } from "../course-revalidate";
 import type { CourseActionResult } from "./admin-course";
 
@@ -280,6 +281,39 @@ export async function deleteChapter(
   }
   if (!Array.isArray(data) || data.length === 0) {
     return { error: "הפרק לא נמצא" };
+  }
+
+  revalidateCourse();
+  return { success: true };
+}
+
+/** Store (or, with null, remove) a course's cover image link. */
+export async function setCourseCover(
+  courseId: string,
+  url: string | null
+): Promise<CourseActionResult> {
+  const { error: authError } = await verifyAdmin();
+  if (authError) return { error: authError };
+  if (!isValidUUID(courseId)) return { error: "מזהה קורס לא תקין" };
+  if (
+    url !== null &&
+    !isAllowedCoverUrl(url, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")
+  ) {
+    return { error: "כתובת התמונה לא תקינה" };
+  }
+
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("courses")
+    .update({ cover_url: url })
+    .eq("id", courseId)
+    .select("id");
+  if (error) {
+    console.error("setCourseCover failed:", error);
+    return { error: SAVE_FAILED };
+  }
+  if (!Array.isArray(data) || data.length === 0) {
+    return { error: "הקורס לא נמצא" };
   }
 
   revalidateCourse();

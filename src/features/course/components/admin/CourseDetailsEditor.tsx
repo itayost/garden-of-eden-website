@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CourseCoverUpload } from "./CourseCoverUpload";
 import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import {
   deleteCourse,
@@ -18,6 +19,7 @@ interface CourseDetailsEditorProps {
   courseId: string;
   titleHe: string;
   descriptionHe: string | null;
+  coverUrl: string | null;
   /** Only an empty course (no chapters) may be deleted. */
   canDelete: boolean;
 }
@@ -27,6 +29,7 @@ export function CourseDetailsEditor({
   courseId,
   titleHe,
   descriptionHe,
+  coverUrl,
   canDelete,
 }: CourseDetailsEditorProps) {
   const router = useRouter();
@@ -65,6 +68,8 @@ export function CourseDetailsEditor({
 
   return (
     <div className="space-y-3">
+      <CourseCoverUpload courseId={courseId} coverUrl={coverUrl} />
+
       <div className="space-y-1.5">
         <Label
           htmlFor="course-description"
