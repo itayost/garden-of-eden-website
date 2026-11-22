@@ -8,6 +8,7 @@ import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import { lessonVideoSchema, reorderSchema } from "@/lib/validations/course";
 import { COURSE_VIDEO_BUCKET } from "../playback-config";
+import { positionalSlug } from "../course-admin-rules";
 
 // ---------------------------------------------------------------------------
 // Result and view types
@@ -463,22 +464,6 @@ export async function reorderLessons(
 // ---------------------------------------------------------------------------
 
 /**
- * Turn a Hebrew title into an ASCII slug usable as a storage-path segment.
- *
- * Hebrew does not transliterate cleanly, so rather than mangle it this falls
- * back to a timestamp-free positional slug. The slug is an identifier, not
- * something anyone reads -- `title_he` is what shows in the UI.
- */
-function lessonSlug(titleHe: string, position: number): string {
-  const ascii = titleHe
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const suffix = ascii.length >= 2 ? ascii.slice(0, 40) : "lesson";
-  return `${String(position).padStart(2, "0")}-${suffix}`;
-}
-
-/**
  * Add a lesson to a chapter. It starts unpublished and without a video -- the
  * CHECK constraint would reject anything else, and the video arrives in a
  * second step once the file has finished uploading.
@@ -518,9 +503,9 @@ export async function createLesson(
   // The slug only has to be unique within the chapter; nudge past a collision
   // rather than failing in front of Eden.
   const taken = new Set(existing.map((row) => row.slug));
-  let slug = lessonSlug(titleHe, nextIndex);
+  let slug = positionalSlug(titleHe, nextIndex, "lesson");
   for (let n = 2; taken.has(slug); n++) {
-    slug = `${lessonSlug(titleHe, nextIndex)}-${n}`;
+    slug = `${positionalSlug(titleHe, nextIndex, "lesson")}-${n}`;
   }
 
   const { data, error } = await typedFrom(db, "course_lessons")
