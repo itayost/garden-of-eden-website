@@ -3,8 +3,11 @@ import type { PlanQueueView } from "@/features/plans/lib/queries";
 import {
   isBelievableSweep,
   planActivityStamps,
+  planQueuesLookUnread,
   queueIsTraining,
+  wouldLockAfterSweep,
   type ActivityProfile,
+  type SweptTrainee,
 } from "../activity";
 
 function view(queue: {
@@ -81,5 +84,53 @@ describe("planActivityStamps", () => {
   });
   test("stamps a profile last seen earlier", () => {
     expect(planActivityStamps({ ...base, profiles: [profile({ id: "p2", seenOn: "2026-11-01" })] })).toEqual(["p2"]);
+  });
+});
+
+describe("planQueuesLookUnread", () => {
+  test("nothing to read is not a failure", () => {
+    expect(planQueuesLookUnread(0, 0)).toBe(false);
+  });
+  test("Plan holders with no queue at all back means the read failed", () => {
+    expect(planQueuesLookUnread(300, 0)).toBe(true);
+  });
+  test("any queue back is a read that worked", () => {
+    expect(planQueuesLookUnread(300, 1)).toBe(false);
+  });
+});
+
+describe("wouldLockAfterSweep", () => {
+  const today = "2026-11-22";
+  const trainee = (over: Partial<SweptTrainee> & { id: string }): SweptTrainee => ({
+    arboxUserId: null,
+    seenOn: null,
+    accessUntil: null,
+    ...over,
+  });
+  const locked = (profiles: SweptTrainee[], stamped: string[] = []) =>
+    wouldLockAfterSweep({ profiles, stampedIds: new Set(stamped), today }).map((p) => p.id);
+
+  test("a trainee stamped by this sweep stays open", () => {
+    expect(locked([trainee({ id: "a" })], ["a"])).toEqual([]);
+  });
+  test("a trainee seen on the first day of the grace period stays open", () => {
+    expect(locked([trainee({ id: "a", seenOn: "2026-11-15" })])).toEqual([]);
+  });
+  test("a trainee seen the day before the grace period is locked", () => {
+    expect(locked([trainee({ id: "a", seenOn: "2026-11-14" })])).toEqual(["a"]);
+  });
+  test("a trainee never seen is locked", () => {
+    expect(locked([trainee({ id: "a" })])).toEqual(["a"]);
+  });
+  test("an admin mark until today keeps an unseen trainee open", () => {
+    expect(locked([trainee({ id: "a", accessUntil: today })])).toEqual([]);
+  });
+  test("an admin mark that ended yesterday does not", () => {
+    expect(locked([trainee({ id: "a", accessUntil: "2026-11-21" })])).toEqual(["a"]);
+  });
+  test("keeps the input order and returns the trainees themselves", () => {
+    const b = trainee({ id: "b", arboxUserId: 4 });
+    const a = trainee({ id: "a" });
+    expect(wouldLockAfterSweep({ profiles: [b, trainee({ id: "c" }), a], stampedIds: new Set(["c"]), today })).toEqual([b, a]);
   });
 });

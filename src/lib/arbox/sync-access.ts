@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chunk } from "@/lib/supabase/in-chunks";
 import { fetchPaidTrainingUserIds, fetchCourseBuyerIds } from "./access";
 
 /**
@@ -162,8 +163,9 @@ export async function syncCourseAccess(): Promise<AccessSyncResult> {
     .filter((p) => !unchangedIds.has(p.id))
     .map((p) => p.id);
 
-  for (let i = 0; i < toStamp.length; i += PROFILE_PAGE_SIZE) {
-    const batch = toStamp.slice(i, i + PROFILE_PAGE_SIZE);
+  // 200 ids per request: `.in()` goes in the URL, and the gateway refuses
+  // one much past 640 uuids.
+  for (const batch of chunk(toStamp)) {
     const { error } = await db
       .from("profiles")
       .update({ arbox_access_synced_at: syncedAt })

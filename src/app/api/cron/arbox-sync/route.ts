@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncArboxUsers, syncArboxBirthdays } from "@/lib/arbox/sync";
 import { syncCourseAccess } from "@/lib/arbox/sync-access";
+import { syncCourseActivity, type ActivitySweepResult } from "@/lib/course-access/sync-activity";
 import { runArboxPurchaseImport, type ImportRunResult } from "@/features/plans/lib/arbox-import";
 import { revalidateStaffSurfaces } from "@/features/plans/lib/revalidate-staff";
 
@@ -15,8 +16,10 @@ export const maxDuration = 300;
  * for unmatched members (with phones), and fills null profile fields for existing ones.
  * Also syncs birthdays from the Arbox birthday report into profiles.birthdate,
  * and each trainee's purchase facts, which decide who sees only the digital
- * course. With ARBOX_IMPORT_PURCHASES=on it then imports new Arbox cards and
- * memberships of קריית אתא trainees into their plans.
+ * course. Then the course-access sweep stamps who trains now (Arbox and the
+ * app's Plan queues), which decides who may open the courses. With
+ * ARBOX_IMPORT_PURCHASES=on it then imports new Arbox cards and memberships of
+ * קריית אתא trainees into their plans.
  */
 export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
@@ -50,6 +53,19 @@ export async function GET(request: NextRequest) {
       console.error("[Arbox Sync] Access sync failed:", accessError);
     }
 
+    // Needs the Arbox links the user step just made. Isolated like the access
+    // step; a sweep that is not good writes nothing and says why. The locked
+    // list stays out of the response (children's names): only its length.
+    let activityResult: (Omit<ActivitySweepResult, "wouldLock"> & { wouldLock: number }) | null = null;
+    let activityError: string | null = null;
+    try {
+      const { wouldLock, ...activity } = await syncCourseActivity({ dryRun: false });
+      activityResult = { ...activity, wouldLock: wouldLock.length };
+    } catch (error) {
+      activityError = error instanceof Error ? error.message : String(error);
+      console.error("[Arbox Sync] Course activity sweep failed:", activityError);
+    }
+
     // Runs last: it needs the links the user step just made. Behind a flag
     // until the owner approves a dry run; isolated like the access step.
     let purchasesResult: ImportRunResult | null = null;
@@ -74,6 +90,8 @@ export async function GET(request: NextRequest) {
       birthdays: birthdayResult,
       access: accessResult,
       accessError,
+      activity: activityResult,
+      activityError,
       purchases: purchasesResult,
       purchasesError,
     });

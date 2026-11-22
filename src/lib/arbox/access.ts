@@ -42,7 +42,7 @@ interface MembershipTypeEntry {
   type?: string | null;
 }
 
-interface MembershipRow {
+export interface MembershipRow {
   user_id?: string | number | null;
   membership_type_name?: string | null;
   membership_type_type?: string | null;
@@ -80,13 +80,14 @@ export function monthWindows(
   return windows;
 }
 
-function toUserId(value: string | number | null | undefined): number | null {
+/** An Arbox user id as a positive integer, or null when the row has none. */
+export function toUserId(value: string | number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-interface ProductTypes {
+export interface ProductTypes {
   /** Names whose product is a plan or a session. */
   readonly paid: ReadonlySet<string>;
   /** Every product name Arbox knows, whatever its type. */
@@ -100,7 +101,7 @@ interface ProductTypes {
  * while the cancelled one carries the type directly. A name reused across types
  * counts as paid training if any of its types is a plan or a session.
  */
-async function fetchProductTypes(): Promise<ProductTypes> {
+export async function fetchProductTypes(): Promise<ProductTypes> {
   const json = await arboxGet<{ data?: MembershipTypeEntry[] }>("/membershipTypes");
   const paid = new Set<string>();
   const known = new Set<string>();
@@ -111,6 +112,24 @@ async function fetchProductTypes(): Promise<ProductTypes> {
     if (entry.type && PAID_TRAINING_TYPES.has(entry.type)) paid.add(name);
   }
   return { paid, known };
+}
+
+/**
+ * Whether a membership row is a plan or a session, the kind that means
+ * "this person paid to train here".
+ */
+export function isTrainingMembership(row: MembershipRow, products: ProductTypes): boolean {
+  // Prefer the row's own type when it has one -- that is exact, and it is
+  // what excludes trials and one-off items.
+  if (row.membership_type_type) return PAID_TRAINING_TYPES.has(row.membership_type_type);
+
+  // Otherwise fall back to the name map. A name the catalogue does not know
+  // (a renamed or deleted product -- the box has at least one) is counted as
+  // paid training on purpose: wrongly locking a paying member out of the app
+  // is far worse than wrongly granting one full access.
+  const name = row.membership_type_name;
+  if (!name) return false;
+  return products.paid.has(name) || !products.known.has(name);
 }
 
 /**
@@ -126,22 +145,7 @@ export async function fetchPaidTrainingUserIds(
   const consider = (rows: readonly MembershipRow[]) => {
     for (const row of rows) {
       const id = toUserId(row.user_id);
-      if (!id) continue;
-
-      // Prefer the row's own type when it has one -- that is exact, and it is
-      // what excludes trials and one-off items.
-      if (row.membership_type_type) {
-        if (PAID_TRAINING_TYPES.has(row.membership_type_type)) ids.add(id);
-        continue;
-      }
-
-      // Otherwise fall back to the name map. A name the catalogue does not know
-      // (a renamed or deleted product -- the box has at least one) is counted as
-      // paid training on purpose: wrongly locking a paying member out of the app
-      // is far worse than wrongly granting one full access.
-      const name = row.membership_type_name;
-      if (!name) continue;
-      if (products.paid.has(name) || !products.known.has(name)) ids.add(id);
+      if (id && isTrainingMembership(row, products)) ids.add(id);
     }
   };
 
