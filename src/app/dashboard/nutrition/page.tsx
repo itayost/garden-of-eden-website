@@ -1,5 +1,4 @@
 import { EmptyState } from "@/components/ui/empty-state";
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Utensils } from "lucide-react";
 import {
@@ -11,16 +10,14 @@ import {
   getTraineeMeasurements,
 } from "@/features/nutrition";
 import type { Metadata } from "next";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export const metadata: Metadata = {
   title: "תזונה | Garden of Eden",
 };
 
 export default async function NutritionPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login?redirect=/dashboard/nutrition");

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Profile } from "@/types/database";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Result of user access verification.
@@ -35,9 +35,7 @@ export async function verifyUserAccess(
 ): Promise<UserAccessResult> {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return { authorized: false, supabase };
@@ -49,14 +47,14 @@ export async function verifyUserAccess(
   }
 
   // For cross-user access, verify caller is trainer or admin
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .is("deleted_at", null)
-    .single()) as { data: Pick<Profile, "role"> | null };
+  const profile = await getCurrentProfile();
 
-  if (!profile?.role || !["trainer", "admin"].includes(profile.role)) {
+  if (
+    !profile ||
+    profile.deleted_at != null ||
+    !profile.role ||
+    !["trainer", "admin"].includes(profile.role)
+  ) {
     return { authorized: false, supabase };
   }
 

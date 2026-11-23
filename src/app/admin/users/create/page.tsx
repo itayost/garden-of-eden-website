@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import {
   Card,
   CardContent,
@@ -12,24 +11,17 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, UserPlus } from "lucide-react";
 import { UserCreateForm } from "@/components/admin/users/UserCreateForm";
 import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export default async function AdminCreateUserPage() {
-  const supabase = await createClient();
-
   // Verify admin role
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()) as { data: { role: string } | null };
+  const profile = await getCurrentProfile();
 
   if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");

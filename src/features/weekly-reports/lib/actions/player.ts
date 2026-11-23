@@ -1,8 +1,8 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { reportIdSchema, type ReportIdInput } from "@/lib/validations/weekly-reports";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 type Result = { success: true } | { error: string };
 
@@ -18,10 +18,7 @@ export async function markReportReadAction(input: ReportIdInput): Promise<Result
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "מזהה דוח לא תקין" };
   const { reportId } = parsed.data;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "לא מחובר" };
 
   const db = createAdminClient();

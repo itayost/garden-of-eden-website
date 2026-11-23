@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Video, Plus } from "lucide-react";
 import { VideoListClient } from "@/components/admin/videos/VideoListClient";
 import type { WorkoutVideo } from "@/types/database";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export const metadata: Metadata = {
   title: "ניהול סרטונים | Garden of Eden",
@@ -22,19 +23,13 @@ export default async function AdminVideosPage() {
   const supabase = await createClient();
 
   // Verify admin role before showing video list
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     redirect("/login");
   }
 
-  const { data: currentProfile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", currentUser.id)
-    .single()) as { data: { role: string } | null };
+  const currentProfile = await getCurrentProfile();
 
   if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/admin");

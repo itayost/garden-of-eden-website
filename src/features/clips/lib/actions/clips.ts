@@ -6,6 +6,7 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { cleanupUploadedFiles } from "@/lib/api/storage";
 import { CLIPS_BUCKET } from "@/lib/api/clip-validation";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export interface ClipRow {
   readonly id: string;
@@ -41,9 +42,7 @@ async function signClipUrl(
 
 export async function getOwnClipWithSignedUrl(): Promise<ClipWithSignedUrl | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data } = await typedFrom(supabase, "trainee_clips")
@@ -77,9 +76,7 @@ export async function getClipWithSignedUrlForAdmin(
 
 export async function deleteOwnClip(): Promise<ActionResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { success: false, error: "לא מחובר" };
 
   const { data: existing } = await typedFrom(supabase, "trainee_clips")

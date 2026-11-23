@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlayerCard } from "@/components/player-card";
 import { ArrowLeft, Salad, TrendingUp } from "lucide-react";
-import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
+import type { UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getPlayerRatingHistory, latestRatings } from "@/lib/utils/get-player-ratings";
 import { hebrewWeekday } from "@/lib/utils/date";
@@ -43,6 +43,7 @@ import { loadNextBooking } from "@/features/booking/lib/next-booking";
 import type { UserAchievementRow } from "@/types/database";
 import { resolveAgeGroup } from "@/lib/age-group-override";
 import { firstNameOf } from "@/lib/utils/profile";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 const MiniRatingChartWrapper = dynamic(
   () => import("./MiniRatingChartWrapper").then(m => ({ default: m.MiniRatingChartWrapper }))
@@ -50,7 +51,7 @@ const MiniRatingChartWrapper = dynamic(
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   // Explicit auth check - redirect if not authenticated
   if (!user) {
@@ -61,7 +62,7 @@ export default async function DashboardPage() {
   // once: one round trip of latency instead of five stages in a row.
   const userId = user.id;
   const [
-    { data: profile },
+    profile,
     { data: nutritionForm },
     { data: assessmentRows },
     { count: preWorkoutCount },
@@ -78,7 +79,7 @@ export default async function DashboardPage() {
     notices,
     canAskParent,
   ] = await Promise.all([
-    supabase.from("profiles").select("full_name, birthdate, age_group_override, age_group_override_until, position, created_at, processed_avatar_url, avatar_url").eq("id", userId).single() as unknown as { data: Profile | null },
+    getCurrentProfile(),
     supabase.from("nutrition_forms").select("id").eq("user_id", userId).limit(1).maybeSingle() as unknown as { data: { id: string } | null },
     // Only whether any assessment exists is used here.
     supabase.from("player_assessments").select("id").eq("user_id", userId).limit(1) as unknown as { data: { id: string }[] | null },

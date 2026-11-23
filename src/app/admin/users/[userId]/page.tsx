@@ -39,6 +39,7 @@ import { canManageBranches, isInBranchScope } from "@/lib/branches/branch-scope"
 import { HealthCard } from "@/features/plans/components/HealthCard";
 import { TraineeCheckinsCard } from "@/features/checkins/components/TraineeCheckinsCard";
 import { TrainingHistoryCard } from "@/features/training-history/components/TrainingHistoryCard";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 interface UserEditPageProps {
   params: Promise<{ userId: string }>;
@@ -55,9 +56,7 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   const supabase = await createClient();
 
   // Get current user and verify admin role
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     redirect("/login");
@@ -70,17 +69,13 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   // until the checks below pass.
   const adminClient = createAdminClient();
   const [
-    { data: currentProfile },
+    currentProfile,
     { data: userToEdit },
     activeBranches,
     membershipMap,
     scopeResult,
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", currentUser.id)
-      .single() as unknown as Promise<{ data: { role: string } | null }>,
+    getCurrentProfile(),
     supabase
       .from("profiles")
       .select("*")

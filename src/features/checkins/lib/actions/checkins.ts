@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { waitUntil } from "@vercel/functions";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { israelToday } from "@/lib/utils/tasks";
 import { checkinSchema, type CheckinInput } from "@/lib/validations/checkins";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 type Result = { success: true } | { error: string };
 
@@ -16,10 +16,7 @@ type Result = { success: true } | { error: string };
  * the streak trigger only counts the first (it fires on insert).
  */
 export async function saveCheckinAction(input: CheckinInput): Promise<Result> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "לא מחובר" };
 
   const limit = await checkRateLimit(`checkin:${user.id}`, "general");

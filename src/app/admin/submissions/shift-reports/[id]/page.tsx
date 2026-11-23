@@ -27,6 +27,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import type { TrainerShiftReport } from "@/types/database";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 interface ShiftReportDetailPageProps {
   params: Promise<{ id: string }>;
@@ -198,19 +199,13 @@ export default async function ShiftReportDetailPage({ params }: ShiftReportDetai
   const supabase = await createClient();
 
   // Verify auth
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     redirect("/auth/login");
   }
 
-  const { data: currentProfile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", currentUser.id)
-    .single()) as { data: { role: string } | null };
+  const currentProfile = await getCurrentProfile();
 
   if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/dashboard");

@@ -13,13 +13,12 @@ import {
   validateClipFile,
 } from "@/lib/api/clip-validation";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rate-limit";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
     if (!user) {
       return NextResponse.json({ error: "לא מחובר" }, { status: 401 });

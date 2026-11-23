@@ -1,8 +1,8 @@
 "use server";
 
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Admin verification result
@@ -28,8 +28,9 @@ export type AdminVerifyResult =
  * Memoized per request with React `cache()`: a single page render calls this
  * from the layout, the page and every server action it fans out to, which
  * otherwise costs an `auth.getUser()` round trip plus a profiles SELECT each
- * time. The cache is request-scoped, so it can never serve one user's
- * identity to another.
+ * time. The user and the profile row come from `getCurrentUser()` and
+ * `getCurrentProfile()`, which the layouts share too. The cache is
+ * request-scoped, so it can never serve one user's identity to another.
  *
  * @example
  * ```ts
@@ -39,30 +40,22 @@ export type AdminVerifyResult =
  * ```
  */
 export const verifyAdmin = cache(async (): Promise<AdminVerifyResult> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return { error: "לא מחובר", user: null, adminProfile: null };
   }
 
-  const { data: adminProfile } = await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .is("deleted_at", null)
-    .single();
+  const profile = await getCurrentProfile();
 
-  if (adminProfile?.role !== "admin") {
+  if (profile?.deleted_at != null || profile?.role !== "admin") {
     return { error: "נדרשת הרשאת מנהל", user: null, adminProfile: null };
   }
 
   return {
     error: null,
     user,
-    adminProfile: adminProfile as { role: string; full_name: string | null },
+    adminProfile: { role: profile.role, full_name: profile.full_name },
   };
 });
 
@@ -90,29 +83,25 @@ export type TrainerVerifyResult =
  * @returns TrainerVerifyResult with either user data or error
  */
 export const verifyAdminOrTrainer = cache(async (): Promise<TrainerVerifyResult> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return { error: "לא מחובר", user: null, profile: null };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .is("deleted_at", null)
-    .single();
+  const profile = await getCurrentProfile();
 
-  if (profile?.role !== "admin" && profile?.role !== "trainer") {
+  if (
+    !profile ||
+    profile.deleted_at != null ||
+    (profile.role !== "admin" && profile.role !== "trainer")
+  ) {
     return { error: "נדרשת הרשאת מנהל או מאמן", user: null, profile: null };
   }
 
   return {
     error: null,
     user,
-    profile: profile as { role: string; full_name: string | null },
+    profile: { role: profile.role, full_name: profile.full_name },
   };
 });

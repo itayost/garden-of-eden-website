@@ -2,9 +2,9 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
-import { readInChunks } from "@/lib/supabase/in-chunks";
+import { readAllPages, readInChunks } from "@/lib/supabase/in-chunks";
+import { rosterReadSlices } from "@/lib/plans/roster-read-bounds";
 import {
   planStart,
   resolvePlanQueue,
@@ -18,6 +18,7 @@ import { PLAN_FREEZES_EMBED, toQueuePlan, type PlanFreezeRow } from "@/lib/plans
 import { orderPlanName } from "@/lib/plans/manual-card";
 import { arboxCardName } from "@/lib/plans/arbox-card-name";
 import type { Order, PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 type ProductBits = Pick<PlanProduct, "name_he" | "kind">;
 
@@ -112,28 +113,12 @@ interface RosterRow {
   slot: { schedule_date: string; start_time: string; branch_id: string | null; called_off_at: string | null } | null;
 }
 
-/**
- * Roster rows of these Trainees, grouped by Trainee, a slice of Trainees per
- * request and page by page: PostgREST caps a response at 1000 rows, and a
- * silently truncated roster would undercount every queue.
- */
-export async function loadQueueRows(
-  db: SupabaseClient,
-  profileIds: readonly string[],
-  options: LoadOptions = {},
-): Promise<Map<string, QueueRow[]>> {
+const ROSTER_SELECT =
+  "id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, called_off_at)";
+
+/** Roster rows grouped by Trainee, in the queue's shape. */
+function groupQueueRows(data: readonly RosterRow[]): Map<string, QueueRow[]> {
   const result = new Map<string, QueueRow[]>();
-  const { data, error } = await readInChunks<RosterRow>(profileIds, "trainee_id", () =>
-    typedFrom(db, "daily_schedule_slot_trainees")
-      .select(
-        "id, trainee_id, cancelled_at, late_cancel, slot:daily_schedule_slots!inner(schedule_date, start_time, branch_id, called_off_at)",
-      )
-      .order("id"),
-  );
-  if (error) {
-    readFailed("loadQueueRows", error, options);
-    return result;
-  }
   for (const row of data) {
     if (!row.slot) continue;
     const queueRow: QueueRow = {
@@ -148,6 +133,59 @@ export async function loadQueueRows(
     result.set(row.trainee_id, [...(result.get(row.trainee_id) ?? []), queueRow]);
   }
   return result;
+}
+
+/**
+ * Roster rows of these Trainees, grouped by Trainee, a slice of Trainees per
+ * request and page by page: PostgREST caps a response at 1000 rows, and a
+ * silently truncated roster would undercount every queue. Every row the
+ * Trainee ever had: for a read that also places a new Plan or tries a
+ * Booking. To resolve stored queues only, `loadChargeableQueueRows` reads less.
+ */
+export async function loadQueueRows(
+  db: SupabaseClient,
+  profileIds: readonly string[],
+  options: LoadOptions = {},
+): Promise<Map<string, QueueRow[]>> {
+  const { data, error } = await readInChunks<RosterRow>(profileIds, "trainee_id", () =>
+    typedFrom(db, "daily_schedule_slot_trainees").select(ROSTER_SELECT).order("id"),
+  );
+  if (error) {
+    readFailed("loadQueueRows", error, options);
+    return new Map();
+  }
+  return groupQueueRows(data);
+}
+
+/**
+ * The roster rows that can be charged to these stored Plans: each Trainee's
+ * rows from the earliest day any of their Plans may start
+ * (`rosterReadSlices`), so a staff list does not read years of history.
+ * `resolvePlanQueue` over these rows gives the same queue as over every row.
+ * Only for resolving these Plans: a new Plan or a Booking needs `loadQueueRows`.
+ */
+export async function loadChargeableQueueRows(
+  db: SupabaseClient,
+  plans: ReadonlyMap<string, readonly QueuePlan[]>,
+  options: LoadOptions = {},
+): Promise<Map<string, QueueRow[]>> {
+  const slices = await Promise.all(
+    rosterReadSlices(plans).map(({ ids, from }) =>
+      readAllPages<RosterRow>(() =>
+        typedFrom(db, "daily_schedule_slot_trainees")
+          .select(ROSTER_SELECT)
+          .in("trainee_id", ids)
+          .gte("slot.schedule_date", from)
+          .order("id"),
+      ),
+    ),
+  );
+  const failed = slices.find((slice) => slice.error !== null);
+  if (failed?.error) {
+    readFailed("loadChargeableQueueRows", failed.error, options);
+    return new Map();
+  }
+  return groupQueueRows(slices.flatMap((slice) => slice.data));
 }
 
 /** The screen view of one resolved queue; null when there is nothing to show. */
@@ -180,7 +218,7 @@ export async function loadPlanQueues(
 ): Promise<Map<string, PlanQueueView>> {
   const result = new Map<string, PlanQueueView>();
   const plans = await loadStoredPlans(db, profileIds, options);
-  const rows = await loadQueueRows(db, [...plans.keys()], options);
+  const rows = await loadChargeableQueueRows(db, plans, options);
   for (const [profileId, own] of plans) {
     const view = toPlanQueueView(resolvePlanQueue(own, rows.get(profileId) ?? [], today));
     if (view) result.set(profileId, view);
@@ -193,10 +231,7 @@ export async function loadPlanQueues(
  * the admin client does the read because the roster tables are staff-only.
  */
 export async function loadOwnPlanQueue(today: string): Promise<PlanQueueView | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
   const map = await loadPlanQueues(createAdminClient(), [user.id], today);
   return map.get(user.id) ?? null;

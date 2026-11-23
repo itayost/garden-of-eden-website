@@ -7,6 +7,7 @@ import type { Profile, PlayerGoalRow } from "@/types/database";
 import { isLowerBetterMetric } from "../config/goal-config";
 import { goalRefusal } from "../utils/goal-rules";
 import { isValidUUID } from "@/lib/validations/common";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 interface SetGoalParams {
   userId: string;
@@ -33,9 +34,7 @@ export async function setGoal(params: SetGoalParams): Promise<SetGoalResult> {
   const supabase = await createClient();
 
   // Verify caller is trainer or admin
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) {
     return { success: false, error: "Unauthorized" };
   }

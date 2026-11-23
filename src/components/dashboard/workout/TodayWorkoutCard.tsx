@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { cn } from "@/lib/utils";
 import { israelToday } from "@/lib/utils/tasks";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Dashboard-home teaser for today's session — part of the player-card family:
@@ -14,9 +15,7 @@ import { israelToday } from "@/lib/utils/tasks";
  */
 export async function TodayWorkoutCard() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data } = await typedFrom(supabase, "training_sessions")

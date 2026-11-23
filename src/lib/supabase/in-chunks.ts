@@ -31,20 +31,40 @@ export function chunk<T>(items: readonly T[], size: number = ID_CHUNK): T[][] {
   );
 }
 
+/** Pages asked for at once once a read has filled its first page. */
+export const PAGES_AT_ONCE = 4;
+
 /**
  * Every row of a read, page by page. A read that can pass 1000 rows must
  * order by a unique column so the pages do not overlap.
+ *
+ * Most reads fit one page and take one request. A read that fills its
+ * first page is likely to fill more, so the next pages are asked for
+ * `PAGES_AT_ONCE` at a time instead of one after another; a batch past the
+ * end costs at most a few empty pages. The rows are the same, in the same
+ * order, as one page at a time.
  */
 export async function readAllPages<Row>(
   query: () => RangeRead<Row>,
 ): Promise<{ data: Row[]; error: ReadError | null }> {
-  let rows: Row[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await query().range(from, from + PAGE - 1);
-    if (error) return { data: [], error };
-    const page = data ?? [];
-    rows = [...rows, ...page];
-    if (page.length < PAGE) return { data: rows, error: null };
+  const readPage = (index: number) => query().range(index * PAGE, (index + 1) * PAGE - 1);
+  const first = await readPage(0);
+  if (first.error) return { data: [], error: first.error };
+  const head = first.data ?? [];
+  if (head.length < PAGE) return { data: head, error: null };
+
+  let pages: Row[][] = [head];
+
+  for (let next = 1; ; next += PAGES_AT_ONCE) {
+    const batch = await Promise.all(
+      Array.from({ length: PAGES_AT_ONCE }, (_, i) => readPage(next + i)),
+    );
+    for (const { data, error } of batch) {
+      if (error) return { data: [], error };
+      const page = data ?? [];
+      pages = [...pages, page];
+      if (page.length < PAGE) return { data: pages.flat(), error: null };
+    }
   }
 }
 

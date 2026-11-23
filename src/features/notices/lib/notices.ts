@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidUUID } from "@/lib/validations/common";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export interface TraineeNotice {
   id: string;
@@ -14,9 +15,7 @@ export interface TraineeNotice {
 /** The signed-in Trainee's open notices, newest first; RLS lets them read only their own. */
 export async function getMyNoticesAction(): Promise<TraineeNotice[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
   const { data, error } = await supabase
     .from("trainee_notices")
@@ -35,10 +34,7 @@ export async function getMyNoticesAction(): Promise<TraineeNotice[]> {
 /** The Trainee dismisses one of their own notices. Written with the service role, scoped to the caller. */
 export async function dismissNoticeAction(noticeId: string): Promise<{ success: true } | { error: string }> {
   if (!isValidUUID(noticeId)) return { error: "מזהה לא תקין" };
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "נדרשת התחברות" };
 
   const { error } = await createAdminClient()
