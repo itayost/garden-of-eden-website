@@ -12,6 +12,7 @@ import type {
 } from "../types";
 import type { CourseViewer } from "../course-access-rule";
 import { COURSE_VIEWER_COLUMNS, courseViewerFromProfile } from "../course-viewer";
+import { coverUrlOrNull } from "../course-cover-rules";
 
 // --- Raw DB row shapes (snake_case) ---
 
@@ -154,13 +155,18 @@ export async function getPublishedCourse(
   return { ...toCourse(course), chapters: withLessons };
 }
 
+/** A stored cover that fails the cover check is shown as no cover. */
 function toCourse(row: RawCourse) {
   return {
     id: row.id,
     slug: row.slug,
     titleHe: row.title_he,
     descriptionHe: row.description_he,
-    coverUrl: row.cover_url ?? null,
+    coverUrl: coverUrlOrNull(
+      row.cover_url ?? null,
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+      row.id
+    ),
     isPublished: row.is_published,
     needsTitle: row.needs_title,
     orderIndex: row.order_index,

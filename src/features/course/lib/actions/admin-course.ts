@@ -8,6 +8,7 @@ import { isValidUUID } from "@/lib/validations/common";
 import { lessonVideoSchema, reorderSchema } from "@/lib/validations/course";
 import { revalidateCourse } from "../course-revalidate";
 import { COURSE_VIDEO_BUCKET } from "../playback-config";
+import { coverUrlOrNull } from "../course-cover-rules";
 import {
   positionalSlug,
   publishCourseProblem,
@@ -152,7 +153,12 @@ export async function listCourseAdminTree(slug: string): Promise<AdminCourse | n
     slug: course.slug,
     titleHe: course.title_he,
     descriptionHe: course.description_he,
-    coverUrl: course.cover_url ?? null,
+    // A stored cover that fails the cover check is shown as no cover.
+    coverUrl: coverUrlOrNull(
+      course.cover_url ?? null,
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+      course.id
+    ),
     isPublished: course.is_published,
     needsTitle: course.needs_title,
     chapters: chapterRows.map(

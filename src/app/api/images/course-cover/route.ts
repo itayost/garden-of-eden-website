@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  parseFormDataSafe,
-  unauthorizedResponse,
-  verifyAdmin,
-} from "@/lib/api/auth";
+import { parseFormDataSafe, verifyAdmin } from "@/lib/api/auth";
 import { validateUUID } from "@/lib/api/image-validation";
 import { uploadAvatarImage } from "@/lib/api/storage";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rate-limit";
@@ -23,12 +19,13 @@ function fail(error: string, status: number) {
  * POST /api/images/course-cover
  *
  * Admin-only upload of a course cover image.
- * FormData: file (JPEG, PNG or WebP, up to 5 MB), courseId (UUID).
+ * FormData: file (JPEG, PNG or WebP, up to 4 MB: Vercel refuses a body over
+ * 4.5 MB before this runs, and the browser compresses first), courseId (UUID).
  */
 export async function POST(request: NextRequest) {
   try {
     const auth = await verifyAdmin();
-    if (!auth.authorized) return unauthorizedResponse("Unauthorized - Admin role required");
+    if (!auth.authorized) return fail("אין הרשאה", 403);
 
     const ip = request.headers.get("x-forwarded-for") || "unknown";
     const limit = await checkRateLimit(

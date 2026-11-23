@@ -2,6 +2,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyAdmin } from "@/lib/actions/shared";
+import { AVATARS_BUCKET } from "@/lib/api/image-validation";
+import { deleteFromStorage } from "@/lib/api/storage";
 import { isValidUUID } from "@/lib/validations/common";
 import {
   cleanOptionalText,
@@ -11,7 +13,7 @@ import {
   positionalSlug,
   validateTitle,
 } from "../course-admin-rules";
-import { isAllowedCoverUrl } from "../course-cover-rules";
+import { coverObjectPath, isAllowedCoverUrl } from "../course-cover-rules";
 import { revalidateCourse } from "../course-revalidate";
 import type { CourseActionResult } from "./admin-course";
 
@@ -287,7 +289,12 @@ export async function deleteChapter(
   return { success: true };
 }
 
-/** Store (or, with null, remove) a course's cover image link. */
+/**
+ * Store (or, with null, remove) a course's cover image link. Only this course's
+ * own upload passes the check. The replaced file is removed afterwards with the
+ * service role; that is best effort, so a failed removal is logged and never
+ * fails the save.
+ */
 export async function setCourseCover(
   courseId: string,
   url: string | null
@@ -295,14 +302,23 @@ export async function setCourseCover(
   const { error: authError } = await verifyAdmin();
   if (authError) return { error: authError };
   if (!isValidUUID(courseId)) return { error: "מזהה קורס לא תקין" };
-  if (
-    url !== null &&
-    !isAllowedCoverUrl(url, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")
-  ) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  if (url !== null && !isAllowedCoverUrl(url, supabaseUrl, courseId)) {
     return { error: "כתובת התמונה לא תקינה" };
   }
 
   const db = createAdminClient();
+  const { data: current, error: readError } = await db
+    .from("courses")
+    .select("cover_url")
+    .eq("id", courseId)
+    .maybeSingle();
+  if (readError) {
+    console.error("setCourseCover read failed:", readError);
+    return { error: SAVE_FAILED };
+  }
+  if (!current) return { error: "הקורס לא נמצא" };
+
   const { data, error } = await db
     .from("courses")
     .update({ cover_url: url })
@@ -316,6 +332,27 @@ export async function setCourseCover(
     return { error: "הקורס לא נמצא" };
   }
 
+  const oldPath =
+    current.cover_url === url
+      ? null
+      : coverObjectPath(current.cover_url, supabaseUrl, courseId);
+  if (oldPath) await removeReplacedCover(db, oldPath);
+
   revalidateCourse();
   return { success: true };
+}
+
+/** Remove a replaced cover file; logged, never thrown. */
+async function removeReplacedCover(
+  db: ReturnType<typeof createAdminClient>,
+  path: string
+): Promise<void> {
+  try {
+    const result = await deleteFromStorage(db, AVATARS_BUCKET, [path]);
+    if (!result.success) {
+      console.error("setCourseCover remove old cover failed:", result.error);
+    }
+  } catch (error) {
+    console.error("setCourseCover remove old cover failed:", error);
+  }
 }
