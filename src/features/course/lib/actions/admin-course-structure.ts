@@ -60,6 +60,9 @@ export async function createCourse(
     description_he: description.value,
     is_published: false,
     needs_title: false,
+    // While the old access rule holds (no good sweep a week old yet), a new
+    // course opens like the tactical course: staff and active trainees only.
+    active_only: true,
     order_index: nextIndexAfter(existing),
   });
   if (error) {
