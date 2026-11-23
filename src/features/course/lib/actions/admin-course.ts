@@ -1,13 +1,19 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdmin, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
 import { lessonVideoSchema, reorderSchema } from "@/lib/validations/course";
+import { revalidateCourse } from "../course-revalidate";
 import { COURSE_VIDEO_BUCKET } from "../playback-config";
+import { coverUrlOrNull } from "../course-cover-rules";
+import {
+  positionalSlug,
+  publishCourseProblem,
+  validateTitle,
+} from "../course-admin-rules";
 
 // ---------------------------------------------------------------------------
 // Result and view types
@@ -45,6 +51,7 @@ export interface AdminCourse {
   slug: string;
   titleHe: string;
   descriptionHe: string | null;
+  coverUrl: string | null;
   isPublished: boolean;
   needsTitle: boolean;
   chapters: AdminCourseChapter[];
@@ -62,14 +69,6 @@ interface RawLesson {
   needs_title: boolean;
   is_published: boolean;
   order_index: number;
-}
-
-const ADMIN_PATH = "/admin/course";
-const TRAINEE_PATH = "/dashboard/course";
-
-function revalidateCourse(): void {
-  revalidatePath(ADMIN_PATH);
-  revalidatePath(TRAINEE_PATH);
 }
 
 // ---------------------------------------------------------------------------
@@ -154,6 +153,12 @@ export async function listCourseAdminTree(slug: string): Promise<AdminCourse | n
     slug: course.slug,
     titleHe: course.title_he,
     descriptionHe: course.description_he,
+    // A stored cover that fails the cover check is shown as no cover.
+    coverUrl: coverUrlOrNull(
+      course.cover_url ?? null,
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+      course.id
+    ),
     isPublished: course.is_published,
     needsTitle: course.needs_title,
     chapters: chapterRows.map(
@@ -180,13 +185,6 @@ export async function listCourseAdminTree(slug: string): Promise<AdminCourse | n
 // ---------------------------------------------------------------------------
 // Titles
 // ---------------------------------------------------------------------------
-
-function validateTitle(title: string): string | null {
-  const trimmed = title.trim();
-  if (trimmed.length === 0) return "נדרשת כותרת";
-  if (trimmed.length > 160) return "כותרת ארוכה מדי";
-  return null;
-}
 
 /**
  * Optional secondary text (a chapter subtitle, a lesson or course description).
@@ -365,6 +363,37 @@ export async function setCoursePublished(
   if (authError) return { error: authError };
   if (!isValidUUID(courseId)) return { error: "מזהה קורס לא תקין" };
 
+  if (isPublished) {
+    const db = createAdminClient();
+    const { data: course, error: courseError } = await db.from("courses")
+      .select("needs_title")
+      .eq("id", courseId)
+      .maybeSingle();
+    if (courseError) {
+      console.error("setCoursePublished read course failed:", courseError);
+      return { error: "שמירה נכשלה" };
+    }
+    if (!course) return { error: "הקורס לא נמצא" };
+
+    const { count, error: countError } = await db.from("course_lessons")
+      .select("id, course_chapters!inner(course_id)", {
+        count: "exact",
+        head: true,
+      })
+      .eq("course_chapters.course_id", courseId)
+      .eq("is_published", true);
+    if (countError) {
+      console.error("setCoursePublished count lessons failed:", countError);
+      return { error: "שמירה נכשלה" };
+    }
+
+    const problem = publishCourseProblem({
+      needsTitle: course.needs_title === true,
+      publishedLessons: count ?? 0,
+    });
+    if (problem) return { error: problem };
+  }
+
   return updateOneRow(
     "courses",
     courseId,
@@ -463,22 +492,6 @@ export async function reorderLessons(
 // ---------------------------------------------------------------------------
 
 /**
- * Turn a Hebrew title into an ASCII slug usable as a storage-path segment.
- *
- * Hebrew does not transliterate cleanly, so rather than mangle it this falls
- * back to a timestamp-free positional slug. The slug is an identifier, not
- * something anyone reads -- `title_he` is what shows in the UI.
- */
-function lessonSlug(titleHe: string, position: number): string {
-  const ascii = titleHe
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const suffix = ascii.length >= 2 ? ascii.slice(0, 40) : "lesson";
-  return `${String(position).padStart(2, "0")}-${suffix}`;
-}
-
-/**
  * Add a lesson to a chapter. It starts unpublished and without a video -- the
  * CHECK constraint would reject anything else, and the video arrives in a
  * second step once the file has finished uploading.
@@ -518,9 +531,9 @@ export async function createLesson(
   // The slug only has to be unique within the chapter; nudge past a collision
   // rather than failing in front of Eden.
   const taken = new Set(existing.map((row) => row.slug));
-  let slug = lessonSlug(titleHe, nextIndex);
+  let slug = positionalSlug(titleHe, nextIndex, "lesson");
   for (let n = 2; taken.has(slug); n++) {
-    slug = `${lessonSlug(titleHe, nextIndex)}-${n}`;
+    slug = `${positionalSlug(titleHe, nextIndex, "lesson")}-${n}`;
   }
 
   const { data, error } = await typedFrom(db, "course_lessons")
@@ -647,7 +660,8 @@ export async function listCourses(): Promise<{ slug: string; titleHe: string }[]
   const { data, error: readError } = await createAdminClient()
     .from("courses")
     .select("slug, title_he")
-    .order("order_index", { ascending: true });
+    .order("order_index", { ascending: true })
+    .order("id", { ascending: true });
   if (readError) {
     console.error("listCourses failed:", readError);
     return [];

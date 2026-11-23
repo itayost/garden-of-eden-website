@@ -17,8 +17,7 @@ const MID_ACTIVITY_PATHS: readonly { readonly section: string; readonly segments
   { section: "workout", segments: 2 },
   { section: "scan", segments: 3 },
   { section: "forms", segments: 3 },
-  { section: "course", segments: 4 },
-  { section: "tactical-course", segments: 4 },
+  { section: "courses", segments: 5 },
 ];
 
 interface OfferDates {

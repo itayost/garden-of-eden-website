@@ -8,6 +8,7 @@ const row: CourseViewerRow = {
   course_seen_training_on: "2026-11-20",
   course_access_until: "2026-12-31",
   arbox_bought_course: false,
+  arbox_paid_training: true,
   access_override: null,
 };
 
@@ -19,6 +20,7 @@ describe("courseViewerFromProfile", () => {
       seenTrainingOn: "2026-11-20",
       accessUntil: "2026-12-31",
       boughtCourse: false,
+      courseOnly: false,
     });
   });
 
@@ -38,7 +40,31 @@ describe("courseViewerFromProfile", () => {
     expect(courseViewerFromProfile({ ...row, access_override: "something" }).boughtCourse).toBe(false);
   });
 
-  test("null columns read as no role, not active, no days and no purchase", () => {
+  test("a buyer who never paid for training is course-only, as the middleware tier says", () => {
+    const viewer = courseViewerFromProfile({ ...row, arbox_bought_course: true, arbox_paid_training: false });
+    expect(viewer.courseOnly).toBe(true);
+    expect(viewer.boughtCourse).toBe(true);
+  });
+
+  test("a buyer who also paid for training is not course-only", () => {
+    expect(
+      courseViewerFromProfile({ ...row, arbox_bought_course: true, arbox_paid_training: true }).courseOnly,
+    ).toBe(false);
+  });
+
+  test("an admin's course_only override is course-only, a full override is not", () => {
+    expect(courseViewerFromProfile({ ...row, access_override: "course_only" }).courseOnly).toBe(true);
+    expect(
+      courseViewerFromProfile({
+        ...row,
+        arbox_bought_course: true,
+        arbox_paid_training: false,
+        access_override: "full",
+      }).courseOnly,
+    ).toBe(false);
+  });
+
+  test("null columns read as no role, not active, no days, no purchase and not course-only", () => {
     expect(
       courseViewerFromProfile({
         role: null,
@@ -46,9 +72,17 @@ describe("courseViewerFromProfile", () => {
         course_seen_training_on: null,
         course_access_until: null,
         arbox_bought_course: null,
+        arbox_paid_training: null,
         access_override: null,
       }),
-    ).toEqual({ role: null, isActive: false, seenTrainingOn: null, accessUntil: null, boughtCourse: false });
+    ).toEqual({
+      role: null,
+      isActive: false,
+      seenTrainingOn: null,
+      accessUntil: null,
+      boughtCourse: false,
+      courseOnly: false,
+    });
   });
 
   test("no profile row reads as no viewer", () => {
@@ -58,6 +92,7 @@ describe("courseViewerFromProfile", () => {
       seenTrainingOn: null,
       accessUntil: null,
       boughtCourse: false,
+      courseOnly: false,
     });
   });
 });

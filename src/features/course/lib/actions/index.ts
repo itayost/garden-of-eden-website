@@ -8,3 +8,12 @@ export {
   COURSE_VIDEO_BUCKET,
   PLAYBACK_URL_TTL_SEC,
 } from "../playback-config";
+
+export {
+  createCourse,
+  updateCourseDescription,
+  moveCourse,
+  deleteCourse,
+  createChapter,
+  deleteChapter,
+} from "./admin-course-structure";

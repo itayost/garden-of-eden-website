@@ -14,7 +14,7 @@ export type NavItem = {
   // sidebar's list order, so both surfaces read one config yet keep their own order).
   mobileOrder?: number;
   /** Shown only when the viewer has this capability (e.g. a bookable branch). */
-  requires?: "booking" | "tacticalCourse";
+  requires?: "booking" | "courses";
 };
 
 export type NavSection = {

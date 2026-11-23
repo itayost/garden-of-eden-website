@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { courseRedirects } from "./src/lib/navigation/course-redirects";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
@@ -17,6 +18,9 @@ const nextConfig: NextConfig = {
       "@radix-ui/react-tabs",
       "@radix-ui/react-tooltip",
     ],
+  },
+  async redirects() {
+    return courseRedirects();
   },
   async headers() {
     return [

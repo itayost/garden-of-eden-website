@@ -2,13 +2,24 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import { Switch } from "@/components/ui/switch";
 import { InlineTitleEdit } from "./InlineTitleEdit";
 import { LessonAdminRow } from "./LessonAdminRow";
+import { ChapterCreateForm } from "./ChapterCreateForm";
+import { CourseDetailsEditor } from "./CourseDetailsEditor";
 import { formatDuration } from "@/features/course/lib/progress-utils";
 import {
   createLesson,
@@ -18,6 +29,7 @@ import {
   reorderLessons,
   setCoursePublished,
 } from "@/features/course/lib/actions/admin-course";
+import { deleteChapter } from "@/features/course/lib/actions/admin-course-structure";
 import type { AdminCourse } from "@/features/course/lib/actions/admin-course";
 
 interface CourseAdminClientProps {
@@ -34,7 +46,7 @@ function moved<T>(items: readonly T[], from: number, to: number): T[] {
 
 export function CourseAdminClient({ course }: CourseAdminClientProps) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState(course.chapters[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(course.chapters[0]?.id ?? null);
   const [publishPending, startPublish] = useTransition();
   const [orderPending, startOrder] = useTransition();
   const [addPending, startAdd] = useTransition();
@@ -42,7 +54,7 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
 
   const selected = useMemo(
     () => course.chapters.find((c) => c.id === selectedId) ?? null,
-    [course.chapters, selectedId]
+    [course.chapters, selectedId],
   );
 
   const missingTitles = useMemo(
@@ -52,9 +64,9 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
           n +
           (chapter.needsTitle ? 1 : 0) +
           chapter.lessons.filter((l) => l.needsTitle).length,
-        0
+        0,
       ),
-    [course.chapters]
+    [course.chapters],
   );
 
   const togglePublished = (next: boolean) => {
@@ -122,35 +134,45 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
   return (
     <div className="space-y-6">
       {/* Course header */}
-      <div className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-border p-4">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-            שם הקורס
-          </p>
-          <InlineTitleEdit
-            value={course.titleHe}
-            isPlaceholder={course.needsTitle}
-            label="שם הקורס"
-            className="mt-1 text-lg font-bold"
-            inputClassName="h-9 text-base"
-            onSave={async (next) => {
-              const result = await renameCourse(course.id, next);
-              return "error" in result ? result.error : null;
-            }}
-          />
+      <div className="space-y-4 rounded-xl border border-border p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+              שם הקורס
+            </p>
+            <InlineTitleEdit
+              value={course.titleHe}
+              isPlaceholder={course.needsTitle}
+              label="שם הקורס"
+              className="mt-1 text-lg font-bold"
+              inputClassName="h-9 text-base"
+              onSave={async (next) => {
+                const result = await renameCourse(course.id, next);
+                return "error" in result ? result.error : null;
+              }}
+            />
+          </div>
+
+          <label className="flex shrink-0 items-center gap-2">
+            <span className="text-sm font-medium">
+              {course.isPublished ? "פורסם" : "לא פורסם"}
+            </span>
+            <Switch
+              checked={course.isPublished}
+              onCheckedChange={togglePublished}
+              disabled={publishPending || course.needsTitle}
+              aria-label="פרסום הקורס"
+            />
+          </label>
         </div>
 
-        <label className="flex shrink-0 items-center gap-2">
-          <span className="text-sm font-medium">
-            {course.isPublished ? "פורסם" : "לא פורסם"}
-          </span>
-          <Switch
-            checked={course.isPublished}
-            onCheckedChange={togglePublished}
-            disabled={publishPending || course.needsTitle}
-            aria-label="פרסום הקורס"
-          />
-        </label>
+        <CourseDetailsEditor
+          courseId={course.id}
+          titleHe={course.titleHe}
+          descriptionHe={course.descriptionHe}
+          coverUrl={course.coverUrl}
+          canDelete={course.chapters.length === 0}
+        />
       </div>
 
       {missingTitles > 0 && (
@@ -168,59 +190,66 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
 
       <div className="grid gap-4 md:grid-cols-[220px_1fr]">
         {/* Chapter picker */}
-        <nav aria-label="פרקים" className="space-y-1">
-          {course.chapters.map((chapter, index) => {
-            const active = chapter.id === selectedId;
-            const drafts = chapter.lessons.filter((l) => !l.isPublished).length;
-            return (
-              <div key={chapter.id} className="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(chapter.id)}
-                  aria-current={active ? "true" : undefined}
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-3 py-2 text-start text-sm transition-colors",
-                    active
-                      ? "bg-card font-bold shadow-sm ring-1 ring-border"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <span className="min-w-0 truncate">
-                    {chapter.needsTitle ? `פרק ${index + 1}` : chapter.titleHe}
-                  </span>
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                    {drafts > 0
-                      ? `${chapter.lessons.length - drafts}/${chapter.lessons.length}`
-                      : chapter.lessons.length}
-                  </span>
-                </button>
+        <div className="space-y-3">
+          <nav aria-label="פרקים" className="space-y-1">
+            {course.chapters.map((chapter, index) => {
+              const active = chapter.id === selectedId;
+              const drafts = chapter.lessons.filter(
+                (l) => !l.isPublished,
+              ).length;
+              return (
+                <div key={chapter.id} className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(chapter.id)}
+                    aria-current={active ? "true" : undefined}
+                    className={cn(
+                      "flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-3 py-2 text-start text-sm transition-colors",
+                      active
+                        ? "bg-card font-bold shadow-sm ring-1 ring-border"
+                        : "text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    <span className="min-w-0 truncate">
+                      {chapter.needsTitle
+                        ? `פרק ${index + 1}`
+                        : chapter.titleHe}
+                    </span>
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      {drafts > 0
+                        ? `${chapter.lessons.length - drafts}/${chapter.lessons.length}`
+                        : chapter.lessons.length}
+                    </span>
+                  </button>
 
-                <span className="flex shrink-0 flex-col">
-                  <button
-                    type="button"
-                    onClick={() => handleMoveChapter(index, -1)}
-                    disabled={index === 0 || orderPending}
-                    aria-label={`הזז את ${chapter.titleHe} למעלה`}
-                    className="grid h-4 w-4 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  >
-                    <ChevronUp className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMoveChapter(index, 1)}
-                    disabled={
-                      index === course.chapters.length - 1 || orderPending
-                    }
-                    aria-label={`הזז את ${chapter.titleHe} למטה`}
-                    className="grid h-4 w-4 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  >
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                </span>
-              </div>
-            );
-          })}
-        </nav>
+                  <span className="flex shrink-0 flex-col">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveChapter(index, -1)}
+                      disabled={index === 0 || orderPending}
+                      aria-label={`הזז את ${chapter.titleHe} למעלה`}
+                      className="grid h-4 w-4 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      <ChevronUp className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveChapter(index, 1)}
+                      disabled={
+                        index === course.chapters.length - 1 || orderPending
+                      }
+                      aria-label={`הזז את ${chapter.titleHe} למטה`}
+                      className="grid h-4 w-4 place-items-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    >
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
+          </nav>
+          <ChapterCreateForm courseId={course.id} onCreated={setSelectedId} />
+        </div>
 
         {/* Selected chapter */}
         {selected ? (
@@ -242,15 +271,38 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
               <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                 {selected.lessons.length} שיעורים ·{" "}
                 {formatDuration(
-                  selected.lessons.reduce((n, l) => n + l.durationSec, 0)
+                  selected.lessons.reduce((n, l) => n + l.durationSec, 0),
                 )}
               </p>
             </div>
 
             {selected.lessons.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
-                אין שיעורים בפרק הזה.
-              </p>
+              <div className="space-y-3 rounded-lg border border-dashed border-border py-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  אין שיעורים בפרק הזה.
+                </p>
+                <DeleteConfirmDialog
+                  title="מחיקת הפרק"
+                  description={`הפרק "${selected.titleHe}" יימחק. אי אפשר לבטל את הפעולה.`}
+                  confirmLabel="מחק פרק"
+                  successMessage="הפרק נמחק"
+                  errorMessage="מחיקת הפרק נכשלה"
+                  onDelete={() => deleteChapter(selected.id)}
+                  onSuccess={() => {
+                    const deleted = selected.id;
+                    setSelectedId(
+                      course.chapters.find((c) => c.id !== deleted)?.id ?? null,
+                    );
+                    router.refresh();
+                  }}
+                  trigger={
+                    <Button type="button" variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4 me-1.5" aria-hidden="true" />
+                      מחק פרק
+                    </Button>
+                  }
+                />
+              </div>
             ) : (
               <ul className="space-y-1.5">
                 {selected.lessons.map((lesson, index) => (

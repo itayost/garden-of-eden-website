@@ -6,10 +6,6 @@ import { DashboardBottomNav } from "@/components/dashboard/DashboardBottomNav";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DASHBOARD_PAGE_TITLES } from "@/lib/navigation/dashboard-nav";
 import { canBookForUser } from "@/features/booking/lib/can-book";
-import { canOpenCourse } from "@/features/course/lib/course-access-rule";
-import { getCourseAccessContext } from "@/features/course/lib/course-access-context";
-import { courseViewerFromProfile } from "@/features/course/lib/course-viewer";
-import { TACTICAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { AppTopBar } from "@/components/layout/AppTopBar";
 import { MotionProvider } from "@/components/MotionProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -37,7 +33,7 @@ export default async function DashboardLayout({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override, is_active, course_seen_training_on, course_access_until, deleted_at",
+      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override",
     )
     .eq("id", user.id)
     .maybeSingle() as unknown as {
@@ -46,9 +42,6 @@ export default async function DashboardLayout({
             arbox_paid_training: boolean;
             arbox_bought_course: boolean;
             access_override: AccessOverride;
-            course_seen_training_on: string | null;
-            course_access_until: string | null;
-            deleted_at: string | null;
           })
         | null;
     };
@@ -71,28 +64,21 @@ export default async function DashboardLayout({
   });
 
   // Independent reads; run together so every dashboard render pays for one.
-  // The tactical course is shown only when published and the viewer may open it.
-  const [canBook, { data: tacticalCourse }, courseCtx] = await Promise.all([
+  // The menu shows "קורסים" while any course is published. Locked courses
+  // still appear in the list with a lock, so this does not depend on access.
+  const [canBook, { data: publishedCourse, error: coursesError }] = await Promise.all([
     profile?.role === "trainee" ? canBookForUser(user.id) : Promise.resolve(false),
     supabase
       .from("courses")
       .select("id")
-      .eq("slug", TACTICAL_COURSE_SLUG)
       .eq("is_published", true)
+      .limit(1)
       .maybeSingle(),
-    profile?.role === "trainee" ? getCourseAccessContext() : null,
   ]);
-  // Only a trainee needs the rule's sweep context; staff always open courses.
-  const canTacticalCourse =
-    tacticalCourse !== null &&
-    (courseCtx === null
-      ? profile?.role === "admin" || profile?.role === "trainer"
-      : canOpenCourse(
-          { slug: TACTICAL_COURSE_SLUG, activeOnly: true },
-          courseViewerFromProfile(profile && !profile.deleted_at ? profile : null),
-          courseCtx,
-        ));
-  const capabilities = { booking: canBook, tacticalCourse: canTacticalCourse };
+  if (coursesError) {
+    console.error("Dashboard layout published courses read failed:", coursesError);
+  }
+  const capabilities = { booking: canBook, courses: publishedCourse !== null };
   const firstName = firstNameOf(profile?.full_name ?? null);
   const cookieStore = await cookies();
   const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";

@@ -10,3 +10,6 @@ export const TACTICAL_COURSE_SLUG = "tactical";
 export function courseEarnsBadges(courseSlug: string): boolean {
   return courseSlug === DIGITAL_COURSE_SLUG;
 }
+
+/** Where a trainee opens a course. */
+export const courseHref = (slug: string): string => `/dashboard/courses/${slug}`;

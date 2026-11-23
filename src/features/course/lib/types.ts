@@ -43,6 +43,8 @@ export interface Course {
   slug: string;
   titleHe: string;
   descriptionHe: string | null;
+  /** Public link of the cover image, or null for the plain gradient. */
+  coverUrl: string | null;
   isPublished: boolean;
   needsTitle: boolean;
   orderIndex: number;

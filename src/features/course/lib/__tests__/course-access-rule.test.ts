@@ -14,9 +14,12 @@ const base: CourseViewer = {
   seenTrainingOn: null,
   accessUntil: null,
   boughtCourse: false,
+  courseOnly: false,
 };
 const digital = { slug: "eden-player-development", activeOnly: false };
 const tactical = { slug: "tactical", activeOnly: true };
+/** A course an admin created: active_only, as createCourse inserts it. */
+const created = { slug: "mental-training", activeOnly: true };
 
 describe("canOpenCourse", () => {
   test("staff always open", () => {
@@ -96,7 +99,55 @@ describe("effectiveLastGoodSweep", () => {
 describe("canOpenCourse before the rule is on", () => {
   test("a viewer with no role opens nothing, as after the switch", () => {
     const ctx = { today: "2026-12-01", lastGoodSweepOn: null };
-    const viewer = { role: null, isActive: false, seenTrainingOn: null, accessUntil: null, boughtCourse: false };
+    const viewer = {
+      role: null,
+      isActive: false,
+      seenTrainingOn: null,
+      accessUntil: null,
+      boughtCourse: false,
+      courseOnly: false,
+    };
     expect(canOpenCourse({ slug: "eden-player-development", activeOnly: false }, viewer, ctx)).toBe(false);
+  });
+});
+
+describe("canOpenCourse for a course-only buyer", () => {
+  const buyer: CourseViewer = { ...base, isActive: true, boughtCourse: true, courseOnly: true };
+  const regimes: [string, CourseAccessContext][] = [
+    ["the old rule", { today: "2026-12-01", lastGoodSweepOn: null }],
+    ["the new rule", ctx],
+  ];
+
+  for (const [name, regime] of regimes) {
+    test(`under ${name}, opens the digital course only`, () => {
+      expect(canOpenCourse(digital, buyer, regime)).toBe(true);
+      expect(canOpenCourse(tactical, buyer, regime)).toBe(false);
+      expect(canOpenCourse(created, buyer, regime)).toBe(false);
+      expect(canOpenCourse({ slug: "open-course", activeOnly: false }, buyer, regime)).toBe(false);
+    });
+
+    test(`under ${name}, stays on the digital course even while seen training or marked`, () => {
+      const training = { ...buyer, seenTrainingOn: "2026-11-30", accessUntil: "2026-12-31" };
+      expect(canOpenCourse(digital, training, regime)).toBe(true);
+      expect(canOpenCourse(tactical, training, regime)).toBe(false);
+    });
+
+    test(`under ${name}, a course-only viewer with no role opens nothing`, () => {
+      expect(canOpenCourse(digital, { ...buyer, role: null }, regime)).toBe(false);
+    });
+  }
+
+  test("staff are never confined, whatever their Arbox facts", () => {
+    for (const role of ["admin", "trainer"]) {
+      expect(canOpenCourse(tactical, { ...buyer, role }, ctx)).toBe(true);
+    }
+  });
+});
+
+describe("canOpenCourse for a course an admin created", () => {
+  test("under the old rule it opens like the tactical course: active trainees only", () => {
+    const before = { ...ctx, lastGoodSweepOn: null };
+    expect(canOpenCourse(created, base, before)).toBe(true);
+    expect(canOpenCourse(created, { ...base, isActive: false }, before)).toBe(false);
   });
 });

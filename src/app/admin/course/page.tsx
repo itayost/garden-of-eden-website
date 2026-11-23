@@ -8,6 +8,7 @@ import { CourseSwitcher } from "@/features/course/components/admin/CourseSwitche
 import { CourseNotice } from "@/features/course/components/CourseNotice";
 import { DIGITAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { CourseAdminClient } from "@/features/course/components/admin/CourseAdminClient";
+import { NewCourseDialog } from "@/features/course/components/admin/NewCourseDialog";
 import { CourseSweepNotice } from "@/features/course/components/admin/CourseSweepNotice";
 import { getCourseSweepSpan } from "@/features/course/lib/course-access-context";
 import { courseSweepNotice } from "@/lib/course-access/status";
@@ -61,14 +62,20 @@ export default async function AdminCoursePage({ searchParams }: AdminCoursePageP
 
       {isAdmin && <CourseSweepNotice notice={courseSweepNotice(sweepSpan, israelDateStr(new Date()))} />}
 
-      <CourseSwitcher courses={courses} current={slug} basePath="/admin/course" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <CourseSwitcher courses={courses} current={slug} basePath="/admin/course" />
+        {isAdmin && course && <NewCourseDialog />}
+      </div>
 
       {!isAdmin ? (
         <CourseNotice message="עריכת תכני הקורס פתוחה למנהלים בלבד. אפשר לצפות בהתקדמות המתאמנים בכפתור שלמעלה." />
       ) : course ? (
         <CourseAdminClient key={course.id} course={course} />
       ) : (
-        <CourseNotice message="עדיין לא נוצר קורס. הרץ את סקריפט הזריעה כדי לייבא את הפרקים והשיעורים." />
+        <div className="space-y-4">
+          <CourseNotice message="עדיין לא נוצר קורס." />
+          <NewCourseDialog />
+        </div>
       )}
     </div>
   );

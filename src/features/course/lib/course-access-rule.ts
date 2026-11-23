@@ -15,6 +15,8 @@ export interface CourseViewer {
   readonly accessUntil: string | null;
   /** profiles.arbox_bought_course, or an access_override of course_only. */
   readonly boughtCourse: boolean;
+  /** In the course-only tier (`resolveAccessTier()`): the digital course is all they may open. */
+  readonly courseOnly: boolean;
 }
 
 export interface CourseAccessContext {
@@ -53,11 +55,12 @@ export function isTrainingNow(
 }
 
 /**
- * Who may open a course. Staff always may. A trainee opens a course while he
- * trains now: Arbox or the calendar saw him within the grace period of the last
- * good sweep, or an admin marked him until a day that has not passed. Buyers of
- * the digital course keep that course only. Pure, so the pages and the
- * video-URL action cannot disagree.
+ * Who may open a course. Staff always may. Someone in the course-only tier opens
+ * the digital course and nothing else, under either rule, as the middleware
+ * keeps them to it. A trainee opens a course while he trains now: Arbox or the
+ * calendar saw him within the grace period of the last good sweep, or an admin
+ * marked him until a day that has not passed. Buyers of the digital course keep
+ * that course only. Pure, so the pages and the video-URL action cannot disagree.
  */
 export function canOpenCourse(
   course: { readonly slug: string; readonly activeOnly: boolean },
@@ -65,6 +68,7 @@ export function canOpenCourse(
   ctx: CourseAccessContext,
 ): boolean {
   if (viewer.role === "admin" || viewer.role === "trainer") return true;
+  if (viewer.courseOnly) return viewer.role === "trainee" && course.slug === DIGITAL_COURSE_SLUG;
   // Until the rule is on (no good sweep a week old yet) keep the old rule.
   if (ctx.lastGoodSweepOn === null) {
     return viewer.role === "trainee" && (!course.activeOnly || viewer.isActive);

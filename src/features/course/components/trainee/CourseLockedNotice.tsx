@@ -9,7 +9,7 @@ import {
 import { CourseCover } from "./CourseCover";
 
 interface CourseLockedNoticeProps {
-  course: Pick<Course, "titleHe" | "descriptionHe">;
+  course: Pick<Course, "titleHe" | "descriptionHe" | "coverUrl">;
   /** Which "ask the parent" button to show, or null for none. */
   askParent: AskParent | null;
 }
@@ -20,7 +20,11 @@ interface CourseLockedNoticeProps {
  */
 export function CourseLockedNotice({ course, askParent }: CourseLockedNoticeProps) {
   return (
-    <CourseCover titleHe={course.titleHe} descriptionHe={course.descriptionHe}>
+    <CourseCover
+      titleHe={course.titleHe}
+      descriptionHe={course.descriptionHe}
+      coverUrl={course.coverUrl}
+    >
       <p className="flex items-center gap-2 text-sm font-medium">
         <Lock className="size-4 shrink-0 text-primary" aria-hidden="true" />
         {COURSE_ACCESS_DENIED}

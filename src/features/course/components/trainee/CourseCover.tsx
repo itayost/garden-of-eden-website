@@ -6,6 +6,8 @@ import type { CourseChapterWithLessons } from "@/features/course/lib/types";
 interface CourseCoverProps {
   titleHe: string;
   descriptionHe: string | null;
+  /** Cover image drawn behind the gradient; none keeps the plain gradient. */
+  coverUrl?: string | null;
   /** Shows the chapters, lessons and watch time line; a locked course has none. */
   chapters?: CourseChapterWithLessons[];
   /** Under the rule, in place of the stats line (the locked course's notice). */
@@ -19,6 +21,7 @@ interface CourseCoverProps {
 export function CourseCover({
   titleHe,
   descriptionHe,
+  coverUrl,
   chapters,
   children,
 }: CourseCoverProps) {
@@ -38,6 +41,21 @@ export function CourseCover({
         "border border-primary/20 p-6 sm:p-10"
       )}
     >
+      {coverUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 size-full object-cover"
+          />
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/50"
+            aria-hidden="true"
+          />
+        </>
+      )}
       <div
         className="pointer-events-none absolute inset-0 opacity-5"
         aria-hidden="true"
