@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { TraineeCourseProgress } from "@/features/course/lib/actions/course-progress-report";
+import type { TraineeCourseProgress } from "@/features/course/lib/lesson-views";
 
 interface CourseProgressExportButtonProps {
   trainees: TraineeCourseProgress[];
