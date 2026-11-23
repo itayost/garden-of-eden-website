@@ -21,8 +21,29 @@ export interface BranchOption {
   nameHe: string;
 }
 
-/** A profile row with its memberships resolved, for admin tables and exports. */
-export type ProfileWithBranches = Profile & {
+/**
+ * The profile columns the users list, its table and its CSV export read. The
+ * page selects only these, so the whole academy's profiles are not sent to the
+ * browser with every column. Add a column here when a list surface needs it.
+ */
+export const USER_LIST_COLUMNS =
+  "id, full_name, phone, role, is_active, position, avatar_url, deleted_at, created_at";
+
+export type UserListProfile = Pick<
+  Profile,
+  | "id"
+  | "full_name"
+  | "phone"
+  | "role"
+  | "is_active"
+  | "position"
+  | "avatar_url"
+  | "deleted_at"
+  | "created_at"
+>;
+
+/** A users-list profile with its memberships resolved, for admin tables and exports. */
+export type ProfileWithBranches = UserListProfile & {
   branchIds: string[];
   branchNames: string[];
   /** Plan status and medical flag; absent for staff and for trainees with neither. */

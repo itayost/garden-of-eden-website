@@ -32,11 +32,10 @@ import { loadBranchIdsByProfile, loadManagedBranchIds } from "@/features/branche
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { allowedBranches } from "@/lib/branches/resolve-branch";
-import { isTraineeInScope } from "@/features/branches/lib/memberships";
 import { getPlanForProfileAction } from "@/features/plans/lib/actions/admin-plans";
 import { getTraineeHealthAction } from "@/features/plans/lib/actions/trainee-health";
 import { UserPlanCard } from "@/features/plans/components/UserPlanCard";
-import { canManageBranches } from "@/lib/branches/branch-scope";
+import { canManageBranches, isInBranchScope } from "@/lib/branches/branch-scope";
 import { HealthCard } from "@/features/plans/components/HealthCard";
 import { TraineeCheckinsCard } from "@/features/checkins/components/TraineeCheckinsCard";
 import { TrainingHistoryCard } from "@/features/training-history/components/TrainingHistoryCard";
@@ -64,24 +63,39 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     redirect("/login");
   }
 
-  const { data: currentProfile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", currentUser.id)
-    .single()) as { data: { role: string } | null };
+  // The caller's role, the profile being opened, and the branch data the
+  // checks below need are independent reads: one round trip for all of them.
+  // Memberships are read through the service role: a trainer cannot read
+  // another user's profile_branches rows through RLS. Nothing is rendered
+  // until the checks below pass.
+  const adminClient = createAdminClient();
+  const [
+    { data: currentProfile },
+    { data: userToEdit },
+    activeBranches,
+    membershipMap,
+    scopeResult,
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", currentUser.id)
+      .single() as unknown as Promise<{ data: { role: string } | null }>,
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single() as unknown as Promise<{ data: Profile | null }>,
+    listActiveBranchOptionsAction(),
+    loadBranchIdsByProfile(adminClient, [userId]),
+    getBranchScopeAction(),
+  ]);
 
   if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/dashboard");
   }
 
   const isAdmin = currentProfile?.role === "admin";
-
-  // Get user to edit
-  const { data: userToEdit } = (await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single()) as { data: Profile | null };
 
   if (!userToEdit) {
     notFound();
@@ -92,59 +106,46 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
     redirect("/admin/users");
   }
 
-  // Memberships read through the service role: a trainer cannot read another
-  // user's profile_branches rows through RLS, and this page is already gated.
-  const adminClient = createAdminClient();
-  const [activeBranches, membershipMap, scopeResult] = await Promise.all([
-    listActiveBranchOptionsAction(),
-    loadBranchIdsByProfile(adminClient, [userId]),
-    getBranchScopeAction(),
-  ]);
   if ("error" in scopeResult) redirect("/admin/users");
   const scope = scopeResult.data.scope;
+  const initialBranchIds = membershipMap.get(userId) ?? [];
 
   // A trainer reaches only trainees in their branches, and may toggle only
-  // those branches on the form; the action preserves the rest.
-  if (!isAdmin && !(await isTraineeInScope(adminClient, scope, userId))) {
+  // those branches on the form; the action preserves the rest. Same rule as
+  // isTraineeInScope(), on the memberships already read above.
+  if (!isAdmin && !isInBranchScope(scope, initialBranchIds)) {
     redirect("/admin/users");
   }
-  // Course access, for the card staff see on a trainee. The rule is on once a
-  // good sweep is a week old; until then the card says the old rule holds.
-  const courseCtx = userToEdit.role === "trainee" ? await getCourseAccessContext() : null;
 
   const branches = allowedBranches(scope, activeBranches);
-  const initialBranchIds = membershipMap.get(userId) ?? [];
-  // Only an Admin sees or sets which branches a trainer manages.
-  const initialManagedBranchIds =
-    isAdmin && userToEdit.role === "trainer" ? await loadManagedBranchIds(adminClient, userId) : [];
+  const isTrainee = userToEdit.role === "trainee";
 
-  // Compute player ratings for radar chart (trainees only)
-  let stats: {
-    pace: number | null;
-    shooting: number | null;
-    passing: number | null;
-    dribbling: number | null;
-    defending: number | null;
-    physical: number | null;
-  } | null = null;
-  if (userToEdit.role === "trainee") {
-    const { ratings } = await getPlayerRatings(supabase, userToEdit.id);
-    stats = {
-      pace: ratings.pace,
-      shooting: ratings.shooting,
-      passing: ratings.passing,
-      dribbling: ratings.dribbling,
-      defending: ratings.defending,
-      physical: ratings.physical,
-    };
-  }
+  // Everything the cards need, at once. The plan and health loaders are
+  // branch scoped, so a trainer sees them for their own trainees only.
+  const [courseCtx, initialManagedBranchIds, ratingsResult, planRow, health] = await Promise.all([
+    // Course access, for the card staff see on a trainee. The rule is on once
+    // a good sweep is a week old; until then the card says the old rule holds.
+    isTrainee ? getCourseAccessContext() : null,
+    // Only an Admin sees or sets which branches a trainer manages.
+    isAdmin && userToEdit.role === "trainer"
+      ? loadManagedBranchIds(adminClient, userId)
+      : ([] as string[]),
+    // Player ratings for the radar chart (trainees only)
+    isTrainee ? getPlayerRatings(supabase, userToEdit.id) : null,
+    isTrainee ? getPlanForProfileAction(userId) : null,
+    isTrainee ? getTraineeHealthAction(userId) : null,
+  ]);
 
-  // Both loaders are branch scoped, so a trainer sees them for their own
-  // trainees only.
-  const [planRow, health] =
-    userToEdit.role === "trainee"
-      ? await Promise.all([getPlanForProfileAction(userId), getTraineeHealthAction(userId)])
-      : [null, null];
+  const stats = ratingsResult
+    ? {
+        pace: ratingsResult.ratings.pace,
+        shooting: ratingsResult.ratings.shooting,
+        passing: ratingsResult.ratings.passing,
+        dribbling: ratingsResult.ratings.dribbling,
+        defending: ratingsResult.ratings.defending,
+        physical: ratingsResult.ratings.physical,
+      }
+    : null;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";

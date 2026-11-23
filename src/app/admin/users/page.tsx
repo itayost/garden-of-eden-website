@@ -7,7 +7,6 @@ import { UserDataTable } from "@/components/admin/users/UserDataTable";
 import { UserImportDialog } from "@/components/admin/users/UserImportDialog";
 import { UserExportButton } from "@/components/admin/users/UserExportButton";
 import { ArboxSyncButton } from "@/components/admin/users/ArboxSyncButton";
-import type { Profile } from "@/types/database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { newestFirst, readInChunks } from "@/lib/supabase/in-chunks";
 import {
@@ -16,7 +15,12 @@ import {
   loadBranchIdsByProfile,
   scopedProfileIds,
 } from "@/features/branches/lib/memberships";
-import { toBranchOption, type ProfileWithBranches } from "@/types/branches";
+import {
+  toBranchOption,
+  USER_LIST_COLUMNS,
+  type ProfileWithBranches,
+  type UserListProfile,
+} from "@/types/branches";
 import { getBranchScopeAction } from "@/lib/actions/shared";
 import { loadPlanStatusesForStaff } from "@/features/plans/lib/actions/staff-plan-badges";
 import { listSellableProductsAction } from "@/features/plans/lib/actions/staff-payment";
@@ -68,18 +72,24 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
 
   // Admins see everyone (including soft-deleted); the branch filter on the
   // table narrows client-side like the other filters. Trainers see trainees
-  // in their branches only.
+  // in their branches only. The branch list, the sellable products and the
+  // search params do not depend on the scope, so they load alongside it.
   const adminClient = createAdminClient();
-  const scopeResult = await getBranchScopeAction();
+  const [scopeResult, allBranches, sellable, params] = await Promise.all([
+    getBranchScopeAction(),
+    loadAllBranches(adminClient),
+    listSellableProductsAction(),
+    searchParams,
+  ]);
   // A failed scope read must not widen a trainer's view to the whole academy.
   if ("error" in scopeResult) redirect("/dashboard");
   const scopedIds = isAdmin ? null : await scopedProfileIds(adminClient, scopeResult.data.scope);
 
   // A trainer's scope is every member of their branches, more ids than one
   // request URL holds: read a slice at a time. An empty scope is a real
-  // answer and sends no request.
+  // answer and sends no request. Only the columns the list shows are read.
   const { data: users, error } = await readInChunks(scopedIds, "id", () => {
-    const query = supabase.from("profiles").select("*").order("id");
+    const query = supabase.from("profiles").select(USER_LIST_COLUMNS).order("id");
     return isAdmin ? query : query.eq("role", "trainee");
   });
 
@@ -87,12 +97,11 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
     console.error("Failed to fetch users:", error);
   }
 
-  const typedUsers = [...(users as Profile[])].sort(newestFirst("created_at"));
+  const typedUsers = [...(users as UserListProfile[])].sort(newestFirst("created_at"));
 
   // Memberships through the service role: the page is gated above, and a
   // trainer cannot read other users' profile_branches rows through RLS.
-  const [allBranches, membershipMap, planBadges] = await Promise.all([
-    loadAllBranches(adminClient),
+  const [membershipMap, planBadges] = await Promise.all([
     loadBranchIdsByProfile(adminClient, typedUsers.map((u) => u.id)),
     loadPlanStatusesForStaff(
       typedUsers.filter((u) => u.role === "trainee").map((u) => u.id),
@@ -113,8 +122,6 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
     };
   });
 
-  const params = await searchParams;
-  const sellable = await listSellableProductsAction();
   const activeUserCount = usersWithBranches.filter((u) => !u.deleted_at).length;
 
   return (

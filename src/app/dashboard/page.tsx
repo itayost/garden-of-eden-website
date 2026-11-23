@@ -9,13 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { PlayerCard } from "@/components/player-card";
 import { ArrowLeft, Salad, TrendingUp } from "lucide-react";
 import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
-import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
-import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
+import { getPlayerRatingHistory, latestRatings } from "@/lib/utils/get-player-ratings";
 import { hebrewWeekday } from "@/lib/utils/date";
 import { israelToday } from "@/lib/utils/tasks";
 import { ActionTile, type ActionTileIcon } from "@/components/dashboard/ActionTile";
-import { transformToRatingChartData } from "@/features/progress-charts/lib/transforms";
+import { ratingHistoryToChartData } from "@/features/progress-charts/lib/transforms";
 import { RatingMigrationBanner } from "@/components/dashboard/RatingMigrationBanner";
 import { StreakCard, StreakCelebrationClient } from "@/features/streak-tracking";
 import { GoalsList, calculateGoalProgress } from "@/features/goals";
@@ -58,39 +57,45 @@ export default async function DashboardPage() {
     redirect("/auth/login?redirect=/dashboard");
   }
 
-  // Get user's data
+  // Every read below depends only on the signed-in user, so they all run at
+  // once: one round trip of latency instead of five stages in a row.
+  const userId = user.id;
   const [
     { data: profile },
     { data: nutritionForm },
-    { data: assessments },
+    { data: assessmentRows },
     { count: preWorkoutCount },
     { count: postWorkoutCount },
     { count: videosWatched },
     { data: streakData },
     { data: goalsData },
     { data: achievementsData },
+    snapshotHistory,
+    nextGame,
+    ownClipWithUrl,
+    ownPlan,
+    booking,
+    notices,
+    canAskParent,
   ] = await Promise.all([
-    supabase.from("profiles").select("full_name, birthdate, age_group_override, age_group_override_until, position, created_at, processed_avatar_url, avatar_url").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
-    supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").limit(1).maybeSingle() as unknown as { data: { id: string } | null },
-    supabase.from("player_assessments").select("*").eq("user_id", user?.id || "").order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
-    supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
-    supabase.from("post_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },
-    supabase.from("video_progress").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "").eq("watched", true) as unknown as { count: number | null },
-    supabase.from("user_streaks").select("user_id, current_streak, longest_streak, last_activity_date, total_activities").eq("user_id", user?.id || "").single() as unknown as { data: UserStreakRow | null },
-    supabase.from("player_goals").select("*").eq("user_id", user?.id || "").order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
-    supabase.from("user_achievements").select("id, achievement_id, badge_type, unlocked_at, celebrated").eq("user_id", user?.id || "").order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null },
-  ]);
-
-  const [nextGame, ownClipWithUrl] = await Promise.all([
+    supabase.from("profiles").select("full_name, birthdate, age_group_override, age_group_override_until, position, created_at, processed_avatar_url, avatar_url").eq("id", userId).single() as unknown as { data: Profile | null },
+    supabase.from("nutrition_forms").select("id").eq("user_id", userId).limit(1).maybeSingle() as unknown as { data: { id: string } | null },
+    // Only whether any assessment exists is used here.
+    supabase.from("player_assessments").select("id").eq("user_id", userId).limit(1) as unknown as { data: { id: string }[] | null },
+    supabase.from("pre_workout_forms").select("id", { count: "exact", head: true }).eq("user_id", userId) as unknown as { count: number | null },
+    supabase.from("post_workout_forms").select("id", { count: "exact", head: true }).eq("user_id", userId) as unknown as { count: number | null },
+    supabase.from("video_progress").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("watched", true) as unknown as { count: number | null },
+    supabase.from("user_streaks").select("user_id, current_streak, longest_streak, last_activity_date, total_activities").eq("user_id", userId).single() as unknown as { data: UserStreakRow | null },
+    supabase.from("player_goals").select("*").eq("user_id", userId).order("created_at", { ascending: false }) as unknown as { data: PlayerGoalRow[] | null },
+    supabase.from("user_achievements").select("id, achievement_id, badge_type, unlocked_at, celebrated").eq("user_id", userId).order("unlocked_at", { ascending: false }) as unknown as { data: UserAchievementRow[] | null },
+    // One read of the rating snapshots feeds both the card and the chart.
+    getPlayerRatingHistory(supabase, userId),
     getOwnNextGame(),
     getOwnClipWithSignedUrl(),
-  ]);
-
-  const [ownPlan, booking, notices, canAskParent] = await Promise.all([
     loadOwnPlanQueue(israelToday()),
-    loadNextBooking(user.id),
+    loadNextBooking(userId),
     getMyNoticesAction(),
-    canAskParentToBuy(createAdminClient(), user.id),
+    canAskParentToBuy(createAdminClient(), userId),
   ]);
   const canBook = booking.canBook;
   const nextBooking = booking.next;
@@ -106,13 +111,9 @@ export default async function DashboardPage() {
   // Age group + FIFA-style ratings: ratings come from the latest snapshot row,
   // which was frozen at assessment write time (stable history, no moving baseline).
   const ageGroup = profile ? resolveAgeGroup(profile) : null;
-  const hasAssessments = assessments && assessments.length > 0;
-  const calculatedRatings = hasAssessments && user
-    ? (await getPlayerRatings(supabase, user.id)).ratings
-    : null;
-  const ratingHistory = hasAssessments && user
-    ? await transformToRatingChartData(supabase, user.id)
-    : [];
+  const hasAssessments = (assessmentRows?.length ?? 0) > 0;
+  const calculatedRatings = hasAssessments ? latestRatings(snapshotHistory) : null;
+  const ratingHistory = hasAssessments ? ratingHistoryToChartData(snapshotHistory) : [];
 
   const quickActions: Array<{
     title: string;
@@ -353,7 +354,7 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        {assessments && assessments.length > 0 && (
+        {hasAssessments && (
           <Link href="/dashboard/assessments" className="mt-3 block">
             <div className="transition-shadow hover:shadow-md">
               <MiniRatingChartWrapper data={ratingHistory} />
@@ -368,7 +369,7 @@ export default async function DashboardPage() {
           <h2 className="text-xl font-semibold mb-4">היעדים שלי</h2>
           <GoalsList
             goals={goalsWithProgress}
-            userId={user?.id || ""}
+            userId={user.id}
             variant="dashboard"
           />
         </div>
