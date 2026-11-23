@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PlayerAssessment } from "@/types/assessment";
-import { getPlayerRatingHistory } from "@/lib/utils/get-player-ratings";
+import { getPlayerRatingHistory, type RatingHistoryRow } from "@/lib/utils/get-player-ratings";
 import type {
   ChartDataPoint,
   PhysicalMetricKey,
@@ -77,7 +77,13 @@ export async function transformToRatingChartData(
   supabase: SupabaseClient,
   userId: string
 ): Promise<RatingDataPoint[]> {
-  const history = await getPlayerRatingHistory(supabase, userId);
+  return ratingHistoryToChartData(await getPlayerRatingHistory(supabase, userId));
+}
+
+/** Chart points from an already loaded rating history (date ascending). */
+export function ratingHistoryToChartData(
+  history: readonly RatingHistoryRow[]
+): RatingDataPoint[] {
   return history.map((snapshot) => ({
     date: snapshot.date,
     dateDisplay: formatHebrewDate(snapshot.date),

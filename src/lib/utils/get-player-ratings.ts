@@ -46,6 +46,25 @@ export async function getPlayerRatings(
 }
 
 /**
+ * Current ratings from a date-ascending history: its last row, the same row
+ * getPlayerRatings() reads. Lets a page that needs both read the snapshots once.
+ * Returns neutral (all-null) ratings for an empty history.
+ */
+export function latestRatings(history: readonly RatingHistoryRow[]): CalculatedRatings {
+  const last = history.at(-1);
+  if (!last) return calculateNeutralRatings();
+  return {
+    pace: last.pace,
+    shooting: last.shooting,
+    passing: last.passing,
+    dribbling: last.dribbling,
+    defending: last.defending,
+    physical: last.physical,
+    overall_rating: last.overall_rating,
+  };
+}
+
+/**
  * Full rating history for the chart, in date-ascending order.
  * Returns an empty array if no snapshots exist for this user.
  */
