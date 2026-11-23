@@ -4,6 +4,12 @@ import { ChevronRight } from "lucide-react";
 import { getCourseProgressReport } from "@/features/course/lib/actions/course-progress-report";
 import { listCourses } from "@/features/course/lib/actions/admin-course";
 import { CourseSwitcher } from "@/features/course/components/admin/CourseSwitcher";
+import { LessonViewsList } from "@/features/course/components/admin/LessonViewsList";
+import {
+  ProgressViewTabs,
+  progressViewFrom,
+  progressViewQuery,
+} from "@/features/course/components/admin/ProgressViewTabs";
 import { CourseNotice } from "@/features/course/components/CourseNotice";
 import { DIGITAL_COURSE_SLUG } from "@/features/course/lib/course-slugs";
 import { CourseProgressExportButton } from "@/components/admin/exports/CourseProgressExportButton";
@@ -16,11 +22,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface CourseProgressPageProps {
-  searchParams: Promise<{ course?: string }>;
+  searchParams: Promise<{ course?: string; view?: string }>;
 }
 
 export default async function CourseProgressPage({ searchParams }: CourseProgressPageProps) {
-  const slug = (await searchParams).course ?? DIGITAL_COURSE_SLUG;
+  const params = await searchParams;
+  const slug = params.course ?? DIGITAL_COURSE_SLUG;
+  const view = progressViewFrom(params.view);
   const [report, courses] = await Promise.all([getCourseProgressReport(slug), listCourses()]);
 
   if (!report) {
@@ -29,7 +37,7 @@ export default async function CourseProgressPage({ searchParams }: CourseProgres
     );
   }
 
-  const started = report.trainees.filter((t) => t.doneCount > 0);
+  const started = report.trainees.filter((t) => t.hasStarted);
   const finished = report.trainees.filter(
     (t) => report.lessonTotal > 0 && t.doneCount >= report.lessonTotal
   );
@@ -48,7 +56,12 @@ export default async function CourseProgressPage({ searchParams }: CourseProgres
         <p className="text-muted-foreground">{report.courseTitleHe}</p>
       </div>
 
-      <CourseSwitcher courses={courses} current={slug} basePath="/admin/course/progress" />
+      <CourseSwitcher
+        courses={courses}
+        current={slug}
+        basePath="/admin/course/progress"
+        query={progressViewQuery(view)}
+      />
 
       {/* dt precedes dd so a screen reader pairs each label with its own value;
           flex-col-reverse keeps the number on top visually. */}
@@ -71,15 +84,19 @@ export default async function CourseProgressPage({ searchParams }: CourseProgres
         ))}
       </dl>
 
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold">לפי מתאמן</h2>
-        <CourseProgressExportButton
-          trainees={report.trainees}
-          lessonTotal={report.lessonTotal}
-        />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ProgressViewTabs courseSlug={slug} current={view} />
+        {view === "trainees" && (
+          <CourseProgressExportButton
+            trainees={report.trainees}
+            lessonTotal={report.lessonTotal}
+          />
+        )}
       </div>
 
-      {report.trainees.length === 0 ? (
+      {view === "lessons" ? (
+        <LessonViewsList lessons={report.lessons} />
+      ) : report.trainees.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
           אין מתאמנים להצגה.
         </p>

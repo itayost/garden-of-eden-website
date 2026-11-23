@@ -7,17 +7,19 @@ interface CourseSwitcherProps {
   current: string;
   /** "/admin/course" or "/admin/course/progress". */
   basePath: string;
+  /** More of the query to keep across courses, starting with "&". */
+  query?: string;
 }
 
 /** Tabs between courses; the choice lives in ?course= so it survives reloads. */
-export function CourseSwitcher({ courses, current, basePath }: CourseSwitcherProps) {
+export function CourseSwitcher({ courses, current, basePath, query = "" }: CourseSwitcherProps) {
   if (courses.length < 2) return null;
   return (
     <nav aria-label="בחירת קורס" className="flex flex-wrap gap-2">
       {courses.map((course) => (
         <Link
           key={course.slug}
-          href={`${basePath}?course=${course.slug}`}
+          href={`${basePath}?course=${course.slug}${query}`}
           aria-current={course.slug === current ? "page" : undefined}
           className={cn(
             "rounded-full border px-4 py-1.5 text-sm transition-colors",
