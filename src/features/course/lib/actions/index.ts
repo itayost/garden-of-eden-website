@@ -11,7 +11,7 @@ export {
 
 export {
   createCourse,
-  updateCourseDetails,
+  updateCourseDescription,
   moveCourse,
   deleteCourse,
   createChapter,

@@ -33,7 +33,7 @@ export default async function DashboardLayout({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override, is_active",
+      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override",
     )
     .eq("id", user.id)
     .maybeSingle() as unknown as {
@@ -66,7 +66,7 @@ export default async function DashboardLayout({
   // Independent reads; run together so every dashboard render pays for one.
   // The menu shows "קורסים" while any course is published. Locked courses
   // still appear in the list with a lock, so this does not depend on access.
-  const [canBook, { data: publishedCourse }] = await Promise.all([
+  const [canBook, { data: publishedCourse, error: coursesError }] = await Promise.all([
     profile?.role === "trainee" ? canBookForUser(user.id) : Promise.resolve(false),
     supabase
       .from("courses")
@@ -75,6 +75,9 @@ export default async function DashboardLayout({
       .limit(1)
       .maybeSingle(),
   ]);
+  if (coursesError) {
+    console.error("Dashboard layout published courses read failed:", coursesError);
+  }
   const capabilities = { booking: canBook, courses: publishedCourse !== null };
   const firstName = firstNameOf(profile?.full_name ?? null);
   const cookieStore = await cookies();

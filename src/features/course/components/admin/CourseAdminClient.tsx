@@ -289,7 +289,10 @@ export function CourseAdminClient({ course }: CourseAdminClientProps) {
                   errorMessage="מחיקת הפרק נכשלה"
                   onDelete={() => deleteChapter(selected.id)}
                   onSuccess={() => {
-                    setSelectedId(null);
+                    const deleted = selected.id;
+                    setSelectedId(
+                      course.chapters.find((c) => c.id !== deleted)?.id ?? null,
+                    );
                     router.refresh();
                   }}
                   trigger={

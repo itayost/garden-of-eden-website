@@ -660,7 +660,8 @@ export async function listCourses(): Promise<{ slug: string; titleHe: string }[]
   const { data, error: readError } = await createAdminClient()
     .from("courses")
     .select("slug, title_he")
-    .order("order_index", { ascending: true });
+    .order("order_index", { ascending: true })
+    .order("id", { ascending: true });
   if (readError) {
     console.error("listCourses failed:", readError);
     return [];

@@ -74,31 +74,29 @@ export async function createCourse(
   return { success: true, slug };
 }
 
-/** Change a course's title and description. */
-export async function updateCourseDetails(
+/**
+ * Change only a course's description. The title keeps its own editor
+ * (`renameCourse`), so saving a description never resends a title from a stale
+ * screen or touches the placeholder flag.
+ */
+export async function updateCourseDescription(
   courseId: string,
-  details: { titleHe: string; descriptionHe: string | null }
+  descriptionHe: string | null
 ): Promise<CourseActionResult> {
   const { error: authError } = await verifyAdmin();
   if (authError) return { error: authError };
   if (!isValidUUID(courseId)) return { error: "מזהה קורס לא תקין" };
 
-  const titleError = validateTitle(details.titleHe);
-  if (titleError) return { error: titleError };
-  const description = cleanOptionalText(details.descriptionHe, MAX_DESCRIPTION);
+  const description = cleanOptionalText(descriptionHe, MAX_DESCRIPTION);
   if ("error" in description) return { error: description.error };
 
   const db = createAdminClient();
   const { data, error } = await db.from("courses")
-    .update({
-      title_he: details.titleHe.trim(),
-      description_he: description.value,
-      needs_title: false,
-    })
+    .update({ description_he: description.value })
     .eq("id", courseId)
     .select("id");
   if (error) {
-    console.error("updateCourseDetails failed:", error);
+    console.error("updateCourseDescription failed:", error);
     return { error: SAVE_FAILED };
   }
   if (!Array.isArray(data) || data.length === 0) {

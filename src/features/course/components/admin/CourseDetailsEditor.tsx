@@ -12,7 +12,7 @@ import { DeleteConfirmDialog } from "@/components/admin/DeleteConfirmDialog";
 import {
   deleteCourse,
   moveCourse,
-  updateCourseDetails,
+  updateCourseDescription,
 } from "@/features/course/lib/actions/admin-course-structure";
 
 interface CourseDetailsEditorProps {
@@ -42,10 +42,10 @@ export function CourseDetailsEditor({
 
   const handleSave = () => {
     startSave(async () => {
-      const result = await updateCourseDetails(courseId, {
-        titleHe,
-        descriptionHe: description.trim() || null,
-      });
+      const result = await updateCourseDescription(
+        courseId,
+        description.trim() || null
+      );
       if ("error" in result) {
         toast.error(result.error);
         return;

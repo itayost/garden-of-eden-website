@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { courseHref } from "@/features/course/lib/course-slugs";
-import type { CourseCard } from "@/features/course/lib/load-course-list";
+import { COURSE_ACCESS_DENIED } from "@/features/course/lib/course-access-rule";
+import type { CourseCard } from "@/features/course/lib/course-card";
 
 interface CourseListProps {
   courses: CourseCard[];
@@ -74,7 +75,7 @@ function CourseCardLink({ course }: { course: CourseCard }) {
         {!course.canOpen && (
           <p className="flex items-center gap-2 text-sm font-medium">
             <Lock className="size-4 shrink-0 text-primary" aria-hidden="true" />
-            הקורס פתוח למתאמנים פעילים
+            {COURSE_ACCESS_DENIED}
           </p>
         )}
       </div>

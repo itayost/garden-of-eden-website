@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { loadCourseForViewer } from "@/features/course/lib/load-course";
 import { CourseNotice } from "../CourseNotice";
 import { CourseLockedNotice } from "./CourseLockedNotice";
@@ -21,9 +22,8 @@ interface CourseHomePageProps {
 export async function CourseHomePage({ slug, basePath }: CourseHomePageProps) {
   const { course, progress, canOpen, askParent } = await loadCourseForViewer(slug);
 
-  if (!course) {
-    return <CourseNotice message="הקורס עדיין לא פורסם. נעדכן אותך ברגע שהוא יעלה." />;
-  }
+  // An unknown, deleted or unpublished course is not there for a trainee.
+  if (!course) notFound();
 
   if (!canOpen) {
     return (
