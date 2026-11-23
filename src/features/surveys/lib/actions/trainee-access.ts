@@ -9,7 +9,6 @@ import { waitUntil } from "@vercel/functions";
 
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import { inSurveyAudience } from "../audience";
@@ -17,6 +16,7 @@ import { SHARED_MESSAGES } from "../messages";
 import { loadCandidate, loadSurvey, type Db, type LoadedSurvey } from "../queries";
 import { surveyState } from "../state";
 import type { ActionFailure } from "./staff-access";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export const TRAINEE_MESSAGES = {
   signIn: "נדרשת התחברות",
@@ -31,10 +31,7 @@ export const TRAINEE_MESSAGES = {
 
 /** The signed-in user's id, when there is one and they are under the rate limit. */
 export async function requireSignedIn(): Promise<ActionFailure | { userId: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: TRAINEE_MESSAGES.signIn };
 
   const limit = await checkRateLimit(`survey:${user.id}`, "general");

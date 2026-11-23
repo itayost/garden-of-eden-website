@@ -2,20 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { waitUntil } from "@vercel/functions";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { israelToday } from "@/lib/utils/tasks";
 import { parentPhoneSchema, type ParentPhoneInput } from "@/lib/validations/parent-phone";
 import { noParentRefusal, parentPhoneRefusal } from "../prompt";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 type Result = { success: true } | { error: string };
 
 async function signedInUserId(): Promise<string | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   return user?.id ?? null;
 }
 

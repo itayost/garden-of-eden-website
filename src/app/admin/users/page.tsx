@@ -23,6 +23,7 @@ import { listSellableProductsAction } from "@/features/plans/lib/actions/staff-p
 import { NewTraineeSheet } from "@/features/plans/components/staff/NewTraineeSheet";
 import { onlinePaymentsOpen } from "@/lib/payments/online-payments";
 import { isMorningConfigured } from "@/lib/morning/config";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 // The "סנכרון עם Arbox" action runs on this page and reads ~500 Arbox clients.
 export const maxDuration = 300;
@@ -46,19 +47,13 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   const supabase = await createClient();
 
   // Verify admin role before showing user list
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     redirect("/login");
   }
 
-  const { data: currentProfile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", currentUser.id)
-    .single()) as { data: { role: string } | null };
+  const currentProfile = await getCurrentProfile();
 
   if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/dashboard");

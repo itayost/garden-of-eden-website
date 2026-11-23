@@ -27,6 +27,7 @@ import {
   buildAgeGroupOptions,
 } from "../utils/ranking-utils";
 import { resolveAgeGroup, type AgeGroupProfile } from "@/lib/age-group-override";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 // ===========================================
 // TYPES
@@ -63,9 +64,7 @@ export async function getRankingsData(
   const supabase = await createClient();
 
   // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   // Nothing below the login gate should touch the service role: an
   // unauthenticated call gets the empty shape and no membership read.

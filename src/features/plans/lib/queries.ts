@@ -2,7 +2,6 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { readInChunks } from "@/lib/supabase/in-chunks";
 import {
@@ -18,6 +17,7 @@ import { PLAN_FREEZES_EMBED, toQueuePlan, type PlanFreezeRow } from "@/lib/plans
 import { orderPlanName } from "@/lib/plans/manual-card";
 import { arboxCardName } from "@/lib/plans/arbox-card-name";
 import type { Order, PlanProduct, PlanStatus, TraineePlan } from "@/types/plans";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 type ProductBits = Pick<PlanProduct, "name_he" | "kind">;
 
@@ -193,10 +193,7 @@ export async function loadPlanQueues(
  * the admin client does the read because the roster tables are staff-only.
  */
 export async function loadOwnPlanQueue(today: string): Promise<PlanQueueView | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
   const map = await loadPlanQueues(createAdminClient(), [user.id], today);
   return map.get(user.id) ?? null;

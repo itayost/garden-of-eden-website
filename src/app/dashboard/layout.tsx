@@ -17,6 +17,7 @@ import {
   resolveAccessTier,
   type AccessOverride,
 } from "@/lib/access/course-access";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export default async function DashboardLayout({
   children,
@@ -24,27 +25,27 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login?redirect=/dashboard");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "full_name, avatar_url, processed_avatar_url, profile_completed, role, tour_completed, arbox_paid_training, arbox_bought_course, access_override",
-    )
-    .eq("id", user.id)
-    .maybeSingle() as unknown as {
-      data:
-        | (Profile & {
-            arbox_paid_training: boolean;
-            arbox_bought_course: boolean;
-            access_override: AccessOverride;
-          })
-        | null;
-    };
+  const profile = await getCurrentProfile();
+  // Only the columns the menus read are sent to the client components.
+  const navProfile = profile
+    ? ({
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+        processed_avatar_url: profile.processed_avatar_url,
+        profile_completed: profile.profile_completed,
+        role: profile.role,
+        tour_completed: profile.tour_completed,
+        arbox_paid_training: profile.arbox_paid_training,
+        arbox_bought_course: profile.arbox_bought_course,
+        access_override: profile.access_override,
+      } as Profile)
+    : null;
 
   if (
     profile &&
@@ -60,7 +61,7 @@ export default async function DashboardLayout({
   const tier = resolveAccessTier({
     arboxPaidTraining: profile?.arbox_paid_training ?? false,
     arboxBoughtCourse: profile?.arbox_bought_course ?? false,
-    accessOverride: profile?.access_override ?? null,
+    accessOverride: (profile?.access_override ?? null) as AccessOverride,
   });
 
   // Independent reads; run together so every dashboard render pays for one.
@@ -88,11 +89,11 @@ export default async function DashboardLayout({
     // celebration respect prefers-reduced-motion.
     <MotionProvider>
     <SidebarProvider defaultOpen={sidebarOpen}>
-      <DashboardSidebar user={user} profile={profile} tier={tier} capabilities={capabilities} />
+      <DashboardSidebar user={user} profile={navProfile} tier={tier} capabilities={capabilities} />
       <SidebarInset>
         <AppTopBar
           user={user}
-          profile={profile}
+          profile={navProfile}
           titles={DASHBOARD_PAGE_TITLES}
           fallbackTitle="ראשי"
         />

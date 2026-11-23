@@ -1,10 +1,10 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { grantBadge } from "@/features/achievements/lib/actions/grant-badge";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Toggle a drill's done state for the current user.
@@ -19,10 +19,7 @@ export async function toggleDrillDone(
   }
 
   // Get current user id
-  const authClient = await createClient();
-  const {
-    data: { user },
-  } = await authClient.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return { success: false, done: false, error: "לא מחובר" };

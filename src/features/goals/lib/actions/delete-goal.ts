@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { Profile } from "@/types/database";
 import { isValidUUID } from "@/lib/validations/common";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 interface DeleteGoalResult {
   success: boolean;
@@ -22,9 +23,7 @@ export async function deleteGoal(goalId: string): Promise<DeleteGoalResult> {
   const supabase = await createClient();
 
   // Verify caller is trainer or admin
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) {
     return { success: false, error: "Unauthorized" };
   }

@@ -26,6 +26,7 @@ import { loadAllBranches } from "@/features/branches/lib/memberships";
 import { toBranchOption } from "@/types/branches";
 import { BranchUrlFilter } from "@/features/branches/components/BranchUrlFilter";
 import { isValidUUID } from "@/lib/validations/common";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export const metadata: Metadata = {
   title: "שעות מאמנים | Garden of Eden",
@@ -41,19 +42,13 @@ export default async function AdminShiftsPage({
   const { month: monthParam, year: yearParam, branch: branchParam } = await searchParams;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login?redirect=/admin/shifts");
   }
 
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .single()) as { data: { role: string; full_name: string | null } | null };
+  const profile = await getCurrentProfile();
 
   if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");

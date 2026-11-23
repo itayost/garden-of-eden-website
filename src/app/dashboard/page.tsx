@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlayerCard } from "@/components/player-card";
 import { ArrowLeft, Salad, TrendingUp } from "lucide-react";
-import type { Profile, UserStreakRow, PlayerGoalRow } from "@/types/database";
+import type { UserStreakRow, PlayerGoalRow } from "@/types/database";
 import type { PlayerAssessment } from "@/types/assessment";
 import type { PlayerPosition } from "@/types/player-stats";
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
@@ -44,6 +44,7 @@ import { loadNextBooking } from "@/features/booking/lib/next-booking";
 import type { UserAchievementRow } from "@/types/database";
 import { resolveAgeGroup } from "@/lib/age-group-override";
 import { firstNameOf } from "@/lib/utils/profile";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 const MiniRatingChartWrapper = dynamic(
   () => import("./MiniRatingChartWrapper").then(m => ({ default: m.MiniRatingChartWrapper }))
@@ -51,7 +52,7 @@ const MiniRatingChartWrapper = dynamic(
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   // Explicit auth check - redirect if not authenticated
   if (!user) {
@@ -60,7 +61,7 @@ export default async function DashboardPage() {
 
   // Get user's data
   const [
-    { data: profile },
+    profile,
     { data: nutritionForm },
     { data: assessments },
     { count: preWorkoutCount },
@@ -70,7 +71,7 @@ export default async function DashboardPage() {
     { data: goalsData },
     { data: achievementsData },
   ] = await Promise.all([
-    supabase.from("profiles").select("full_name, birthdate, age_group_override, age_group_override_until, position, created_at, processed_avatar_url, avatar_url").eq("id", user?.id || "").single() as unknown as { data: Profile | null },
+    getCurrentProfile(),
     supabase.from("nutrition_forms").select("id").eq("user_id", user?.id || "").limit(1).maybeSingle() as unknown as { data: { id: string } | null },
     supabase.from("player_assessments").select("*").eq("user_id", user?.id || "").order("assessment_date", { ascending: true }) as unknown as { data: PlayerAssessment[] | null },
     supabase.from("pre_workout_forms").select("*", { count: "exact", head: true }).eq("user_id", user?.id || "") as unknown as { count: number | null },

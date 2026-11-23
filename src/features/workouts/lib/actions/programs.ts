@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { isValidUUID } from "@/lib/validations/common";
@@ -15,6 +14,7 @@ import type {
   ProgramExerciseRow,
   ProgramGrid,
 } from "@/features/workouts/lib/types";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export type { ProgramMetaInput, ProgramRowsInput } from "@/lib/validations/workout-program";
 
@@ -137,8 +137,7 @@ export async function createProgram(
     };
   }
 
-  const serverClient = await createClient();
-  const { data: { user } } = await serverClient.auth.getUser();
+  const user = await getCurrentUser();
 
   const adminClient = createAdminClient();
 

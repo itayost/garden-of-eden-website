@@ -2,14 +2,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileCompletionForm } from "@/components/onboarding/ProfileCompletionForm";
 import type { Profile } from "@/types/database";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export default async function OnboardingProfilePage() {
   const supabase = await createClient();
 
   // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login?redirect=/onboarding/profile");

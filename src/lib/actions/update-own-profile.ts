@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { profileSelfUpdateSchema } from "@/lib/validations/profile";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Let a signed-in user edit their OWN birthdate + position.
@@ -21,10 +21,7 @@ export async function updateOwnProfileAction(data: {
   birthdate: string;
   position?: string | null;
 }): Promise<{ success: true } | { error: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) return { error: "לא מחובר" };
 

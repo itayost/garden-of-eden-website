@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { waitUntil } from "@vercel/functions";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -22,6 +21,7 @@ import { loadStoredPlans } from "@/features/plans/lib/queries";
 import { guardArgs } from "@/lib/plans/read-guard";
 import type { ScheduleSlot } from "@/types/schedule";
 import { loadTraineeRosterRows } from "../queries";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 type BookResult = { ok: true; sessionsLeft: number | null } | { error: string; block?: BookingBlock };
 type CancelResult = { ok: true; late: boolean } | { error: string };
@@ -41,10 +41,7 @@ function blocked(block: BookingBlock): BookResult {
 }
 
 async function currentUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   return user;
 }
 

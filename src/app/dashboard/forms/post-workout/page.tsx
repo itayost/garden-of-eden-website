@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadStaffOptions } from "@/lib/staff-options";
 import { PostWorkoutForm } from "./PostWorkoutForm";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * The post-training report. The trainer list is every active trainer and
@@ -12,10 +12,7 @@ import { PostWorkoutForm } from "./PostWorkoutForm";
  * a layout renders in parallel and does not guard a page's data.
  */
 export default async function PostWorkoutFormPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/auth/login?redirect=/dashboard/forms/post-workout");
   const trainers = (await loadStaffOptions(createAdminClient())) ?? [];
   return <PostWorkoutForm trainers={trainers} />;

@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { getTaskCountsAction } from "@/lib/actions/admin-tasks";
 import { getBranchScopeAction } from "@/lib/actions/shared";
@@ -13,6 +12,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { MotionProvider } from "@/components/MotionProvider";
 import { CallReminderWatcher } from "@/features/call-reminders/components/CallReminderWatcher";
 import type { Profile } from "@/types/database";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 async function managesAnyBranch(role: string): Promise<boolean> {
   const scope = await getBranchScopeAction();
@@ -24,18 +24,22 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login?redirect=/admin");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, avatar_url, processed_avatar_url, role")
-    .eq("id", user.id)
-    .maybeSingle() as unknown as { data: Profile | null };
+  const profile = await getCurrentProfile();
+  // Only the columns the menus read are sent to the client components.
+  const navProfile = profile
+    ? ({
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+        processed_avatar_url: profile.processed_avatar_url,
+        role: profile.role,
+      } as Profile)
+    : null;
 
   if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");
@@ -76,14 +80,14 @@ export default async function AdminLayout({
       <SidebarProvider defaultOpen={sidebarOpen}>
         <AdminSidebar
           user={user}
-          profile={profile}
+          profile={navProfile}
           navBadges={navBadges}
           managesBranch={managesBranch}
         />
         <SidebarInset>
           <AppTopBar
             user={user}
-            profile={profile}
+            profile={navProfile}
             titles={ADMIN_PAGE_TITLES}
             fallbackTitle="ניהול"
             menuVariant="brand"

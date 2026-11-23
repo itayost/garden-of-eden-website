@@ -5,6 +5,7 @@ import { isValidUUID } from "@/lib/validations/common";
 import { typedFrom } from "@/lib/supabase/helpers";
 import type { Profile } from "@/types/database";
 import type { NutritionMeasurementRow } from "../../types";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Get the measurement history for a trainee.
@@ -23,9 +24,7 @@ export async function getTraineeMeasurements(
   const { authorized, supabase } = await verifyUserAccess(userId);
   if (!authorized) return [];
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) return [];
 

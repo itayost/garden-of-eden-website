@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 import { ActionTile, type ActionTileIcon } from "@/components/dashboard/ActionTile";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export const metadata: Metadata = {
   title: "טפסים | Garden of Eden",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function FormsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   // Explicit auth check - redirect if not authenticated
   if (!user) {

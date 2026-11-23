@@ -1,7 +1,6 @@
 "use server";
 
 import { waitUntil } from "@vercel/functions";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isActiveTrainee } from "@/lib/plans/bound-renewal";
@@ -11,6 +10,7 @@ import { buildRenewalUrl, buildTraineePurchaseUrl } from "../renewal-link";
 import { loadPlanQueues } from "../queries";
 import { israelToday } from "@/lib/utils/tasks";
 import { canAskParentToBuy } from "../can-ask-parent";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export type PurchaseRequestResult = { ok: true } | { error: string };
 
@@ -20,10 +20,7 @@ export type PurchaseRequestResult = { ok: true } | { error: string };
  * child cannot flood the parent.
  */
 export async function requestPurchaseLinkAction(): Promise<PurchaseRequestResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "נדרשת התחברות" };
 
   const db = createAdminClient();

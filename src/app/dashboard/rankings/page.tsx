@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getRankingsData } from "@/features/rankings";
@@ -7,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadBranchIdsByProfile, loadBranchOptions } from "@/features/branches/lib/memberships";
 import { ALL_BRANCHES } from "@/features/rankings/lib/config/branches";
 import { resolveAgeGroup } from "@/lib/age-group-override";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 const RankingsView = dynamic(
   () => import("@/features/rankings").then(m => ({ default: m.RankingsView }))
@@ -17,22 +17,14 @@ export const metadata: Metadata = {
 };
 
 export default async function RankingsPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login?redirect=/dashboard/rankings");
   }
 
   // Fetch user profile to get role and age group
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, birthdate, age_group_override, age_group_override_until")
-    .eq("id", user.id)
-    .single();
+  const profile = await getCurrentProfile();
 
   const userRole = profile?.role || "trainee";
   const isTrainee = userRole === "trainee";

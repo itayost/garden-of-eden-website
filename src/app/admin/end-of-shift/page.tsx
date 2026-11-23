@@ -3,25 +3,20 @@ import { createClient } from "@/lib/supabase/server";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { ShiftReportForm } from "@/components/admin/shift-report/ShiftReportForm";
 import type { TrainerShiftReport } from "@/types/database";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export default async function EndOfShiftPage() {
   const supabase = await createClient();
 
   // Verify authenticated user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login?redirect=/admin/end-of-shift");
   }
 
   // Verify trainer/admin role
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("role, full_name")
-    .eq("id", user.id)
-    .single()) as { data: { role: string; full_name: string | null } | null };
+  const profile = await getCurrentProfile();
 
   if (profile?.role !== "trainer" && profile?.role !== "admin") {
     redirect("/dashboard");

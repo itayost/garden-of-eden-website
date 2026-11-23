@@ -6,6 +6,7 @@ import { isValidUUID } from "@/lib/validations/common";
 import type { UserAchievementRow } from "@/types/database";
 import type { AchievementWithDisplay } from "../../types";
 import { enrichAchievement } from "../utils/achievement-utils";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Get all achievements for a specific user
@@ -39,11 +40,7 @@ export async function getUserAchievements(
  * Get achievements for the current logged-in user
  */
 export async function getMyAchievements(): Promise<AchievementWithDisplay[]> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return [];
@@ -58,9 +55,7 @@ export async function getMyAchievements(): Promise<AchievementWithDisplay[]> {
 export async function getUncelebratedAchievements(): Promise<AchievementWithDisplay[]> {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return [];
@@ -92,9 +87,7 @@ export async function markAchievementCelebrated(
   const supabase = await createClient();
 
   // Verify user is authenticated
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     console.error("Unauthorized: No user logged in");
@@ -128,9 +121,7 @@ export async function markAchievementsCelebrated(
   const supabase = await createClient();
 
   // Verify user is authenticated
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     console.error("Unauthorized: No user logged in");
