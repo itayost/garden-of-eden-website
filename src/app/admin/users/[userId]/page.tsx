@@ -40,6 +40,7 @@ import { canManageBranches } from "@/lib/branches/branch-scope";
 import { HealthCard } from "@/features/plans/components/HealthCard";
 import { TraineeCheckinsCard } from "@/features/checkins/components/TraineeCheckinsCard";
 import { TrainingHistoryCard } from "@/features/training-history/components/TrainingHistoryCard";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 interface UserEditPageProps {
   params: Promise<{ userId: string }>;
@@ -56,19 +57,13 @@ export default async function UserEditPage({ params }: UserEditPageProps) {
   const supabase = await createClient();
 
   // Get current user and verify admin role
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     redirect("/login");
   }
 
-  const { data: currentProfile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", currentUser.id)
-    .single()) as { data: { role: string } | null };
+  const currentProfile = await getCurrentProfile();
 
   if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/dashboard");

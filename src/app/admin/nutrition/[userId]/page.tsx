@@ -13,6 +13,7 @@ const SleepChart = dynamic(
 import { MealPlanPdfUpload } from "@/components/admin/nutrition/MealPlanPdfUpload";
 import { RecommendationForm } from "@/components/admin/nutrition/RecommendationForm";
 import { MeasurementsCard } from "@/components/admin/nutrition/MeasurementsCard";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 interface PageProps {
   params: Promise<{ userId: string }>;
@@ -24,9 +25,7 @@ export default async function AdminTraineeNutritionPage({
   const { userId } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) {
     redirect("/auth/login");
   }

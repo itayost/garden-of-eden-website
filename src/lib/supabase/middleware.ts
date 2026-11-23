@@ -35,10 +35,14 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Refresh the session and verify the access token. getClaims() checks the
+  // JWT signature against the project's cached signing keys instead of asking
+  // Supabase Auth on every request (it falls back to getUser() for a project
+  // still on a shared-secret key). Pages and actions still verify the user
+  // with Supabase Auth through getCurrentUser().
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub ?? null;
+  const user = userId ? { id: userId } : null;
 
   // Protected routes
   const protectedPaths = ["/dashboard", "/admin"];

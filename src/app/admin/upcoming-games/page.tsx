@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import {
   Card,
   CardContent,
@@ -17,24 +16,17 @@ import {
   formatHebrewGameDate,
   gameDayLabel,
 } from "@/features/next-game/lib/format";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export const metadata: Metadata = {
   title: "המשחקים הקרובים | Garden of Eden",
 };
 
 export default async function AdminUpcomingGamesPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()) as { data: { role: string } | null };
+  const profile = await getCurrentProfile();
 
   if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");

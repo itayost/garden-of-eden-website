@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { israelMinutesOfDay } from "@/lib/utils/israel-time";
 import { addDays } from "@/lib/utils/iso-date";
@@ -21,6 +20,7 @@ import { PLAN_STATUS_LABELS_HE, type PlanStatus } from "@/types/plans";
 import { materializeBookableSlots } from "../materialize";
 import { loadBookableBranchForUser, loadBookableSlots, loadTraineeRosterRows } from "../queries";
 import { canAskParentToBuy } from "@/features/plans/lib/can-ask-parent";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 const END_OF_DAY = "23:59:59";
 
@@ -84,10 +84,7 @@ export interface TraineeScheduleView {
  * always there.
  */
 export async function getMyScheduleAction(): Promise<TraineeScheduleView | { error: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "נדרשת התחברות" };
 
   const db = createAdminClient();

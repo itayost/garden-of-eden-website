@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import {
   Card,
   CardContent,
@@ -11,24 +10,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Video } from "lucide-react";
 import { VideoCreateForm } from "@/components/admin/videos/VideoCreateForm";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export default async function AdminCreateVideoPage() {
-  const supabase = await createClient();
-
   // Verify admin role
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  const { data: profile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()) as { data: { role: string } | null };
+  const profile = await getCurrentProfile();
 
   if (profile?.role !== "admin" && profile?.role !== "trainer") {
     redirect("/dashboard");

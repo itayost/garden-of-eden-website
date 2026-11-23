@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { isValidUUID } from "@/lib/validations/common";
 import { deriveAgeGroup } from "../age-group";
@@ -224,8 +225,7 @@ export async function getBookTree(
   doneMap: DrillProgressMap;
 }> {
   const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth.user;
+  const user = await getCurrentUser();
 
   const { data: profile } = user
     ? await supabase
@@ -386,8 +386,7 @@ export async function getDrillCard(
   if (!rawDrill) return null;
 
   // Load muscles and current user's progress for this drill in parallel
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth.user;
+  const user = await getCurrentUser();
 
   const [muscleLinksResult, allMusclesResult, progressResult] = await Promise.all([
     typedFrom(supabase, "book_drill_muscles")

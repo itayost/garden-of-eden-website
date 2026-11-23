@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import {
   Card,
   CardContent,
@@ -11,24 +10,18 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCog } from "lucide-react";
 import { ProfilePersonalForm } from "@/components/dashboard/profile/ProfilePersonalForm";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export const metadata: Metadata = {
   title: "פרופיל | Garden of Eden",
 };
 
 export default async function DashboardProfilePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) redirect("/auth/login?redirect=/dashboard/profile");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, birthdate, position, avatar_url, processed_avatar_url")
-    .eq("id", user.id)
-    .maybeSingle();
+  const profile = await getCurrentProfile();
 
   const avatarUrl = profile?.processed_avatar_url ?? profile?.avatar_url ?? null;
   const initial = (profile?.full_name ?? "מ").slice(0, 1);

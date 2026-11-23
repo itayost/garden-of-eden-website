@@ -5,9 +5,9 @@ import { typedFrom } from "@/lib/supabase/helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FileText, Video, Activity, Salad } from "lucide-react";
 import { ShiftStatusCard } from "@/components/admin/shifts/ShiftStatusCard";
-import type { Profile } from "@/types/database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadMemberBranchOptions } from "@/features/branches/lib/memberships";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export const metadata: Metadata = {
   title: "ניהול | Garden of Eden",
@@ -17,17 +17,9 @@ export default async function AdminDashboardPage() {
   const supabase = await createClient();
 
   // Get current user for shift status
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
-  const { data: profile } = user
-    ? ((await supabase
-        .from("profiles")
-        .select("role, full_name")
-        .eq("id", user.id)
-        .single()) as { data: Profile | null })
-    : { data: null };
+  const profile = user ? await getCurrentProfile() : null;
 
   // Check for active shift (for trainers/admins)
   const { data: activeShift } = user

@@ -22,6 +22,7 @@ import {
   type TodaySession,
   type TrainingSession,
 } from "@/types/training-session";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Trainee-facing actions. Every query runs on the user-scoped client, so RLS
@@ -46,9 +47,7 @@ type CompleteResult = { success: true } | { error: string };
  */
 export async function getMyTodaySessionsAction(): Promise<MySessionsResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "לא מחובר" };
 
   const { data, error } = await typedFrom(supabase, "training_sessions")
@@ -83,9 +82,7 @@ export async function getMyTodaySessionsAction(): Promise<MySessionsResult> {
  */
 export async function logExerciseAction(input: ExerciseLogInput): Promise<LogResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "לא מחובר" };
 
   const validated = exerciseLogSchema.safeParse(input);
@@ -213,9 +210,7 @@ export async function completeMySessionAction(
   sessionId: string,
 ): Promise<CompleteResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "לא מחובר" };
 
   if (!isValidUUID(sessionId)) return { error: "מזהה אימון לא תקין" };
@@ -263,9 +258,7 @@ export async function resolveEquipmentCodeAction(code: string): Promise<
   | { error: string }
 > {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "לא מחובר" };
 
   const trimmed = code.trim();
@@ -307,9 +300,7 @@ export async function getPreviousLogsAction(
   excludeSessionExerciseIds: string[],
 ): Promise<{ success: true; data: PreviousLogMap } | { error: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "לא מחובר" };
 
   const ids = exerciseIds.filter(isValidUUID);
@@ -370,9 +361,7 @@ export async function getEquipmentExercisesAction(equipmentId: string): Promise<
   | { error: string }
 > {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "לא מחובר" };
 
   if (!isValidUUID(equipmentId)) return { error: "מזהה ציוד לא תקין" };

@@ -13,6 +13,7 @@ import type {
 import type { CourseViewer } from "../course-access-rule";
 import { COURSE_VIEWER_COLUMNS, courseViewerFromProfile } from "../course-viewer";
 import { coverUrlOrNull } from "../course-cover-rules";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 // --- Raw DB row shapes (snake_case) ---
 
@@ -206,10 +207,7 @@ export async function getMyLessonProgress(): Promise<LessonProgressMap> {
 
 /** The signed-in user's id, or null. Memoized per request so it is read once. */
 export const getCourseUserId = cache(async (): Promise<string | null> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   return user?.id ?? null;
 });
 

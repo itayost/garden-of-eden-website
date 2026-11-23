@@ -5,6 +5,7 @@ import { resolveTimestamp } from "@/lib/utils/resolve-timestamp";
 import { MAX_SHIFT_HOURS } from "@/lib/constants/shifts";
 import { pickClockInBranch } from "@/lib/branches/clock-in-branch";
 import { isValidUUID } from "@/lib/validations/common";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 interface SyncAction {
   type: "clock_in" | "clock_out";
@@ -24,9 +25,7 @@ interface SyncAction {
 export async function POST(request: Request) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

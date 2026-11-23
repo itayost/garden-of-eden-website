@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowRight, Activity, Brain, FileText, Salad, User, Calendar } from "lucide-react";
 import type { PreWorkoutForm, PostWorkoutForm, NutritionForm } from "@/types/database";
 import type { MentalQuestionnaire } from "@/lib/actions/admin-submissions-list";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 // Form type configuration
 const formTypeConfig = {
@@ -467,19 +468,13 @@ export default async function FormDetailPage({ params }: FormDetailPageProps) {
   const supabase = await createClient();
 
   // Get current user and verify admin role
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     redirect("/login");
   }
 
-  const { data: currentProfile } = (await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", currentUser.id)
-    .single()) as { data: { role: string } | null };
+  const currentProfile = await getCurrentProfile();
 
   if (currentProfile?.role !== "admin" && currentProfile?.role !== "trainer") {
     redirect("/dashboard");

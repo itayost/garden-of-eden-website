@@ -1,9 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { verifyUserAccess } from "@/lib/actions/shared/verify-user-access";
 import type { PlayerGoalRow } from "@/types/database";
 import { isValidUUID } from "@/lib/validations/common";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 /**
  * Get all goals for a player
@@ -44,11 +44,7 @@ export async function getPlayerGoals(
  * Get active goals for the current user (for dashboard)
  */
 export async function getMyActiveGoals(): Promise<PlayerGoalRow[]> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
   return getPlayerGoals(user.id, { includeAchieved: false });

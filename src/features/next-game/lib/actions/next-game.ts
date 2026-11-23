@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { typedFrom, upsertIntoTable } from "@/lib/supabase/helpers";
 import { nextGameSchema, type NextGameInput } from "@/lib/validations/next-game";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export interface NextGameRow {
   readonly id: string;
@@ -21,9 +22,7 @@ async function getTraineeUserId(): Promise<
   { ok: true; userId: string } | { ok: false; error: string }
 > {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { ok: false, error: "לא מחובר" };
 
   const { data: profile } = await supabase
@@ -42,9 +41,7 @@ async function getTraineeUserId(): Promise<
 
 export async function getOwnNextGame(): Promise<NextGameRow | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return null;
 
   const { data } = await typedFrom(supabase, "trainee_next_games")
@@ -87,9 +84,7 @@ export async function upsertNextGame(input: NextGameInput): Promise<ActionResult
 
 export async function clearOwnNextGame(): Promise<ActionResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { success: false, error: "לא מחובר" };
 
   const { error } = await typedFrom(supabase, "trainee_next_games")

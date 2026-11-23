@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 import { VideoCard } from "@/components/dashboard/VideoCard";
 import { Clock, Calendar, Dumbbell } from "lucide-react";
 import type { WorkoutVideo, VideoProgress } from "@/types/database";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 const dayTopics = [
   { day: 1, topic: "גמישות תנועתיות", icon: "🤸" },
@@ -23,7 +24,7 @@ const dayTopics = [
 
 export default async function VideosPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   // Explicit auth check - redirect if not authenticated
   if (!user) {

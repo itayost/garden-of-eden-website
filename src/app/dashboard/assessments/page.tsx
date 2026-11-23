@@ -25,7 +25,6 @@ import {
 import { getPlayerRatings } from "@/lib/utils/get-player-ratings";
 import { transformToRatingChartData } from "@/features/progress-charts/lib/transforms";
 import type { PlayerAssessment } from "@/types/assessment";
-import type { Profile } from "@/types/database";
 import dynamic from "next/dynamic";
 
 const AssessmentChartsWrapper = dynamic(
@@ -33,25 +32,20 @@ const AssessmentChartsWrapper = dynamic(
 );
 import { ComparisonSelector } from "@/features/assessment-comparison";
 import { resolveAgeGroup } from "@/lib/age-group-override";
+import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/current-user";
 
 export default async function DashboardAssessmentsPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login?redirect=/dashboard/assessments");
   }
 
   // Fetch profile and assessments in parallel
-  const [{ data: profile }, { data: assessments }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single() as unknown as { data: Profile | null },
+  const [profile, { data: assessments }] = await Promise.all([
+    getCurrentProfile(),
     supabase
       .from("player_assessments")
       .select("*")

@@ -1,18 +1,15 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { onboardingSchema } from "@/lib/validations/profile";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 
 export async function completeOnboardingAction(data: {
   full_name: string;
   birthdate: string;
   position?: string | null;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) return { error: "לא מחובר" };
 
