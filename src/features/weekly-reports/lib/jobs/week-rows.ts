@@ -20,6 +20,7 @@ import {
 } from "../audience";
 import type { BuiltSheet } from "../fact-sheet/types";
 import type { NewReportRow } from "../queries/rows";
+import { isSharedAccount, SHARED_ACCOUNT_HOLD } from "../shared-account";
 
 /** What the job read about one Trainee over the five weeks up to the week's end. */
 export interface TraineeTraining {
@@ -48,6 +49,8 @@ export function classifyTrainee(
 
 export interface ClassifiedTrainee {
   traineeId: string;
+  /** For the shared-account Hold and the preview's names; never goes into a Fact sheet. */
+  fullName: string;
   branchIds: readonly string[];
   kind: WeekKind;
 }
@@ -61,23 +64,29 @@ function rowOf(weekStart: string, trainee: ClassifiedTrainee, built: BuiltSheet 
     factSheet: null,
     approvedAutomatically: false,
   };
+  const shared = isSharedAccount(trainee.fullName) ? [SHARED_ACCOUNT_HOLD] : [];
   switch (trainee.kind) {
     case "nothing":
       return null;
     case "missed_you":
       // No model writes it, so it needs no approval; staff can still hold it until it goes.
-      return { ...base, kind: "missed_you", status: "approved", approvedAutomatically: true };
+      // A shared account's goes in held: its first name would be only one of the children.
+      return shared.length > 0
+        ? { ...base, kind: "missed_you", status: "held", holdReasons: shared }
+        : { ...base, kind: "missed_you", status: "approved", approvedAutomatically: true };
     case "absent":
       return { ...base, kind: "absent", status: "listed" };
-    case "report":
+    case "report": {
       if (built === undefined) return null;
+      const holds = [...shared, ...built.holds];
       return {
         ...base,
         kind: "report",
-        status: built.holds.length > 0 ? "held" : "pending",
-        holdReasons: [...built.holds],
+        status: holds.length > 0 ? "held" : "pending",
+        holdReasons: holds,
         factSheet: { sheet: built.sheet, body: built.body },
       };
+    }
   }
 }
 

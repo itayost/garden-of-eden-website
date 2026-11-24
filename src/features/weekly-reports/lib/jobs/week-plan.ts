@@ -28,10 +28,7 @@ import { classifyTrainee, type ClassifiedTrainee } from "./week-rows";
  */
 const LOOKBACK_DAYS = 28;
 
-export interface PlannedTrainee extends ClassifiedTrainee {
-  /** For the preview's names only; never goes into a Fact sheet. */
-  fullName: string;
-}
+export type PlannedTrainee = ClassifiedTrainee;
 
 export interface WeekPlan {
   weekStart: string;
