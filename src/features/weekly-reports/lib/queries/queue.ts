@@ -12,7 +12,7 @@ import { byFullName, readAllPages } from "@/lib/supabase/in-chunks";
 import { addDays } from "@/lib/utils/iso-date";
 import type { DrillCandidate, HoldReason } from "../fact-sheet/types";
 import { firstNameOf } from "../fill-name";
-import { hasNewData, parentOutcome, tabCounts, tabOf, type QueueTab, type TabCounts } from "../queue-view";
+import { hasNewData, parentOutcome, tabCounts, tabOf, textPreview, type QueueTab, type TabCounts } from "../queue-view";
 import { reportWeekEnd } from "../report-week";
 import { writerOutputSchema, type WriterOutput } from "../writer/output";
 import { readNewDataTimes } from "./queue-new-data";
@@ -44,6 +44,8 @@ export interface QueueRow {
   newData: boolean;
   /** The absent list only: the last day the Trainee trained (Roster), else null. */
   lastTrainedOn: string | null;
+  /** The start of the player's text, the name filled in; null before it is written and for the other kinds. */
+  preview: string | null;
 }
 
 export interface QueueData {
@@ -60,7 +62,7 @@ export interface QueueQuery {
 }
 
 const QUEUE_SELECT =
-  "id, trainee_id, kind, status, branch_ids, hold_reasons, written_at, sent_at, parent_message_id, parent_skip_reason, parent_first_opened_at, player_first_opened_at, edit_ratio, trainee:profiles!weekly_reports_trainee_id_fkey(full_name)";
+  "id, trainee_id, kind, status, branch_ids, hold_reasons, player_text, written_at, sent_at, parent_message_id, parent_skip_reason, parent_first_opened_at, player_first_opened_at, edit_ratio, trainee:profiles!weekly_reports_trainee_id_fkey(full_name)";
 
 const KINDS: readonly ReportKind[] = ["report", "missed_you", "absent"];
 
@@ -148,6 +150,7 @@ function toQueueRow(row: WeekRow, context: RowContext): QueueRow | null {
     editRatio: row.edit_ratio,
     newData: kind === "report" && hasNewData(row.written_at, context.newData.get(row.trainee_id) ?? []),
     lastTrainedOn: context.lastTrained.get(row.trainee_id) ?? null,
+    preview: kind === "report" ? textPreview(row.player_text, firstNameOf(row.trainee?.full_name ?? null)) : null,
   };
 }
 

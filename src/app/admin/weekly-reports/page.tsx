@@ -1,24 +1,35 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBranchScopeAction, verifyAdminOrTrainer } from "@/lib/actions/shared";
 import { assertTraineeInScope } from "@/lib/actions/shared/assert-trainee";
 import { isInBranchScope, type BranchScope } from "@/lib/branches/branch-scope";
 import { allowedBranches } from "@/lib/branches/resolve-branch";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getIsraelTime } from "@/lib/utils/israel-time";
 import { israelToday } from "@/lib/utils/tasks";
 import { isValidUUID } from "@/lib/validations/common";
 import { BranchUrlFilter } from "@/features/branches/components/BranchUrlFilter";
 import { listActiveBranchOptionsAction } from "@/features/branches/lib/actions/list-branches";
 import { listReportSettingsAction } from "@/features/weekly-reports/lib/actions/settings-load";
 import { loadQueue, loadReportDetail, queueWeeks, type ReportDetail } from "@/features/weekly-reports/lib/queries/queue";
-import { countsLine, pickTab, pickWeek, queueHref, weekChoices, type QueueTab } from "@/features/weekly-reports/lib/queue-view";
-import { lastCompletedWeekStart, reportWeekLabel } from "@/features/weekly-reports/lib/report-week";
+import {
+  filterRows,
+  nextReportId,
+  pickFilter,
+  pickWeek,
+  queueHref,
+  weekChoices,
+  type QueueFilter,
+} from "@/features/weekly-reports/lib/queue-view";
+import { lastCompletedWeekStart, nextSendLabel, reportWeekLabel } from "@/features/weekly-reports/lib/report-week";
 import { ApproveAllButton } from "@/features/weekly-reports/components/admin/ApproveAllButton";
-import { QueueTable } from "@/features/weekly-reports/components/admin/QueueTable";
-import { QueueTabs } from "@/features/weekly-reports/components/admin/QueueTabs";
+import { QueueFilters } from "@/features/weekly-reports/components/admin/QueueFilters";
+import { QueueList } from "@/features/weekly-reports/components/admin/QueueList";
+import { ReportReader } from "@/features/weekly-reports/components/admin/ReportReader";
 import { ReportSettingsCard } from "@/features/weekly-reports/components/admin/ReportSettingsCard";
-import { ReportSheet } from "@/features/weekly-reports/components/admin/ReportSheet";
 import { WeekPicker } from "@/features/weekly-reports/components/admin/WeekPicker";
+import { WeekStatus } from "@/features/weekly-reports/components/admin/WeekStatus";
 import { ProposalQueue } from "@/features/goal-proposals/components/ProposalQueue";
 import { loadOpenProposals } from "@/features/goal-proposals/lib/queries/views";
 
@@ -27,9 +38,8 @@ export const metadata: Metadata = { title: "דוחות שבועיים | Garden o
 /** כתוב מחדש and בן / בת call the model from a server action of this page. */
 export const maxDuration = 120;
 
-const EMPTY_TEXT: Record<QueueTab, string> = {
-  held: "אין דוחות מעוכבים",
-  pending: "אין דוחות שממתינים לאישור",
+const EMPTY_TEXT: Record<QueueFilter, string> = {
+  todo: "אין דוחות שמחכים לטיפול",
   approved: "אין דוחות מאושרים שמחכים לשליחה",
   sent: "עוד לא נשלחו דוחות השבוע",
   missed_you: "אין הודעות התגעגענו השבוע",
@@ -49,7 +59,7 @@ interface PageProps {
 async function visibleReport(id: string | undefined, scope: BranchScope): Promise<ReportDetail | null> {
   if (!id || !isValidUUID(id)) return null;
   const report = await loadReportDetail(createAdminClient(), id);
-  // The absent list has no sheet: its rows link to the trainee page.
+  // The absent list has no report: its rows link to the trainee page.
   if (report === null || report.kind === "absent" || !isInBranchScope(scope, report.branchIds)) return null;
   return (await assertTraineeInScope(report.traineeId)) === null ? report : null;
 }
@@ -78,42 +88,76 @@ export default async function WeeklyReportsPage({ searchParams }: PageProps) {
     visibleReport(params.report, scope),
     isAdmin ? listReportSettingsAction() : Promise.resolve(null),
   ]);
-  // The proposals are of every week, so their count stays out of the counts line.
+  // The proposals are of every week, so they count in their filter only.
   const counts = { ...queue.counts, proposals: proposals.length };
-  const tab = pickTab(params.tab, counts);
-  const rows = queue.rows.filter((row) => row.tab === tab);
+  const filter = pickFilter(params.tab, counts);
+  const rows = filterRows(queue.rows, filter);
   const approvable = rows.filter((row) => row.tab === "pending" && row.writtenAt !== null).length;
-  const location = { week, branch, tab };
+  const location = { week, branch, tab: filter };
+  const at = report ? rows.findIndex((row) => row.id === report.id) : -1;
+  const firstOpenable = rows.find((row) => row.kind !== "absent");
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-bold">דוחות שבועיים</h1>
-        <p className="text-muted-foreground">שבוע {reportWeekLabel(week)}</p>
-        <p className="text-sm">{countsLine(queue.counts)}</p>
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-3">
+        <div className="space-y-0.5">
+          <h1 className="text-2xl font-bold sm:text-3xl">דוחות שבועיים</h1>
+          <p className="text-sm text-muted-foreground">שבוע {reportWeekLabel(week)}</p>
+        </div>
+        {settings && "success" in settings && <ReportSettingsCard settings={settings.data} />}
       </header>
+
+      <WeekStatus counts={queue.counts} nextSend={nextSendLabel(getIsraelTime(new Date()))} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <WeekPicker weeks={weekChoices([...storedWeeks, week], current)} value={week} current={current} />
         {branches.length > 1 && <BranchUrlFilter branches={branches} className="w-full sm:w-48" />}
       </div>
 
-      <QueueTabs active={tab} counts={counts} location={{ week, branch }} />
+      <QueueFilters active={filter} counts={counts} location={{ week, branch }} />
 
-      {tab === "pending" && <ApproveAllButton weekStart={week} branchId={branch} count={approvable} />}
-
-      {tab === "proposals" ? (
+      {filter === "proposals" ? (
         <section className="space-y-4" aria-label="הצעות יעד">
           <p className="text-sm text-muted-foreground">הצעות פתוחות מכל המבדקים, לא לפי שבוע</p>
           <ProposalQueue proposals={proposals} emptyText={EMPTY_TEXT.proposals} />
         </section>
+      ) : filter === "absent" ? (
+        <QueueList rows={rows} location={location} selectedId={null} emptyText={EMPTY_TEXT.absent} />
       ) : (
-        <QueueTable rows={rows} location={location} emptyText={EMPTY_TEXT[tab]} />
+        <div className="lg:grid lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:items-start lg:gap-6">
+          <div className="space-y-3">
+            {filter === "todo" && approvable > 0 && <ApproveAllButton weekStart={week} branchId={branch} count={approvable} />}
+            <QueueList rows={rows} location={location} selectedId={report?.id ?? null} emptyText={EMPTY_TEXT[filter]} />
+          </div>
+          {report ? (
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-background lg:sticky lg:inset-auto lg:top-4 lg:z-auto lg:max-h-[calc(100dvh-2rem)] lg:rounded-xl lg:border lg:bg-card">
+              <ReportReader
+                key={`${report.id}:${report.version}`}
+                report={report}
+                location={location}
+                nextId={nextReportId(rows, report.id)}
+                position={at === -1 ? null : { index: at, total: rows.length }}
+              />
+            </div>
+          ) : (
+            <div className="hidden min-h-64 place-items-center rounded-xl border border-dashed p-8 text-center lg:grid">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">בחרו דוח מהרשימה כדי לקרוא אותו כאן.</p>
+                {firstOpenable && (
+                  <Link
+                    href={queueHref({ ...location, report: firstOpenable.id })}
+                    replace
+                    scroll={false}
+                    className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                  >
+                    להתחיל מהראשון
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
-
-      {settings && "success" in settings && <ReportSettingsCard settings={settings.data} />}
-
-      <ReportSheet report={report} closeHref={queueHref(location)} />
     </div>
   );
 }

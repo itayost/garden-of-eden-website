@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { getIsraelTime } from "@/lib/utils/israel-time";
 import {
   isSendWindow,
+  nextSendLabel,
   lastCompletedWeekStart,
   reportWeekDays,
   reportWeekEnd,
@@ -151,5 +152,26 @@ describe("isSendWindow", () => {
 
   test("Sunday at 12:00 does not", () => {
     expect(isSendWindow(at("2026-11-22T10:00:00Z"))).toBe(false);
+  });
+});
+
+describe("nextSendLabel", () => {
+  test("Friday morning: today at 12:00", () => {
+    expect(nextSendLabel(at("2026-11-20T07:30:00Z"))).toBe("השליחה הבאה: היום ב-12:00");
+  });
+
+  test("Friday afternoon and Saturday: Sunday at 09:00", () => {
+    expect(nextSendLabel(at("2026-11-20T11:30:00Z"))).toBe("השליחה הבאה: ראשון ב-09:00");
+    expect(nextSendLabel(at("2026-11-21T08:00:00Z"))).toBe("השליחה הבאה: ראשון ב-09:00");
+  });
+
+  test("Sunday to Wednesday: today before 09:00, else tomorrow", () => {
+    expect(nextSendLabel(at("2026-11-22T05:00:00Z"))).toBe("השליחה הבאה: היום ב-09:00");
+    expect(nextSendLabel(at("2026-11-24T09:00:00Z"))).toBe("השליחה הבאה: מחר ב-09:00");
+  });
+
+  test("Thursday after 09:00: Friday at 12:00", () => {
+    expect(nextSendLabel(at("2026-11-26T05:00:00Z"))).toBe("השליחה הבאה: היום ב-09:00");
+    expect(nextSendLabel(at("2026-11-26T09:00:00Z"))).toBe("השליחה הבאה: שישי ב-12:00");
   });
 });

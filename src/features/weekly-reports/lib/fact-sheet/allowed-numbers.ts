@@ -41,6 +41,15 @@ export function numbersIn(text: string): string[] {
   return (text.match(NUMBER) ?? []).map(normalizeNumber);
 }
 
+/** Every number in a text as numbersIn() reads it, with where it starts and how it is written. */
+export function numberMatches(text: string): { index: number; raw: string; value: string }[] {
+  return [...text.matchAll(NUMBER)].map((match) => ({
+    index: match.index ?? 0,
+    raw: match[0],
+    value: normalizeNumber(match[0]),
+  }));
+}
+
 /**
  * Every number value in a value (a sheet, a Goal proposal's candidate) and
  * every number inside its strings, walked recursively. Fields named `id` are

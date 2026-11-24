@@ -87,3 +87,15 @@ export function isSendWindow(now: IsraelTime): boolean {
   const weekday = now.dayOfWeek >= SUNDAY && now.dayOfWeek <= THURSDAY;
   return weekday && now.hour === WEEKDAY_SEND_HOUR;
 }
+
+const SATURDAY = 6;
+const pad = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
+
+/** "השליחה הבאה: היום ב-12:00": when approved reports next go out, for the queue's header. */
+export function nextSendLabel(now: IsraelTime): string {
+  const at = (day: string, hour: number) => `השליחה הבאה: ${day} ב-${pad(hour)}`;
+  if (now.dayOfWeek === FRIDAY && now.hour < FRIDAY_SEND_HOUR) return at("היום", FRIDAY_SEND_HOUR);
+  if (now.dayOfWeek === FRIDAY || now.dayOfWeek === SATURDAY) return at("ראשון", WEEKDAY_SEND_HOUR);
+  if (now.hour < WEEKDAY_SEND_HOUR) return at("היום", WEEKDAY_SEND_HOUR);
+  return now.dayOfWeek === THURSDAY ? at("שישי", FRIDAY_SEND_HOUR) : at("מחר", WEEKDAY_SEND_HOUR);
+}
