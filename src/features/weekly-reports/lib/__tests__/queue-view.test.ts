@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   countsLine,
+  filterCount,
+  filterRows,
+  nextReportId,
+  pickFilter,
+  textPreview,
   hasNewData,
   parentOutcome,
   pickTab,
@@ -183,9 +188,76 @@ describe("weeks", () => {
 
 describe("queueHref", () => {
   it("keeps the week, the branch, the tab and the open report in the URL", () => {
-    expect(queueHref({ week: "2026-11-13", branch: "b1", tab: "held", report: "r1" })).toBe(
-      "/admin/weekly-reports?week=2026-11-13&branch=b1&tab=held&report=r1",
+    expect(queueHref({ week: "2026-11-13", branch: "b1", tab: "todo", report: "r1" })).toBe(
+      "/admin/weekly-reports?week=2026-11-13&branch=b1&tab=todo&report=r1",
     );
     expect(queueHref({ week: "2026-11-13" })).toBe("/admin/weekly-reports?week=2026-11-13");
+  });
+});
+
+describe("the filters", () => {
+  const counts = { ...EMPTY, held: 2, pending: 14, approved: 9, missed_you: 3 };
+
+  it("לטיפול counts the held and the pending together", () => {
+    expect(filterCount("todo", counts)).toBe(16);
+    expect(filterCount("approved", counts)).toBe(9);
+  });
+
+  it("an old held or pending link opens לטיפול", () => {
+    expect(pickFilter("held", counts)).toBe("todo");
+    expect(pickFilter("pending", counts)).toBe("todo");
+    expect(pickFilter("missed_you", counts)).toBe("missed_you");
+  });
+
+  it("with no filter asked for, the first that has rows, else לטיפול", () => {
+    expect(pickFilter(undefined, { ...EMPTY, approved: 4 })).toBe("approved");
+    expect(pickFilter("nonsense", EMPTY)).toBe("todo");
+  });
+
+  it("לטיפול lists the held first, each group in its own order", () => {
+    const rows = [
+      { id: "a", tab: "pending" as const },
+      { id: "b", tab: "held" as const },
+      { id: "c", tab: "approved" as const },
+      { id: "d", tab: "pending" as const },
+      { id: "e", tab: "held" as const },
+    ];
+    expect(filterRows(rows, "todo").map((r) => r.id)).toEqual(["b", "e", "a", "d"]);
+    expect(filterRows(rows, "approved").map((r) => r.id)).toEqual(["c"]);
+  });
+});
+
+describe("nextReportId", () => {
+  const rows = [{ id: "a" }, { id: "b" }, { id: "c" }];
+
+  it("is the row after the open one", () => {
+    expect(nextReportId(rows, "a")).toBe("b");
+  });
+
+  it("is none after the last", () => {
+    expect(nextReportId(rows, "c")).toBeNull();
+  });
+
+  it("is the first row when the open one is not in the list", () => {
+    expect(nextReportId(rows, "z")).toBe("a");
+    expect(nextReportId([], "z")).toBeNull();
+  });
+});
+
+describe("textPreview", () => {
+  it("fills in the name and keeps the start of the text", () => {
+    expect(textPreview("{שם}, שבוע חזק.\n\nהגעת לשני אימונים.", "עומר")).toBe("עומר, שבוע חזק. הגעת לשני אימונים.");
+  });
+
+  it("cuts a long text at a word and marks the cut", () => {
+    const preview = textPreview(`${"מילה ".repeat(40)}סוף`, "עומר");
+    expect(preview?.endsWith("…")).toBe(true);
+    expect(preview?.length).toBeLessThanOrEqual(91);
+    expect(preview).not.toMatch(/מיל…$/);
+  });
+
+  it("is none for a text not written yet", () => {
+    expect(textPreview(null, "עומר")).toBeNull();
+    expect(textPreview("  ", "עומר")).toBeNull();
   });
 });

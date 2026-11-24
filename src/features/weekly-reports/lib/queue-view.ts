@@ -61,6 +61,61 @@ export function pickTab(requested: string | undefined, counts: TabCounts): Queue
   return QUEUE_TABS.find((t) => counts[t.tab] > 0)?.tab ?? "held";
 }
 
+/**
+ * The list's filters: לטיפול holds the held and the pending together, the
+ * held first, so one list is the morning's work; the others are one tab each.
+ */
+export type QueueFilter = "todo" | "approved" | "sent" | "missed_you" | "absent" | "proposals";
+
+export const QUEUE_FILTERS: readonly { filter: QueueFilter; label: string; tabs: readonly QueueTab[] }[] = [
+  { filter: "todo", label: "לטיפול", tabs: ["held", "pending"] },
+  { filter: "approved", label: "אושרו", tabs: ["approved"] },
+  { filter: "sent", label: "נשלחו", tabs: ["sent"] },
+  { filter: "missed_you", label: "התגעגענו", tabs: ["missed_you"] },
+  { filter: "absent", label: "לא הגיעו 3 שבועות", tabs: ["absent"] },
+  { filter: "proposals", label: "הצעות יעד", tabs: ["proposals"] },
+];
+
+function tabsOf(filter: QueueFilter): readonly QueueTab[] {
+  return QUEUE_FILTERS.find((f) => f.filter === filter)?.tabs ?? [];
+}
+
+export function filterCount(filter: QueueFilter, counts: TabCounts): number {
+  return tabsOf(filter).reduce((sum, tab) => sum + counts[tab], 0);
+}
+
+/** The requested filter (an old held or pending link is לטיפול), else the first with rows, else לטיפול. */
+export function pickFilter(requested: string | undefined, counts: TabCounts): QueueFilter {
+  if (requested === "held" || requested === "pending") return "todo";
+  const asked = QUEUE_FILTERS.find((f) => f.filter === requested);
+  if (asked) return asked.filter;
+  return QUEUE_FILTERS.find((f) => filterCount(f.filter, counts) > 0)?.filter ?? "todo";
+}
+
+/** The rows of a filter, in the order of its tabs (held before pending), each tab in its own order. */
+export function filterRows<T extends { tab: QueueTab }>(rows: readonly T[], filter: QueueFilter): T[] {
+  return tabsOf(filter).flatMap((tab) => rows.filter((row) => row.tab === tab));
+}
+
+/** The row after the open one, the first when the open one is not listed, none after the last. */
+export function nextReportId(rows: readonly { id: string }[], currentId: string): string | null {
+  const at = rows.findIndex((row) => row.id === currentId);
+  if (at === -1) return rows[0]?.id ?? null;
+  return rows[at + 1]?.id ?? null;
+}
+
+const PREVIEW_LENGTH = 90;
+
+/** The start of a text on one line, the name filled in, cut at a word; none before it is written. */
+export function textPreview(text: string | null, firstName: string): string | null {
+  const flat = text?.replaceAll("{שם}", firstName).replace(/\s+/g, " ").trim() ?? "";
+  if (flat === "") return null;
+  if (flat.length <= PREVIEW_LENGTH) return flat;
+  const cut = flat.slice(0, PREVIEW_LENGTH);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
 const COUNT_WORDS: readonly { tab: QueueTab; one: string; many: string }[] = [
   { tab: "pending", one: "ממתין", many: "ממתינים" },
   { tab: "held", one: "מעוכב", many: "מעוכבים" },
@@ -129,7 +184,7 @@ export function pickWeek(requested: string | undefined, current: string): string
 export interface QueueLocation {
   week: string;
   branch?: string;
-  tab?: QueueTab;
+  tab?: QueueFilter;
   report?: string;
 }
 
