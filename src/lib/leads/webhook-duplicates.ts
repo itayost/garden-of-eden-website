@@ -2,9 +2,16 @@
  * Tabs fed by a campaign of their own. A lead sent to one of these lands even
  * when the phone already sits in another tab (a parent from the general ad who
  * now asks about goalkeeper training); only a second copy in the same tab is
- * refused. Every other tab keeps the ad rule: a phone in any tab is not added.
+ * refused. A tab the webhook finds or makes by name (`tab_name`, one per sheet
+ * tab) is treated the same way. Every other tab keeps the ad rule: a phone in
+ * any tab is not added.
  */
 export const OWN_CAMPAIGN_TAB_SLUGS: readonly string[] = ["goalkeepers"];
+
+/** Whether a webhook lead is refused only by a copy in its own tab. */
+export function isPerTabCampaign(input: { slug: string | null; byName: boolean }): boolean {
+  return input.byName || (input.slug !== null && OWN_CAMPAIGN_TAB_SLUGS.includes(input.slug));
+}
 
 export interface ExistingLead {
   id: string;
@@ -19,12 +26,11 @@ export interface WebhookLeadVerdict {
 }
 
 export function webhookLeadVerdict(input: {
-  slug: string | null;
+  perTab: boolean;
   targetTabId: string;
   existing: readonly ExistingLead[];
 }): WebhookLeadVerdict {
-  const { slug, targetTabId, existing } = input;
-  const perTab = slug !== null && OWN_CAMPAIGN_TAB_SLUGS.includes(slug);
+  const { perTab, targetTabId, existing } = input;
   const blocking = perTab ? existing.find((l) => l.tab_id === targetTabId) : existing[0];
   return {
     duplicateOf: blocking?.id ?? null,

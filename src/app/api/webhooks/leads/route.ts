@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { timingSafeEqual } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { leadWebhookSchema } from "@/lib/validations/leads";
 import { sendFlowTemplate } from "@/lib/whatsapp/client";
-import { webhookLeadVerdict, type ExistingLead } from "@/lib/leads/webhook-duplicates";
+import {
+  isPerTabCampaign,
+  webhookLeadVerdict,
+  type ExistingLead,
+} from "@/lib/leads/webhook-duplicates";
+import { tabByName, tabBySlug } from "@/lib/leads/webhook-tab";
 
 /**
  * Leads Webhook Handler
  *
  * External webhook for lead creation from Zapier, landing pages, etc.
  * Authenticates via x-api-key header, validates payload with Zod,
+ * picks the tab (tab_slug, else tab_name, found or made, else the default),
  * refuses a duplicate (a phone in any tab, or in the same tab for a tab with
  * its own campaign: webhookLeadVerdict), and inserts into the leads table.
  */
@@ -50,28 +57,32 @@ export async function POST(request: NextRequest) {
       note,
       source,
       tab_slug,
+      tab_name,
       club,
       birth_year,
       additional_info,
     } = parseResult.data;
     const supabase = createAdminClient();
 
-    const requestedSlug = tab_slug ?? source ?? null;
+    // tab_slug names a tab; else tab_name finds or makes one; else the
+    // acquisition source's tab; else the default tab.
+    const byName = !tab_slug && !!tab_name;
+    const requestedSlug = tab_slug ?? (byName ? null : source ?? null);
 
     let tab_id: string;
-    if (requestedSlug) {
-      const { data: tab } = await typedFrom(supabase, "lead_tabs")
-        .select("id")
-        .eq("slug", requestedSlug)
-        .is("deleted_at", null)
-        .maybeSingle();
-      if (!tab) {
-        return NextResponse.json(
-          { error: "Invalid tab_slug" },
-          { status: 400 },
-        );
+    if (byName) {
+      const tab = await tabByName(supabase, tab_name!);
+      if ("error" in tab) {
+        return NextResponse.json({ error: tab.error }, { status: tab.status });
       }
-      tab_id = tab.id as string;
+      if (tab.created) revalidatePath("/admin/leads");
+      tab_id = tab.tabId;
+    } else if (requestedSlug) {
+      const tab = await tabBySlug(supabase, requestedSlug);
+      if ("error" in tab) {
+        return NextResponse.json({ error: tab.error }, { status: tab.status });
+      }
+      tab_id = tab.tabId;
     } else {
       const { data: defaultTab } = await typedFrom(supabase, "lead_tabs")
         .select("id")
@@ -104,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     const verdict = webhookLeadVerdict({
-      slug: requestedSlug,
+      perTab: isPerTabCampaign({ slug: requestedSlug, byName }),
       targetTabId: tab_id,
       existing: (existingRows ?? []) as ExistingLead[],
     });

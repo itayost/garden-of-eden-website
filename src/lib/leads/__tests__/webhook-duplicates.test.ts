@@ -1,43 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { webhookLeadVerdict } from "../webhook-duplicates";
+import { isPerTabCampaign, webhookLeadVerdict } from "../webhook-duplicates";
 
 const PAID = "tab-paid";
 const GK = "tab-gk";
 
+describe("isPerTabCampaign", () => {
+  it("keeps the any-tab rule for the ad tab and for no slug", () => {
+    expect(isPerTabCampaign({ slug: "paid", byName: false })).toBe(false);
+    expect(isPerTabCampaign({ slug: null, byName: false })).toBe(false);
+  });
+
+  it("checks only the own tab for a campaign slug or a tab found by name", () => {
+    expect(isPerTabCampaign({ slug: "goalkeepers", byName: false })).toBe(true);
+    expect(isPerTabCampaign({ slug: null, byName: true })).toBe(true);
+  });
+});
+
 describe("webhookLeadVerdict", () => {
   it("adds a new phone and sends the flow", () => {
-    expect(webhookLeadVerdict({ slug: "paid", targetTabId: PAID, existing: [] })).toEqual({
+    expect(webhookLeadVerdict({ perTab: false, targetTabId: PAID, existing: [] })).toEqual({
       duplicateOf: null,
       sendFlow: true,
     });
   });
 
-  it("refuses a phone already in any tab for the ad tab", () => {
+  it("refuses a phone already in any tab under the ad rule", () => {
     expect(
-      webhookLeadVerdict({ slug: "paid", targetTabId: PAID, existing: [{ id: "a", tab_id: GK }] }),
+      webhookLeadVerdict({ perTab: false, targetTabId: PAID, existing: [{ id: "a", tab_id: GK }] }),
     ).toEqual({ duplicateOf: "a", sendFlow: false });
   });
 
-  it("refuses a phone already in any tab when no slug is sent", () => {
+  it("adds a campaign lead whose phone is only in another tab, without a second flow", () => {
     expect(
-      webhookLeadVerdict({ slug: null, targetTabId: PAID, existing: [{ id: "a", tab_id: "other" }] }),
-    ).toEqual({ duplicateOf: "a", sendFlow: false });
-  });
-
-  it("adds a goalkeeper lead whose phone is only in another tab, without a second flow", () => {
-    expect(
-      webhookLeadVerdict({
-        slug: "goalkeepers",
-        targetTabId: GK,
-        existing: [{ id: "a", tab_id: PAID }],
-      }),
+      webhookLeadVerdict({ perTab: true, targetTabId: GK, existing: [{ id: "a", tab_id: PAID }] }),
     ).toEqual({ duplicateOf: null, sendFlow: false });
   });
 
-  it("refuses a goalkeeper lead already in the goalkeepers tab", () => {
+  it("refuses a campaign lead already in its own tab", () => {
     expect(
       webhookLeadVerdict({
-        slug: "goalkeepers",
+        perTab: true,
         targetTabId: GK,
         existing: [
           { id: "a", tab_id: PAID },
@@ -47,8 +49,8 @@ describe("webhookLeadVerdict", () => {
     ).toEqual({ duplicateOf: "b", sendFlow: false });
   });
 
-  it("sends the flow to a brand new goalkeeper lead", () => {
-    expect(webhookLeadVerdict({ slug: "goalkeepers", targetTabId: GK, existing: [] })).toEqual({
+  it("sends the flow to a brand new campaign lead", () => {
+    expect(webhookLeadVerdict({ perTab: true, targetTabId: GK, existing: [] })).toEqual({
       duplicateOf: null,
       sendFlow: true,
     });
