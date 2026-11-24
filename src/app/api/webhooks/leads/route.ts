@@ -4,13 +4,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { typedFrom } from "@/lib/supabase/helpers";
 import { leadWebhookSchema } from "@/lib/validations/leads";
 import { sendFlowTemplate } from "@/lib/whatsapp/client";
+import { webhookLeadVerdict, type ExistingLead } from "@/lib/leads/webhook-duplicates";
 
 /**
  * Leads Webhook Handler
  *
  * External webhook for lead creation from Zapier, landing pages, etc.
  * Authenticates via x-api-key header, validates payload with Zod,
- * refuses a phone already in any tab, and inserts into the leads table.
+ * refuses a duplicate (a phone in any tab, or in the same tab for a tab with
+ * its own campaign: webhookLeadVerdict), and inserts into the leads table.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -85,18 +87,31 @@ export async function POST(request: NextRequest) {
       tab_id = defaultTab.id as string;
     }
 
-    // An ad lead whose phone is already in any tab is not added again. Staff
-    // may keep one phone in several tabs, so take the first match.
-    const { data: existing } = await typedFrom(supabase, "leads")
-      .select("id")
+    // An ad lead whose phone is already in any tab is not added again; a tab
+    // with its own campaign refuses only a second copy in that tab. Staff may
+    // keep one phone in several tabs, so read every match, newest first.
+    const { data: existingRows, error: existingError } = await typedFrom(supabase, "leads")
+      .select("id, tab_id")
       .eq("phone", phone)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
 
-    if (existing) {
+    if (existingError) {
+      console.error("[Leads Webhook] Duplicate check error:", existingError);
       return NextResponse.json(
-        { error: "Lead already exists", leadId: existing.id },
+        { error: "Failed to create lead" },
+        { status: 500 }
+      );
+    }
+
+    const verdict = webhookLeadVerdict({
+      slug: requestedSlug,
+      targetTabId: tab_id,
+      existing: (existingRows ?? []) as ExistingLead[],
+    });
+
+    if (verdict.duplicateOf) {
+      return NextResponse.json(
+        { error: "Lead already exists", leadId: verdict.duplicateOf },
         { status: 409 }
       );
     }
@@ -120,6 +135,14 @@ export async function POST(request: NextRequest) {
       .select("id")
       .single();
 
+    // The same phone sent twice at once: the per-tab unique index refuses the second.
+    if (insertError?.code === "23505") {
+      return NextResponse.json(
+        { error: "Lead already exists" },
+        { status: 409 }
+      );
+    }
+
     if (insertError) {
       console.error("[Leads Webhook] Insert error:", insertError);
       return NextResponse.json(
@@ -128,24 +151,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send WhatsApp Flow and log the result
-    try {
-      const flowResult = await sendFlowTemplate(phone, name);
-      if (flowResult.success) {
-        const { error: logError } = await typedFrom(supabase, "lead_sent_messages").insert({
-          lead_id: newLead.id,
-          message_id: flowResult.messageId ?? null,
-          message_type: "flow",
-          campaign: "webhook_creation",
-        });
-        if (logError) {
-          console.error("[Leads Webhook] Failed to log sent message:", logError);
+    // Send WhatsApp Flow and log the result. A phone another tab already
+    // holds got the flow when it first came in, so it is not sent twice.
+    if (verdict.sendFlow) {
+      try {
+        const flowResult = await sendFlowTemplate(phone, name);
+        if (flowResult.success) {
+          const { error: logError } = await typedFrom(supabase, "lead_sent_messages").insert({
+            lead_id: newLead.id,
+            message_id: flowResult.messageId ?? null,
+            message_type: "flow",
+            campaign: "webhook_creation",
+          });
+          if (logError) {
+            console.error("[Leads Webhook] Failed to log sent message:", logError);
+          }
+        } else {
+          console.error("[Leads Webhook] Flow send failed:", flowResult.error);
         }
-      } else {
-        console.error("[Leads Webhook] Flow send failed:", flowResult.error);
+      } catch (flowErr) {
+        console.error("[Leads Webhook] Flow send error:", flowErr);
       }
-    } catch (flowErr) {
-      console.error("[Leads Webhook] Flow send error:", flowErr);
     }
 
     return NextResponse.json(
