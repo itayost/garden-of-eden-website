@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Loader2, Plus, Settings, X } from "lucide-react";
+import { Loader2, Plus, Settings, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { saveReportSettingsAction } from "../../lib/actions/settings";
 import type { BranchReportSetting, CardMode } from "../../lib/actions/settings-load";
@@ -158,26 +159,32 @@ function BranchSettingRow({ setting }: { setting: BranchReportSetting }) {
   );
 }
 
-/** Admins only: the weekly report setting of each active branch, folded under the queue. */
+/** Admins only: the weekly report setting of each active branch, behind the gear in the page's header. */
 export function ReportSettingsCard({ settings }: { settings: readonly BranchReportSetting[] }) {
   return (
-    <details className="group rounded-lg border">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-medium [&::-webkit-details-marker]:hidden">
-        <Settings className="size-4 text-muted-foreground" aria-hidden="true" />
-        הגדרות
-        <ChevronDown className="ms-auto size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
-      </summary>
-      <div className="border-t px-4 py-4">
-        {settings.length === 0 ? (
-          <p className="text-sm text-muted-foreground">אין סניפים פעילים</p>
-        ) : (
-          <ul className="divide-y">
-            {settings.map((setting) => (
-              <BranchSettingRow key={`${setting.branchId}:${setting.changedAt ?? ""}`} setting={setting} />
-            ))}
-          </ul>
-        )}
-      </div>
-    </details>
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button type="button" variant="outline" size="icon" aria-label="הגדרות הדוחות" title="הגדרות הדוחות">
+          <Settings aria-hidden="true" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-full overflow-y-auto sm:max-w-md">
+        <SheetHeader className="text-start">
+          <SheetTitle>הגדרות הדוחות</SheetTitle>
+          <SheetDescription>לכל סניף: מצב, שנות לידה בפיילוט, ושליחת התגעגענו.</SheetDescription>
+        </SheetHeader>
+        <div className="px-4 pb-6">
+          {settings.length === 0 ? (
+            <p className="text-sm text-muted-foreground">אין סניפים פעילים</p>
+          ) : (
+            <ul className="divide-y">
+              {settings.map((setting) => (
+                <BranchSettingRow key={`${setting.branchId}:${setting.changedAt ?? ""}`} setting={setting} />
+              ))}
+            </ul>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

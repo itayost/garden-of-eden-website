@@ -21,10 +21,11 @@ interface HoldDialogProps {
   disabled: boolean;
   /** Holds the report with the reason; true when it was held. */
   onHold: (reason: string) => Promise<boolean>;
+  variant?: "outline" | "ghost";
 }
 
 /** עכב: asks why, so whoever opens the report next knows what to check. */
-export function HoldDialog({ disabled, onHold }: HoldDialogProps) {
+export function HoldDialog({ disabled, onHold, variant = "outline" }: HoldDialogProps) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,7 +48,7 @@ export function HoldDialog({ disabled, onHold }: HoldDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(next) => !busy && setOpen(next)}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" disabled={disabled}>
+        <Button type="button" variant={variant} disabled={disabled}>
           <PauseCircle aria-hidden="true" />
           עכב
         </Button>
