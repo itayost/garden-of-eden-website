@@ -3,6 +3,7 @@ import type { ReportSetting } from "../../audience";
 import { buildFactSheet } from "../../fact-sheet/build";
 import { emptyWeek, ME, OTHER, WEEK } from "../../fact-sheet/__tests__/fixtures";
 import type { BuiltSheet } from "../../fact-sheet/types";
+import { SHARED_ACCOUNT_HOLD } from "../../shared-account";
 import { classifyTrainee, countRows, weekRows, type TraineeTraining } from "../week-rows";
 
 const KIRYAT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -87,11 +88,11 @@ describe("weekRows", () => {
   });
 
   test("nothing gives no row", () => {
-    expect(weekRows(WEEK, [{ traineeId: ME, branchIds: [KIRYAT], kind: "nothing" }], new Map())).toEqual([]);
+    expect(weekRows(WEEK, [{ traineeId: ME, fullName: "דני כהן", branchIds: [KIRYAT], kind: "nothing" }], new Map())).toEqual([]);
   });
 
   test("התגעגענו goes in approved by the system, with no sheet and no Hold", () => {
-    const [row] = weekRows(WEEK, [{ traineeId: ME, branchIds: [KIRYAT, HAIFA], kind: "missed_you" }], new Map());
+    const [row] = weekRows(WEEK, [{ traineeId: ME, fullName: "דני כהן", branchIds: [KIRYAT, HAIFA], kind: "missed_you" }], new Map());
     expect(row).toEqual({
       traineeId: ME,
       weekStart: WEEK,
@@ -105,30 +106,55 @@ describe("weekRows", () => {
   });
 
   test("absent is listed, never approved", () => {
-    const [row] = weekRows(WEEK, [{ traineeId: ME, branchIds: [KIRYAT], kind: "absent" }], new Map());
+    const [row] = weekRows(WEEK, [{ traineeId: ME, fullName: "דני כהן", branchIds: [KIRYAT], kind: "absent" }], new Map());
     expect(row).toMatchObject({ kind: "absent", status: "listed", approvedAutomatically: false, factSheet: null });
   });
 
   test("a report with no Hold waits for approval and stores the sheet and the body", () => {
-    const [row] = weekRows(WEEK, [{ traineeId: ME, branchIds: [KIRYAT], kind: "report" }], new Map([[ME, report]]));
+    const [row] = weekRows(WEEK, [{ traineeId: ME, fullName: "דני כהן", branchIds: [KIRYAT], kind: "report" }], new Map([[ME, report]]));
     expect(row).toMatchObject({ kind: "report", status: "pending", holdReasons: [], approvedAutomatically: false });
     expect(row.factSheet).toEqual({ sheet: report.sheet, body: report.body });
   });
 
   test("a report with a Hold goes in held with its reasons", () => {
     const noGender = built({ profile: { ...emptyWeek().profile, gender: null } });
-    const [row] = weekRows(WEEK, [{ traineeId: ME, branchIds: [KIRYAT], kind: "report" }], new Map([[ME, noGender]]));
+    const [row] = weekRows(WEEK, [{ traineeId: ME, fullName: "דני כהן", branchIds: [KIRYAT], kind: "report" }], new Map([[ME, noGender]]));
     expect(row.status).toBe("held");
     expect(row.holdReasons).toEqual(noGender.holds);
   });
 
   test("a report whose sheet could not be built gives no row", () => {
-    expect(weekRows(WEEK, [{ traineeId: OTHER, branchIds: [KIRYAT], kind: "report" }], new Map([[ME, report]]))).toEqual([]);
+    expect(weekRows(WEEK, [{ traineeId: OTHER, fullName: "דני כהן", branchIds: [KIRYAT], kind: "report" }], new Map([[ME, report]]))).toEqual([]);
+  });
+
+  test("a shared account's report goes in held for a person, ahead of its other Holds", () => {
+    const noGender = built({ profile: { ...emptyWeek().profile, gender: null } });
+    const shared = { traineeId: ME, fullName: "דני + יוסי", branchIds: [KIRYAT], kind: "report" as const };
+    const [row] = weekRows(WEEK, [shared], new Map([[ME, noGender]]));
+    expect(row.status).toBe("held");
+    expect(row.holdReasons).toEqual([SHARED_ACCOUNT_HOLD, ...noGender.holds]);
+  });
+
+  test("a shared account's התגעגענו is held too, never approved by the system", () => {
+    const shared = { traineeId: ME, fullName: "דני + יוסי", branchIds: [KIRYAT], kind: "missed_you" as const };
+    const [row] = weekRows(WEEK, [shared], new Map());
+    expect(row).toMatchObject({
+      kind: "missed_you",
+      status: "held",
+      holdReasons: [SHARED_ACCOUNT_HOLD],
+      approvedAutomatically: false,
+    });
+  });
+
+  test("a shared account on the absent list stays listed", () => {
+    const shared = { traineeId: ME, fullName: "דני + יוסי", branchIds: [KIRYAT], kind: "absent" as const };
+    const [row] = weekRows(WEEK, [shared], new Map());
+    expect(row).toMatchObject({ kind: "absent", status: "listed", holdReasons: [] });
   });
 
   test("the input lists are not shared with the rows", () => {
     const branchIds = [KIRYAT];
-    const [row] = weekRows(WEEK, [{ traineeId: ME, branchIds, kind: "missed_you" }], new Map());
+    const [row] = weekRows(WEEK, [{ traineeId: ME, fullName: "דני כהן", branchIds, kind: "missed_you" }], new Map());
     expect(row.branchIds).toEqual(branchIds);
     expect(row.branchIds).not.toBe(branchIds);
   });
@@ -140,11 +166,11 @@ describe("countRows", () => {
     const rows = weekRows(
       WEEK,
       [
-        { traineeId: ME, branchIds: [KIRYAT], kind: "report" },
-        { traineeId: OTHER, branchIds: [KIRYAT], kind: "report" },
-        { traineeId: "c", branchIds: [KIRYAT], kind: "missed_you" },
-        { traineeId: "d", branchIds: [KIRYAT], kind: "absent" },
-        { traineeId: "e", branchIds: [KIRYAT], kind: "nothing" },
+        { traineeId: ME, fullName: "דני כהן", branchIds: [KIRYAT], kind: "report" },
+        { traineeId: OTHER, fullName: "דני כהן", branchIds: [KIRYAT], kind: "report" },
+        { traineeId: "c", fullName: "דני כהן", branchIds: [KIRYAT], kind: "missed_you" },
+        { traineeId: "d", fullName: "דני כהן", branchIds: [KIRYAT], kind: "absent" },
+        { traineeId: "e", fullName: "דני כהן", branchIds: [KIRYAT], kind: "nothing" },
       ],
       new Map([
         [ME, built()],
