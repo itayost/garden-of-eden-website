@@ -6,7 +6,7 @@ import {
   LEAD_SOURCES,
   LEAD_STATUSES,
 } from "@/types/leads";
-import { leadTabSlugSchema } from "./lead-tabs";
+import { leadTabNameSchema, leadTabSlugSchema } from "./lead-tabs";
 import { normalizePhoneIL } from "./common";
 
 /** Normalize Israeli phone formats to 972xxxxxxxxx. Returns null if unrecognizable. */
@@ -174,6 +174,8 @@ export const leadWebhookSchema = z.object({
   is_from_haifa: z.boolean().optional().default(false),
   note: z.string().max(2000).optional(),
   tab_slug: leadTabSlugSchema.optional(),
+  /** A tab found by its name, or made when no live tab has it (one per sheet tab). Ignored when tab_slug is sent. */
+  tab_name: leadTabNameSchema.optional(),
   source: z.enum(["paid", "organic"]).optional(),
   club: z.string().max(100).optional(),
   birth_year: z.number().int().min(1990).max(2030).optional(),
