@@ -210,6 +210,17 @@ export function Footer() {
           <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/10">
             <p className="text-white/50 text-sm mb-4 md:mb-0">
               Copyright &copy; {currentYear} Garden of Eden. כל הזכויות שמורות.
+              <span className="block md:inline md:ms-2 text-xs">
+                עוצב ופותח על ידי{' '}
+                <a
+                  href="https://www.itayost.com"
+                  target="_blank"
+                  rel="noopener"
+                  className="hover:text-white/70 transition-colors"
+                >
+                  ITAYOST
+                </a>
+              </span>
             </p>
             <div className="flex gap-6">
               <Link
