@@ -244,6 +244,17 @@ export function Footer() {
               </Link>
             </div>
           </div>
+          <p className="mt-6 text-center text-white/50 text-xs">
+            עוצב ופותח על ידי{' '}
+            <a
+              href="https://www.itayost.com"
+              target="_blank"
+              rel="noopener"
+              className="hover:text-white/70 transition-colors"
+            >
+              ITAYOST
+            </a>
+          </p>
         </div>
       </footer>
 
