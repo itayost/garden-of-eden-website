@@ -50,3 +50,27 @@ export function periodFor(product: PlanProduct): string {
     ? `${product.sessions_total} אימונים, ${weeksLabel(product.duration_days)}`
     : weeksLabel(product.duration_days);
 }
+
+/** A price per session, such as "125 ₪ לאימון" or "(90 ₪ למפגש)". */
+function hasSessionPrice(text: string): boolean {
+  return /\d/.test(text) && /(₪|ש"ח|שקל)/.test(text) && /ל(אימון|מפגש)/.test(text);
+}
+
+/**
+ * The catalog blurb as a landing card shows it: never a price per session
+ * (owner, 2026-11-25). When the blurb names one, that sentence or bracket is
+ * dropped, and so is a "תוקף:" sentence, which the card already shows under
+ * the price. A blurb with no price per session is shown as typed. Null when
+ * nothing is left, so the card falls back to the plan kind.
+ */
+export function landingBlurb(blurb: string | null): string | null {
+  const typed = blurb?.trim() ?? "";
+  if (!typed) return null;
+  if (!hasSessionPrice(typed)) return typed;
+  const kept = typed
+    .replace(/\(([^)]*)\)/g, (bracket, inner: string) => (hasSessionPrice(inner) ? "" : bracket))
+    .split(".")
+    .map((part) => part.replace(/\s+/g, " ").trim().replace(/^[,\s]+|[,\s]+$/g, ""))
+    .filter((part) => part && !hasSessionPrice(part) && !part.startsWith("תוקף"));
+  return kept.length > 0 ? kept.join(". ") : null;
+}

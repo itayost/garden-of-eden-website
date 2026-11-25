@@ -14,6 +14,7 @@ import { MotionProvider } from "@/components/MotionProvider";
 import { loadLandingCatalog } from "@/features/enrollment/lib/catalog";
 import { KIRYAT_ATA_LANDING } from "../../../content/landing-kiryat-ata";
 import { BRANCH_SEO, branchMetadata } from "../../../content/seo";
+import { landingBlurb } from "../../../content/landing-plans";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 
 export const metadata: Metadata = branchMetadata(BRANCH_SEO.kiryat_ata);
@@ -39,7 +40,7 @@ export default async function KiryatAtaPage() {
       <main id="main-content" tabIndex={-1} className="outline-none bg-paper">
         <LocalBusinessJsonLd
           seo={BRANCH_SEO.kiryat_ata}
-          offers={products.map((p) => ({ name: p.name_he, price: p.price_ils, description: p.blurb_he }))}
+          offers={products.map((p) => ({ name: p.name_he, price: p.price_ils, description: landingBlurb(p.blurb_he) }))}
         />
         <Navbar
           otherBranch={{ label: "סניף חיפה", href: "/" }}
