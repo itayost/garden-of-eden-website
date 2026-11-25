@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Brain, CalendarDays, Ticket, Trophy, Users, type LucideIcon } from "lucide-react";
 import { joinHref, type LandingBranchKey } from "@/lib/branches/landing-branches";
 import type { PlanKind, PlanProduct } from "@/types/plans";
-import { featuresFor, periodFor } from "../../../content/landing-plans";
+import { featuresFor, landingBlurb, periodFor } from "../../../content/landing-plans";
 import { PosterPlanCard, type PosterPlan } from "./poster/PosterPlanCard";
 import { PosterSection } from "./poster/PosterSection";
 
@@ -38,7 +38,7 @@ function toPosterPlan(branch: LandingBranchKey, product: PlanProduct, highlighte
   return {
     icon: product.once_per_trainee ? CalendarDays : KIND_ICONS[product.kind],
     name: product.name_he,
-    description: product.blurb_he ?? KIND_LABELS[product.kind],
+    description: landingBlurb(product.blurb_he) ?? KIND_LABELS[product.kind],
     price: product.price_ils.toLocaleString("he-IL"),
     period: periodFor(product),
     features: featuresFor(product),

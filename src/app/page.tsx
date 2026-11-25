@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { LocalBusinessJsonLd } from "@/components/seo/LocalBusinessJsonLd";
 import { BRANCH_SEO, branchMetadata } from "../../content/seo";
+import { landingBlurb } from "../../content/landing-plans";
 import { HAIFA_LANDING } from "../../content/landing-haifa";
 import {
   Navbar,
@@ -43,7 +44,7 @@ export default async function HomePage() {
       <main id="main-content" tabIndex={-1} className="outline-none bg-paper">
         <LocalBusinessJsonLd
           seo={BRANCH_SEO.haifa}
-          offers={products.map((p) => ({ name: p.name_he, price: p.price_ils, description: p.blurb_he }))}
+          offers={products.map((p) => ({ name: p.name_he, price: p.price_ils, description: landingBlurb(p.blurb_he) }))}
         />
         <Navbar
           otherBranch={{ label: "סניף קריית אתא", href: "/kiryat-ata" }}
